@@ -841,14 +841,9 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const interest = new Array(h).fill(0);
   const debtService = new Array(h).fill(0);
 
-  // Grace period: user specifies start year, or auto = first drawdown
-  let graceStartIdx;
-  if ((project.debtGraceStartYear || 0) > 0) {
-    graceStartIdx = project.debtGraceStartYear - startYear;
-  } else {
-    graceStartIdx = constrEnd; // fallback
-    for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { graceStartIdx = y; break; } }
-  }
+  // Grace period starts from first drawdown year
+  let graceStartIdx = constrEnd;
+  for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { graceStartIdx = y; break; } }
   const repayStart = graceStartIdx + grace;
   const annualRepay = repayYears > 0 ? totalDrawn / repayYears : 0;
 
@@ -1491,7 +1486,6 @@ function FinancingView({ project, results, financing, t, up, lang }) {
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:10,fontSize:12}}>
         <div><span style={{color:"#6b7080"}}>Tenor:</span> <strong>{project.loanTenor} yrs</strong> ({project.debtGrace} grace + {f.repayYears} repay)</div>
-        <div><span style={{color:"#6b7080"}}>{lang==="ar"?"بداية السماح":"Grace Start"}:</span> <strong>{sy + (f.graceStartIdx||0)}</strong></div>
         <div><span style={{color:"#6b7080"}}>Rate:</span> <strong>{project.financeRate}%</strong></div>
         <div><span style={{color:"#6b7080"}}>Upfront Fee:</span> <strong>{project.upfrontFeePct}%</strong></div>
         <div><span style={{color:"#6b7080"}}>Repay Starts:</span> <strong>{sy + f.repayStart}</strong></div>
@@ -2041,9 +2035,6 @@ function ControlPanel({ project, up, t, lang }) {
               <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"}><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
               <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"}><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
             </div>
-            <Fld label={lang==="ar"?"سنة بداية السماح":"Grace Start Year"} tip="Year when grace period begins (no principal repayment)" hint={`0 = ${lang==="ar"?"تلقائي (أول سحب)":"auto (first drawdown)"}`}>
-              <SidebarInput type="number" value={project.debtGraceStartYear} onChange={v=>up({debtGraceStartYear:v})} />
-            </Fld>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
               <Fld label={lang==="ar"?"نوع السداد":"Repayment"}>
