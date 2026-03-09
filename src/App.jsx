@@ -1995,7 +1995,7 @@ function ControlPanel({ project, up, t, lang }) {
         {/* ── Land Capitalization ── */}
         <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
           <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"رسملة الأرض":"Land Capitalization"}</div>
-          <Fld label={lang==="ar"?"هل ترسمل الأرض؟":"Capitalize Land?" tip="Convert leasehold right to equity contribution"}>
+          <Fld label={lang==="ar"?"هل ترسمل الأرض؟":"Capitalize Land?"} tip="Convert leasehold right to equity contribution">
             <Sel lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
           </Fld>
           {project.landCapitalize && <>
@@ -2035,17 +2035,17 @@ function ControlPanel({ project, up, t, lang }) {
           {project.debtAllowed && <>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label="Max LTV %" tip="Loan-to-Value ratio. Saudi banks: 50-70%"><SidebarInput type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></Fld>
-              <Fld label={lang==="ar"?"معدل الربح %":"Finance Rate %" tip="Annual profit/interest rate. Saudi market: 5-8%"}><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
+              <Fld label={lang==="ar"?"معدل الربح %":"Finance Rate %"} tip="Annual profit/interest rate. Saudi market: 5-8%"><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"}><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
               <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"}><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
             </div>
-            <Fld label={lang==="ar"?"سنة بداية السماح":"Grace Start Year" tip="Year when grace period begins (no principal repayment)"} hint={`0 = ${lang==="ar"?"تلقائي (أول سحب)":"auto (first drawdown)"}`}>
+            <Fld label={lang==="ar"?"سنة بداية السماح":"Grace Start Year"} tip="Year when grace period begins (no principal repayment)" hint={`0 = ${lang==="ar"?"تلقائي (أول سحب)":"auto (first drawdown)"}`}>
               <SidebarInput type="number" value={project.debtGraceStartYear} onChange={v=>up({debtGraceStartYear:v})} />
             </Fld>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %" tip="One-time loan fee at first drawdown"}><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
               <Fld label={lang==="ar"?"نوع السداد":"Repayment"}>
                 <Sel lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[
                   {value:"amortizing",en:"Amortizing",ar:"أقساط"},
@@ -2075,7 +2075,7 @@ function ControlPanel({ project, up, t, lang }) {
           {(project.exitStrategy||"sale") !== "hold" && <>
             <Fld label={lang==="ar"?"سنة التخارج":"Exit Year"} hint="0 = auto"><SidebarInput type="number" value={project.exitYear} onChange={v=>up({exitYear:v})} /></Fld>
             {(project.exitStrategy||"sale") === "sale" && (
-              <Fld label={lang==="ar"?"مضاعف الإيجار":"Exit Multiple (x)" tip="Sale price = Annual Rent × Multiple"}><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
+              <Fld label={lang==="ar"?"مضاعف الإيجار":"Exit Multiple (x)"} tip="Sale price = Annual Rent × Multiple"><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
             )}
             {project.exitStrategy === "caprate" && (
               <Fld label={lang==="ar"?"معدل الرسملة %":"Cap Rate %"}><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
@@ -2083,7 +2083,7 @@ function ControlPanel({ project, up, t, lang }) {
             <Fld label={lang==="ar"?"تكاليف التخارج %":"Exit Cost %"}><SidebarInput type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></Fld>
           </>}
           {project.vehicleType === "fund" && (
-            <Fld label={lang==="ar"?"سنة بداية الصندوق":"Fund Start Year" tip="Fund establishment year. Usually 1 year before construction"} hint={`0 = ${lang==="ar"?"تلقائي (سنة قبل البناء)":"auto (1yr before construction)"}`}>
+            <Fld label={lang==="ar"?"سنة بداية الصندوق":"Fund Start Year"} tip="Fund establishment year. Usually 1 year before construction" hint={`0 = ${lang==="ar"?"تلقائي (سنة قبل البناء)":"auto (1yr before construction)"}`}>
               <SidebarInput type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} />
             </Fld>
           )}
@@ -2091,10 +2091,10 @@ function ControlPanel({ project, up, t, lang }) {
         {/* ── Waterfall ── */}
         <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
           <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"شلال التوزيعات":"Waterfall"}</div>
-          <Fld label={lang==="ar"?"العائد التفضيلي %":"Preferred Return %" tip="Priority return to investors before profit split. Standard 8-15%"}><SidebarInput type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></Fld>
+          <Fld label={lang==="ar"?"العائد التفضيلي %":"Preferred Return %"} tip="Priority return to investors before profit split. Standard 8-15%"><SidebarInput type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></Fld>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <Fld label={lang==="ar"?"حصة الأداء %":"Carry %" tip="Developer profit share after preferred return. Standard 20-30%"}><SidebarInput type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></Fld>
-            <Fld label={lang==="ar"?"حصة LP %":"LP Split %" tip="Investor share of remaining profits. Standard 70-80%"}><SidebarInput type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></Fld>
+            <Fld label={lang==="ar"?"حصة الأداء %":"Carry %"} tip="Developer profit share after preferred return. Standard 20-30%"><SidebarInput type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></Fld>
+            <Fld label={lang==="ar"?"حصة LP %":"LP Split %"} tip="Investor share of remaining profits. Standard 70-80%"><SidebarInput type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></Fld>
           </div>
           <Fld label={lang==="ar"?"تعويض المطور؟":"GP Catch-up"}>
             <Sel lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} />
@@ -2105,14 +2105,14 @@ function ControlPanel({ project, up, t, lang }) {
           <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
             <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"رسوم الصندوق":"Fund Fees"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"اكتتاب %":"Subscription %" tip="One-time fund entry fee. Standard 1-3%"}><SidebarInput type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></Fld>
-              <Fld label={lang==="ar"?"إدارة %":"Mgmt Fee %" tip="Annual management fee. Standard 0.5-2%"}><SidebarInput type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"اكتتاب %":"Subscription %"} tip="One-time fund entry fee. Standard 1-3%"><SidebarInput type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"إدارة %":"Mgmt Fee %"} tip="Annual management fee. Standard 0.5-2%"><SidebarInput type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label={lang==="ar"?"تطوير %":"Developer Fee %"}><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
-              <Fld label={lang==="ar"?"هيكلة %":"Structuring %" tip="One-time deal structuring fee. Standard 0.1-1%"}><SidebarInput type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"هيكلة %":"Structuring %"} tip="One-time deal structuring fee. Standard 0.1-1%"><SidebarInput type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></Fld>
             </div>
-            <Fld label={lang==="ar"?"رسوم حفظ سنوية":"Custody Fee (annual)" tip="Annual custody & admin (fixed SAR). Standard 100-200K"}><SidebarInput type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></Fld>
+            <Fld label={lang==="ar"?"رسوم حفظ سنوية":"Custody Fee (annual)"} tip="Annual custody & admin (fixed SAR). Standard 100-200K"><SidebarInput type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></Fld>
           </div>
         )}
         {/* Developer fee for non-fund */}
