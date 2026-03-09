@@ -400,6 +400,7 @@ const defaultProject = () => ({
   financeRate: 6.5,
   loanTenor: 7,
   debtGrace: 3,
+  debtGraceStartYear: 0, // 0 = auto (first drawdown year), or specific calendar year e.g. 2027
   upfrontFeePct: 0.5,
   repaymentType: "amortizing", // amortizing | bullet
   islamicMode: "conventional", // conventional | murabaha | ijara
@@ -410,11 +411,14 @@ const defaultProject = () => ({
   subscriptionFeePct: 2,
   annualMgmtFeePct: 0.9,
   custodyFeeAnnual: 130000,
+  mgmtFeeBase: "devCost", // devCost | equity | custom
   developerFeePct: 10,
   structuringFeePct: 0.1,
   // Exit
+  exitStrategy: "sale", // sale | hold | caprate
   exitYear: 0, // 0 = auto
   exitMultiple: 10,
+  exitCapRate: 9, // NOI / Cap Rate %
   exitCostPct: 2,
   // Waterfall (Phase 3)
   prefReturnPct: 15,
@@ -428,6 +432,8 @@ const defaultProject = () => ({
     landRentRebate: { enabled: false, constrRebatePct: 100, constrRebateYears: 0, operRebatePct: 50, operRebateYears: 3, phases: [] },
     feeRebates: { enabled: false, items: [], phases: [] },
   },
+  // Sharing
+  sharedWith: [], // array of email strings
 });
 
 // ── Formatters ──
@@ -587,14 +593,33 @@ function calcNPV(cf, r) { return cf.reduce((s,v,t)=>s+v/Math.pow(1+r,t),0); }
 
 function runChecks(project, results, financing, waterfall) {
   const as = results.assetSchedules;
+  const c = results.consolidated;
+  const h = results.horizon;
+
+  // Land allocation check
+  const phases = results.phaseResults || {};
+  const totalAlloc = Object.values(phases).reduce((s, p) => s + (p.allocPct || 0), 0);
+
+  // Footprint check
+  const phaseFootprints = {};
+  (project.phases || []).forEach(p => { phaseFootprints[p.name] = p.footprint || 0; });
+  const assetFootprints = {};
+  (project.assets || []).forEach(a => { assetFootprints[a.phase] = (assetFootprints[a.phase] || 0) + (a.buildingFootprint || 0); });
+
+  // Payback period
+  let cumCF = 0, paybackYear = null;
+  for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYear === null) paybackYear = y; }
+
   const checks = [
     { name: "GFA Total Match", pass: Math.abs((project.assets||[]).reduce((s,a)=>s+(a.gfa||0),0) - as.reduce((s,a)=>s+(a.gfa||0),0)) < 1, desc: "GFA total matches sum" },
     { name: "No Negative GFA", pass: (project.assets||[]).every(a=>(a.gfa||0)>=0), desc: "No negative GFA" },
     { name: "No Zero Duration (active)", pass: (project.assets||[]).every(a=>((a.gfa||0)===0&&(a.costPerSqm||0)===0)||(a.constrDuration||0)>0), desc: "Active assets have duration > 0" },
     { name: "No Negative Leasable", pass: as.every(a=>(a.leasableArea||0)>=0), desc: "No negative leasable areas" },
-    { name: "CAPEX Reconciles", pass: Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - results.consolidated.totalCapex) < 1, desc: "Program vs Calc CAPEX match" },
+    { name: "CAPEX Reconciles", pass: Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - c.totalCapex) < 1, desc: "Program vs Calc CAPEX match" },
     { name: "Op Assets have EBITDA", pass: (project.assets||[]).filter(a=>a.revType==="Operating").every(a=>(a.opEbitda||0)>0||(a.gfa||0)===0), desc: "Operating assets have EBITDA > 0" },
+    { name: "Land Alloc = 100%", pass: Object.keys(phases).length === 0 || Math.abs(totalAlloc - 1) < 0.01, desc: "Land allocation sums to 100%" },
   ];
+
   // Fund checks
   if (financing && financing.mode !== "self") {
     const f = financing;
@@ -804,6 +829,10 @@ function computeFinancing(project, projectResults, incentivesResult) {
     }
     equityCalls[y] = Math.max(0, c.capex[y] - drawdown[y]);
   }
+  // Upfront fee added to equity calls in first drawdown year
+  let firstDrawYear = -1;
+  for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { firstDrawYear = y; break; } }
+  if (firstDrawYear >= 0) equityCalls[firstDrawYear] += upfrontFee;
 
   // ── Debt balance + repayment ──
   const debtBalOpen = new Array(h).fill(0);
@@ -811,7 +840,16 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const repay = new Array(h).fill(0);
   const interest = new Array(h).fill(0);
   const debtService = new Array(h).fill(0);
-  const repayStart = constrEnd + grace + 1;
+
+  // Grace period: user specifies start year, or auto = first drawdown
+  let graceStartIdx;
+  if ((project.debtGraceStartYear || 0) > 0) {
+    graceStartIdx = project.debtGraceStartYear - startYear;
+  } else {
+    graceStartIdx = constrEnd; // fallback
+    for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { graceStartIdx = y; break; } }
+  }
+  const repayStart = graceStartIdx + grace;
   const annualRepay = repayYears > 0 ? totalDrawn / repayYears : 0;
 
   for (let y = 0; y < h; y++) {
@@ -823,16 +861,26 @@ function computeFinancing(project, projectResults, incentivesResult) {
       repay[y] = bal;
     }
     debtBalClose[y] = bal - repay[y];
-    interest[y] = bal * rate;
+    // Interest on AVERAGE balance (open+close)/2 - matches Excel methodology
+    interest[y] = ((debtBalOpen[y] + drawdown[y] + debtBalClose[y]) / 2) * rate;
     debtService[y] = repay[y] + interest[y];
   }
 
   // ── Exit ──
   const exitProceeds = new Array(h).fill(0);
-  const exitYr = (project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEnd + grace + 2;
-  if (exitYr >= 0 && exitYr < h) {
+  const exitStrategy = project.exitStrategy || "sale";
+  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEnd + grace + 2);
+
+  if (exitStrategy !== "hold" && exitYr >= 0 && exitYr < h) {
     const stabIncome = c.income[Math.min(exitYr, h - 1)] || c.income[Math.min(constrEnd + 2, h - 1)] || 0;
-    const exitVal = stabIncome * (project.exitMultiple || 10);
+    const stabNOI = stabIncome - (c.landRent[Math.min(exitYr, h-1)] || 0);
+    let exitVal;
+    if (exitStrategy === "caprate") {
+      const capRate = (project.exitCapRate || 9) / 100;
+      exitVal = capRate > 0 ? stabNOI / capRate : 0;
+    } else {
+      exitVal = stabIncome * (project.exitMultiple || 10);
+    }
     const exitCost = exitVal * (project.exitCostPct || 2) / 100;
     exitProceeds[exitYr] = Math.max(0, exitVal - exitCost - debtBalClose[exitYr]);
   }
@@ -844,10 +892,11 @@ function computeFinancing(project, projectResults, incentivesResult) {
   for (let y = 0; y < h; y++) adjustedDebtService[y] = repay[y] + adjustedInterest[y];
 
   // ── Levered CF (with incentives) ──
+  // landRent is positive (cost amount), income is positive (revenue)
   const adjustedLandRent = ir?.adjustedLandRent || c.landRent;
   const leveredCF = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
-    leveredCF[y] = c.income[y] - Math.abs(adjustedLandRent[y]) - c.capex[y]
+    leveredCF[y] = c.income[y] - adjustedLandRent[y] - c.capex[y]
       + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0)
       - adjustedDebtService[y] + drawdown[y] + exitProceeds[y];
   }
@@ -855,7 +904,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
   // ── DSCR (using adjusted interest) ──
   const dscr = new Array(h).fill(null);
   for (let y = 0; y < h; y++) {
-    if (adjustedDebtService[y] > 0) { dscr[y] = (c.income[y] - Math.abs(adjustedLandRent[y])) / adjustedDebtService[y]; }
+    if (adjustedDebtService[y] > 0) { dscr[y] = (c.income[y] - adjustedLandRent[y]) / adjustedDebtService[y]; }
   }
 
   return {
@@ -866,7 +915,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
     debtService: adjustedDebtService, leveredCF, dscr, exitProceeds,
     totalDebt: totalDrawn, totalInterest: adjustedInterest.reduce((a, b) => a + b, 0),
     interestSubsidyTotal: intSub.total, interestSubsidySchedule: intSub.savings,
-    upfrontFee, maxDebt, rate, tenor, grace, repayYears,
+    upfrontFee, maxDebt, rate, tenor, grace, repayYears, graceStartIdx,
     leveredIRR: calcIRR(leveredCF), constrEnd, repayStart, exitYear: exitYr + startYear,
   };
 }
@@ -895,7 +944,7 @@ function computeWaterfall(project, projectResults, financing) {
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
   const devFeeTotal = c.totalCapex * (project.developerFeePct || 0) / 100;
   const structFee = isFund ? c.totalCapex * (project.structuringFeePct || 0) / 100 : 0;
-  const annualMgmt = isFund ? f.devCostInclLand * (project.annualMgmtFeePct || 0) / 100 : 0;
+  const annualMgmt = isFund ? ((project.mgmtFeeBase === "equity" ? totalEquity : f.devCostInclLand) * (project.annualMgmtFeePct || 0) / 100) : 0;
   const annualCustody = isFund ? (project.custodyFeeAnnual || 0) : 0;
 
   // Fee schedule
@@ -910,21 +959,25 @@ function computeWaterfall(project, projectResults, financing) {
   let constrStart = h, constrEnd = 0;
   for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = Math.min(constrStart, y); constrEnd = Math.max(constrEnd, y); } }
 
+  // Fund start year: user input or auto (1 year before construction)
+  const fundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : Math.max(0, constrStart - 1);
+
   // Exit year
-  const exitYr = (project.exitYear || 0) > 0 ? project.exitYear - sy : constrEnd + (project.debtGrace || 3) + 2;
+  const exitStrategy = project.exitStrategy || "sale";
+  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : constrEnd + (project.debtGrace || 3) + 2);
   const operYears = exitYr - constrStart + 1;
 
-  // Subscription fee at fund start
-  if (constrStart < h) feeSub[constrStart] = subFee;
+  // Subscription fee at fund start (not construction start)
+  if (fundStartIdx < h) feeSub[fundStartIdx] = subFee;
   // Structuring fee at fund start
-  if (constrStart < h) feeStruct[constrStart] = structFee;
+  if (fundStartIdx < h) feeStruct[fundStartIdx] = structFee;
   // Developer fee spread over construction
   const constrYears = constrEnd - constrStart + 1;
   for (let y = constrStart; y <= constrEnd && y < h; y++) {
     if (c.totalCapex > 0) feeDev[y] = devFeeTotal * (c.capex[y] / c.totalCapex);
   }
-  // Management + custody fees during operation period
-  for (let y = constrStart; y <= exitYr && y < h; y++) {
+  // Management + custody fees from fund start to exit
+  for (let y = fundStartIdx; y <= exitYr && y < h; y++) {
     feeMgmt[y] = annualMgmt;
     feeCustody[y] = annualCustody;
   }
@@ -938,24 +991,19 @@ function computeWaterfall(project, projectResults, financing) {
     equityCalls[y] = f.equityCalls[y] + fees[y];
   }
 
-  // Exit proceeds
-  const exitProceeds = new Array(h).fill(0);
-  if (exitYr >= 0 && exitYr < h) {
-    const stabIncome = c.income[Math.min(exitYr, h - 1)] || c.income[Math.min(constrEnd + 2, h - 1)] || 0;
-    const exitVal = stabIncome * (project.exitMultiple || 10);
-    const exitCost = exitVal * (project.exitCostPct || 2) / 100;
-    const debtOutstanding = f.debtBalClose[exitYr] || 0;
-    exitProceeds[exitYr] = Math.max(0, exitVal - exitCost - debtOutstanding);
-  }
+  // Exit proceeds - use from financing engine (already net of debt)
+  const exitProceeds = [...(f.exitProceeds || new Array(h).fill(0))];
 
   // Cash available for distribution
+  // = NOI - debt service - fees + exit proceeds (at exit year)
+  // exitProceeds already has debt subtracted in financing engine
   const cashAvail = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
     const noi = c.income[y] - c.landRent[y];
     const debtSvc = f.debtService[y] || 0;
     const netOp = noi - debtSvc - fees[y];
     cashAvail[y] = (y <= exitYr ? netOp : 0) + exitProceeds[y];
-    if (cashAvail[y] < 0) cashAvail[y] = 0; // Can't distribute negatives
+    if (cashAvail[y] < 0) cashAvail[y] = 0;
   }
 
   // 4-tier waterfall
@@ -1055,10 +1103,11 @@ function computeWaterfall(project, projectResults, financing) {
   const lpIRR = calcIRR(lpNetCF);
   const gpIRR = calcIRR(gpNetCF);
   const projIRR = c.irr;
-  const lpTotalInvested = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
-  const gpTotalInvested = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
+  // MOIC = Total Distributions / Equity Invested (NOT equity calls which include fees)
   const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
+  const lpTotalInvested = lpEquity;
+  const gpTotalInvested = gpEquity;
   const lpMOIC = lpTotalInvested > 0 ? lpTotalDist / lpTotalInvested : 0;
   const gpMOIC = gpTotalInvested > 0 ? gpTotalDist / gpTotalInvested : 0;
 
@@ -1089,10 +1138,110 @@ function computeWaterfall(project, projectResults, financing) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// WATERFALL VIEW COMPONENT
+// PER-PHASE WATERFALL (runs waterfall for each phase independently)
 // ═══════════════════════════════════════════════════════════════
-function WaterfallView({ project, results, financing, waterfall, t, lang }) {
+function computePhaseWaterfalls(project, projectResults, financing, waterfallConsolidated) {
+  if (!project || !projectResults || !financing || !waterfallConsolidated) return {};
+  if (project.finMode === "self") return {};
+
+  const phases = projectResults.phaseResults;
+  const phaseNames = Object.keys(phases);
+  if (phaseNames.length <= 1) return {}; // No need if single phase
+
+  const h = project.horizon || 50;
+  const sy = project.startYear || 2026;
+  const c = projectResults.consolidated;
+  const f = financing;
+  const wc = waterfallConsolidated;
+
+  const result = {};
+
+  for (const pName of phaseNames) {
+    const pr = phases[pName];
+    const allocPct = pr.allocPct || (1 / phaseNames.length);
+
+    // Phase-level financing allocation (proportional to CAPEX)
+    const capexPct = c.totalCapex > 0 ? pr.totalCapex / c.totalCapex : allocPct;
+
+    const pDebt = f.totalDebt * capexPct;
+    const pEquity = f.totalEquity * capexPct;
+    const pGpEquity = f.gpEquity * capexPct;
+    const pLpEquity = f.lpEquity * capexPct;
+    const pFees = wc.totalFees * capexPct;
+
+    // Phase exit proceeds (proportional to income at exit)
+    const exitYr = wc.exitYear - sy;
+    const totalIncomeAtExit = c.income[exitYr] || 1;
+    const phaseIncomeAtExit = pr.income[exitYr] || 0;
+    const exitPct = totalIncomeAtExit > 0 ? phaseIncomeAtExit / totalIncomeAtExit : capexPct;
+
+    // Phase cash available
+    const pCashAvail = new Array(h).fill(0);
+    const pEquityCalls = new Array(h).fill(0);
+    for (let y = 0; y < h; y++) {
+      pEquityCalls[y] = (wc.equityCalls[y] || 0) * capexPct;
+      const noi = pr.income[y] - pr.landRent[y];
+      const debtSvc = (f.debtService[y] || 0) * capexPct;
+      const fees = (wc.fees[y] || 0) * capexPct;
+      const exitP = (wc.exitProceeds[y] || 0) * exitPct;
+      pCashAvail[y] = (y <= exitYr ? (noi - debtSvc - fees) : 0) + exitP;
+      if (pCashAvail[y] < 0) pCashAvail[y] = 0;
+    }
+
+    // Run 4-tier waterfall for this phase
+    const prefRate = (project.prefReturnPct || 15) / 100;
+    const carryPct = (project.carryPct || 30) / 100;
+    const lpSplitPct = (project.lpProfitSplitPct || 70) / 100;
+    const gpPct = wc.gpPct;
+    const lpPct = wc.lpPct;
+
+    const tier1=[],tier2=[],tier3=[],tier4LP=[],tier4GP=[],lpDist=[],gpDist=[];
+    for(let i=0;i<h;i++){tier1.push(0);tier2.push(0);tier3.push(0);tier4LP.push(0);tier4GP.push(0);lpDist.push(0);gpDist.push(0);}
+
+    let cumEqCalled=0,cumReturned=0,cumPrefPaid=0,cumPrefAccrued=0;
+    for(let y=0;y<h;y++){
+      cumEqCalled+=pEquityCalls[y];
+      const unreturned=cumEqCalled-cumReturned;
+      const yearPref=unreturned*prefRate;
+      cumPrefAccrued+=yearPref;
+      let rem=pCashAvail[y];
+      if(rem<=0)continue;
+      if(unreturned>0&&rem>0){const t1=Math.min(rem,unreturned);tier1[y]=t1;rem-=t1;cumReturned+=t1;}
+      const prefOwed=cumPrefAccrued-cumPrefPaid;
+      if(prefOwed>0&&rem>0){const t2=Math.min(rem,prefOwed);tier2[y]=t2;rem-=t2;cumPrefPaid+=t2;}
+      if(project.gpCatchup&&rem>0){const gpTarget=(tier1[y]+tier2[y]+rem)*carryPct;const catchup=Math.min(rem,Math.max(0,gpTarget));tier3[y]=catchup;rem-=catchup;}
+      if(rem>0){tier4LP[y]=rem*lpSplitPct;tier4GP[y]=rem*(1-lpSplitPct);}
+      lpDist[y]=(tier1[y]+tier2[y])*lpPct+tier4LP[y];
+      gpDist[y]=(tier1[y]+tier2[y])*gpPct+tier3[y]+tier4GP[y];
+    }
+
+    const lpNetCF=new Array(h).fill(0),gpNetCF=new Array(h).fill(0);
+    for(let y=0;y<h;y++){lpNetCF[y]=-pEquityCalls[y]*lpPct+lpDist[y];gpNetCF[y]=-pEquityCalls[y]*gpPct+gpDist[y];}
+
+    const lpTotalDist=lpDist.reduce((a,b)=>a+b,0);
+    const gpTotalDist=gpDist.reduce((a,b)=>a+b,0);
+    const lpInv=pEquityCalls.reduce((a,b)=>a+b,0)*lpPct;
+    const gpInv=pEquityCalls.reduce((a,b)=>a+b,0)*gpPct;
+
+    result[pName] = {
+      debt: pDebt, equity: pEquity, gpEquity: pGpEquity, lpEquity: pLpEquity,
+      fees: pFees, capexPct, exitPct,
+      cashAvail: pCashAvail, equityCalls: pEquityCalls,
+      tier1, tier2, tier3, tier4LP, tier4GP, lpDist, gpDist, lpNetCF, gpNetCF,
+      lpIRR: calcIRR(lpNetCF), gpIRR: calcIRR(gpNetCF), projIRR: pr.irr,
+      lpMOIC: lpInv > 0 ? lpTotalDist / lpInv : 0,
+      gpMOIC: gpInv > 0 ? gpTotalDist / gpInv : 0,
+      lpTotalDist, gpTotalDist, lpTotalInvested: lpInv, gpTotalInvested: gpInv,
+      lpNPV10: calcNPV(lpNetCF, 0.10), gpNPV10: calcNPV(gpNetCF, 0.10),
+      totalCashAvail: pCashAvail.reduce((a,b)=>a+b,0),
+    };
+  }
+
+  return result;
+}
+function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, t, lang }) {
   const [showYrs, setShowYrs] = useState(15);
+  const [selectedPhase, setSelectedPhase] = useState("all");
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
     <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
@@ -1101,7 +1250,9 @@ function WaterfallView({ project, results, financing, waterfall, t, lang }) {
   const h = results.horizon;
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
-  const w = waterfall;
+  const phaseNames = Object.keys(results.phaseResults || {});
+  const hasPhases = phaseNames.length > 1 && phaseWaterfalls && Object.keys(phaseWaterfalls).length > 0;
+  const w = (selectedPhase !== "all" && phaseWaterfalls?.[selectedPhase]) ? phaseWaterfalls[selectedPhase] : waterfall;
   const cur = project.currency || "SAR";
 
   const CFRow=({label,values,total,bold,color,negate})=>{
@@ -1115,6 +1266,20 @@ function WaterfallView({ project, results, financing, waterfall, t, lang }) {
   };
 
   return (<div>
+    {/* Phase selector */}
+    {hasPhases && (
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:500,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec")}}>
+          {lang==="ar"?"الإجمالي":"Consolidated"}
+        </button>
+        {phaseNames.map(p=>(
+          <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:500,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec")}}>
+            {p}
+          </button>
+        ))}
+      </div>
+    )}
+
     {/* Returns KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:10,marginBottom:18}}>
       <KPI label="LP Equity" value={fmtM(w.lpEquity)} sub={`${fmtPct(w.lpPct*100)}`} color="#8b5cf6" />
@@ -1159,7 +1324,7 @@ function WaterfallView({ project, results, financing, waterfall, t, lang }) {
         {[
           {label: lang==="ar"?"رد رأس المال":"Tier 1: Return of Capital", val: w.tier1.reduce((a,b)=>a+b,0), bg:"#dbeafe", fg:"#1e40af"},
           {label: lang==="ar"?"العائد التفضيلي":"Tier 2: Preferred Return", val: w.tier2.reduce((a,b)=>a+b,0), bg:"#dcfce7", fg:"#166534"},
-          {label: lang==="ar"?"تعويض المطور":"Tier 3: GP Catch-up", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e"},
+          {label: lang==="ar"?"تعويض المطور":"Tier 3: GP Catch-up" tip="Developer catches up to carry % before final split", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e"},
           {label: lang==="ar"?"تقسيم الأرباح (LP)":"Tier 4: LP Profit Split", val: w.tier4LP.reduce((a,b)=>a+b,0), bg:"#ede9fe", fg:"#5b21b6"},
           {label: lang==="ar"?"تقسيم الأرباح (GP)":"Tier 4: GP Profit Split", val: w.tier4GP.reduce((a,b)=>a+b,0), bg:"#e0f2fe", fg:"#075985"},
         ].map((t,i)=>(
@@ -1187,6 +1352,41 @@ function WaterfallView({ project, results, financing, waterfall, t, lang }) {
         ))}
       </div>
     </div>
+
+    {/* Phase comparison table */}
+    {hasPhases && selectedPhase === "all" && (
+      <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:18}}>
+        <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600}}>{lang==="ar"?"مقارنة المراحل":"Phase Comparison"}</div>
+        <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}>
+          <thead><tr>
+            <th style={{...thSt,minWidth:100}}>{lang==="ar"?"المرحلة":"Phase"}</th>
+            <th style={{...thSt,textAlign:"right"}}>CAPEX %</th>
+            <th style={{...thSt,textAlign:"right"}}>LP IRR</th>
+            <th style={{...thSt,textAlign:"right"}}>GP IRR</th>
+            <th style={{...thSt,textAlign:"right"}}>LP MOIC</th>
+            <th style={{...thSt,textAlign:"right"}}>GP MOIC</th>
+            <th style={{...thSt,textAlign:"right"}}>LP Dist</th>
+            <th style={{...thSt,textAlign:"right"}}>GP Dist</th>
+          </tr></thead>
+          <tbody>
+            {phaseNames.map(p => {
+              const pw = phaseWaterfalls[p];
+              if (!pw) return null;
+              return <tr key={p}>
+                <td style={{...tdSt,fontWeight:600}}>{p}</td>
+                <td style={tdN}>{fmtPct(pw.capexPct*100)}</td>
+                <td style={{...tdN,color:"#8b5cf6",fontWeight:600}}>{pw.lpIRR?fmtPct(pw.lpIRR*100):"—"}</td>
+                <td style={{...tdN,color:"#3b82f6",fontWeight:600}}>{pw.gpIRR?fmtPct(pw.gpIRR*100):"—"}</td>
+                <td style={tdN}>{pw.lpMOIC?pw.lpMOIC.toFixed(2)+"x":"—"}</td>
+                <td style={tdN}>{pw.gpMOIC?pw.gpMOIC.toFixed(2)+"x":"—"}</td>
+                <td style={{...tdN,color:"#16a34a"}}>{fmtM(pw.lpTotalDist)}</td>
+                <td style={{...tdN,color:"#16a34a"}}>{fmtM(pw.gpTotalDist)}</td>
+              </tr>;
+            })}
+          </tbody>
+        </table></div>
+      </div>
+    )}
 
     {/* Year selector + tables */}
     <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12}}>
@@ -1230,7 +1430,11 @@ function WaterfallView({ project, results, financing, waterfall, t, lang }) {
 
 function FinancingView({ project, results, financing, t, up, lang }) {
   const [showYrs, setShowYrs] = useState(15);
-  if (!project || !results || !financing) return <div style={{color:"#9ca3af"}}>Complete asset program first.</div>;
+  if (!project || !results || !financing) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
+    <div style={{fontSize:32,marginBottom:12}}>📊</div>
+    <div style={{fontSize:14,fontWeight:500,color:"#6b7080",marginBottom:6}}>{lang==="ar"?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
+    <div style={{fontSize:12}}>{lang==="ar"?"أضف أصول في تاب 'برنامج الأصول' ثم ارجع هنا":"Add assets in the 'Asset Program' tab, then return here"}</div>
+  </div>;
   const h = results.horizon;
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
@@ -1287,6 +1491,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:10,fontSize:12}}>
         <div><span style={{color:"#6b7080"}}>Tenor:</span> <strong>{project.loanTenor} yrs</strong> ({project.debtGrace} grace + {f.repayYears} repay)</div>
+        <div><span style={{color:"#6b7080"}}>{lang==="ar"?"بداية السماح":"Grace Start"}:</span> <strong>{sy + (f.graceStartIdx||0)}</strong></div>
         <div><span style={{color:"#6b7080"}}>Rate:</span> <strong>{project.financeRate}%</strong></div>
         <div><span style={{color:"#6b7080"}}>Upfront Fee:</span> <strong>{project.upfrontFeePct}%</strong></div>
         <div><span style={{color:"#6b7080"}}>Repay Starts:</span> <strong>{sy + f.repayStart}</strong></div>
@@ -1464,7 +1669,7 @@ const SidebarInput = memo(function SidebarInput({ value, onChange, type = "text"
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 
-export default function ReDevModeler() {
+export default function ReDevModeler({ user, signOut }) {
   const [view, setView] = useState("dashboard");
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
@@ -1494,6 +1699,7 @@ export default function ReDevModeler() {
   const incentivesResult = useMemo(() => project && results ? computeIncentives(project, results) : null, [project, results]);
   const financing = useMemo(() => project && results ? computeFinancing(project, results, incentivesResult) : null, [project, results, incentivesResult]);
   const waterfall = useMemo(() => project && results && financing ? computeWaterfall(project, results, financing) : null, [project, results, financing]);
+  const phaseWaterfalls = useMemo(() => computePhaseWaterfalls(project, results, financing, waterfall), [project, results, financing, waterfall]);
   const checks = useMemo(() => project && results ? runChecks(project, results, financing, waterfall) : [], [project, results, financing, waterfall]);
 
   const createProject = async () => { const p = defaultProject(); await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject(p); setView("editor"); setActiveTab("dashboard"); };
@@ -1526,7 +1732,7 @@ export default function ReDevModeler() {
   const goBack = () => { setView("dashboard"); setProject(null); };
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>RE-DEV MODELER</div><div style={{fontSize:13,color:"#6b7080",marginTop:8}}>Loading...</div></div></div>;
-  if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} />;
+  if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
 
   const dir = lang === "ar" ? "rtl" : "ltr";
 
@@ -1551,18 +1757,35 @@ export default function ReDevModeler() {
           <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
           <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
           <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"EN"}</button>
+          <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const shared=[...(project.sharedWith||[])];if(!shared.includes(email)){shared.push(email);up({sharedWith:shared});alert(lang==="ar"?"تمت المشاركة مع "+email:"Shared with "+email);}else{alert(lang==="ar"?"مشارك مسبقاً":"Already shared");}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}</button>
+          {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
+          {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
-        <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0}}>
-          {[{key:"dashboard",label:t.dashboard},{key:"assets",label:t.assetProgram},{key:"financing",label:lang==="ar"?"التمويل":"Financing"},{key:"waterfall",label:lang==="ar"?"شلال التوزيعات":"Waterfall"},{key:"incentives",label:lang==="ar"?"الحوافز الحكومية":"Incentives"},{key:"reports",label:lang==="ar"?"التقارير":"Reports"},{key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},{key:"cashflow",label:t.cashFlow},{key:"checks",label:t.checks}].map(tb=>(
-            <button key={tb.key} onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 16px",fontSize:12,fontWeight:500,border:"none",cursor:"pointer",background:"none",color:activeTab===tb.key?"#2563eb":"#6b7080",borderBottom:activeTab===tb.key?"2px solid #2563eb":"2px solid transparent"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
+        <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
+          {/* Progress steps */}
+          <div style={{display:"flex",alignItems:"center",gap:2,padding:"8px 12px 8px 0",borderRight:"1px solid #f0f1f5",marginRight:4}}>
+            {[
+              {n:"1",done:(project.assets||[]).length>0},
+              {n:"2",done:project.finMode!=="self"},
+              {n:"3",done:!!waterfall},
+              {n:"4",done:false},
+            ].map((s,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:2}}>
+                <div style={{width:18,height:18,borderRadius:9,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",background:s.done?"#16a34a":"#e5e7ec",color:s.done?"#fff":"#9ca3af"}}>{s.done?"✓":s.n}</div>
+                {i<3&&<div style={{width:12,height:1,background:s.done?"#16a34a":"#e5e7ec"}} />}
+              </div>
+            ))}
+          </div>
+          {[{key:"dashboard",label:t.dashboard},{key:"assets",label:t.assetProgram},{key:"financing",label:lang==="ar"?"التمويل":"Financing"},{key:"waterfall",label:lang==="ar"?"شلال التوزيعات":"Waterfall"},{key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},{key:"reports",label:lang==="ar"?"التقارير":"Reports"},{key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},{key:"cashflow",label:t.cashFlow},{key:"checks",label:t.checks}].map(tb=>(
+            <button key={tb.key} onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:500,border:"none",cursor:"pointer",background:"none",color:activeTab===tb.key?"#2563eb":"#6b7080",borderBottom:activeTab===tb.key?"2px solid #2563eb":"2px solid transparent",whiteSpace:"nowrap"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
           ))}
         </div>
         <div style={{flex:1,overflow:"auto",padding:18}}>
           {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} />}
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
           {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} t={t} up={up} lang={lang} />}
-          {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} t={t} lang={lang} />}
-          {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} checks={checks} lang={lang} />}
+          {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} lang={lang} />}
+          {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} checks={checks} lang={lang} />}
           {activeTab==="scenarios"&&<ScenariosView project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />}
           {activeTab==="incentives"&&<IncentivesView project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />}
           {activeTab==="cashflow"&&<CashFlowView project={project} results={results} t={t} />}
@@ -1576,7 +1799,7 @@ export default function ReDevModeler() {
 // ═══════════════════════════════════════════════════════════════
 // PROJECTS DASHBOARD
 // ═══════════════════════════════════════════════════════════════
-function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t }) {
+function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut }) {
   const [confirmDel, setConfirmDel] = useState(null);
   const sorted = [...index].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
   return (
@@ -1588,7 +1811,11 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <div style={{fontSize:36,fontWeight:700,color:"#fff",letterSpacing:-1}}>{t.title}</div>
             <div style={{fontSize:14,color:"#6b7080",marginTop:8}}>{t.subtitle}</div>
           </div>
-          <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            {user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
+            {signOut && <button onClick={signOut} style={{...btnS,background:"#2a0a0a",color:"#f87171",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
+            <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
+          </div>
         </div>
         <div style={{display:"flex",gap:12,marginBottom:32}}>
           <button onClick={onCreate} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
@@ -1610,7 +1837,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                   <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
                 </div>
                 <span style={{fontSize:10,padding:"3px 10px",borderRadius:4,fontWeight:500,background:p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af"}}>{p.status||"Draft"}</span>
-                <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af"}} title="Duplicate">⧉</button>
+                <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>
                 {confirmDel===p.id ? (
                   <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>{onDel(p.id);setConfirmDel(null);}} style={{...btnSm,background:"#7f1d1d",color:"#fca5a5"}}>Yes</button>
@@ -1653,9 +1880,15 @@ function Sec({title,children,def=true}) {
   </div>);
 }
 
-function Fld({label,children,hint}) {
-  return (<div style={{marginBottom:9}}>
-    <label style={{display:"block",fontSize:11,color:"#7b8094",marginBottom:3}}>{label}</label>{children}
+function Fld({label,children,hint,tip}) {
+  const [showTip, setShowTip] = useState(false);
+  return (<div style={{marginBottom:9,position:"relative"}}>
+    <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#7b8094",marginBottom:3}}>
+      {label}
+      {tip && <span onMouseEnter={()=>setShowTip(true)} onMouseLeave={()=>setShowTip(false)} style={{cursor:"help",fontSize:10,color:"#4b5060",lineHeight:1}}>ⓘ</span>}
+    </label>
+    {showTip && tip && <div style={{position:"absolute",top:-4,left:0,right:0,transform:"translateY(-100%)",background:"#1a1d23",color:"#d0d4dc",padding:"8px 10px",borderRadius:6,fontSize:10,lineHeight:1.4,zIndex:99,boxShadow:"0 4px 12px rgba(0,0,0,0.4)",maxWidth:260}}>{tip}</div>}
+    {children}
     {hint&&<div style={{fontSize:10,color:"#4b5060",marginTop:2}}>{hint}</div>}
   </div>);
 }
@@ -1707,15 +1940,15 @@ function ControlPanel({ project, up, t, lang }) {
 
     <Sec title={t.capexAssumptions}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.softCost}><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
-        <Fld label={t.contingency}><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
+        <Fld label={t.softCost} tip="Indirect costs: design, supervision, permits. Standard 8-12%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
+        <Fld label={t.contingency} tip="Risk reserve for unexpected costs. Standard 3-7%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
       </div>
     </Sec>
 
     <Sec title={t.revenueAssumptions}>
       <Fld label={t.rentEsc}><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.defEfficiency}><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
+        <Fld label={t.defEfficiency} tip="Leasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
         <Fld label={t.defLeaseRate}><SidebarInput type="number" value={project.defaultLeaseRate} onChange={v=>up({defaultLeaseRate:v})} /></Fld>
       </div>
       <Fld label={t.defCostSqm}><SidebarInput type="number" value={project.defaultCostPerSqm} onChange={v=>up({defaultCostPerSqm:v})} /></Fld>
@@ -1762,7 +1995,7 @@ function ControlPanel({ project, up, t, lang }) {
         {/* ── Land Capitalization ── */}
         <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
           <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"رسملة الأرض":"Land Capitalization"}</div>
-          <Fld label={lang==="ar"?"هل ترسمل الأرض؟":"Capitalize Land?"}>
+          <Fld label={lang==="ar"?"هل ترسمل الأرض؟":"Capitalize Land?" tip="Convert leasehold right to equity contribution"}>
             <Sel lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
           </Fld>
           {project.landCapitalize && <>
@@ -1801,15 +2034,18 @@ function ControlPanel({ project, up, t, lang }) {
           </Fld>
           {project.debtAllowed && <>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label="Max LTV %"><SidebarInput type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></Fld>
-              <Fld label={lang==="ar"?"معدل الربح %":"Finance Rate %"}><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
+              <Fld label="Max LTV %" tip="Loan-to-Value ratio. Saudi banks: 50-70%"><SidebarInput type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></Fld>
+              <Fld label={lang==="ar"?"معدل الربح %":"Finance Rate %" tip="Annual profit/interest rate. Saudi market: 5-8%"}><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"}><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
               <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"}><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
             </div>
+            <Fld label={lang==="ar"?"سنة بداية السماح":"Grace Start Year" tip="Year when grace period begins (no principal repayment)"} hint={`0 = ${lang==="ar"?"تلقائي (أول سحب)":"auto (first drawdown)"}`}>
+              <SidebarInput type="number" value={project.debtGraceStartYear} onChange={v=>up({debtGraceStartYear:v})} />
+            </Fld>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"}><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %" tip="One-time loan fee at first drawdown"}><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
               <Fld label={lang==="ar"?"نوع السداد":"Repayment"}>
                 <Sel lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[
                   {value:"amortizing",en:"Amortizing",ar:"أقساط"},
@@ -1829,19 +2065,36 @@ function ControlPanel({ project, up, t, lang }) {
         {/* ── Exit ── */}
         <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
           <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"التخارج":"Exit"}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <Fld label={lang==="ar"?"استراتيجية التخارج":"Exit Strategy"}>
+            <Sel lang={lang} value={project.exitStrategy||"sale"} onChange={v=>up({exitStrategy:v})} options={[
+              {value:"sale",en:"Asset Sale (Multiple)",ar:"بيع الأصل (مضاعف)"},
+              {value:"caprate",en:"Asset Sale (Cap Rate)",ar:"بيع الأصل (معدل رسملة)"},
+              {value:"hold",en:"Hold for Income (No Sale)",ar:"احتفاظ بالدخل (بدون بيع)"},
+            ]} />
+          </Fld>
+          {(project.exitStrategy||"sale") !== "hold" && <>
             <Fld label={lang==="ar"?"سنة التخارج":"Exit Year"} hint="0 = auto"><SidebarInput type="number" value={project.exitYear} onChange={v=>up({exitYear:v})} /></Fld>
-            <Fld label={lang==="ar"?"المضاعف":"Exit Multiple (x)"}><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
-          </div>
-          <Fld label={lang==="ar"?"تكاليف التخارج %":"Exit Cost %"}><SidebarInput type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></Fld>
+            {(project.exitStrategy||"sale") === "sale" && (
+              <Fld label={lang==="ar"?"مضاعف الإيجار":"Exit Multiple (x)" tip="Sale price = Annual Rent × Multiple"}><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
+            )}
+            {project.exitStrategy === "caprate" && (
+              <Fld label={lang==="ar"?"معدل الرسملة %":"Cap Rate %"}><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
+            )}
+            <Fld label={lang==="ar"?"تكاليف التخارج %":"Exit Cost %"}><SidebarInput type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></Fld>
+          </>}
+          {project.vehicleType === "fund" && (
+            <Fld label={lang==="ar"?"سنة بداية الصندوق":"Fund Start Year" tip="Fund establishment year. Usually 1 year before construction"} hint={`0 = ${lang==="ar"?"تلقائي (سنة قبل البناء)":"auto (1yr before construction)"}`}>
+              <SidebarInput type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} />
+            </Fld>
+          )}
         </div>
         {/* ── Waterfall ── */}
         <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
           <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"شلال التوزيعات":"Waterfall"}</div>
-          <Fld label={lang==="ar"?"العائد التفضيلي %":"Preferred Return %"}><SidebarInput type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></Fld>
+          <Fld label={lang==="ar"?"العائد التفضيلي %":"Preferred Return %" tip="Priority return to investors before profit split. Standard 8-15%"}><SidebarInput type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></Fld>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <Fld label={lang==="ar"?"حصة الأداء %":"Carry %"}><SidebarInput type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></Fld>
-            <Fld label={lang==="ar"?"حصة LP %":"LP Split %"}><SidebarInput type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></Fld>
+            <Fld label={lang==="ar"?"حصة الأداء %":"Carry %" tip="Developer profit share after preferred return. Standard 20-30%"}><SidebarInput type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></Fld>
+            <Fld label={lang==="ar"?"حصة LP %":"LP Split %" tip="Investor share of remaining profits. Standard 70-80%"}><SidebarInput type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></Fld>
           </div>
           <Fld label={lang==="ar"?"تعويض المطور؟":"GP Catch-up"}>
             <Sel lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} />
@@ -1852,14 +2105,14 @@ function ControlPanel({ project, up, t, lang }) {
           <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
             <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"رسوم الصندوق":"Fund Fees"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"اكتتاب %":"Subscription %"}><SidebarInput type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></Fld>
-              <Fld label={lang==="ar"?"إدارة %":"Mgmt Fee %"}><SidebarInput type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"اكتتاب %":"Subscription %" tip="One-time fund entry fee. Standard 1-3%"}><SidebarInput type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"إدارة %":"Mgmt Fee %" tip="Annual management fee. Standard 0.5-2%"}><SidebarInput type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label={lang==="ar"?"تطوير %":"Developer Fee %"}><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
-              <Fld label={lang==="ar"?"هيكلة %":"Structuring %"}><SidebarInput type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"هيكلة %":"Structuring %" tip="One-time deal structuring fee. Standard 0.1-1%"}><SidebarInput type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></Fld>
             </div>
-            <Fld label={lang==="ar"?"رسوم حفظ سنوية":"Custody Fee (annual)"}><SidebarInput type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></Fld>
+            <Fld label={lang==="ar"?"رسوم حفظ سنوية":"Custody Fee (annual)" tip="Annual custody & admin (fixed SAR). Standard 100-200K"}><SidebarInput type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></Fld>
           </div>
         )}
         {/* Developer fee for non-fund */}
@@ -2226,6 +2479,15 @@ function ProjectDash({ project, results, checks, t, financing }) {
   const phases = Object.entries(results.phaseResults);
   const fc = checks.filter(ch => !ch.pass).length;
   const f = financing;
+  const h = results.horizon;
+
+  // Payback period
+  let cumCF = 0, paybackYr = null;
+  for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYr === null) paybackYr = y + 1; }
+
+  // Cash Yield (stabilized year income / total equity)
+  const stabYear = Math.min(10, h - 1);
+  const cashYield = f && f.totalEquity > 0 ? (c.income[stabYear] / f.totalEquity * 100) : null;
 
   return (<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(170px, 1fr))",gap:10,marginBottom:20}}>
@@ -2236,6 +2498,8 @@ function ProjectDash({ project, results, checks, t, financing }) {
       {f && f.mode !== "self" && <KPI label="Total Debt" value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" />}
       <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" />
       <KPI label={t.npv10} value={fmtM(c.npv10)} sub={cur} color="#06b6d4" />
+      <KPI label="Payback" value={paybackYr ? `Year ${paybackYr}` : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" />
+      {cashYield !== null && <KPI label="Cash Yield" value={fmtPct(cashYield)} sub="on equity" color="#16a34a" />}
       <KPI label={t.assetsLabel} value={project.assets.length} color="#f59e0b" />
       <KPI label={t.checksLabel} value={fc===0?t.allPass:`${fc} FAIL`} color={fc===0?"#22c55e":"#ef4444"} />
     </div>
@@ -2470,9 +2734,10 @@ function generateFullModelCSV(project, results, financing, waterfall) {
   URL.revokeObjectURL(url);
 }
 
-function ReportsView({ project, results, financing, waterfall, checks, lang }) {
+function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, checks, lang }) {
   const reportRef = useRef(null);
   const [activeReport, setActiveReport] = useState(null);
+  const [selectedPhases, setSelectedPhases] = useState([]);
   if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
 
   const c = results.consolidated;
@@ -2482,6 +2747,12 @@ function ReportsView({ project, results, financing, waterfall, checks, lang }) {
   const sy = results.startYear;
   const h = results.horizon;
   const failCount = checks.filter(ch => !ch.pass).length;
+  const phaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
+
+  const togglePhase = (p) => {
+    setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  };
 
   const printReport = () => {
     const el = reportRef.current;
@@ -2528,6 +2799,23 @@ function ReportsView({ project, results, financing, waterfall, checks, lang }) {
         </button>
       ))}
     </div>
+
+    {/* Phase filter */}
+    {phaseNames.length > 1 && (
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:12,color:"#6b7080",marginBottom:6}}>{lang==="ar"?"اختر المراحل للتقرير":"Select phases for report"}</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec")}}>
+            {lang==="ar"?"الكل":"All"}
+          </button>
+          {phaseNames.map(p=>(
+            <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"5px 12px",fontSize:11,background:activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#f0f1f5",color:activePh.includes(p)&&selectedPhases.length>0?"#fff":"#1a1d23",border:"1px solid "+(activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#e5e7ec")}}>
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18}}>
