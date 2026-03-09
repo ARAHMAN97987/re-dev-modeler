@@ -1324,7 +1324,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {[
           {label: lang==="ar"?"رد رأس المال":"Tier 1: Return of Capital", val: w.tier1.reduce((a,b)=>a+b,0), bg:"#dbeafe", fg:"#1e40af"},
           {label: lang==="ar"?"العائد التفضيلي":"Tier 2: Preferred Return", val: w.tier2.reduce((a,b)=>a+b,0), bg:"#dcfce7", fg:"#166534"},
-          {label: lang==="ar"?"تعويض المطور":"Tier 3: GP Catch-up" tip="Developer catches up to carry % before final split", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e"},
+          {label: lang==="ar"?"تعويض المطور":"Tier 3: GP Catch-up", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e"},
           {label: lang==="ar"?"تقسيم الأرباح (LP)":"Tier 4: LP Profit Split", val: w.tier4LP.reduce((a,b)=>a+b,0), bg:"#ede9fe", fg:"#5b21b6"},
           {label: lang==="ar"?"تقسيم الأرباح (GP)":"Tier 4: GP Profit Split", val: w.tier4GP.reduce((a,b)=>a+b,0), bg:"#e0f2fe", fg:"#075985"},
         ].map((t,i)=>(
