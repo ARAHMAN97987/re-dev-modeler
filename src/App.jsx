@@ -1790,7 +1790,7 @@ export default function ReDevModeler({ user, signOut }) {
           {activeTab==="checks"&&<ChecksView checks={checks} t={t} />}
         </div>
       </div>
-      <AiAssistant open={aiOpen} onClose={()=>setAiOpen(false)} project={project} onApply={up} lang={lang} />
+      <AiAssistant open={aiOpen} onClose={()=>setAiOpen(false)} project={project} onApply={up} lang={lang} projectIndex={projectIndex} loadProjectFn={loadProject} />
     </div>
   );
 }

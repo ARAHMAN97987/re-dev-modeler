@@ -244,7 +244,7 @@ const btnStyle = {
 };
 
 // ── Component ──
-export default function AiAssistant({ open, onClose, project, onApply, lang }) {
+export default function AiAssistant({ open, onClose, project, onApply, lang, projectIndex, loadProjectFn }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -406,7 +406,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang }) {
       .filter(m => m.role === "user" || (m.role === "assistant" && messages.indexOf(m) > 0))
       .map(m => ({ role: m.role, content: m.content }));
 
-    // If this is the first real message, include project context
+    // Build context: current project + other saved projects
     const projectContext = project
       ? `\nCurrent project context: ${JSON.stringify({
           name: project.name,
@@ -420,12 +420,51 @@ export default function AiAssistant({ open, onClose, project, onApply, lang }) {
         })}`
       : "";
 
+    // Include other saved projects as reference
+    const otherProjects = (projectIndex || [])
+      .filter(p => p.id !== project?.id)
+      .map(p => ({ id: p.id, name: p.name, status: p.status, updatedAt: p.updatedAt }));
+    const projectsListContext = otherProjects.length > 0
+      ? `\n\nOther saved projects the user has (can reference or copy from):\n${JSON.stringify(otherProjects)}\nIf the user wants to reference or copy from another project, respond with: \`\`\`json\n{"_action": "load_project", "projectId": "THE_ID"}\n\`\`\`\nThe app will load that project's data and send it back to you in the next message so you can adapt it.`
+      : "";
+
+    // Check if we need to load a referenced project's data
+    let referencedProjectData = "";
+    if (loadProjectFn && text.match(/مشابه|مثل|زي|نسخة|copy|similar|like|based on|reference/i)) {
+      // Find if any project name matches
+      for (const p of otherProjects) {
+        if (text.includes(p.name) || text.includes(p.id)) {
+          try {
+            const refProj = await loadProjectFn(p.id);
+            if (refProj) {
+              referencedProjectData = `\n\nREFERENCED PROJECT DATA (user wants something similar to "${p.name}"):\n${JSON.stringify({
+                name: refProj.name, location: refProj.location, landType: refProj.landType, landArea: refProj.landArea,
+                landRentAnnual: refProj.landRentAnnual, landRentEscalation: refProj.landRentEscalation,
+                softCostPct: refProj.softCostPct, contingencyPct: refProj.contingencyPct,
+                phases: refProj.phases,
+                assets: (refProj.assets || []).map(a => ({
+                  phase: a.phase, category: a.category, name: a.name, plotArea: a.plotArea,
+                  footprint: a.footprint, gfa: a.gfa, revType: a.revType, leaseRate: a.leaseRate,
+                  costPerSqm: a.costPerSqm, constrDuration: a.constrDuration, efficiency: a.efficiency,
+                  hotelPL: a.hotelPL, marinaPL: a.marinaPL,
+                })),
+                finMode: refProj.finMode, debtAllowed: refProj.debtAllowed, maxLtvPct: refProj.maxLtvPct,
+                financeRate: refProj.financeRate, exitStrategy: refProj.exitStrategy,
+                prefReturnPct: refProj.prefReturnPct, carryPct: refProj.carryPct,
+              })}\nUse this as a template. Adapt the location, name, and any specifics the user mentioned. Keep the structure and parameters similar unless the user says otherwise.`;
+            }
+          } catch { /* ignore load errors */ }
+          break;
+        }
+      }
+    }
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: SYSTEM_PROMPT + projectContext,
+          system: SYSTEM_PROMPT + projectContext + projectsListContext + referencedProjectData,
           messages: apiMessages.length > 0 ? apiMessages : [{ role: "user", content: text }],
         }),
       });
