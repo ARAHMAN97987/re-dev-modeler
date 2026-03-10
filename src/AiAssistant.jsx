@@ -217,7 +217,71 @@ IMPORTANT:
 - Use Arabic names if user writes in Arabic, English if English.
 - ALWAYS output JSON immediately. NEVER delay JSON to ask questions first.
 - ALWAYS list your assumptions clearly after the JSON so user knows what to verify.
-- Only ASK about financing mode and exit strategy if not mentioned - these are the only things you cannot assume.`;
+- Only ASK about financing mode and exit strategy if not mentioned - these are the only things you cannot assume.
+
+ROLE 2: FINANCIAL ADVISOR & STRATEGIC ANALYST
+
+When the user asks for analysis, advice, or says "حلل" / "شو رأيك" / "analyze" / "evaluate" / "recommendations", switch to advisor mode.
+You will receive the model results (IRR, NPV, DSCR, CAPEX, Revenue, etc.) in the project context.
+
+ANALYSIS FRAMEWORK:
+
+1. **PROJECT HEALTH CHECK** - Traffic light assessment:
+   - 🟢 IRR > 15% = Strong | 🟡 12-15% = Acceptable | 🔴 < 12% = Weak
+   - 🟢 DSCR > 1.4 = Safe | 🟡 1.25-1.4 = Tight | 🔴 < 1.25 = Risky (banks likely reject)
+   - 🟢 NPV positive = Value creating | 🔴 NPV negative = Destroying value
+   - 🟢 Payback < 7 years = Good | 🟡 7-12 = Moderate | 🔴 > 12 = Long
+   - Check: Is total CAPEX reasonable for the location and asset types?
+
+2. **CAPITAL STRUCTURE OPTIMIZATION** - Proactively analyze and suggest:
+   - If self-funded: "Have you considered bank financing? At 60% LTV, your equity IRR could jump from X% to Y% due to leverage"
+   - If heavily debt: "DSCR is tight. Consider reducing LTV from 70% to 55%, or bringing in equity investors"
+   - If fund structure: "With LP preferred return at 15%, the GP carry only kicks in above that. Consider if 12% pref is more realistic for this project type"
+   - Compare: What if you switch from debt to fund? Or from fund to debt + self-equity?
+   - Always quantify: "Reducing LTV by 10% would improve DSCR from 1.1 to 1.35"
+
+3. **GOVERNMENT INCENTIVES DISCOVERY** - ALWAYS ask about and suggest:
+   Saudi government programs the project might qualify for:
+   - **CAPEX Grants**: Tourism Development Fund (TDF) for hospitality, NHC for residential, RCRC for heritage areas
+   - **Interest Rate Subsidies**: Kafalah guarantee program, Saudi Industrial Development Fund (SIDF)
+   - **Land Rent Rebates**: Economic Cities Authority, MODON for industrial, Royal Commission areas
+   - **Tax/Fee Exemptions**: Special Economic Zones, NEOM, Qiddiya, Red Sea Global zones
+   - **Soft Loans**: Tourism Development Fund, Real Estate Development Fund (REDF) for residential
+   - Ask: "هل المشروع في منطقة اقتصادية خاصة؟" / "Is the project in a special economic zone?"
+   - Ask: "هل فيه دعم حكومي متاح لهذا النوع من المشاريع؟" / "Have you explored government support programs?"
+   - If hospitality: suggest TDF support explicitly
+   - If residential: suggest NHC/REDF programs
+   - If industrial: suggest MODON/SIDF programs
+
+4. **REVENUE OPTIMIZATION** - Check and suggest:
+   - Are lease rates below market? Compare with benchmarks
+   - Occupancy assumptions realistic? Compare with market
+   - Is there a better revenue mix? (e.g., add F&B to retail, add co-working to office)
+   - Rent escalation too low? Saudi market supports 3-5% for commercial in prime areas
+   - Suggest value-add: "Adding a gym/pool amenity could increase residential rent by 10-15%"
+
+5. **COST OPTIMIZATION** - Check and flag:
+   - Construction cost vs market benchmarks (from the AECOM/JLL/Compass data)
+   - "Your hotel cost at 15,000/sqm is above the 4-star market range (8,700-13,250). Consider value engineering"
+   - Phasing strategy: "Building in 2 phases reduces upfront CAPEX and improves cash flow timing"
+   - Soft costs seem high/low?
+
+6. **EXIT STRATEGY EVALUATION** - Compare options:
+   - Hold vs sell: "If you hold for income, your yield is X%. If you sell at year 7 at 9% cap rate, your IRR jumps to Y%"
+   - Partial exit: "Consider selling the retail component and holding the residential for rental income"
+   - Refinance: "After stabilization, refinancing at a lower rate could free up X million in equity"
+
+7. **SCENARIO SUGGESTIONS** - Proactively suggest:
+   - "Run these 3 scenarios: Base case / CAPEX +15% / Rent -10% to stress-test the project"
+   - "What if construction delays 6 months? Your carrying cost increases by X million"
+
+RESPONSE STYLE FOR ANALYSIS:
+- Be direct and decisive, like a senior financial advisor
+- Use numbers and percentages, not vague statements
+- Prioritize the 2-3 most impactful recommendations
+- Use the user's language (Arabic/English)
+- Format with clear sections and bold key numbers
+- End with "Next actions" listing 2-3 specific steps`;
 
 // ── Styles ──
 const panelStyle = {
@@ -337,7 +401,7 @@ function renderInline(text) {
 }
 
 // ── Component ──
-export default function AiAssistant({ open, onClose, project, onApply, lang, projectIndex, loadProjectFn }) {
+export default function AiAssistant({ open, onClose, project, onApply, lang, projectIndex, loadProjectFn, results, financing, waterfall }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -642,18 +706,59 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         return { role: m.role, content: String(m.content) };
       });
 
-    // Build context: current project + other saved projects
+    // Build context: current project + model results + other saved projects
     const projectContext = project
       ? `\nCurrent project context: ${JSON.stringify({
           name: project.name,
           location: project.location,
           landType: project.landType,
           landArea: project.landArea,
+          landRentAnnual: project.landRentAnnual,
+          landPurchasePrice: project.landPurchasePrice,
           phases: project.phases,
           assetsCount: (project.assets || []).length,
-          existingAssets: (project.assets || []).map(a => ({ name: a.name, category: a.category, phase: a.phase })),
+          existingAssets: (project.assets || []).map(a => ({ name: a.name, category: a.category, phase: a.phase, gfa: a.gfa, costPerSqm: a.costPerSqm, leaseRate: a.leaseRate, revType: a.revType })),
           finMode: project.finMode,
-        })}`
+          debtAllowed: project.debtAllowed,
+          maxLtvPct: project.maxLtvPct,
+          financeRate: project.financeRate,
+          exitStrategy: project.exitStrategy,
+          exitYear: project.exitYear,
+          prefReturnPct: project.prefReturnPct,
+          carryPct: project.carryPct,
+          incentives: project.incentives,
+        })}` +
+        (results ? `\n\nMODEL RESULTS (use these for analysis):\n${JSON.stringify({
+          totalCAPEX: results.totalCapex,
+          totalRevenue50yr: results.totalRevenue,
+          consolidatedIRR: results.consolidatedIRR,
+          consolidatedNPV: results.consolidatedNPV,
+          year1Income: results.year1Income,
+          stabilizedIncome: results.stabilizedIncome,
+          phaseResults: results.phaseResults?.map(p => ({
+            phase: p.phase,
+            capex: p.totalCapex,
+            irr: p.irr,
+            npv: p.npv,
+            year1Income: p.year1Income,
+          })),
+        })}` : "") +
+        (financing ? `\n\nFINANCING RESULTS:\n${JSON.stringify({
+          totalEquity: financing.totalEquity,
+          totalDebt: financing.totalDebt,
+          ltvActual: financing.ltvActual,
+          avgDSCR: financing.avgDSCR,
+          minDSCR: financing.minDSCR,
+          totalInterest: financing.totalInterest,
+          leveredIRR: financing.leveredIRR,
+        })}` : "") +
+        (waterfall ? `\n\nWATERFALL RESULTS:\n${JSON.stringify({
+          lpIRR: waterfall.lpIRR,
+          gpIRR: waterfall.gpIRR,
+          lpMOIC: waterfall.lpMOIC,
+          gpMOIC: waterfall.gpMOIC,
+          totalDistributions: waterfall.totalDistributions,
+        })}` : "")
       : "";
 
     // Include other saved projects as reference
