@@ -1,0 +1,546 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+
+// ── System prompt that teaches Claude the project state structure ──
+const SYSTEM_PROMPT = `You are the AI assistant for RE-DEV MODELER, a real estate development financial modeling platform.
+Your job: parse the user's project description (Arabic or English) and return ONLY a valid JSON object that maps to the project state.
+
+CRITICAL RULES:
+1. ALWAYS respond with a JSON object wrapped in \`\`\`json ... \`\`\` code fences. Nothing else outside the fences except a brief confirmation message in the user's language.
+2. Only include fields the user mentioned or that can be reasonably inferred. Do NOT include fields with no data.
+3. All monetary values in SAR unless stated otherwise.
+4. If the user says "مليون" or "million", multiply by 1,000,000. "مليار" or "billion" = 1,000,000,000.
+5. If the user gives partial info, fill what you can and note what's missing in a "notes" field.
+6. Support incremental updates: if the user says "add a hotel" after initial setup, return only the new/changed fields.
+
+PROJECT STATE SCHEMA:
+{
+  "name": "string - project name",
+  "location": "string - city/area",
+  "startYear": "number - e.g. 2025",
+  "horizon": "number - projection years, default 50",
+  "currency": "SAR",
+  "landType": "lease | purchase | partner | bot",
+  "landArea": "number - sqm",
+  "landRentAnnual": "number - SAR/year (if lease)",
+  "landRentEscalation": "number - % every N years (if lease), default 5",
+  "landRentEscalationEveryN": "number - years between escalations, default 5",
+  "landRentGrace": "number - grace years, default 5",
+  "landRentTerm": "number - lease term years",
+  "landPurchasePrice": "number - SAR (if purchase)",
+  "partnerEquityPct": "number - % (if partner)",
+  "landValuation": "number - SAR (if partner)",
+  "botOperationYears": "number - (if bot)",
+  "softCostPct": "number - default 10",
+  "contingencyPct": "number - default 5",
+  "rentEscalation": "number - annual % default 0.75",
+  "defaultEfficiency": "number - % default 85",
+  "defaultLeaseRate": "number - SAR/sqm",
+  "defaultCostPerSqm": "number - SAR/sqm",
+  "phases": [{ "name": "string", "startYearOffset": "number", "footprint": "number sqm" }],
+  "assets": [{
+    "id": "auto-generated UUID",
+    "phase": "string - must match a phase name",
+    "category": "Hospitality|Retail|Office|Residential|Flexible|Marina|Cultural|Amenity|Open Space|Utilities|Industrial|Infrastructure",
+    "name": "string",
+    "code": "string - short code e.g. T1, M1, H1",
+    "notes": "string",
+    "plotArea": "number sqm",
+    "footprint": "number sqm - building footprint",
+    "gfa": "number sqm - gross floor area (floors x footprint)",
+    "revType": "Lease|Sale|Operating",
+    "efficiency": "number % - net leasable ratio",
+    "leaseRate": "number SAR/sqm/year (if Lease)",
+    "opEbitda": "number SAR/year (if Operating, for custom EBITDA)",
+    "escalation": "number - annual rent escalation %",
+    "rampUpYears": "number - years to reach stabilized occupancy, default 3",
+    "stabilizedOcc": "number % - target occupancy, default 100",
+    "costPerSqm": "number SAR/sqm - construction cost",
+    "constrStart": "number - year offset from project start",
+    "constrDuration": "number - months",
+    "hotelPL": "object or null - only for hotels/resorts",
+    "marinaPL": "object or null - only for marinas"
+  }],
+  "finMode": "self|debt|fund",
+  "vehicleType": "fund|direct|spv",
+  "debtAllowed": "boolean",
+  "maxLtvPct": "number %",
+  "financeRate": "number %",
+  "loanTenor": "number years",
+  "debtGrace": "number years",
+  "upfrontFeePct": "number %",
+  "repaymentType": "amortizing|bullet",
+  "islamicMode": "conventional|murabaha|ijara",
+  "exitStrategy": "sale|hold|caprate",
+  "exitYear": "number - 0 for auto",
+  "exitMultiple": "number - x annual rent",
+  "exitCostPct": "number %",
+  "prefReturnPct": "number % - preferred return for waterfall",
+  "gpCatchup": "boolean",
+  "carryPct": "number % - GP carry",
+  "lpProfitSplitPct": "number % - LP share of profits"
+}
+
+HOTEL P&L OBJECT (hotelPL):
+{ "keys": rooms, "adr": SAR/night, "stabOcc": %, "daysYear": 365,
+  "roomsPct": % of total rev, "fbPct": %, "micePct": %, "otherPct": %,
+  "roomExpPct": %, "fbExpPct": %, "miceExpPct": %, "otherExpPct": %,
+  "undistPct": %, "fixedPct": % }
+
+MARINA P&L OBJECT (marinaPL):
+{ "berths": count, "avgLength": meters, "unitPrice": SAR/m/year, "stabOcc": %,
+  "fuelPct": %, "otherRevPct": %, "berthingOpexPct": %, "fuelOpexPct": %, "otherOpexPct": % }
+
+EXAMPLES:
+
+User: "مشروع سكني تجاري في جدة، أرض 30,000 م² إيجار 1.5 مليون، برجين سكنيين + مول، تكلفة 500 مليون، تمويل بنكي 65%"
+Response:
+تم تحليل المشروع. إليك البيانات:
+\`\`\`json
+{
+  "name": "مشروع سكني تجاري - جدة",
+  "location": "جدة",
+  "landType": "lease",
+  "landArea": 30000,
+  "landRentAnnual": 1500000,
+  "phases": [{ "name": "Phase 1", "startYearOffset": 1, "footprint": 0 }],
+  "assets": [
+    { "phase": "Phase 1", "category": "Residential", "name": "برج سكني 1", "code": "R1", "plotArea": 10000, "footprint": 2500, "gfa": 50000, "revType": "Lease", "efficiency": 85, "leaseRate": 700, "costPerSqm": 3500, "constrStart": 1, "constrDuration": 30 },
+    { "phase": "Phase 1", "category": "Residential", "name": "برج سكني 2", "code": "R2", "plotArea": 10000, "footprint": 2500, "gfa": 50000, "revType": "Lease", "efficiency": 85, "leaseRate": 700, "costPerSqm": 3500, "constrStart": 1, "constrDuration": 30 },
+    { "phase": "Phase 1", "category": "Retail", "name": "مول تجاري", "code": "M1", "plotArea": 10000, "footprint": 8000, "gfa": 24000, "revType": "Lease", "efficiency": 80, "leaseRate": 1500, "costPerSqm": 4000, "constrStart": 1, "constrDuration": 24 }
+  ],
+  "finMode": "debt",
+  "debtAllowed": true,
+  "maxLtvPct": 65,
+  "financeRate": 6.5,
+  "loanTenor": 7,
+  "debtGrace": 3,
+  "_notes": "التكلفة الإجمالية 500 مليون وزعت تقريبياً على الأصول. يمكن تعديل المساحات والأسعار حسب الدراسة الفعلية."
+}
+\`\`\`
+
+User: "Add a 200-key 5-star hotel"
+Response:
+Added hotel asset:
+\`\`\`json
+{
+  "_action": "add_assets",
+  "assets": [
+    { "phase": "Phase 1", "category": "Hospitality", "name": "5-Star Hotel", "code": "H1", "plotArea": 5000, "footprint": 2000, "gfa": 20000, "revType": "Operating", "costPerSqm": 8000, "constrStart": 1, "constrDuration": 36, "hotelPL": { "keys": 200, "adr": 800, "stabOcc": 70, "daysYear": 365, "roomsPct": 65, "fbPct": 25, "micePct": 5, "otherPct": 5, "roomExpPct": 22, "fbExpPct": 55, "miceExpPct": 55, "otherExpPct": 50, "undistPct": 28, "fixedPct": 10 } }
+  ]
+}
+\`\`\`
+
+IMPORTANT:
+- When "_action" is "add_assets", only append the new assets to existing ones.
+- When "_action" is absent, it's a full/initial project setup - replace all fields provided.
+- Generate reasonable defaults for Saudi market if the user doesn't specify (e.g., costPerSqm for residential ~3500, retail ~4000, hotel ~8000).
+- Construction duration: residential towers ~30 months, malls ~24 months, hotels ~36 months, low-rise ~18 months.
+- Use Arabic names if user writes in Arabic.`;
+
+// ── Styles ──
+const panelStyle = {
+  position: "fixed", top: 0, right: 0, width: 420, height: "100vh",
+  background: "#0c0f16", color: "#d0d4dc", display: "flex", flexDirection: "column",
+  zIndex: 9999, boxShadow: "-4px 0 32px rgba(0,0,0,0.5)",
+  fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif",
+  borderLeft: "1px solid #1a1f2e",
+};
+const headerStyle = {
+  padding: "14px 18px", borderBottom: "1px solid #1a1f2e",
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+};
+const msgAreaStyle = {
+  flex: 1, overflowY: "auto", padding: "16px 18px",
+  display: "flex", flexDirection: "column", gap: 12,
+};
+const inputBarStyle = {
+  padding: "12px 16px", borderTop: "1px solid #1a1f2e",
+  display: "flex", gap: 8, alignItems: "flex-end",
+};
+const btnStyle = {
+  border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "inherit",
+};
+
+// ── Component ──
+export default function AiAssistant({ open, onClose, project, onApply, lang }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const msgEndRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const isAr = lang === "ar";
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    msgEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
+    }
+  }, [input]);
+
+  // Reset on new open with no messages
+  useEffect(() => {
+    if (open && messages.length === 0) {
+      setMessages([{
+        role: "assistant",
+        content: isAr
+          ? "مرحباً! أنا مساعد النمذجة المالية.\n\nصِف مشروعك وسأعبّي البيانات تلقائياً في الموديل.\n\nمثال: \"مشروع سكني في الرياض، أرض 20,000 م² شراء بـ 50 مليون، 3 أبراج سكنية، تكلفة بناء 300 مليون، تمويل بنكي 60%\""
+          : "Hello! I'm the financial modeling assistant.\n\nDescribe your project and I'll auto-fill the model.\n\nExample: \"Mixed-use project in Riyadh, 20,000 sqm land purchased for 50M SAR, 3 residential towers, 300M construction cost, 60% bank financing\"",
+        parsed: null,
+      }]);
+    }
+  }, [open]);
+
+  const extractJSON = (text) => {
+    // Try to find JSON in code fences
+    const fenceMatch = text.match(/```json\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      try { return JSON.parse(fenceMatch[1].trim()); } catch { /* fall through */ }
+    }
+    // Try to find raw JSON object
+    const braceMatch = text.match(/\{[\s\S]*\}/);
+    if (braceMatch) {
+      try { return JSON.parse(braceMatch[0]); } catch { /* fall through */ }
+    }
+    return null;
+  };
+
+  const applyToProject = useCallback((parsed) => {
+    if (!parsed || !onApply) return;
+
+    // Handle incremental asset additions
+    if (parsed._action === "add_assets" && parsed.assets) {
+      const newAssets = parsed.assets.map(a => ({
+        id: crypto.randomUUID(),
+        phase: a.phase || project?.phases?.[0]?.name || "Phase 1",
+        category: a.category || "Retail",
+        name: a.name || "",
+        code: a.code || "",
+        notes: a.notes || "",
+        plotArea: a.plotArea || 0,
+        footprint: a.footprint || 0,
+        gfa: a.gfa || 0,
+        revType: a.revType || "Lease",
+        efficiency: a.efficiency || 85,
+        leaseRate: a.leaseRate || 0,
+        opEbitda: a.opEbitda || 0,
+        escalation: a.escalation ?? 0.75,
+        rampUpYears: a.rampUpYears ?? 3,
+        stabilizedOcc: a.stabilizedOcc ?? 100,
+        costPerSqm: a.costPerSqm || 0,
+        constrStart: a.constrStart || 1,
+        constrDuration: a.constrDuration || 24,
+        hotelPL: a.hotelPL || null,
+        marinaPL: a.marinaPL || null,
+      }));
+      onApply({ assets: [...(project?.assets || []), ...newAssets] });
+      return;
+    }
+
+    // Full project setup - build the update object
+    const update = {};
+    const directFields = [
+      "name", "location", "startYear", "horizon", "currency",
+      "landType", "landArea", "landRentAnnual", "landRentEscalation",
+      "landRentEscalationEveryN", "landRentGrace", "landRentTerm",
+      "landPurchasePrice", "partnerEquityPct", "landValuation", "botOperationYears",
+      "softCostPct", "contingencyPct", "rentEscalation", "vacancyPct",
+      "defaultEfficiency", "defaultLeaseRate", "defaultCostPerSqm",
+      "finMode", "vehicleType", "debtAllowed", "maxLtvPct", "financeRate",
+      "loanTenor", "debtGrace", "upfrontFeePct", "repaymentType", "islamicMode",
+      "exitStrategy", "exitYear", "exitMultiple", "exitCapRate", "exitCostPct",
+      "prefReturnPct", "gpCatchup", "carryPct", "lpProfitSplitPct",
+      "fundName", "fundStrategy",
+      "landCapitalize", "landCapRate", "landCapTo",
+      "subscriptionFeePct", "annualMgmtFeePct", "custodyFeeAnnual",
+      "developerFeePct", "structuringFeePct",
+    ];
+
+    for (const f of directFields) {
+      if (parsed[f] !== undefined) update[f] = parsed[f];
+    }
+
+    // Phases
+    if (parsed.phases && Array.isArray(parsed.phases)) {
+      update.phases = parsed.phases.map((p, i) => ({
+        name: p.name || `Phase ${i + 1}`,
+        startYearOffset: p.startYearOffset ?? (i + 1),
+        footprint: p.footprint || 0,
+      }));
+    }
+
+    // Assets - full replace
+    if (parsed.assets && Array.isArray(parsed.assets)) {
+      update.assets = parsed.assets.map(a => ({
+        id: crypto.randomUUID(),
+        phase: a.phase || update.phases?.[0]?.name || project?.phases?.[0]?.name || "Phase 1",
+        category: a.category || "Retail",
+        name: a.name || "",
+        code: a.code || "",
+        notes: a.notes || "",
+        plotArea: a.plotArea || 0,
+        footprint: a.footprint || 0,
+        gfa: a.gfa || 0,
+        revType: a.revType || "Lease",
+        efficiency: a.efficiency ?? 85,
+        leaseRate: a.leaseRate || 0,
+        opEbitda: a.opEbitda || 0,
+        escalation: a.escalation ?? 0.75,
+        rampUpYears: a.rampUpYears ?? 3,
+        stabilizedOcc: a.stabilizedOcc ?? 100,
+        costPerSqm: a.costPerSqm || 0,
+        constrStart: a.constrStart || 1,
+        constrDuration: a.constrDuration || 24,
+        hotelPL: a.hotelPL || null,
+        marinaPL: a.marinaPL || null,
+      }));
+    }
+
+    if (Object.keys(update).length > 0) {
+      onApply(update);
+    }
+  }, [project, onApply]);
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    setInput("");
+    setError(null);
+
+    const userMsg = { role: "user", content: text };
+    setMessages(prev => [...prev, userMsg]);
+    setLoading(true);
+
+    // Build conversation history for Claude (exclude welcome message and parsed data)
+    const apiMessages = [...messages, userMsg]
+      .filter(m => m.role === "user" || (m.role === "assistant" && messages.indexOf(m) > 0))
+      .map(m => ({ role: m.role, content: m.content }));
+
+    // If this is the first real message, include project context
+    const projectContext = project
+      ? `\nCurrent project context: ${JSON.stringify({
+          name: project.name,
+          location: project.location,
+          landType: project.landType,
+          landArea: project.landArea,
+          phases: project.phases,
+          assetsCount: (project.assets || []).length,
+          existingAssets: (project.assets || []).map(a => ({ name: a.name, category: a.category, phase: a.phase })),
+          finMode: project.finMode,
+        })}`
+      : "";
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system: SYSTEM_PROMPT + projectContext,
+          messages: apiMessages.length > 0 ? apiMessages : [{ role: "user", content: text }],
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(errData.error || `API Error ${res.status}`);
+      }
+
+      const data = await res.json();
+      const assistantText = data.content?.map(c => c.text || "").join("") || "";
+
+      // Try to extract and parse JSON
+      const parsed = extractJSON(assistantText);
+
+      // Clean display text (remove JSON block for display)
+      const displayText = assistantText.replace(/```json[\s\S]*?```/g, "").trim();
+
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: assistantText,
+        displayText: displayText || (isAr ? "تم تحليل البيانات ✓" : "Data parsed ✓"),
+        parsed,
+      }]);
+
+    } catch (e) {
+      setError(e.message);
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: isAr ? "حدث خطأ في الاتصال. حاول مرة أخرى." : "Connection error. Please try again.",
+        parsed: null,
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9998 }} />
+
+      {/* Panel */}
+      <div style={panelStyle}>
+        {/* Header */}
+        <div style={headerStyle}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #5fbfbf, #2563eb)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{isAr ? "مساعد الذكاء الاصطناعي" : "AI Assistant"}</div>
+              <div style={{ fontSize: 10, color: "#6b7080" }}>{isAr ? "وصف مشروعك وسأعبّي البيانات" : "Describe your project to auto-fill"}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ ...btnStyle, background: "#1a1f2e", color: "#6b7080", padding: "6px 10px", fontSize: 16, lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Messages */}
+        <div style={msgAreaStyle}>
+          {messages.map((m, i) => (
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", gap: 6 }}>
+              {/* Message bubble */}
+              <div style={{
+                maxWidth: "88%", padding: "10px 14px", borderRadius: 12,
+                background: m.role === "user" ? "#1e3a5f" : "#151922",
+                color: m.role === "user" ? "#93c5fd" : "#c8cdd8",
+                fontSize: 12.5, lineHeight: 1.6, whiteSpace: "pre-wrap",
+                border: m.role === "user" ? "1px solid #1e3a5f" : "1px solid #1e2230",
+              }}>
+                {m.displayText || m.content}
+              </div>
+
+              {/* Apply button for parsed responses */}
+              {m.parsed && m.role === "assistant" && (
+                <button
+                  onClick={() => {
+                    applyToProject(m.parsed);
+                    setMessages(prev => prev.map((msg, j) =>
+                      j === i ? { ...msg, applied: true } : msg
+                    ));
+                  }}
+                  disabled={m.applied}
+                  style={{
+                    ...btnStyle,
+                    background: m.applied ? "#0a2a1a" : "linear-gradient(135deg, #16a34a, #15803d)",
+                    color: m.applied ? "#4ade80" : "#fff",
+                    padding: "7px 16px", fontSize: 11, fontWeight: 600,
+                    opacity: m.applied ? 0.7 : 1,
+                    display: "flex", alignItems: "center", gap: 6,
+                  }}
+                >
+                  {m.applied
+                    ? (isAr ? "✓ تم التطبيق" : "✓ Applied")
+                    : (isAr ? "⚡ طبّق على المشروع" : "⚡ Apply to Project")}
+                </button>
+              )}
+            </div>
+          ))}
+
+          {/* Loading indicator */}
+          {loading && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "#151922", borderRadius: 12, border: "1px solid #1e2230", alignSelf: "flex-start" }}>
+              <div style={{ display: "flex", gap: 4 }}>
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{
+                    width: 6, height: 6, borderRadius: 3, background: "#5fbfbf",
+                    animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                  }} />
+                ))}
+              </div>
+              <span style={{ fontSize: 11, color: "#6b7080" }}>{isAr ? "جاري التحليل..." : "Analyzing..."}</span>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div style={{ padding: "8px 12px", background: "#2a0a0a", border: "1px solid #7f1d1d", borderRadius: 8, fontSize: 11, color: "#fca5a5" }}>
+              {error}
+            </div>
+          )}
+
+          <div ref={msgEndRef} />
+        </div>
+
+        {/* Quick suggestions */}
+        {messages.length <= 1 && (
+          <div style={{ padding: "0 16px 8px", display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {(isAr ? [
+              "مشروع فندقي 5 نجوم في نيوم",
+              "مجمع سكني في الرياض",
+              "مول تجاري + أبراج مكتبية في جدة",
+            ] : [
+              "5-star hotel resort in NEOM",
+              "Residential compound in Riyadh",
+              "Mall + office towers in Jeddah",
+            ]).map((s, i) => (
+              <button key={i} onClick={() => setInput(s)} style={{
+                ...btnStyle, background: "#1a1f2e", color: "#8b90a0", padding: "5px 10px",
+                fontSize: 10.5, border: "1px solid #252a3a",
+                transition: "all 0.15s",
+              }}
+                onMouseEnter={e => { e.target.style.background = "#252a3a"; e.target.style.color = "#c8cdd8"; }}
+                onMouseLeave={e => { e.target.style.background = "#1a1f2e"; e.target.style.color = "#8b90a0"; }}
+              >{s}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Input bar */}
+        <div style={inputBarStyle}>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={isAr ? "صف مشروعك هنا..." : "Describe your project here..."}
+            dir="auto"
+            rows={1}
+            style={{
+              flex: 1, resize: "none", border: "1px solid #252a3a", borderRadius: 10,
+              background: "#151922", color: "#d0d4dc", padding: "10px 14px",
+              fontSize: 12.5, fontFamily: "inherit", outline: "none",
+              maxHeight: 120, lineHeight: 1.5,
+            }}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || loading}
+            style={{
+              ...btnStyle,
+              background: input.trim() && !loading ? "linear-gradient(135deg, #5fbfbf, #2563eb)" : "#1a1f2e",
+              color: input.trim() && !loading ? "#fff" : "#4a4f5e",
+              padding: "10px 14px", fontSize: 14, fontWeight: 700,
+              transition: "all 0.2s",
+              minWidth: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+
+      {/* Pulse animation CSS */}
+      <style>{`
+        @keyframes pulse {
+          0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+          40% { opacity: 1; transform: scale(1.2); }
+        }
+      `}</style>
+    </>
+  );
+}

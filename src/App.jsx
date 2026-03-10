@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
+import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
 // RE-DEV MODELER — Phase 1: Project Engine v3 (Stable)
@@ -1673,6 +1674,7 @@ export default function ReDevModeler({ user, signOut }) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("en");
+  const [aiOpen, setAiOpen] = useState(false);
   const t = L[lang];
   const autoSaveTimer = useRef(null);
   const sidebarRef = useRef(null);
@@ -1750,6 +1752,7 @@ export default function ReDevModeler({ user, signOut }) {
             <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
           <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
+          <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
           <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
           <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"EN"}</button>
           <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const shared=[...(project.sharedWith||[])];if(!shared.includes(email)){shared.push(email);up({sharedWith:shared});alert(lang==="ar"?"تمت المشاركة مع "+email:"Shared with "+email);}else{alert(lang==="ar"?"مشارك مسبقاً":"Already shared");}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}</button>
@@ -1787,6 +1790,7 @@ export default function ReDevModeler({ user, signOut }) {
           {activeTab==="checks"&&<ChecksView checks={checks} t={t} />}
         </div>
       </div>
+      <AiAssistant open={aiOpen} onClose={()=>setAiOpen(false)} project={project} onApply={up} lang={lang} />
     </div>
   );
 }
