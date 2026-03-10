@@ -2631,7 +2631,21 @@ function CashFlowView({ project, results, t }) {
 // ═══════════════════════════════════════════════════════════════
 
 function generateFullModelXLSX(project, results, financing, waterfall) {
-  import('xlsx').then(XLSX => {
+  // Load SheetJS from CDN (no npm dependency needed)
+  const script = document.createElement('script');
+  script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  script.onload = () => {
+    const XLSX = window.XLSX;
+    if (!XLSX) { alert('Excel export failed.'); return; }
+    _buildXLSX(XLSX, project, results, financing, waterfall);
+  };
+  script.onerror = () => { alert('Could not load Excel library.'); };
+  // Only load once
+  if (window.XLSX) { _buildXLSX(window.XLSX, project, results, financing, waterfall); return; }
+  document.head.appendChild(script);
+}
+
+function _buildXLSX(XLSX, project, results, financing, waterfall) {
     const h = results?.horizon || 50;
     const sy = results?.startYear || 2026;
     const c = results?.consolidated;
@@ -2641,163 +2655,144 @@ function generateFullModelXLSX(project, results, financing, waterfall) {
     const cur = project.currency || "SAR";
     const yrs = Array.from({length: Math.min(30, h)}, (_, i) => i);
 
-    // ── Helper: style-aware cell ──
-    const numFmt = '#,##0';
-    const pctFmt = '0.0%';
-    const hdr = (ws, row, cols) => {
-      cols.forEach((c, i) => {
-        const cell = XLSX.utils.encode_cell({r: row, c: i});
-        if (!ws[cell]) ws[cell] = {v: c, t: 's'};
-        ws[cell].s = {font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'0C1A2E'}},alignment:{horizontal:'center'}};
-      });
-    };
-    const subHdr = (ws, row, cols) => {
-      cols.forEach((c, i) => {
-        const cell = XLSX.utils.encode_cell({r: row, c: i});
-        if (!ws[cell]) ws[cell] = {v: c, t: 's'};
-        ws[cell].s = {font:{bold:true,color:{rgb:'0C1A2E'}},fill:{fgColor:{rgb:'E8EEF5'}},border:{bottom:{style:'thin',color:{rgb:'B0B8C8'}}}};
-      });
-    };
+    // Format helpers
+    const fm = v => typeof v === 'number' ? Math.round(v) : v;
+    const fp = v => typeof v === 'number' ? +(v*100).toFixed(2) + '%' : v;
 
     // ═══ SHEET 1: Executive Summary ═══
     const s1 = [];
-    s1.push(['', 'ZAN DESTINATION DEVELOPMENT']);
-    s1.push(['', 'Financial Model Summary']);
+    s1.push(['─────────────────────────────────────────']);
+    s1.push(['  ZAN DESTINATION DEVELOPMENT']);
+    s1.push(['  Financial Model — ' + (project.name || 'Project')]);
+    s1.push(['─────────────────────────────────────────']);
     s1.push([]);
-    s1.push(['PROJECT INFORMATION', '']);
-    s1.push(['Project Name', project.name]);
-    s1.push(['Location', project.location || '']);
-    s1.push(['Currency', cur]);
-    s1.push(['Start Year', sy]);
-    s1.push(['Projection Horizon', h + ' years']);
-    s1.push(['Land Acquisition', project.landType]);
-    s1.push(['Total Land Area (sqm)', project.landArea || 0]);
-    s1.push(['Number of Assets', (project.assets||[]).length]);
+    s1.push(['▸ PROJECT INFORMATION', '', '▸ KEY METRICS']);
+    s1.push(['  Project Name', project.name, '  Total CAPEX (' + cur + ')', fm(c?.totalCapex||0)]);
+    s1.push(['  Location', project.location || '-', '  Total Income (' + h + 'yr)', fm(c?.totalIncome||0)]);
+    s1.push(['  Currency', cur, '  Unlevered IRR', c?.irr ? fp(c.irr) : 'N/A']);
+    s1.push(['  Start Year', sy, '  NPV @10%', fm(c?.npv10||0)]);
+    s1.push(['  Horizon', h + ' years', '  NPV @12%', fm(c?.npv12||0)]);
+    s1.push(['  Land Type', project.landType, '  NPV @14%', fm(c?.npv14||0)]);
+    s1.push(['  Land Area (sqm)', project.landArea || 0, '  Total Assets', (project.assets||[]).length]);
     s1.push([]);
-    s1.push(['KEY METRICS', '']);
-    s1.push(['Total Development CAPEX', c?.totalCapex || 0]);
-    s1.push(['Total Income (' + h + 'yr)', c?.totalIncome || 0]);
-    s1.push(['Unlevered Project IRR', c?.irr ? c.irr : 'N/A']);
-    s1.push(['NPV @10%', c?.npv10 || 0]);
-    s1.push(['NPV @12%', c?.npv12 || 0]);
-    s1.push(['NPV @14%', c?.npv14 || 0]);
-    if (f && f.mode !== 'self') {
-      s1.push([]);
-      s1.push(['FINANCING', '']);
-      s1.push(['Max Debt (' + (project.maxLtvPct||70) + '% LTV)', f.maxDebt]);
-      s1.push(['Total Equity', f.totalEquity]);
-      s1.push(['GP Equity', f.gpEquity]);
-      s1.push(['LP Equity', f.lpEquity]);
-      s1.push(['Finance Rate', (project.financeRate||0)/100]);
-      s1.push(['Tenor', project.loanTenor + ' years (' + project.debtGrace + ' grace)']);
-      s1.push(['Levered IRR', f.leveredIRR || 'N/A']);
-      s1.push(['Total Interest', f.totalInterest]);
-    }
-    if (w) {
-      s1.push([]);
-      s1.push(['INVESTOR RETURNS', 'LP', 'GP']);
-      s1.push(['Equity (' + cur + ')', w.lpEquity, w.gpEquity]);
-      s1.push(['Equity %', w.lpPct, w.gpPct]);
-      s1.push(['Total Distributions', w.lpTotalDist, w.gpTotalDist]);
-      s1.push(['Net IRR', w.lpIRR || 'N/A', w.gpIRR || 'N/A']);
-      s1.push(['MOIC', w.lpMOIC || 0, w.gpMOIC || 0]);
-      s1.push(['NPV @10%', w.lpNPV10, w.gpNPV10]);
-      s1.push(['Total Fees', w.totalFees]);
-    }
-    s1.push([]);
-    s1.push(['', 'Powered by ZAN Development']);
 
+    if (f && f.mode !== 'self') {
+      s1.push(['▸ FINANCING STRUCTURE', '', '▸ DEBT PARAMETERS']);
+      s1.push(['  Dev Cost Excl Land', fm(f.devCostExclLand), '  Finance Rate', fp((project.financeRate||0)/100)]);
+      s1.push(['  Land Capitalization', fm(f.landCapValue||0), '  Tenor', project.loanTenor + ' yrs (' + project.debtGrace + ' grace)']);
+      s1.push(['  Dev Cost Incl Land', fm(f.devCostInclLand), '  Total Interest', fm(f.totalInterest)]);
+      s1.push(['  Max Debt (' + (project.maxLtvPct||70) + '% LTV)', fm(f.maxDebt), '  Levered IRR', f.leveredIRR ? fp(f.leveredIRR) : 'N/A']);
+      s1.push(['  GP Equity', fm(f.gpEquity), '  Upfront Fee', fm(f.upfrontFee)]);
+      s1.push(['  LP Equity', fm(f.lpEquity)]);
+      s1.push(['  Total Equity', fm(f.totalEquity)]);
+      s1.push([]);
+    }
+
+    if (w) {
+      s1.push(['▸ INVESTOR RETURNS', '', 'LP', 'GP']);
+      s1.push(['  Equity (' + cur + ')', '', fm(w.lpEquity), fm(w.gpEquity)]);
+      s1.push(['  Equity %', '', fp(w.lpPct), fp(w.gpPct)]);
+      s1.push(['  Total Distributions', '', fm(w.lpTotalDist), fm(w.gpTotalDist)]);
+      s1.push(['  Net IRR', '', w.lpIRR ? fp(w.lpIRR) : 'N/A', w.gpIRR ? fp(w.gpIRR) : 'N/A']);
+      s1.push(['  MOIC', '', w.lpMOIC ? w.lpMOIC.toFixed(2) + 'x' : '-', w.gpMOIC ? w.gpMOIC.toFixed(2) + 'x' : '-']);
+      s1.push(['  NPV @10%', '', fm(w.lpNPV10), fm(w.gpNPV10)]);
+      s1.push(['  Total Fees', '', fm(w.totalFees)]);
+      s1.push([]);
+    }
+
+    s1.push(['─────────────────────────────────────────']);
+    s1.push(['  Powered by ZAN Development']);
     const ws1 = XLSX.utils.aoa_to_sheet(s1);
-    ws1['!cols'] = [{wch:28},{wch:20},{wch:20}];
+    ws1['!cols'] = [{wch:26},{wch:22},{wch:22},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
 
     // ═══ SHEET 2: Unlevered Cash Flow ═══
-    const s2 = [['UNLEVERED PROJECT CASH FLOW','','','','','',cur]];
-    s2.push(['Year','Calendar','Income','Land Rent','CAPEX','Net CF','Cumulative CF']);
+    const s2 = [];
+    s2.push(['UNLEVERED PROJECT CASH FLOW', '', '', '', '', '', cur]);
+    s2.push([]);
+    s2.push(['Year', 'Calendar', 'Income', 'Land Rent', 'CAPEX', 'Net CF', 'Cumulative CF']);
     let cumCF = 0;
     yrs.forEach(y => {
       cumCF += (c?.netCF[y] || 0);
-      s2.push([y+1, sy+y, c?.income[y]||0, c?.landRent[y]||0, c?.capex[y]||0, c?.netCF[y]||0, cumCF]);
+      s2.push([y+1, sy+y, fm(c?.income[y]||0), fm(c?.landRent[y]||0), fm(c?.capex[y]||0), fm(c?.netCF[y]||0), fm(cumCF)]);
     });
     s2.push([]);
-    s2.push(['TOTALS','', c?.totalIncome||0, c?.totalLandRent||0, c?.totalCapex||0, c?.totalNetCF||0]);
+    s2.push(['', 'TOTAL', fm(c?.totalIncome||0), fm(c?.totalLandRent||0), fm(c?.totalCapex||0), fm(c?.totalNetCF||0), '']);
     const ws2 = XLSX.utils.aoa_to_sheet(s2);
-    ws2['!cols'] = [{wch:6},{wch:10},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16}];
+    ws2['!cols'] = [{wch:6},{wch:10},{wch:18},{wch:18},{wch:18},{wch:18},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws2, 'Unlevered CF');
 
-    // ═══ SHEET 3: Financing & Debt Schedule ═══
+    // ═══ SHEET 3: Debt Schedule ═══
     if (f && f.mode !== 'self') {
-      const s3 = [['FINANCING & DEBT SCHEDULE','','','','','','','',cur]];
-      s3.push(['Year','Calendar','Drawdown','Repayment','Interest','Debt Balance','Levered CF','DSCR','Exit Proceeds']);
+      const s3 = [];
+      s3.push(['FINANCING & DEBT SCHEDULE', '', '', '', '', '', '', '', cur]);
+      s3.push([]);
+      s3.push(['Year', 'Calendar', 'Drawdown', 'Repayment', 'Interest', 'Debt Balance', 'Levered CF', 'DSCR', 'Exit Proceeds']);
       yrs.forEach(y => {
-        s3.push([y+1, sy+y, f.drawdown[y]||0, f.repayment?.[y]||0, f.interest[y]||0, f.debtBalClose[y]||0, f.leveredCF[y]||0, f.dscr[y]!==null&&f.dscr[y]!==undefined?f.dscr[y]:''  , f.exitProceeds[y]||0]);
+        const dscr = f.dscr[y] !== null && f.dscr[y] !== undefined ? +f.dscr[y].toFixed(2) + 'x' : '-';
+        s3.push([y+1, sy+y, fm(f.drawdown[y]||0), fm(f.repayment?.[y]||0), fm(f.interest[y]||0), fm(f.debtBalClose[y]||0), fm(f.leveredCF[y]||0), dscr, fm(f.exitProceeds[y]||0)]);
       });
       s3.push([]);
-      s3.push(['TOTALS','',
-        f.drawdown.reduce((a,b)=>a+b,0),
-        (f.repayment||f.drawdown.map(()=>0)).reduce((a,b)=>a+b,0),
-        f.totalInterest,
-        '', '', '']);
+      s3.push(['', 'TOTAL', fm(f.drawdown.reduce((a,b)=>a+b,0)), fm((f.repayment||[]).reduce((a,b)=>a+b,0)), fm(f.totalInterest), '', '', '', '']);
       const ws3 = XLSX.utils.aoa_to_sheet(s3);
       ws3['!cols'] = [{wch:6},{wch:10},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:8},{wch:16}];
       XLSX.utils.book_append_sheet(wb, ws3, 'Debt Schedule');
     }
 
-    // ═══ SHEET 4: Waterfall Distributions ═══
+    // ═══ SHEET 4: Waterfall ═══
     if (w) {
-      const s4 = [['WATERFALL DISTRIBUTIONS','','','','','','','','','','','','',cur]];
-      s4.push(['Year','Calendar','Equity Calls','Cash Available','T1: Return of Capital','T2: Preferred Return','T3: GP Catch-up','T4: LP Profit Split','T4: GP Profit Split','LP Distribution','GP Distribution','LP Net CF','GP Net CF']);
+      const s4 = [];
+      s4.push(['WATERFALL DISTRIBUTIONS', '', '', '', '', '', '', '', '', '', '', '', '', cur]);
+      s4.push([]);
+      s4.push(['Year','Calendar','Equity Calls','Cash Available','T1: ROC','T2: Pref Return','T3: GP Catch-up','T4: LP Split','T4: GP Split','LP Distribution','GP Distribution','LP Net CF','GP Net CF']);
       yrs.forEach(y => {
-        s4.push([y+1, sy+y, w.equityCalls[y], w.cashAvail[y], w.tier1[y], w.tier2[y], w.tier3[y], w.tier4LP[y], w.tier4GP[y], w.lpDist[y], w.gpDist[y], w.lpNetCF[y], w.gpNetCF[y]]);
+        s4.push([y+1, sy+y, fm(w.equityCalls[y]), fm(w.cashAvail[y]), fm(w.tier1[y]), fm(w.tier2[y]), fm(w.tier3[y]), fm(w.tier4LP[y]), fm(w.tier4GP[y]), fm(w.lpDist[y]), fm(w.gpDist[y]), fm(w.lpNetCF[y]), fm(w.gpNetCF[y])]);
       });
       s4.push([]);
-      s4.push(['TOTALS','',
-        w.equityCalls.reduce((a,b)=>a+b,0), w.cashAvail.reduce((a,b)=>a+b,0),
-        w.tier1.reduce((a,b)=>a+b,0), w.tier2.reduce((a,b)=>a+b,0), w.tier3.reduce((a,b)=>a+b,0),
-        w.tier4LP.reduce((a,b)=>a+b,0), w.tier4GP.reduce((a,b)=>a+b,0),
-        w.lpTotalDist, w.gpTotalDist]);
+      s4.push(['','TOTAL', fm(w.equityCalls.reduce((a,b)=>a+b,0)), fm(w.cashAvail.reduce((a,b)=>a+b,0)),
+        fm(w.tier1.reduce((a,b)=>a+b,0)), fm(w.tier2.reduce((a,b)=>a+b,0)), fm(w.tier3.reduce((a,b)=>a+b,0)),
+        fm(w.tier4LP.reduce((a,b)=>a+b,0)), fm(w.tier4GP.reduce((a,b)=>a+b,0)),
+        fm(w.lpTotalDist), fm(w.gpTotalDist)]);
       const ws4 = XLSX.utils.aoa_to_sheet(s4);
-      ws4['!cols'] = Array(13).fill({wch:16});
-      ws4['!cols'][0] = {wch:6};
-      ws4['!cols'][1] = {wch:10};
+      const w4 = Array(13).fill({wch:15}); w4[0]={wch:6}; w4[1]={wch:10};
+      ws4['!cols'] = w4;
       XLSX.utils.book_append_sheet(wb, ws4, 'Waterfall');
     }
 
     // ═══ SHEET 5: Asset Program ═══
-    const s5 = [['ASSET PROGRAM','','','','','','','','','',cur]];
-    s5.push(['Phase','Category','Asset Name','GFA (sqm)','Revenue Type','Lease Rate','Operating EBITDA','Cost/sqm','Total CAPEX','Total Income']);
+    const s5 = [];
+    s5.push(['ASSET PROGRAM', '', '', '', '', '', '', '', '', '', cur]);
+    s5.push([]);
+    s5.push(['Phase','Category','Asset Name','GFA (sqm)','Rev Type','Lease Rate','Op EBITDA','Cost/sqm','Total CAPEX','Total Income (' + h + 'yr)']);
     (results?.assetSchedules || []).forEach(a => {
-      s5.push([a.phase, a.category, a.name, a.gfa, a.revType, a.leaseRate||0, a.opEbitda||0, a.costPerSqm||0, a.totalCapex, a.totalRevenue]);
+      s5.push([a.phase, a.category, a.name, a.gfa, a.revType, fm(a.leaseRate||0), fm(a.opEbitda||0), fm(a.costPerSqm||0), fm(a.totalCapex), fm(a.totalRevenue)]);
     });
     s5.push([]);
-    s5.push(['TOTAL','','', (results?.assetSchedules||[]).reduce((s,a)=>s+(a.gfa||0),0), '','','','', c?.totalCapex||0, c?.totalIncome||0]);
+    s5.push(['TOTAL','','', (results?.assetSchedules||[]).reduce((s,a)=>s+(a.gfa||0),0), '','','','', fm(c?.totalCapex||0), fm(c?.totalIncome||0)]);
     const ws5 = XLSX.utils.aoa_to_sheet(s5);
-    ws5['!cols'] = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:12},{wch:14},{wch:10},{wch:16},{wch:16}];
+    ws5['!cols'] = [{wch:12},{wch:14},{wch:24},{wch:10},{wch:10},{wch:12},{wch:14},{wch:10},{wch:16},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws5, 'Assets');
 
     // ═══ SHEET 6: Phase Summary ═══
     const phases = Object.entries(results?.phaseResults || {});
     if (phases.length > 0) {
-      const s6 = [['PHASE SUMMARY','','','','','','',cur]];
-      s6.push(['Phase','Assets','Total CAPEX','Total Income','Land Rent','Net CF','IRR']);
+      const s6 = [];
+      s6.push(['PHASE SUMMARY', '', '', '', '', '', '', cur]);
+      s6.push([]);
+      s6.push(['Phase','Assets','Total CAPEX','Total Income','Land Rent','Net CF','IRR','Land Allocation']);
       phases.forEach(([n,pr]) => {
-        s6.push([n, pr.assetCount, pr.totalCapex, pr.totalIncome, pr.totalLandRent, pr.totalNetCF, pr.irr||'N/A']);
+        s6.push([n, pr.assetCount, fm(pr.totalCapex), fm(pr.totalIncome), fm(pr.totalLandRent), fm(pr.totalNetCF), pr.irr ? fp(pr.irr) : 'N/A', fp(pr.allocPct||0)]);
       });
       s6.push([]);
-      s6.push(['CONSOLIDATED','', c?.totalCapex||0, c?.totalIncome||0, c?.totalLandRent||0, c?.totalNetCF||0, c?.irr||'N/A']);
+      s6.push(['CONSOLIDATED','', fm(c?.totalCapex||0), fm(c?.totalIncome||0), fm(c?.totalLandRent||0), fm(c?.totalNetCF||0), c?.irr ? fp(c.irr) : 'N/A', '100%']);
       const ws6 = XLSX.utils.aoa_to_sheet(s6);
-      ws6['!cols'] = [{wch:14},{wch:8},{wch:16},{wch:16},{wch:16},{wch:16},{wch:10}];
+      ws6['!cols'] = [{wch:14},{wch:8},{wch:16},{wch:18},{wch:16},{wch:18},{wch:10},{wch:14}];
       XLSX.utils.book_append_sheet(wb, ws6, 'Phases');
     }
 
     // ── Download ──
-    const fileName = `${(project.name||'Project').replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_')}_Financial_Model.xlsx`;
+    const fileName = `${(project.name||'Project').replace(/[^a-zA-Z0-9\u0600-\u06FF ]/g, '_')}_Financial_Model.xlsx`;
     XLSX.writeFile(wb, fileName);
-  }).catch(err => {
-    console.error('XLSX export error:', err);
-    alert('Excel export failed. Falling back to CSV.');
-    generateFallbackCSV(project, results, financing, waterfall);
-  });
 }
 
 // Fallback CSV export (if SheetJS fails to load)
