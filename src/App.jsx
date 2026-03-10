@@ -194,7 +194,7 @@ const PROJECT_PREFIX = "redev:project:";
 
 const L = {
   en: {
-    title: "RE-DEV MODELER", subtitle: "Real Estate Development Financial Modeling Platform",
+    title: "ZAN", subtitle: "Real Estate Development Financial Modeling Platform",
     newProject: "+ New Project", projects: "projects", noProjects: "No projects yet",
     noProjectsSub: "Create your first project to get started",
     back: "← Back", saved: "Saved", saving: "Saving...", error: "Error",
@@ -261,7 +261,7 @@ const L = {
     partner: "Land as Equity (Partner)", bot: "Land Swap / BOT",
   },
   ar: {
-    title: "RE-DEV MODELER", subtitle: "منصة النمذجة المالية للتطوير العقاري",
+    title: "ZAN", subtitle: "منصة النمذجة المالية للتطوير العقاري",
     newProject: "+ مشروع جديد", projects: "مشاريع", noProjects: "لا توجد مشاريع",
     noProjectsSub: "أنشئ مشروعك الأول للبدء",
     back: "→ رجوع", saved: "تم الحفظ", saving: "جاري الحفظ...", error: "خطأ",
@@ -1725,7 +1725,7 @@ export default function ReDevModeler({ user, signOut }) {
   const rmAsset = useCallback((i) => setProject(prev => ({...prev, assets:prev.assets.filter((_,j)=>j!==i)})), []);
   const goBack = () => { setView("dashboard"); setProject(null); };
 
-  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>RE-DEV MODELER</div><div style={{fontSize:13,color:"#6b7080",marginTop:8}}>Loading...</div></div></div>;
+  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
   if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
 
   const dir = lang === "ar" ? "rtl" : "ltr";
@@ -1736,7 +1736,7 @@ export default function ReDevModeler({ user, signOut }) {
         <div style={{width:340,minWidth:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
             <button onClick={goBack} style={{...btnS,background:"#1e2230",color:"#8b90a0",padding:"5px 10px",fontSize:11}}>{t.back}</button>
-            <div style={{flex:1}}><div style={{fontSize:10,color:"#4ade80",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>RE-DEV MODELER</div></div>
+            <div style={{flex:1}}><div style={{fontSize:10,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>ZAN Financial Modeler</div></div>
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#0a2a1a":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
           </div>
           <div ref={sidebarRef} style={{flex:1,overflowY:"auto"}}><ControlPanel project={project} up={up} t={t} lang={lang} /></div>
@@ -1801,9 +1801,9 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
       <div style={{maxWidth:900,margin:"0 auto",padding:"48px 24px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:48}}>
           <div>
-            <div style={{fontSize:11,color:"#4ade80",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>Real Estate Development</div>
-            <div style={{fontSize:36,fontWeight:700,color:"#fff",letterSpacing:-1}}>{t.title}</div>
-            <div style={{fontSize:14,color:"#6b7080",marginTop:8}}>{t.subtitle}</div>
+            <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Destination Development</div>
+            <div style={{fontSize:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</div>
+            <div style={{fontSize:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             {user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
