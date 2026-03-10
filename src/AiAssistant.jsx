@@ -342,8 +342,12 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [attachments, setAttachments] = useState([]); // {file, preview, type}
+  const [isRecording, setIsRecording] = useState(false);
   const msgEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   const isAr = lang === "ar";
 
@@ -360,14 +364,115 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
     }
   }, [input]);
 
+  // ── File Processing ──
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      const isImage = file.type.startsWith("image/");
+      const isPDF = ext === "pdf";
+      const isCSV = ext === "csv" || ext === "tsv";
+      const isExcel = ext === "xlsx" || ext === "xls";
+
+      if (isImage || isPDF) {
+        // Convert to base64 for Claude API
+        const base64 = await fileToBase64(file);
+        setAttachments(prev => [...prev, {
+          file, type: isImage ? "image" : "pdf",
+          base64, mediaType: file.type || (isPDF ? "application/pdf" : "image/png"),
+          preview: isImage ? URL.createObjectURL(file) : null,
+        }]);
+      } else if (isCSV) {
+        const text = await file.text();
+        const preview = text.split("\n").slice(0, 5).join("\n");
+        setAttachments(prev => [...prev, { file, type: "csv", textContent: text, preview }]);
+      } else if (isExcel) {
+        // Read Excel using SheetJS (available in project)
+        try {
+          const buf = await file.arrayBuffer();
+          // Dynamic import to avoid issues if not available
+          const XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs");
+          const wb = XLSX.read(buf, { type: "array" });
+          let allText = "";
+          for (const sn of wb.SheetNames) {
+            const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sn]);
+            allText += `\n=== Sheet: ${sn} ===\n${csv}`;
+          }
+          setAttachments(prev => [...prev, { file, type: "excel", textContent: allText, preview: `${wb.SheetNames.length} sheets` }]);
+        } catch {
+          setError(isAr ? "خطأ في قراءة ملف Excel" : "Error reading Excel file");
+        }
+      } else {
+        setError(isAr ? "نوع ملف غير مدعوم" : "Unsupported file type");
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const removeAttachment = (idx) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // ── Voice Recording (Web Speech API) ──
+  const toggleRecording = () => {
+    if (isRecording) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError(isAr ? "المتصفح لا يدعم التعرف على الصوت" : "Browser doesn't support speech recognition");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = isAr ? "ar-SA" : "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let finalTranscript = input;
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += (finalTranscript ? " " : "") + t;
+        } else {
+          interim = t;
+        }
+      }
+      setInput(finalTranscript + (interim ? " " + interim : ""));
+    };
+
+    recognition.onend = () => setIsRecording(false);
+    recognition.onerror = (e) => {
+      if (e.error !== "aborted") setError(`Speech error: ${e.error}`);
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+  };
+
   // Reset on new open with no messages
   useEffect(() => {
     if (open && messages.length === 0) {
       setMessages([{
         role: "assistant",
         content: isAr
-          ? "مرحباً! أنا مساعد النمذجة المالية.\n\nصِف مشروعك وسأعبّي البيانات تلقائياً في الموديل.\n\nمثال: \"مشروع سكني في الرياض، أرض 20,000 م² شراء بـ 50 مليون، 3 أبراج سكنية، تكلفة بناء 300 مليون، تمويل بنكي 60%\""
-          : "Hello! I'm the financial modeling assistant.\n\nDescribe your project and I'll auto-fill the model.\n\nExample: \"Mixed-use project in Riyadh, 20,000 sqm land purchased for 50M SAR, 3 residential towers, 300M construction cost, 60% bank financing\"",
+          ? "مرحباً! أنا مساعد النمذجة المالية.\n\nصِف مشروعك وسأعبّي البيانات تلقائياً في الموديل.\n\nيمكنك أيضاً:\n- إرفاق ملفات (Excel, PDF, صور, CSV)\n- تسجيل صوتي بالضغط على 🎤\n\nمثال: \"مشروع سكني في الرياض، أرض 20,000 م² شراء بـ 50 مليون، 3 أبراج سكنية، تكلفة بناء 300 مليون، تمويل بنكي 60%\""
+          : "Hello! I'm the financial modeling assistant.\n\nDescribe your project and I'll auto-fill the model.\n\nYou can also:\n- Attach files (Excel, PDF, images, CSV)\n- Voice record by pressing 🎤\n\nExample: \"Mixed-use project in Riyadh, 20,000 sqm land purchased for 50M SAR, 3 residential towers, 300M construction cost, 60% bank financing\"",
         parsed: null,
       }]);
     }
@@ -485,19 +590,57 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
 
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if ((!text && attachments.length === 0) || loading) return;
 
     setInput("");
     setError(null);
 
-    const userMsg = { role: "user", content: text };
+    // Build display message for user
+    const fileNames = attachments.map(a => a.file.name).join(", ");
+    const displayContent = text + (fileNames ? `\n📎 ${fileNames}` : "");
+    const userMsg = { role: "user", content: displayContent };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
-    // Build conversation history for Claude (exclude welcome message and parsed data)
-    const apiMessages = [...messages, userMsg]
-      .filter(m => m.role === "user" || (m.role === "assistant" && messages.indexOf(m) > 0))
-      .map(m => ({ role: m.role, content: m.content }));
+    // Build the API message content (multimodal)
+    const contentParts = [];
+
+    // Add file attachments
+    for (const att of attachments) {
+      if (att.type === "image") {
+        contentParts.push({
+          type: "image",
+          source: { type: "base64", media_type: att.mediaType, data: att.base64 },
+        });
+      } else if (att.type === "pdf") {
+        contentParts.push({
+          type: "document",
+          source: { type: "base64", media_type: "application/pdf", data: att.base64 },
+        });
+      } else if (att.type === "csv" || att.type === "excel") {
+        contentParts.push({
+          type: "text",
+          text: `[File: ${att.file.name}]\n${att.textContent}`,
+        });
+      }
+    }
+
+    // Add user text
+    contentParts.push({ type: "text", text: text || (isAr ? "حلل الملف المرفق" : "Analyze the attached file") });
+
+    // Clear attachments after sending
+    const sentAttachments = [...attachments];
+    setAttachments([]);
+
+    // Build conversation history
+    const apiMessages = [...messages.filter((m, idx) => idx > 0), { role: "user", content: contentParts.length === 1 ? text : contentParts }]
+      .filter(m => m.role === "user" || m.role === "assistant")
+      .map(m => {
+        // For history messages, keep only text content
+        if (typeof m.content === "string") return { role: m.role, content: m.content };
+        if (Array.isArray(m.content)) return { role: m.role, content: m.content };
+        return { role: m.role, content: String(m.content) };
+      });
 
     // Build context: current project + other saved projects
     const projectContext = project
@@ -717,8 +860,51 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
           </div>
         )}
 
+        {/* Attachments preview */}
+        {attachments.length > 0 && (
+          <div style={{ padding: "8px 16px 0", display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {attachments.map((att, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 5, padding: "4px 8px",
+                background: "#1a1f2e", borderRadius: 8, border: "1px solid #252a3a", fontSize: 11,
+              }}>
+                {att.type === "image" && att.preview && (
+                  <img src={att.preview} alt="" style={{ width: 24, height: 24, borderRadius: 4, objectFit: "cover" }} />
+                )}
+                <span style={{ color: "#8b90a0" }}>
+                  {att.type === "pdf" ? "📄" : att.type === "excel" ? "📊" : att.type === "csv" ? "📋" : "🖼️"}
+                </span>
+                <span style={{ color: "#c8cdd8", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.file.name}</span>
+                <button onClick={() => removeAttachment(i)} style={{ ...btnStyle, background: "none", color: "#6b7080", fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Input bar */}
         <div style={inputBarStyle}>
+          {/* File upload button */}
+          <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.csv,.tsv,.xlsx,.xls" multiple onChange={handleFileSelect} style={{ display: "none" }} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            title={isAr ? "إرفاق ملف" : "Attach file"}
+            style={{ ...btnStyle, background: "#1a1f2e", color: "#6b7080", padding: "8px 10px", fontSize: 16, border: "1px solid #252a3a", minWidth: 40, height: 42, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >📎</button>
+
+          {/* Voice recording button */}
+          <button
+            onClick={toggleRecording}
+            title={isAr ? "تسجيل صوتي" : "Voice input"}
+            style={{
+              ...btnStyle,
+              background: isRecording ? "#7f1d1d" : "#1a1f2e",
+              color: isRecording ? "#f87171" : "#6b7080",
+              padding: "8px 10px", fontSize: 16, border: isRecording ? "1px solid #ef4444" : "1px solid #252a3a",
+              minWidth: 40, height: 42, display: "flex", alignItems: "center", justifyContent: "center",
+              animation: isRecording ? "pulse 1.5s ease-in-out infinite" : "none",
+            }}
+          >{isRecording ? "⏹" : "🎤"}</button>
+
           <textarea
             ref={textareaRef}
             value={input}
@@ -736,11 +922,11 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
           />
           <button
             onClick={sendMessage}
-            disabled={!input.trim() || loading}
+            disabled={(!input.trim() && attachments.length === 0) || loading}
             style={{
               ...btnStyle,
-              background: input.trim() && !loading ? "linear-gradient(135deg, #5fbfbf, #2563eb)" : "#1a1f2e",
-              color: input.trim() && !loading ? "#fff" : "#4a4f5e",
+              background: (input.trim() || attachments.length > 0) && !loading ? "linear-gradient(135deg, #5fbfbf, #2563eb)" : "#1a1f2e",
+              color: (input.trim() || attachments.length > 0) && !loading ? "#fff" : "#4a4f5e",
               padding: "10px 14px", fontSize: 14, fontWeight: 700,
               transition: "all 0.2s",
               minWidth: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center",
