@@ -89,12 +89,7 @@ export function AuthGate({ children }) {
     finally { setBusy(false) }
   }
 
-  const Inp = ({type,value,onChange,placeholder,dir}) => (
-    <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} dir={dir||'ltr'}
-      style={{width:'100%',padding:'13px 16px',borderRadius:10,border:'1.5px solid #dde3ec',background:'#fafbfd',color:'#0c1a2e',fontSize:14,fontFamily:'inherit',outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
-      onFocus={e=>{e.target.style.borderColor='#5fbfbf';e.target.style.boxShadow='0 0 0 3px rgba(95,191,191,0.1)'}}
-      onBlur={e=>{e.target.style.borderColor='#dde3ec';e.target.style.boxShadow='none'}} />
-  )
+
 
   return (
     <div style={S.page}>
