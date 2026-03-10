@@ -221,7 +221,7 @@ IMPORTANT:
 
 // ── Styles ──
 const panelStyle = {
-  position: "fixed", top: 0, right: 0, width: 420, height: "100vh",
+  position: "fixed", top: 0, right: 0, width: 480, maxWidth: "92vw", height: "100vh",
   background: "#0c0f16", color: "#d0d4dc", display: "flex", flexDirection: "column",
   zIndex: 9999, boxShadow: "-4px 0 32px rgba(0,0,0,0.5)",
   fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif",
@@ -242,6 +242,99 @@ const inputBarStyle = {
 const btnStyle = {
   border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "inherit",
 };
+
+// ── Simple Markdown to JSX renderer ──
+function renderMarkdown(text) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  const elements = [];
+  let key = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Empty line = spacing
+    if (!line.trim()) {
+      elements.push(<div key={key++} style={{ height: 6 }} />);
+      continue;
+    }
+
+    // Numbered list: "1. text" or "١. text"
+    const numMatch = line.match(/^\s*(\d+[\.\)٫])\s+(.*)/);
+    if (numMatch) {
+      elements.push(
+        <div key={key++} style={{ display: "flex", gap: 8, padding: "2px 0", marginRight: 8 }}>
+          <span style={{ color: "#5fbfbf", fontWeight: 600, minWidth: 18 }}>{numMatch[1]}</span>
+          <span>{renderInline(numMatch[2])}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Bullet: "- text"
+    const bulletMatch = line.match(/^\s*[-•]\s+(.*)/);
+    if (bulletMatch) {
+      elements.push(
+        <div key={key++} style={{ display: "flex", gap: 8, padding: "2px 0", paddingRight: 4, marginRight: 8 }}>
+          <span style={{ color: "#5fbfbf", marginTop: 2 }}>●</span>
+          <span>{renderInline(bulletMatch[1])}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Sub-bullet: "  - text"
+    const subBulletMatch = line.match(/^\s{2,}[-•]\s+(.*)/);
+    if (subBulletMatch) {
+      elements.push(
+        <div key={key++} style={{ display: "flex", gap: 8, padding: "1px 0", paddingRight: 16 }}>
+          <span style={{ color: "#4a5568", marginTop: 2 }}>○</span>
+          <span>{renderInline(subBulletMatch[1])}</span>
+        </div>
+      );
+      continue;
+    }
+
+    // Regular line
+    elements.push(<div key={key++} style={{ padding: "1px 0" }}>{renderInline(line)}</div>);
+  }
+
+  return elements;
+}
+
+// Inline markdown: **bold**, *italic*, `code`
+function renderInline(text) {
+  if (!text) return text;
+  const parts = [];
+  let remaining = text;
+  let k = 0;
+
+  while (remaining.length > 0) {
+    // Bold: **text**
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+    if (boldMatch) {
+      const idx = remaining.indexOf(boldMatch[0]);
+      if (idx > 0) parts.push(<span key={k++}>{remaining.substring(0, idx)}</span>);
+      parts.push(<span key={k++} style={{ fontWeight: 700, color: "#e2e8f0" }}>{boldMatch[1]}</span>);
+      remaining = remaining.substring(idx + boldMatch[0].length);
+      continue;
+    }
+    // Code: `text`
+    const codeMatch = remaining.match(/`(.+?)`/);
+    if (codeMatch) {
+      const idx = remaining.indexOf(codeMatch[0]);
+      if (idx > 0) parts.push(<span key={k++}>{remaining.substring(0, idx)}</span>);
+      parts.push(<span key={k++} style={{ background: "#1e2230", padding: "1px 5px", borderRadius: 3, fontSize: "0.9em", color: "#5fbfbf" }}>{codeMatch[1]}</span>);
+      remaining = remaining.substring(idx + codeMatch[0].length);
+      continue;
+    }
+    // No more matches
+    parts.push(<span key={k++}>{remaining}</span>);
+    break;
+  }
+
+  return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
 
 // ── Component ──
 export default function AiAssistant({ open, onClose, project, onApply, lang, projectIndex, loadProjectFn }) {
@@ -536,13 +629,16 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", gap: 6 }}>
               {/* Message bubble */}
               <div style={{
-                maxWidth: "88%", padding: "10px 14px", borderRadius: 12,
+                maxWidth: "92%", padding: "12px 16px", borderRadius: 14,
                 background: m.role === "user" ? "#1e3a5f" : "#151922",
                 color: m.role === "user" ? "#93c5fd" : "#c8cdd8",
-                fontSize: 12.5, lineHeight: 1.6, whiteSpace: "pre-wrap",
-                border: m.role === "user" ? "1px solid #1e3a5f" : "1px solid #1e2230",
+                fontSize: 13, lineHeight: 1.65,
+                border: m.role === "user" ? "1px solid #2a4a6f" : "1px solid #1e2230",
               }}>
-                {m.displayText || m.content}
+                {m.role === "user"
+                  ? (m.displayText || m.content)
+                  : renderMarkdown(m.displayText || m.content)
+                }
               </div>
 
               {/* Apply button for parsed responses */}
