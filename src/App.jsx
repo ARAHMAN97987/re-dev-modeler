@@ -1808,9 +1808,12 @@ export default function ReDevModeler({ user, signOut }) {
               </div>
             ))}
           </div>
-          {[{key:"dashboard",label:t.dashboard},{key:"assets",label:t.assetProgram},{key:"financing",label:lang==="ar"?"التمويل":"Financing"},{key:"waterfall",label:lang==="ar"?"شلال التوزيعات":"Waterfall"},{key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},{key:"reports",label:lang==="ar"?"التقارير":"Reports"},{key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},{key:"cashflow",label:t.cashFlow},{key:"checks",label:t.checks}].map(tb=>(
-            <button key={tb.key} onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:500,border:"none",cursor:"pointer",background:"none",color:activeTab===tb.key?"#2563eb":"#6b7080",borderBottom:activeTab===tb.key?"2px solid #2563eb":"2px solid transparent",whiteSpace:"nowrap"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
-          ))}
+          {[{key:"dashboard",label:t.dashboard},{key:"assets",label:t.assetProgram},{key:"cashflow",label:t.cashFlow},{key:"financing",label:lang==="ar"?"التمويل":"Financing"},{key:"waterfall",label:lang==="ar"?"الشلال":"Waterfall"},{key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},{key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},{key:"checks",label:lang==="ar"?"الفحوصات":"Checks"},{key:"reports",label:lang==="ar"?"التقارير":"Reports"}].map(tb=>{
+            const groupColors = {dashboard:"#2563eb",assets:"#2563eb",cashflow:"#2563eb",financing:"#8b5cf6",waterfall:"#8b5cf6",incentives:"#8b5cf6",scenarios:"#f59e0b",checks:"#f59e0b",reports:"#16a34a"};
+            const gc = groupColors[tb.key] || "#2563eb";
+            const isActive = activeTab===tb.key;
+            return <button key={tb.key} onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>;
+          })}
         </div>
         <div style={{flex:1,overflow:"auto",padding:18}}>
           {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} />}
@@ -1905,10 +1908,14 @@ function StatusBadge({status,onChange}) {
 // CONTROL PANEL
 // ═══════════════════════════════════════════════════════════════
 // ── Sidebar helper components (defined OUTSIDE ControlPanel to prevent re-creation) ──
-function Sec({title,children,def=true}) {
+function Sec({title,children,def=false,filled}) {
   const [open,setOpen]=useState(def);
   return (<div style={{borderBottom:"1px solid #1e2230"}}>
-    <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"left",cursor:"pointer",display:"flex",justifyContent:"space-between"}}>{title}<span style={{color:"#3b4050"}}>{open?"−":"+"}</span></button>
+    <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:open?"#d0d4dc":"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"color 0.15s"}}>
+      {filled!==undefined&&<span style={{width:7,height:7,borderRadius:4,background:filled?"#16a34a":"#3b4050",flexShrink:0}} />}
+      <span style={{flex:1}}>{title}</span>
+      <span style={{color:"#3b4050",fontSize:12,transition:"transform 0.2s",transform:open?"rotate(0)":"rotate(-90deg)"}}>▾</span>
+    </button>
     {open&&<div style={{padding:"0 16px 14px"}}>{children}</div>}
   </div>);
 }
@@ -1940,7 +1947,7 @@ function ControlPanel({ project, up, t, lang }) {
   const rmPhase=(i)=>up({phases:project.phases.filter((_,j)=>j!==i)});
 
   return (<>
-    <Sec title={t.general}>
+    <Sec title={t.general} def={true} filled={!!(project.location && project.startYear)}>
       <Fld label={t.location}><SidebarInput value={project.location} onChange={v=>up({location:v})} placeholder="e.g. Jazan, Saudi Arabia" /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.startYear}><SidebarInput type="number" value={project.startYear} onChange={v=>up({startYear:v})} /></Fld>
@@ -1949,7 +1956,7 @@ function ControlPanel({ project, up, t, lang }) {
       <Fld label={t.currency}><Sel lang={lang} value={project.currency} onChange={v=>up({currency:v})} options={CURRENCIES} /></Fld>
     </Sec>
 
-    <Sec title={t.landAcq}>
+    <Sec title={t.landAcq} filled={project.landArea > 0}>
       <Fld label={t.landType}><Sel lang={lang} value={project.landType} onChange={v=>up({landType:v})} options={LAND_TYPES} /></Fld>
       <Fld label={t.landArea}><SidebarInput type="number" value={project.landArea} onChange={v=>up({landArea:v})} /></Fld>
       {project.landType==="lease"&&<>
@@ -1971,15 +1978,15 @@ function ControlPanel({ project, up, t, lang }) {
       {project.landType==="bot"&&<Fld label={t.botYears}><SidebarInput type="number" value={project.botOperationYears} onChange={v=>up({botOperationYears:v})} /></Fld>}
     </Sec>
 
-    <Sec title={t.capexAssumptions}>
+    <Sec title={t.capexAssumptions} filled={project.softCostPct > 0}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.softCost} tip="Indirect costs: design, supervision, permits. Standard 8-12%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
         <Fld label={t.contingency} tip="Risk reserve for unexpected costs. Standard 3-7%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
       </div>
     </Sec>
 
-    <Sec title={t.revenueAssumptions}>
-      <Fld label={t.rentEsc}><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
+    <Sec title={t.revenueAssumptions} filled={project.rentEscalation > 0}>
+      <Fld label={t.rentEsc} tip="Annual rent increase %. Saudi prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.defEfficiency} tip="Leasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
         <Fld label={t.defLeaseRate}><SidebarInput type="number" value={project.defaultLeaseRate} onChange={v=>up({defaultLeaseRate:v})} /></Fld>
@@ -1987,7 +1994,7 @@ function ControlPanel({ project, up, t, lang }) {
       <Fld label={t.defCostSqm}><SidebarInput type="number" value={project.defaultCostPerSqm} onChange={v=>up({defaultCostPerSqm:v})} /></Fld>
     </Sec>
 
-    <Sec title={t.scenario}>
+    <Sec title={t.scenario} filled={project.activeScenario !== "Base Case"}>
       <Fld label={t.activeScenario}><Sel lang={lang} value={project.activeScenario} onChange={v=>up({activeScenario:v})} options={SCENARIOS} /></Fld>
       {project.activeScenario==="Custom"&&<>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -2001,7 +2008,7 @@ function ControlPanel({ project, up, t, lang }) {
       </>}
     </Sec>
 
-    <Sec title={lang==="ar"?"التمويل":"Financing"} def={false}>
+    <Sec title={lang==="ar"?"التمويل":"Financing"} def={false} filled={project.finMode !== "self"}>
       <Fld label={lang==="ar"?"نوع التمويل":"Financing Mode"}>
         <Sel lang={lang} value={project.finMode} onChange={v=>up({finMode:v})} options={[
           {value:"self",en:"Self-Funded (100% Equity)",ar:"تمويل ذاتي"},
@@ -2071,8 +2078,8 @@ function ControlPanel({ project, up, t, lang }) {
               <Fld label={lang==="ar"?"معدل الربح %":"Finance Rate %"} tip="Annual profit/interest rate. Saudi market: 5-8%"><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"}><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
-              <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"}><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
+              <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"} tip="Total loan period including grace. Standard 5-10 years"><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
+              <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"} tip="Interest-only period before repayment starts. Matches construction period"><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
@@ -2108,7 +2115,7 @@ function ControlPanel({ project, up, t, lang }) {
               <Fld label={lang==="ar"?"مضاعف الإيجار":"Exit Multiple (x)"} tip="Sale price = Annual Rent × Multiple"><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
             )}
             {project.exitStrategy === "caprate" && (
-              <Fld label={lang==="ar"?"معدل الرسملة %":"Cap Rate %"}><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
+              <Fld label={lang==="ar"?"معدل الرسملة %":"Cap Rate %"} tip="Exit value = NOI / Cap Rate. Saudi: 7-10% retail, 8-12% office"><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
             )}
             <Fld label={lang==="ar"?"تكاليف التخارج %":"Exit Cost %"}><SidebarInput type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></Fld>
           </>}
@@ -2154,7 +2161,7 @@ function ControlPanel({ project, up, t, lang }) {
       </>}
     </Sec>
 
-    <Sec title={t.phases}>
+    <Sec title={t.phases} filled={(project.phases||[]).length > 1}>
       {project.phases.map((ph,i)=>(
         <div key={i} style={{background:"#161a24",borderRadius:6,padding:10,marginBottom:8}}>
           <div style={{display:"flex",gap:6,marginBottom:6}}>
