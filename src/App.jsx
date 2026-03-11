@@ -503,7 +503,7 @@ function computeProjectCashFlows(project) {
     const totalCapex = computeAssetCapex(asset, project);
     const durYears = Math.ceil(((asset.constrDuration||12) + dm) / 12);
     const ramp = asset.rampUpYears || 3;
-    const occ = (asset.stabilizedOcc || 100) / 100;
+    const occ = (asset.stabilizedOcc != null ? asset.stabilizedOcc : 100) / 100;
     const eff = (asset.efficiency || 0) / 100;
     const leasableArea = (asset.gfa || 0) * eff;
     const leaseRate = (asset.leaseRate || 0) * rm;
@@ -1790,7 +1790,7 @@ export default function ReDevModeler({ user, signOut }) {
           {activeTab==="checks"&&<ChecksView checks={checks} t={t} />}
         </div>
       </div>
-      <AiAssistant open={aiOpen} onClose={()=>setAiOpen(false)} project={project} onApply={up} lang={lang} projectIndex={projectIndex} loadProjectFn={loadProject} />
+      <AiAssistant open={aiOpen} onClose={()=>setAiOpen(false)} project={project} onApply={up} lang={lang} projectIndex={projectIndex} loadProjectFn={loadProject} results={results} financing={financing} waterfall={waterfall} />
     </div>
   );
 }
