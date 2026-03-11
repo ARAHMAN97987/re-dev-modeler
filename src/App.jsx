@@ -696,7 +696,7 @@ function computeIncentives(project, projectResults) {
       else if (y < constrYrs + operYrs) rebatePct = operPct;
       const saving = Math.abs(c.landRent[y] || 0) * rebatePct;
       result.landRentSavingSchedule[y] = saving;
-      result.adjustedLandRent[y] = (c.landRent[y] || 0) + saving; // landRent is negative, saving makes it less negative
+      result.adjustedLandRent[y] = Math.max(0, (c.landRent[y] || 0) - saving); // Rebate reduces land rent cost
       result.landRentSavingTotal += saving;
     }
   }
