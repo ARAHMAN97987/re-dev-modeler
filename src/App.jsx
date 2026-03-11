@@ -1759,14 +1759,15 @@ export default function ReDevModeler({ user, signOut }) {
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
           {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
-        {/* ── Health Status Bar ── */}
+        {/* Health Status Bar */}
         {results && (project.assets||[]).length > 0 && (() => {
           const c = results.consolidated;
           const irr = c.irr;
-          const dscr = financing ? Math.min(...financing.dscr.filter(d=>d!==null).slice(0,20)) : null;
+          const dscrVals = financing ? financing.dscr.filter(d=>d!==null) : [];
+          const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
           const npv = c.npv10;
           const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
-          const dscrOk = !dscr ? -1 : dscr > 1.4 ? 2 : dscr > 1.25 ? 1 : 0;
+          const dscrOk = minDscr === null ? -1 : minDscr > 1.4 ? 2 : minDscr > 1.25 ? 1 : 0;
           const npvOk = npv > 0 ? 2 : 0;
           const score = irrOk + (dscrOk >= 0 ? dscrOk : 0) + npvOk;
           const maxScore = 4 + (dscrOk >= 0 ? 2 : 0);
@@ -1776,21 +1777,19 @@ export default function ReDevModeler({ user, signOut }) {
                         weak: { bg: "#fef2f2", border: "#fecaca", color: "#991b1b", icon: "✗", label: lang==="ar"?"المشروع ضعيف":"Project Health: Weak" } }[health];
           const metrics = [
             irr !== null && { label: "IRR", value: (irr*100).toFixed(1)+"%", ok: irrOk },
-            dscr !== null && { label: "DSCR", value: dscr.toFixed(2)+"x", ok: dscrOk },
-            { label: "NPV@10%", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv >= 0 ? "+" : (npv/1e6).toFixed(0)+"M", ok: npvOk },
+            minDscr !== null && { label: "DSCR", value: minDscr.toFixed(2)+"x", ok: dscrOk },
+            { label: "NPV", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv > 0 ? "+":"—", ok: npvOk },
           ].filter(Boolean);
           return (
-            <div style={{background:cfg.bg,borderBottom:`1px solid ${cfg.border}`,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11,transition:"all 0.3s"}}>
+            <div style={{background:cfg.bg,borderBottom:"1px solid "+cfg.border,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11}}>
               <span style={{fontWeight:700,color:cfg.color,fontSize:13}}>{cfg.icon}</span>
               <span style={{fontWeight:600,color:cfg.color}}>{cfg.label}</span>
               <div style={{width:1,height:16,background:cfg.border}} />
-              {metrics.map((m,i)=>(
-                <span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{width:7,height:7,borderRadius:4,background:m.ok>=2?"#16a34a":m.ok===1?"#eab308":"#ef4444"}} />
-                  <span style={{color:"#6b7080"}}>{m.label}:</span>
-                  <span style={{fontWeight:600,color:m.ok>=2?"#15803d":m.ok===1?"#92400e":"#991b1b"}}>{m.value}</span>
-                </span>
-              ))}
+              {metrics.map((m,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                <span style={{width:7,height:7,borderRadius:4,background:m.ok>=2?"#16a34a":m.ok===1?"#eab308":"#ef4444"}} />
+                <span style={{color:"#6b7080"}}>{m.label}:</span>
+                <span style={{fontWeight:600,color:m.ok>=2?"#15803d":m.ok===1?"#92400e":"#991b1b"}}>{m.value}</span>
+              </span>)}
             </div>
           );
         })()}
@@ -2314,8 +2313,8 @@ function MarinaPLModal({ data, onSave, onClose, t }) {
 function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject }) {
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
-  const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
-  const [editIdx, setEditIdx] = useState(null); // index of asset being edited in detail modal
+  const [viewMode, setViewMode] = useState("cards");
+  const [editIdx, setEditIdx] = useState(null);
   const fileRef = useRef(null);
   if (!project) return null;
   const assets = project.assets || [];
@@ -2394,20 +2393,19 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         <div style={{fontSize:15,fontWeight:600}}>{t.assetProgram}</div>
         <div style={{fontSize:12,color:"#6b7080"}}>{assets.length} {t.assets}</div>
         <div style={{flex:1}} />
-        {/* View toggle */}
         <div style={{display:"flex",background:"#f0f1f5",borderRadius:6,padding:2}}>
           <button onClick={()=>setViewMode("cards")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="cards"?"#fff":"transparent",color:viewMode==="cards"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="cards"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>▦ {lang==="ar"?"بطاقات":"Cards"}</button>
           <button onClick={()=>setViewMode("table")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="table"?"#fff":"transparent",color:viewMode==="table"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="table"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>☰ {lang==="ar"?"جدول":"Table"}</button>
         </div>
         <button onClick={()=>generateTemplate()} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
-          {lang==='ar'?'⬇ نموذج':'⬇ Template'}
+          {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
-        <button onClick={()=>exportAssetsToExcel(project, results)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}}>
+        <button onClick={()=>exportAssetsToExcel(project, results)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
           {lang==='ar'?'⬇ تصدير':'⬇ Export'}
         </button>
         <input type="file" accept=".csv,.tsv" ref={fileRef} onChange={handleUpload} style={{display:"none"}} />
-        <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}}>
-          {lang==='ar'?'⬆ رفع':'⬆ Upload'}
+        <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}} title={lang==='ar'?"رفع ملف Excel":"Upload Excel File"}>
+          {lang==='ar'?'⬆ رفع ملف':'⬆ Upload'}
         </button>
         <button onClick={addAsset} style={{...btnPrim,padding:"7px 16px",fontSize:12}}>{t.addAsset}</button>
       </div>
@@ -2425,131 +2423,81 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           <button onClick={()=>setImportMsg(null)} style={{...btnSm,background:"transparent",color:"inherit",fontSize:14,padding:"0 4px"}}>✕</button>
         </div>
       )}
-      {/* ── CARD VIEW ── */}
-      {viewMode === "cards" && (
-        <div>
-          {assets.length === 0 ? (
-            <div style={{textAlign:"center",padding:48,color:"#9ca3af",background:"#fff",borderRadius:12,border:"2px dashed #e5e7ec"}}>
-              <div style={{fontSize:32,marginBottom:8}}>🏗</div>
-              <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{lang==="ar"?"لا توجد أصول":"No assets yet"}</div>
-              <div style={{fontSize:12}}>{lang==="ar"?"اضغط '+ إضافة أصل' أو استخدم المساعد الذكي":"Click '+ Add Asset' or use the AI Assistant"}</div>
-            </div>
-          ) : (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:12}}>
-              {assets.map((a, i) => {
-                const comp = results?.assetSchedules?.[i];
-                const capex = comp?.totalCapex || computeAssetCapex(a, project);
-                const income = comp?.totalRevenue || 0;
-                const catColors = {Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899",Flexible:"#6366f1"};
-                const catColor = catColors[a.category] || "#6b7080";
-                const catIcons = {Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭",Flexible:"🔧","Open Space":"🌳",Utilities:"⚡",Infrastructure:"🛣",Amenity:"🎯"};
-                const catIcon = catIcons[a.category] || "📦";
-                return (
-                  <div key={a.id||i} onClick={()=>setEditIdx(i)} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:0,cursor:"pointer",transition:"all 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}
-                    onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.borderColor="#c7d2fe";}}
-                    onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";e.currentTarget.style.borderColor="#e5e7ec";}}>
-                    {/* Card header */}
-                    <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                        <span style={{fontSize:18}}>{catIcon}</span>
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:13,fontWeight:700,color:"#1a1d23",lineHeight:1.2}}>{a.name || `Asset ${i+1}`}</div>
-                          <div style={{fontSize:10,color:"#9ca3af"}}>{a.code ? `${a.code} · ` : ""}{a.phase}</div>
-                        </div>
-                        <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:`${catColor}15`,color:catColor,fontWeight:600}}>{a.category}</span>
-                      </div>
-                    </div>
-                    {/* Card body - key metrics */}
-                    <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
-                      <div><span style={{color:"#9ca3af"}}>GFA</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
-                      <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?"Rate":"EBITDA"}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":fmtM(a.opEbitda)}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>CAPEX</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>Income</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>{lang==="ar"?"البناء":"Construction"}</span><div style={{fontWeight:500}}>{a.constrDuration}mo · Yr {a.constrStart}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>{lang==="ar"?"إشغال":"Occupancy"}</span><div style={{fontWeight:500}}>{a.stabilizedOcc}%</div></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Asset Detail Modal */}
-          {editIdx !== null && editIdx < assets.length && (() => {
-            const a = assets[editIdx];
-            const i = editIdx;
-            const comp = results?.assetSchedules?.[i];
-            const isOp = a.revType === "Operating";
-            const isHotel = isOp && a.category === "Hospitality";
-            const isMarina = isOp && a.category === "Marina";
-            const Fld2 = ({label, children}) => (<div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>);
-            const Inp = ({type,value,onChange,...rest}) => (<input type={type||"text"} value={value??""} onChange={e=>onChange(type==="number"?parseFloat(e.target.value)||0:e.target.value)} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,fontFamily:"inherit",background:"#fafbfc",outline:"none"}} {...rest} />);
-
-            return (<>
-              <div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
-              <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-                {/* Modal header */}
-                <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:16,fontWeight:700}}>{a.name || `Asset ${i+1}`}</div>
-                    <div style={{fontSize:11,color:"#9ca3af"}}>{a.category} · {a.phase}</div>
-                  </div>
-                  <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>{lang==="ar"?"حذف":"Delete"}</button>
-                  <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
-                </div>
-                {/* Modal body */}
-                <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"التصنيف":"Category"}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>upAsset(i,{category:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"نوع الإيراد":"Revenue Type"}><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></Fld2>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"اسم الأصل":"Asset Name"}><Inp value={a.name} onChange={v=>upAsset(i,{name:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"الرمز":"Code"}><Inp value={a.code} onChange={v=>upAsset(i,{code:v})} /></Fld2>
-                  </div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8,marginTop:4}}>{lang==="ar"?"المساحات":"Areas"}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label="Plot Area (m²)"><Inp type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></Fld2>
-                    <Fld2 label="Footprint (m²)"><Inp type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></Fld2>
-                    <Fld2 label="GFA (m²)"><Inp type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></Fld2>
-                  </div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{lang==="ar"?"الإيرادات":"Revenue"}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"الكفاءة %":"Efficiency %"}><Inp type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"إيجار/م²":"Lease Rate/m²"}><Inp type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} /></Fld2>
-                    <Fld2 label="Op EBITDA"><Inp type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"الزيادة %":"Escalation %"}><Inp type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"سنوات النمو":"Ramp-up Years"}><Inp type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"الإشغال %":"Occupancy %"}><Inp type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></Fld2>
-                  </div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{lang==="ar"?"البناء":"Construction"}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"تكلفة/م²":"Cost/m²"}><Inp type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"بداية البناء (سنة)":"Start Year"}><Inp type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"مدة البناء (شهر)":"Duration (months)"}><Inp type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></Fld2>
-                  </div>
-                  {/* P&L buttons */}
-                  {(isHotel||isMarina) && (
-                    <button onClick={()=>setModal({type:isHotel?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>
-                      {isHotel?(lang==="ar"?"⚙ إعداد P&L الفندق":"⚙ Configure Hotel P&L"):(lang==="ar"?"⚙ إعداد P&L المارينا":"⚙ Configure Marina P&L")}
-                    </button>
-                  )}
-                  {/* Summary */}
-                  <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
-                    <div><span style={{color:"#6b7080"}}>Total CAPEX:</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
-                    <div><span style={{color:"#6b7080"}}>Total Income:</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
-                    <div><span style={{color:"#6b7080"}}>Leasable Area:</span> <strong>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</strong></div>
-                    <div><span style={{color:"#6b7080"}}>{lang==="ar"?"نوع الإيراد":"Rev Type"}:</span> <strong>{a.revType}</strong></div>
-                  </div>
-                </div>
+      {/* CARD VIEW */}
+      {viewMode === "cards" && (<div>
+        {assets.length===0 ? (
+          <div style={{textAlign:"center",padding:48,color:"#9ca3af",background:"#fff",borderRadius:12,border:"2px dashed #e5e7ec"}}>
+            <div style={{fontSize:32,marginBottom:8}}>🏗</div><div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{lang==="ar"?"لا توجد أصول":"No assets yet"}</div>
+            <div style={{fontSize:12}}>{lang==="ar"?"اضغط '+ إضافة أصل' أو استخدم المساعد الذكي":"Click '+ Add Asset' or use the AI Assistant"}</div>
+          </div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:12}}>
+            {assets.map((a,i)=>{const comp=results?.assetSchedules?.[i];const capex=comp?.totalCapex||computeAssetCapex(a,project);const income=comp?.totalRevenue||0;const catC={Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899"};const catI={Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭","Open Space":"🌳",Utilities:"⚡",Flexible:"🔧"};const cc=catC[a.category]||"#6b7080";
+            return <div key={a.id||i} onClick={()=>setEditIdx(i)} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",cursor:"pointer",transition:"box-shadow 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
+              <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
+                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:10,color:"#9ca3af"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
+                <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:cc+"15",color:cc,fontWeight:600}}>{a.category}</span>
               </div>
-            </>);
-          })()}
-        </div>
-      )}
-
-      {/* ── TABLE VIEW ── */}
+              <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
+                <div><span style={{color:"#9ca3af"}}>GFA</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
+                <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?"Rate":"EBITDA"}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":fmtM(a.opEbitda)}</div></div>
+                <div><span style={{color:"#9ca3af"}}>CAPEX</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
+                <div><span style={{color:"#9ca3af"}}>Income</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
+              </div>
+            </div>;})}
+          </div>
+        )}
+        {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
+        const F2=({label,children})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>;
+        const Inp=({type,value,onChange})=><input type={type||"text"} value={value??""} onChange={e=>onChange(type==="number"?parseFloat(e.target.value)||0:e.target.value)} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,fontFamily:"inherit",background:"#fafbfc",outline:"none"}} />;
+        return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
+        <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
+            <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"#9ca3af"}}>{a.category} · {a.phase}</div></div>
+            <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>Delete</button>
+            <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
+          </div>
+          <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Phase"><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></F2>
+              <F2 label="Category"><EditableCell options={CATEGORIES} value={a.category} onChange={v=>upAsset(i,{category:v})} /></F2>
+              <F2 label="Rev Type"><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Name"><Inp value={a.name} onChange={v=>upAsset(i,{name:v})} /></F2>
+              <F2 label="Code"><Inp value={a.code} onChange={v=>upAsset(i,{code:v})} /></F2>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Areas</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Plot Area"><Inp type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></F2>
+              <F2 label="Footprint"><Inp type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></F2>
+              <F2 label="GFA (m²)"><Inp type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></F2>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Revenue</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Efficiency %"><Inp type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} /></F2>
+              <F2 label="Lease Rate"><Inp type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} /></F2>
+              <F2 label="Op EBITDA"><Inp type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} /></F2>
+              <F2 label="Escalation %"><Inp type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></F2>
+              <F2 label="Ramp Years"><Inp type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></F2>
+              <F2 label="Occupancy %"><Inp type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></F2>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Construction</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Cost/m²"><Inp type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} /></F2>
+              <F2 label="Start Year"><Inp type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></F2>
+              <F2 label="Duration (mo)"><Inp type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></F2>
+            </div>
+            {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>{isH?"⚙ Hotel P&L":"⚙ Marina P&L"}</button>}
+            <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
+              <div><span style={{color:"#6b7080"}}>CAPEX:</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
+              <div><span style={{color:"#6b7080"}}>Income:</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
+            </div>
+          </div>
+        </div></>;})()}
+      </div>)}
+      {/* TABLE VIEW */}
       {viewMode === "table" && (<>
       <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
         <div style={{overflowX:"auto"}}>
@@ -2646,30 +2594,31 @@ function ProjectDash({ project, results, checks, t, financing }) {
   const f = financing;
   const h = results.horizon;
 
+  // Payback period
   let cumCF = 0, paybackYr = null;
   for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYr === null) paybackYr = y + 1; }
+
+  // Cash Yield (stabilized year income / total equity)
   const stabYear = Math.min(10, h - 1);
   const cashYield = f && f.totalEquity > 0 ? (c.income[stabYear] / f.totalEquity * 100) : null;
 
-  // Hero metric helper
-  const Hero = ({label, value, sub, color, size, icon}) => (
-    <div style={{background:`linear-gradient(135deg, ${color}08, ${color}15)`,borderRadius:12,border:`1px solid ${color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
-      {icon && <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{icon}</div>}
-      <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{label}</div>
-      <div style={{fontSize:size||28,fontWeight:800,color:color||"#1a1d23",lineHeight:1,letterSpacing:-0.5}}>{value}</div>
-      {sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{sub}</div>}
-    </div>
-  );
-
   return (<div>
-    {/* Hero KPIs Row */}
+    {/* Hero KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14,marginBottom:22}}>
-      <Hero label={t.consolidatedIRR+" (Unlevered)"} value={c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A"} color={c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444"} icon="📈" />
-      {f && f.mode !== "self" && <Hero label="Levered IRR" value={f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A"} color={f.leveredIRR>0.15?"#16a34a":"#8b5cf6"} icon="🏦" />}
-      <Hero label={t.npv10} value={fmtM(c.npv10)} sub={cur} color={c.npv10>0?"#2563eb":"#ef4444"} icon={c.npv10>0?"✓":"✗"} />
-      <Hero label={t.totalCapexLabel} value={fmtM(c.totalCapex)} sub={cur} color="#ef4444" icon="🏗" />
+      {[
+        {label:t.consolidatedIRR+" (Unlevered)",value:c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A",color:c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444",icon:"📈"},
+        f&&f.mode!=="self"&&{label:"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦"},
+        {label:t.npv10,value:fmtM(c.npv10),sub:cur,color:c.npv10>0?"#2563eb":"#ef4444",icon:c.npv10>0?"✓":"✗"},
+        {label:t.totalCapexLabel,value:fmtM(c.totalCapex),sub:cur,color:"#ef4444",icon:"🏗"},
+      ].filter(Boolean).map((h,i)=>(
+        <div key={i} style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
+          <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{h.label}</div>
+          <div style={{fontSize:28,fontWeight:800,color:h.color,lineHeight:1,letterSpacing:-0.5}}>{h.value}</div>
+          {h.sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{h.sub}</div>}
+        </div>
+      ))}
     </div>
-
     {/* Secondary KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
       <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" />
@@ -3824,3 +3773,184 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   const c = results.consolidated;
 
   const upInc = (key, updates) => {
+    const newInc = { ...project.incentives, [key]: { ...project.incentives[key], ...updates } };
+    up({ incentives: newInc });
+  };
+
+  const addFeeItem = () => {
+    const items = [...(inc.feeRebates?.items || []), { name: "", type: "rebate", amount: 0, year: 1, deferralMonths: 12 }];
+    upInc("feeRebates", { items });
+  };
+  const updateFeeItem = (i, u) => {
+    const items = [...(inc.feeRebates?.items || [])];
+    items[i] = { ...items[i], ...u };
+    upInc("feeRebates", { items });
+  };
+  const removeFeeItem = (i) => {
+    upInc("feeRebates", { items: (inc.feeRebates?.items || []).filter((_, j) => j !== i) });
+  };
+
+  // Without incentives calc (for comparison)
+  const irrWithout = c.irr;
+  const irrWith = financing?.leveredIRR;
+  const npvWithout = c.npv10;
+
+  const ToggleCard = ({ title, titleAr, enabled, onToggle, color, value, children }) => (
+    <div style={{ background: "#fff", borderRadius: 8, border: `1px solid ${enabled ? color : "#e5e7ec"}`, overflow: "hidden", transition: "border-color 0.2s" }}>
+      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: enabled ? `1px solid ${color}22` : "none", cursor: "pointer" }} onClick={onToggle}>
+        <div style={{ width: 36, height: 20, borderRadius: 10, background: enabled ? color : "#d1d5db", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+          <div style={{ width: 16, height: 16, borderRadius: 8, background: "#fff", position: "absolute", top: 2, left: enabled ? 18 : 2, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: enabled ? "#1a1d23" : "#9ca3af" }}>{lang === "ar" ? titleAr : title}</div>
+        </div>
+        {enabled && value && <div style={{ fontSize: 15, fontWeight: 700, color }}>{fmtM(value)}</div>}
+      </div>
+      {enabled && <div style={{ padding: "12px 16px" }}>{children}</div>}
+    </div>
+  );
+
+  const F = ({ label, children, hint }) => <div style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: "#6b7080", marginBottom: 3 }}>{label}</div>{children}{hint && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{hint}</div>}</div>;
+  const NI = ({ value, onChange }) => <SidebarInput type="number" value={value} onChange={onChange} style={{ background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }} />;
+
+  return (<div>
+    {/* Summary KPIs */}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 18 }}>
+      <KPI label={lang === "ar" ? "إجمالي الحوافز" : "Total Incentives"} value={fmtM(ir?.totalIncentiveValue || 0)} sub={cur} color="#16a34a" />
+      <KPI label={lang === "ar" ? "منحة CAPEX" : "CAPEX Grant"} value={fmtM(ir?.capexGrantTotal || 0)} sub={inc.capexGrant?.enabled ? "ON" : "OFF"} color={inc.capexGrant?.enabled ? "#2563eb" : "#9ca3af"} />
+      <KPI label={lang === "ar" ? "وفر إيجار الأرض" : "Land Rent Savings"} value={fmtM(ir?.landRentSavingTotal || 0)} sub={inc.landRentRebate?.enabled ? "ON" : "OFF"} color={inc.landRentRebate?.enabled ? "#f59e0b" : "#9ca3af"} />
+      <KPI label={lang === "ar" ? "دعم التمويل" : "Finance Support"} value={fmtM(financing?.interestSubsidyTotal || 0)} sub={inc.financeSupport?.enabled ? "ON" : "OFF"} color={inc.financeSupport?.enabled ? "#8b5cf6" : "#9ca3af"} />
+      <KPI label={lang === "ar" ? "استرداد رسوم" : "Fee Rebates"} value={fmtM(ir?.feeRebateTotal || 0)} sub={inc.feeRebates?.enabled ? "ON" : "OFF"} color={inc.feeRebates?.enabled ? "#06b6d4" : "#9ca3af"} />
+    </div>
+
+    {/* Incentive cards */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+      {/* ── 1. CAPEX Grant ── */}
+      <ToggleCard title="CAPEX Grant (Capital Subsidy)" titleAr="دعم رأسمالي (منحة CAPEX)" enabled={inc.capexGrant?.enabled} onToggle={() => upInc("capexGrant", { enabled: !inc.capexGrant?.enabled })} color="#2563eb" value={ir?.capexGrantTotal}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <F label={lang === "ar" ? "نسبة المنحة %" : "Grant %"}><NI value={inc.capexGrant?.grantPct || 25} onChange={v => upInc("capexGrant", { grantPct: v })} /></F>
+          <F label={lang === "ar" ? "الحد الأقصى (ريال)" : "Max Cap (SAR)"}><NI value={inc.capexGrant?.maxCap || 50000000} onChange={v => upInc("capexGrant", { maxCap: v })} /></F>
+        </div>
+        <F label={lang === "ar" ? "توقيت الاستلام" : "Timing"}>
+          <select value={inc.capexGrant?.timing || "construction"} onChange={e => upInc("capexGrant", { timing: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }}>
+            <option value="construction">{lang === "ar" ? "خلال البناء" : "During Construction"}</option>
+            <option value="completion">{lang === "ar" ? "عند الإنجاز" : "At Completion"}</option>
+          </select>
+        </F>
+        <div style={{ fontSize: 11, color: "#6b7080", marginTop: 6, padding: 8, background: "#f0f4ff", borderRadius: 4 }}>
+          {lang === "ar" ? "القيمة المحسوبة" : "Calculated"}: <strong>{fmt(ir?.capexGrantTotal || 0)} {cur}</strong> = min({inc.capexGrant?.grantPct}% × {fmtM(c.totalCapex)}, {fmt(inc.capexGrant?.maxCap)})
+        </div>
+      </ToggleCard>
+
+      {/* ── 2. Finance Support ── */}
+      <ToggleCard title="Finance Support (Interest Subsidy / Soft Loan)" titleAr="دعم التمويل (تحمل فوائد / قرض حسن)" enabled={inc.financeSupport?.enabled} onToggle={() => upInc("financeSupport", { enabled: !inc.financeSupport?.enabled })} color="#8b5cf6" value={financing?.interestSubsidyTotal}>
+        <F label={lang === "ar" ? "نوع الدعم" : "Support Type"}>
+          <select value={inc.financeSupport?.subType || "interestSubsidy"} onChange={e => upInc("financeSupport", { subType: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }}>
+            <option value="interestSubsidy">{lang === "ar" ? "تحمل فوائد" : "Interest Subsidy"}</option>
+            <option value="softLoan">{lang === "ar" ? "قرض حسن" : "Soft Loan"}</option>
+          </select>
+        </F>
+        {inc.financeSupport?.subType === "interestSubsidy" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <F label={lang === "ar" ? "نسبة التحمل %" : "Subsidy %"}><NI value={inc.financeSupport?.subsidyPct || 50} onChange={v => upInc("financeSupport", { subsidyPct: v })} /></F>
+            <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"}><NI value={inc.financeSupport?.subsidyYears || 5} onChange={v => upInc("financeSupport", { subsidyYears: v })} /></F>
+            <F label={lang === "ar" ? "البداية" : "Start"}>
+              <select value={inc.financeSupport?.subsidyStart || "operation"} onChange={e => upInc("financeSupport", { subsidyStart: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }}>
+                <option value="drawdown">{lang === "ar" ? "من السحب" : "From Drawdown"}</option>
+                <option value="operation">{lang === "ar" ? "من التشغيل" : "From Operation"}</option>
+              </select>
+            </F>
+          </div>
+        )}
+        {inc.financeSupport?.subType === "softLoan" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <F label={lang === "ar" ? "المبلغ (ريال)" : "Amount (SAR)"}><NI value={inc.financeSupport?.softLoanAmount || 0} onChange={v => upInc("financeSupport", { softLoanAmount: v })} /></F>
+            <F label={lang === "ar" ? "المدة (سنوات)" : "Tenor (yrs)"}><NI value={inc.financeSupport?.softLoanTenor || 10} onChange={v => upInc("financeSupport", { softLoanTenor: v })} /></F>
+            <F label={lang === "ar" ? "سماح (سنوات)" : "Grace (yrs)"}><NI value={inc.financeSupport?.softLoanGrace || 3} onChange={v => upInc("financeSupport", { softLoanGrace: v })} /></F>
+          </div>
+        )}
+      </ToggleCard>
+
+      {/* ── 3. Land Rent Rebate ── */}
+      <ToggleCard title="Land Rent Rebate (Exemption/Discount)" titleAr="إعفاء/خصم إيجار الأرض" enabled={inc.landRentRebate?.enabled} onToggle={() => upInc("landRentRebate", { enabled: !inc.landRentRebate?.enabled })} color="#f59e0b" value={ir?.landRentSavingTotal}>
+        {project.landType !== "lease" ? (
+          <div style={{ fontSize: 12, color: "#ef4444" }}>{lang === "ar" ? "غير متاح - الأرض ليست مؤجرة" : "Not applicable - land is not leased"}</div>
+        ) : (<>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", marginBottom: 6 }}>{lang === "ar" ? "فترة البناء" : "Construction Period"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <F label={lang === "ar" ? "نسبة الإعفاء %" : "Rebate %"}><NI value={inc.landRentRebate?.constrRebatePct || 100} onChange={v => upInc("landRentRebate", { constrRebatePct: v })} /></F>
+            <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"} hint={lang === "ar" ? "0 = تلقائي من البناء" : "0 = auto from construction"}><NI value={inc.landRentRebate?.constrRebateYears || 0} onChange={v => upInc("landRentRebate", { constrRebateYears: v })} /></F>
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", marginTop: 10, marginBottom: 6 }}>{lang === "ar" ? "فترة ما بعد الافتتاح" : "Post-Opening Period"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <F label={lang === "ar" ? "نسبة الخصم %" : "Discount %"}><NI value={inc.landRentRebate?.operRebatePct || 50} onChange={v => upInc("landRentRebate", { operRebatePct: v })} /></F>
+            <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"}><NI value={inc.landRentRebate?.operRebateYears || 3} onChange={v => upInc("landRentRebate", { operRebateYears: v })} /></F>
+          </div>
+        </>)}
+      </ToggleCard>
+
+      {/* ── 4. Fee/Tax Rebates ── */}
+      <ToggleCard title="Fee/Tax Rebates & Deferrals" titleAr="استرداد/تأجيل رسوم وضرائب" enabled={inc.feeRebates?.enabled} onToggle={() => upInc("feeRebates", { enabled: !inc.feeRebates?.enabled })} color="#06b6d4" value={ir?.feeRebateTotal}>
+        {(inc.feeRebates?.items || []).map((item, i) => (
+          <div key={i} style={{ background: "#f8f9fb", borderRadius: 6, padding: 10, marginBottom: 8 }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+              <input value={item.name || ""} onChange={e => updateFeeItem(i, { name: e.target.value })} placeholder={lang === "ar" ? "اسم الرسم" : "Fee name"} style={{ ...sideInputStyle, flex: 1, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }} />
+              <button onClick={() => removeFeeItem(i)} style={{ ...btnSm, background: "#fef2f2", color: "#ef4444" }}>✕</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, fontSize: 11 }}>
+              <div>
+                <div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "النوع" : "Type"}</div>
+                <select value={item.type || "rebate"} onChange={e => updateFeeItem(i, { type: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec", padding: "4px 6px" }}>
+                  <option value="rebate">{lang === "ar" ? "استرداد" : "Rebate"}</option>
+                  <option value="deferral">{lang === "ar" ? "تأجيل" : "Deferral"}</option>
+                </select>
+              </div>
+              <div><div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "المبلغ" : "Amount"}</div><NI value={item.amount || 0} onChange={v => updateFeeItem(i, { amount: v })} /></div>
+              <div><div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "السنة" : "Year"}</div><NI value={item.year || 1} onChange={v => updateFeeItem(i, { year: v })} /></div>
+              {item.type === "deferral" && <div><div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "تأجيل (شهر)" : "Defer (mo)"}</div><NI value={item.deferralMonths || 12} onChange={v => updateFeeItem(i, { deferralMonths: v })} /></div>}
+            </div>
+          </div>
+        ))}
+        <button onClick={addFeeItem} style={{ ...btnS, width: "100%", background: "#f0fdf4", color: "#16a34a", padding: "8px", fontSize: 11, border: "1px solid #bbf7d0" }}>
+          + {lang === "ar" ? "إضافة رسم" : "Add Fee Item"}
+        </button>
+      </ToggleCard>
+
+    </div>
+  </div>);
+}
+
+function ChecksView({ checks, t }) {
+  const ap = checks.every(c=>c.pass);
+  return (<div>
+    <div style={{display:"flex",alignItems:"center",marginBottom:14,gap:12}}>
+      <div style={{fontSize:15,fontWeight:600}}>{t.modelChecks}</div>
+      <span style={{fontSize:11,padding:"3px 10px",borderRadius:4,fontWeight:600,background:ap?"#dcfce7":"#fef2f2",color:ap?"#16a34a":"#ef4444"}}>{ap?t.allPass:t.errorFound}</span>
+    </div>
+    <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
+      <table style={tblStyle}><thead><tr>
+        <th style={thSt}>{t.check}</th><th style={{...thSt,width:80,textAlign:"center"}}>{t.status}</th><th style={thSt}>{t.description}</th>
+      </tr></thead><tbody>
+        {checks.map((c,i)=><tr key={i}>
+          <td style={{...tdSt,fontWeight:500}}>{c.name}</td>
+          <td style={{...tdSt,textAlign:"center"}}><span style={{fontSize:11,padding:"2px 8px",borderRadius:3,fontWeight:600,background:c.pass?"#dcfce7":"#fef2f2",color:c.pass?"#16a34a":"#ef4444"}}>{c.pass?"PASS":"FAIL"}</span></td>
+          <td style={{...tdSt,color:"#6b7080"}}>{c.desc}</td>
+        </tr>)}
+      </tbody></table>
+    </div>
+  </div>);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════
+const btnS={border:"none",borderRadius:5,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"};
+const btnPrim={...btnS,background:"#2563eb",color:"#fff",fontWeight:600};
+const btnSm={...btnS,padding:"4px 8px",fontSize:11,fontWeight:500,borderRadius:4};
+const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:5,border:"1px solid #282d3a",background:"#161a24",color:"#d0d4dc",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+const cellInputStyle={padding:"4px 6px",borderRadius:3,border:"1px solid transparent",background:"transparent",color:"#1a1d23",fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",width:"100%"};
+const tblStyle={width:"100%",borderCollapse:"collapse"};
+const thSt={padding:"7px 8px",textAlign:"left",fontSize:10,fontWeight:600,color:"#6b7080",background:"#f8f9fb",borderBottom:"1px solid #e5e7ec",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
+const tdSt={padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:12,whiteSpace:"nowrap"};
+const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
