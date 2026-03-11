@@ -1672,7 +1672,7 @@ export default function ReDevModeler({ user, signOut }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [saveStatus, setSaveStatus] = useState("saved");
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState("ar");
   const [aiOpen, setAiOpen] = useState(false);
   const t = L[lang];
   const autoSaveTimer = useRef(null);
