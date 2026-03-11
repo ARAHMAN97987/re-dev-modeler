@@ -1735,6 +1735,18 @@ export default function ReDevModeler({ user, signOut }) {
 
   return (
     <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:"#f8f9fb",color:"#1a1d23",fontSize:13}}>
+      <style>{`
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hero-kpi { animation: fadeInUp 0.4s ease-out both; }
+        .hero-kpi:nth-child(1) { animation-delay: 0s; }
+        .hero-kpi:nth-child(2) { animation-delay: 0.08s; }
+        .hero-kpi:nth-child(3) { animation-delay: 0.16s; }
+        .hero-kpi:nth-child(4) { animation-delay: 0.24s; }
+        .asset-card { animation: fadeInUp 0.3s ease-out both; transition: box-shadow 0.15s, border-color 0.15s; }
+        .kpi-secondary { animation: fadeIn 0.5s ease-out both; animation-delay: 0.3s; }
+        table tbody tr { transition: background 0.1s; }
+      `}</style>
       {sidebarOpen && (
         <div style={{width:340,minWidth:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
@@ -1859,7 +1871,29 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           <div style={{fontSize:12,color:"#6b7080",alignSelf:"center"}}>{sorted.length} {t.projects}</div>
         </div>
         {sorted.length===0 ? (
-          <div style={{textAlign:"center",padding:64,border:"1px dashed #1e2230",borderRadius:8}}><div style={{fontSize:15,color:"#6b7080"}}>{t.noProjects}</div><div style={{fontSize:12,color:"#4b5060",marginTop:6}}>{t.noProjectsSub}</div></div>
+          <div style={{textAlign:"center",padding:48}}>
+            <div style={{fontSize:48,marginBottom:16,opacity:0.6}}>🏗</div>
+            <div style={{fontSize:20,fontWeight:700,color:"#fff",marginBottom:8}}>{lang==="ar"?"ابدأ مشروعك الأول":"Start Your First Project"}</div>
+            <div style={{fontSize:13,color:"#6b7080",marginBottom:32,maxWidth:400,margin:"0 auto 32px"}}>{lang==="ar"?"أنشئ مشروع جديد أو ابدأ من أحد القوالب الجاهزة":"Create a new project or start from a ready-made template"}</div>
+            <button onClick={onCreate} style={{...btnPrim,padding:"12px 28px",fontSize:14,marginBottom:32}}>{lang==="ar"?"+ مشروع جديد فارغ":"+ New Blank Project"}</button>
+            <div style={{fontSize:11,color:"#4b5060",textTransform:"uppercase",letterSpacing:1,marginBottom:16,fontWeight:600}}>{lang==="ar"?"أو ابدأ من قالب":"Or start from a template"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12,maxWidth:600,margin:"0 auto"}}>
+              {[
+                {icon:"🏠",name:lang==="ar"?"سكني":"Residential",desc:lang==="ar"?"أبراج سكنية / فلل":"Towers / Villas"},
+                {icon:"🛍",name:lang==="ar"?"تجاري":"Commercial",desc:lang==="ar"?"مولات / محلات":"Malls / Retail"},
+                {icon:"🏨",name:lang==="ar"?"فندقي":"Hospitality",desc:lang==="ar"?"فنادق / منتجعات":"Hotels / Resorts"},
+                {icon:"🏢",name:lang==="ar"?"مختلط":"Mixed-Use",desc:lang==="ar"?"سكني + تجاري + مكاتب":"Residential + Retail + Office"},
+              ].map((tmpl,i)=>(
+                <div key={i} onClick={onCreate} style={{background:"#161a24",border:"1px solid #1e2230",borderRadius:10,padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.background="#1a1f2e";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.background="#161a24";}}>
+                  <div style={{fontSize:28,marginBottom:8}}>{tmpl.icon}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#fff",marginBottom:4}}>{tmpl.name}</div>
+                  <div style={{fontSize:10,color:"#6b7080"}}>{tmpl.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {sorted.map(p=>(
@@ -2440,7 +2474,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         ) : (
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:12}}>
             {assets.map((a,i)=>{const comp=results?.assetSchedules?.[i];const capex=comp?.totalCapex||computeAssetCapex(a,project);const income=comp?.totalRevenue||0;const catC={Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899"};const catI={Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭","Open Space":"🌳",Utilities:"⚡",Flexible:"🔧"};const cc=catC[a.category]||"#6b7080";
-            return <div key={a.id||i} onClick={()=>setEditIdx(i)} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",cursor:"pointer",transition:"box-shadow 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
+            return <div key={a.id||i} className="asset-card" onClick={()=>setEditIdx(i)} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)",animationDelay:i*0.05+"s"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
               <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:10,color:"#9ca3af"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
@@ -2618,7 +2652,7 @@ function ProjectDash({ project, results, checks, t, financing }) {
         {label:t.npv10,value:fmtM(c.npv10),sub:cur,color:c.npv10>0?"#2563eb":"#ef4444",icon:c.npv10>0?"✓":"✗"},
         {label:t.totalCapexLabel,value:fmtM(c.totalCapex),sub:cur,color:"#ef4444",icon:"🏗"},
       ].filter(Boolean).map((h,i)=>(
-        <div key={i} style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
+        <div key={i} className="hero-kpi" style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
           <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{h.label}</div>
           <div style={{fontSize:28,fontWeight:800,color:h.color,lineHeight:1,letterSpacing:-0.5}}>{h.value}</div>
@@ -2627,7 +2661,7 @@ function ProjectDash({ project, results, checks, t, financing }) {
       ))}
     </div>
     {/* Secondary KPIs */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
+    <div className="kpi-secondary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
       <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" />
       <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" />
       {f && f.mode !== "self" && <KPI label="Total Debt" value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" />}
@@ -2708,6 +2742,7 @@ function KPI({label,value,sub,color}) {
 function CashFlowView({ project, results, t }) {
   if (!project||!results) return <div style={{color:"#9ca3af"}}>Add assets to see projections.</div>;
   const [showYrs,setShowYrs]=useState(15);
+  const [showCumulative,setShowCumulative]=useState(false);
   const {horizon,startYear}=results;
   const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
   const phases=Object.entries(results.phaseResults);
@@ -2715,20 +2750,35 @@ function CashFlowView({ project, results, t }) {
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
-    const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af";};
-    return <tr style={st}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500}}>{label}</td>
+    const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#d0d4dc";};
+    return <tr style={st} onMouseEnter={e=>{if(!bold)e.currentTarget.style.background="#fafbff";}} onMouseLeave={e=>{if(!bold)e.currentTarget.style.background="";}}>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:120}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-total:total)}}>{fmt(total)}</td>
-      {years.map(y=>{const v=values[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
+      {years.map(y=>{const v=values[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v),background:v===0?"":"transparent"}}>{v===0?"—":fmt(v)}</td>;})}
+    </tr>;
+  };
+
+  // Cumulative row helper
+  const CumRow=({label,values})=>{
+    let cum=0;
+    return <tr style={{background:"#fffbeb"}} onMouseEnter={e=>e.currentTarget.style.background="#fef9c3"} onMouseLeave={e=>e.currentTarget.style.background="#fffbeb"}>
+      <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:120}}>{label}</td>
+      <td style={tdN}></td>
+      {years.map(y=>{cum+=values[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
     </tr>;
   };
 
   return (<div>
-    <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12}}>
-      <div style={{fontSize:15,fontWeight:600}}>{t.unleveredCF}</div><div style={{flex:1}} />
-      <select value={showYrs} onChange={e=>setShowYrs(parseInt(e.target.value))} style={{...sideInputStyle,background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec",width:"auto",padding:"4px 8px"}}>
-        {[10,15,20,30,50].map(n=><option key={n} value={n}>{n} years</option>)}
-      </select>
+    <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12,flexWrap:"wrap"}}>
+      <div style={{fontSize:15,fontWeight:600}}>{t.unleveredCF}</div>
+      <div style={{flex:1}} />
+      <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7080",cursor:"pointer"}}>
+        <input type="checkbox" checked={showCumulative} onChange={e=>setShowCumulative(e.target.checked)} style={{accentColor:"#2563eb"}} />
+        {t.dashboard==="لوحة التحكم"?"تراكمي":"Cumulative"}
+      </label>
+      <div style={{display:"flex",background:"#f0f1f5",borderRadius:6,padding:2}}>
+        {[10,15,20,30,50].map(n=><button key={n} onClick={()=>setShowYrs(n)} style={{...btnS,padding:"4px 10px",fontSize:10,fontWeight:600,background:showYrs===n?"#fff":"transparent",color:showYrs===n?"#1a1d23":"#9ca3af",boxShadow:showYrs===n?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>{n}yr</button>)}
+      </div>
     </div>
     {phases.map(([name,pr])=>(
       <div key={name} style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:14}}>
@@ -2744,6 +2794,7 @@ function CashFlowView({ project, results, t }) {
           <CFRow label={t.landRentLabel} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate />
           <CFRow label={t.capex} values={pr.capex} total={pr.totalCapex} color="#ef4444" negate />
           <CFRow label={t.netCF} values={pr.netCF} total={pr.totalNetCF} bold />
+          {showCumulative&&<CumRow label="↳ Cumulative" values={pr.netCF} />}
         </tbody></table></div>
       </div>
     ))}
@@ -2760,6 +2811,7 @@ function CashFlowView({ project, results, t }) {
         <CFRow label={t.landRentLabel} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
         <CFRow label={t.capex} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
         <CFRow label={t.netCF} values={c.netCF} total={c.totalNetCF} bold />
+        {showCumulative&&<CumRow label="↳ Cumulative" values={c.netCF} />}
       </tbody></table></div>
     </div>
   </div>);
