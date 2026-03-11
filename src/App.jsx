@@ -1703,28 +1703,55 @@ export default function ReDevModeler({ user, signOut }) {
   const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); }};
   const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} };
 
+  // ── Undo History (last 30 states) ──
+  const undoStack = useRef([]);
+  const pushUndo = useCallback((state) => {
+    if (!state) return;
+    undoStack.current.push(JSON.stringify(state));
+    if (undoStack.current.length > 30) undoStack.current.shift();
+  }, []);
+  const undo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const prev = JSON.parse(undoStack.current.pop());
+    setProject(prev);
+  }, []);
+
+  // Ctrl+Z handler
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        // Don't undo if user is typing in an input
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo]);
+
   const up = useCallback((u) => {
-    // Preserve sidebar scroll position during state updates
     const scrollTop = sidebarRef.current?.scrollTop;
-    setProject(prev => ({...prev,...u}));
+    setProject(prev => { pushUndo(prev); return {...prev,...u}; });
     if (scrollTop != null) {
       requestAnimationFrame(() => {
         if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop;
       });
     }
-  }, []);
+  }, [pushUndo]);
   const upAsset = useCallback((i, u) => {
     const scrollTop = sidebarRef.current?.scrollTop;
-    setProject(prev => { const a=[...prev.assets]; a[i]={...a[i],...u}; return {...prev,assets:a}; });
+    setProject(prev => { pushUndo(prev); const a=[...prev.assets]; a[i]={...a[i],...u}; return {...prev,assets:a}; });
     if (scrollTop != null) requestAnimationFrame(() => { if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop; });
-  }, []);
-  const addAsset = useCallback(() => setProject(prev => ({...prev, assets:[...prev.assets, {
+  }, [pushUndo]);
+  const addAsset = useCallback(() => setProject(prev => { pushUndo(prev); return {...prev, assets:[...prev.assets, {
     id: crypto.randomUUID(), phase: prev.phases[0]?.name||"Phase 1", category:"Retail", name:"", code:"", notes:"",
     plotArea:0, footprint:0, gfa:0, revType:"Lease", efficiency: prev.defaultEfficiency||85,
     leaseRate:0, opEbitda:0, escalation: prev.rentEscalation||0.75, rampUpYears:3, stabilizedOcc:100,
     costPerSqm:0, constrStart:1, constrDuration:12, hotelPL:null, marinaPL:null,
-  }]})), []);
-  const rmAsset = useCallback((i) => setProject(prev => ({...prev, assets:prev.assets.filter((_,j)=>j!==i)})), []);
+  }]}; }), [pushUndo]);
+  const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); };
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
@@ -1763,6 +1790,7 @@ export default function ReDevModeler({ user, signOut }) {
             <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
           <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
+          <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 10px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩ Undo</button>
           <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
           <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
           <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"EN"}</button>
@@ -2524,7 +2552,6 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         )}
         {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
         const F2=({label,children})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>;
-        const Inp=({type,value,onChange})=><input type={type||"text"} value={value??""} onChange={e=>onChange(type==="number"?parseFloat(e.target.value)||0:e.target.value)} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,fontFamily:"inherit",background:"#fafbfc",outline:"none"}} />;
         return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
         <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
@@ -2539,29 +2566,29 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
               <F2 label="Rev Type"><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-              <F2 label="Name"><Inp value={a.name} onChange={v=>upAsset(i,{name:v})} /></F2>
-              <F2 label="Code"><Inp value={a.code} onChange={v=>upAsset(i,{code:v})} /></F2>
+              <F2 label="Name"><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder="Name" style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Code"><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Areas</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-              <F2 label="Plot Area"><Inp type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></F2>
-              <F2 label="Footprint"><Inp type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></F2>
-              <F2 label="GFA (m²)"><Inp type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></F2>
+              <F2 label="Plot Area"><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Footprint"><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="GFA (m²)"><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Revenue</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-              <F2 label="Efficiency %"><Inp type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} /></F2>
-              <F2 label="Lease Rate"><Inp type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} /></F2>
-              <F2 label="Op EBITDA"><Inp type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} /></F2>
-              <F2 label="Escalation %"><Inp type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></F2>
-              <F2 label="Ramp Years"><Inp type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></F2>
-              <F2 label="Occupancy %"><Inp type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></F2>
+              <F2 label="Efficiency %"><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Lease Rate"><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Op EBITDA"><EditableCell type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Escalation %"><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Ramp Years"><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Occupancy %"><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Construction</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-              <F2 label="Cost/m²"><Inp type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} /></F2>
-              <F2 label="Start Year"><Inp type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></F2>
-              <F2 label="Duration (mo)"><Inp type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></F2>
+              <F2 label="Cost/m²"><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Start Year"><EditableCell type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label="Duration (mo)"><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>{isH?"⚙ Hotel P&L":"⚙ Marina P&L"}</button>}
             <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
