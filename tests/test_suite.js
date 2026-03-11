@@ -6,7 +6,7 @@
  * 
  * BUGS FOUND:
  *   BUG-001: stabilizedOcc=0 → treated as 100% [FIXED]
- *   BUG-002: Land rent rebate adds to rent instead of reducing [DETECTED]
+ *   BUG-002: Land rent rebate sign error [FIXED]
  * 
  * Run: node tests/test_suite.js
  */
@@ -53,7 +53,7 @@ function applyInterestSubsidy(project,interest,constrEnd){const inc=project.ince
 
 function computeIncentives(project,projectResults){if(!project||!projectResults)return null;const h=project.horizon||50;const inc=project.incentives||{};const c=projectResults.consolidated;let constrEnd=0;for(let y=h-1;y>=0;y--){if(c.capex[y]>0){constrEnd=y;break;}}const result={capexGrantTotal:0,capexGrantSchedule:new Array(h).fill(0),landRentSavingTotal:0,landRentSavingSchedule:new Array(h).fill(0),adjustedLandRent:[...(c.landRent||[])],feeRebateTotal:0,feeRebateSchedule:new Array(h).fill(0),totalIncentiveValue:0,adjustedCapex:[...c.capex],netCFImpact:new Array(h).fill(0)};
   if(inc.capexGrant?.enabled){const g=inc.capexGrant;const rawGrant=c.totalCapex*(g.grantPct||0)/100;const grantAmt=Math.min(rawGrant,g.maxCap||Infinity);result.capexGrantTotal=grantAmt;if(g.timing==="construction"&&constrEnd>=0){const constrYears=constrEnd+1;const perYear=grantAmt/constrYears;for(let y=0;y<=constrEnd&&y<h;y++){if(c.capex[y]>0){result.capexGrantSchedule[y]=perYear;result.adjustedCapex[y]-=perYear;}}}else{result.capexGrantSchedule[Math.min(constrEnd+1,h-1)]=grantAmt;}}
-  if(inc.landRentRebate?.enabled&&project.landType==="lease"){const lr=inc.landRentRebate;const constrYrs=lr.constrRebateYears>0?lr.constrRebateYears:constrEnd+1;const constrPct=(lr.constrRebatePct||0)/100;const operPct=(lr.operRebatePct||0)/100;const operYrs=lr.operRebateYears||0;for(let y=0;y<h;y++){let rebatePct=0;if(y<constrYrs)rebatePct=constrPct;else if(y<constrYrs+operYrs)rebatePct=operPct;const saving=Math.abs(c.landRent[y]||0)*rebatePct;result.landRentSavingSchedule[y]=saving;result.adjustedLandRent[y]=(c.landRent[y]||0)+saving;result.landRentSavingTotal+=saving;}}
+  if(inc.landRentRebate?.enabled&&project.landType==="lease"){const lr=inc.landRentRebate;const constrYrs=lr.constrRebateYears>0?lr.constrRebateYears:constrEnd+1;const constrPct=(lr.constrRebatePct||0)/100;const operPct=(lr.operRebatePct||0)/100;const operYrs=lr.operRebateYears||0;for(let y=0;y<h;y++){let rebatePct=0;if(y<constrYrs)rebatePct=constrPct;else if(y<constrYrs+operYrs)rebatePct=operPct;const saving=Math.abs(c.landRent[y]||0)*rebatePct;result.landRentSavingSchedule[y]=saving;result.adjustedLandRent[y]=Math.max(0,(c.landRent[y]||0)-saving);result.landRentSavingTotal+=saving;}}
   if(inc.feeRebates?.enabled&&inc.feeRebates.items?.length>0){for(const item of inc.feeRebates.items){const amt=item.amount||0;const yr=Math.max(0,Math.min((item.year||1)-1,h-1));if(item.type==="rebate"){result.feeRebateSchedule[yr]+=amt;result.feeRebateTotal+=amt;}else if(item.type==="deferral"){const deferYrs=Math.ceil((item.deferralMonths||12)/12);const benefit=amt-amt/Math.pow(1.1,deferYrs);result.feeRebateSchedule[yr]+=benefit;result.feeRebateTotal+=benefit;}}}
   for(let y=0;y<h;y++)result.netCFImpact[y]=result.capexGrantSchedule[y]+result.landRentSavingSchedule[y]+result.feeRebateSchedule[y];result.totalIncentiveValue=result.capexGrantTotal+result.landRentSavingTotal+result.feeRebateTotal;return result;}
 
@@ -276,8 +276,8 @@ S("T7: INCENTIVES [P0]");
   Tc(incl.landRentSavingSchedule[0],1000000,1,"T7.05","100% rebate yr0","P0");
   Tc(incl.landRentSavingSchedule[2],500000,1,"T7.06","50% oper yr2","P0");
   Tc(incl.landRentSavingSchedule[5],0,1,"T7.07","No rebate yr5","P0");
-  // BUG-002: adjusted > original (should be <)
-  T(incl.adjustedLandRent[0]>rl.consolidated.landRent[0],"T7.08","[BUG-002] adjRent>original","P0");
+  // BUG-002 FIXED: adjusted should be LOWER than original (rebate reduces rent)
+  T(incl.adjustedLandRent[0]<rl.consolidated.landRent[0],"T7.08","[BUG-002 FIXED] adjRent<original","P0");
   // Interest subsidy
   let pi=P();pi.incentives.financeSupport={enabled:true,subType:"interestSubsidy",subsidyPct:50,subsidyYears:3,subsidyStart:"operation"};
   const fi=computeFinancing(pi,computeProjectCashFlows(pi),null);const fb=computeFinancing(P(),computeProjectCashFlows(P()),null);
@@ -375,6 +375,5 @@ if(failures.length>P0_FAILS.length){console.log("\n  🟡 Other:");failures.filt
 if(failed===0)console.log("\n  ✅ ALL TESTS PASSED");
 console.log(`\n  KNOWN BUGS:`);
 console.log(`    BUG-001: stabilizedOcc=0→100% [FIXED in App.jsx:506]`);
-console.log(`    BUG-002: Land rent rebate ADDS instead of subtracts [App.jsx:699]`);
-console.log(`             Fix: change "+ saving" to "- saving"`);
+console.log(`    BUG-002: Land rent rebate sign error [FIXED in App.jsx:699]`);
 process.exit(failed>0?1:0);
