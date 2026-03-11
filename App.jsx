@@ -696,7 +696,7 @@ function computeIncentives(project, projectResults) {
       else if (y < constrYrs + operYrs) rebatePct = operPct;
       const saving = Math.abs(c.landRent[y] || 0) * rebatePct;
       result.landRentSavingSchedule[y] = saving;
-      result.adjustedLandRent[y] = (c.landRent[y] || 0) + saving; // landRent is negative, saving makes it less negative
+      result.adjustedLandRent[y] = Math.max(0, (c.landRent[y] || 0) - saving); // Rebate reduces land rent cost
       result.landRentSavingTotal += saving;
     }
   }
@@ -1759,6 +1759,41 @@ export default function ReDevModeler({ user, signOut }) {
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
           {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
+        {/* ── Health Status Bar ── */}
+        {results && (project.assets||[]).length > 0 && (() => {
+          const c = results.consolidated;
+          const irr = c.irr;
+          const dscr = financing ? Math.min(...financing.dscr.filter(d=>d!==null).slice(0,20)) : null;
+          const npv = c.npv10;
+          const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
+          const dscrOk = !dscr ? -1 : dscr > 1.4 ? 2 : dscr > 1.25 ? 1 : 0;
+          const npvOk = npv > 0 ? 2 : 0;
+          const score = irrOk + (dscrOk >= 0 ? dscrOk : 0) + npvOk;
+          const maxScore = 4 + (dscrOk >= 0 ? 2 : 0);
+          const health = score >= maxScore * 0.7 ? "strong" : score >= maxScore * 0.4 ? "moderate" : "weak";
+          const cfg = { strong: { bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d", icon: "✓", label: lang==="ar"?"المشروع قوي":"Project Health: Strong" },
+                        moderate: { bg: "#fefce8", border: "#fde68a", color: "#92400e", icon: "⚠", label: lang==="ar"?"المشروع مقبول":"Project Health: Moderate" },
+                        weak: { bg: "#fef2f2", border: "#fecaca", color: "#991b1b", icon: "✗", label: lang==="ar"?"المشروع ضعيف":"Project Health: Weak" } }[health];
+          const metrics = [
+            irr !== null && { label: "IRR", value: (irr*100).toFixed(1)+"%", ok: irrOk },
+            dscr !== null && { label: "DSCR", value: dscr.toFixed(2)+"x", ok: dscrOk },
+            { label: "NPV@10%", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv >= 0 ? "+" : (npv/1e6).toFixed(0)+"M", ok: npvOk },
+          ].filter(Boolean);
+          return (
+            <div style={{background:cfg.bg,borderBottom:`1px solid ${cfg.border}`,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11,transition:"all 0.3s"}}>
+              <span style={{fontWeight:700,color:cfg.color,fontSize:13}}>{cfg.icon}</span>
+              <span style={{fontWeight:600,color:cfg.color}}>{cfg.label}</span>
+              <div style={{width:1,height:16,background:cfg.border}} />
+              {metrics.map((m,i)=>(
+                <span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{width:7,height:7,borderRadius:4,background:m.ok>=2?"#16a34a":m.ok===1?"#eab308":"#ef4444"}} />
+                  <span style={{color:"#6b7080"}}>{m.label}:</span>
+                  <span style={{fontWeight:600,color:m.ok>=2?"#15803d":m.ok===1?"#92400e":"#991b1b"}}>{m.value}</span>
+                </span>
+              ))}
+            </div>
+          );
+        })()}
         <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
           {/* Progress steps */}
           <div style={{display:"flex",alignItems:"center",gap:2,padding:"8px 12px 8px 0",borderRight:"1px solid #f0f1f5",marginRight:4}}>
@@ -2277,8 +2312,10 @@ function MarinaPLModal({ data, onSave, onClose, t }) {
 // ASSET PROGRAM TABLE
 // ═══════════════════════════════════════════════════════════════
 function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject }) {
-  const [modal, setModal] = useState(null); // {type:'hotel'|'marina', idx}
+  const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
+  const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
+  const [editIdx, setEditIdx] = useState(null); // index of asset being edited in detail modal
   const fileRef = useRef(null);
   if (!project) return null;
   const assets = project.assets || [];
@@ -2357,15 +2394,20 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         <div style={{fontSize:15,fontWeight:600}}>{t.assetProgram}</div>
         <div style={{fontSize:12,color:"#6b7080"}}>{assets.length} {t.assets}</div>
         <div style={{flex:1}} />
+        {/* View toggle */}
+        <div style={{display:"flex",background:"#f0f1f5",borderRadius:6,padding:2}}>
+          <button onClick={()=>setViewMode("cards")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="cards"?"#fff":"transparent",color:viewMode==="cards"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="cards"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>▦ {lang==="ar"?"بطاقات":"Cards"}</button>
+          <button onClick={()=>setViewMode("table")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="table"?"#fff":"transparent",color:viewMode==="table"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="table"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>☰ {lang==="ar"?"جدول":"Table"}</button>
+        </div>
         <button onClick={()=>generateTemplate()} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
-          {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
+          {lang==='ar'?'⬇ نموذج':'⬇ Template'}
         </button>
-        <button onClick={()=>exportAssetsToExcel(project, results)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
+        <button onClick={()=>exportAssetsToExcel(project, results)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}}>
           {lang==='ar'?'⬇ تصدير':'⬇ Export'}
         </button>
         <input type="file" accept=".csv,.tsv" ref={fileRef} onChange={handleUpload} style={{display:"none"}} />
-        <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}} title={lang==='ar'?"رفع ملف Excel":"Upload Excel File"}>
-          {lang==='ar'?'⬆ رفع ملف':'⬆ Upload'}
+        <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}}>
+          {lang==='ar'?'⬆ رفع':'⬆ Upload'}
         </button>
         <button onClick={addAsset} style={{...btnPrim,padding:"7px 16px",fontSize:12}}>{t.addAsset}</button>
       </div>
@@ -2383,6 +2425,132 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           <button onClick={()=>setImportMsg(null)} style={{...btnSm,background:"transparent",color:"inherit",fontSize:14,padding:"0 4px"}}>✕</button>
         </div>
       )}
+      {/* ── CARD VIEW ── */}
+      {viewMode === "cards" && (
+        <div>
+          {assets.length === 0 ? (
+            <div style={{textAlign:"center",padding:48,color:"#9ca3af",background:"#fff",borderRadius:12,border:"2px dashed #e5e7ec"}}>
+              <div style={{fontSize:32,marginBottom:8}}>🏗</div>
+              <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{lang==="ar"?"لا توجد أصول":"No assets yet"}</div>
+              <div style={{fontSize:12}}>{lang==="ar"?"اضغط '+ إضافة أصل' أو استخدم المساعد الذكي":"Click '+ Add Asset' or use the AI Assistant"}</div>
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:12}}>
+              {assets.map((a, i) => {
+                const comp = results?.assetSchedules?.[i];
+                const capex = comp?.totalCapex || computeAssetCapex(a, project);
+                const income = comp?.totalRevenue || 0;
+                const catColors = {Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899",Flexible:"#6366f1"};
+                const catColor = catColors[a.category] || "#6b7080";
+                const catIcons = {Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭",Flexible:"🔧","Open Space":"🌳",Utilities:"⚡",Infrastructure:"🛣",Amenity:"🎯"};
+                const catIcon = catIcons[a.category] || "📦";
+                return (
+                  <div key={a.id||i} onClick={()=>setEditIdx(i)} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:0,cursor:"pointer",transition:"all 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}
+                    onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.borderColor="#c7d2fe";}}
+                    onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";e.currentTarget.style.borderColor="#e5e7ec";}}>
+                    {/* Card header */}
+                    <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                        <span style={{fontSize:18}}>{catIcon}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:700,color:"#1a1d23",lineHeight:1.2}}>{a.name || `Asset ${i+1}`}</div>
+                          <div style={{fontSize:10,color:"#9ca3af"}}>{a.code ? `${a.code} · ` : ""}{a.phase}</div>
+                        </div>
+                        <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:`${catColor}15`,color:catColor,fontWeight:600}}>{a.category}</span>
+                      </div>
+                    </div>
+                    {/* Card body - key metrics */}
+                    <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
+                      <div><span style={{color:"#9ca3af"}}>GFA</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
+                      <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?"Rate":"EBITDA"}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":fmtM(a.opEbitda)}</div></div>
+                      <div><span style={{color:"#9ca3af"}}>CAPEX</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
+                      <div><span style={{color:"#9ca3af"}}>Income</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
+                      <div><span style={{color:"#9ca3af"}}>{lang==="ar"?"البناء":"Construction"}</span><div style={{fontWeight:500}}>{a.constrDuration}mo · Yr {a.constrStart}</div></div>
+                      <div><span style={{color:"#9ca3af"}}>{lang==="ar"?"إشغال":"Occupancy"}</span><div style={{fontWeight:500}}>{a.stabilizedOcc}%</div></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Asset Detail Modal */}
+          {editIdx !== null && editIdx < assets.length && (() => {
+            const a = assets[editIdx];
+            const i = editIdx;
+            const comp = results?.assetSchedules?.[i];
+            const isOp = a.revType === "Operating";
+            const isHotel = isOp && a.category === "Hospitality";
+            const isMarina = isOp && a.category === "Marina";
+            const Fld2 = ({label, children}) => (<div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>);
+            const Inp = ({type,value,onChange,...rest}) => (<input type={type||"text"} value={value??""} onChange={e=>onChange(type==="number"?parseFloat(e.target.value)||0:e.target.value)} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,fontFamily:"inherit",background:"#fafbfc",outline:"none"}} {...rest} />);
+
+            return (<>
+              <div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
+              <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+                {/* Modal header */}
+                <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:16,fontWeight:700}}>{a.name || `Asset ${i+1}`}</div>
+                    <div style={{fontSize:11,color:"#9ca3af"}}>{a.category} · {a.phase}</div>
+                  </div>
+                  <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>{lang==="ar"?"حذف":"Delete"}</button>
+                  <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
+                </div>
+                {/* Modal body */}
+                <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+                    <Fld2 label={lang==="ar"?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"التصنيف":"Category"}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>upAsset(i,{category:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"نوع الإيراد":"Revenue Type"}><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></Fld2>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                    <Fld2 label={lang==="ar"?"اسم الأصل":"Asset Name"}><Inp value={a.name} onChange={v=>upAsset(i,{name:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"الرمز":"Code"}><Inp value={a.code} onChange={v=>upAsset(i,{code:v})} /></Fld2>
+                  </div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8,marginTop:4}}>{lang==="ar"?"المساحات":"Areas"}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+                    <Fld2 label="Plot Area (m²)"><Inp type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></Fld2>
+                    <Fld2 label="Footprint (m²)"><Inp type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></Fld2>
+                    <Fld2 label="GFA (m²)"><Inp type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></Fld2>
+                  </div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{lang==="ar"?"الإيرادات":"Revenue"}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+                    <Fld2 label={lang==="ar"?"الكفاءة %":"Efficiency %"}><Inp type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"إيجار/م²":"Lease Rate/m²"}><Inp type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} /></Fld2>
+                    <Fld2 label="Op EBITDA"><Inp type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"الزيادة %":"Escalation %"}><Inp type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"سنوات النمو":"Ramp-up Years"}><Inp type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"الإشغال %":"Occupancy %"}><Inp type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></Fld2>
+                  </div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{lang==="ar"?"البناء":"Construction"}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+                    <Fld2 label={lang==="ar"?"تكلفة/م²":"Cost/m²"}><Inp type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"بداية البناء (سنة)":"Start Year"}><Inp type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></Fld2>
+                    <Fld2 label={lang==="ar"?"مدة البناء (شهر)":"Duration (months)"}><Inp type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></Fld2>
+                  </div>
+                  {/* P&L buttons */}
+                  {(isHotel||isMarina) && (
+                    <button onClick={()=>setModal({type:isHotel?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>
+                      {isHotel?(lang==="ar"?"⚙ إعداد P&L الفندق":"⚙ Configure Hotel P&L"):(lang==="ar"?"⚙ إعداد P&L المارينا":"⚙ Configure Marina P&L")}
+                    </button>
+                  )}
+                  {/* Summary */}
+                  <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
+                    <div><span style={{color:"#6b7080"}}>Total CAPEX:</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
+                    <div><span style={{color:"#6b7080"}}>Total Income:</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
+                    <div><span style={{color:"#6b7080"}}>Leasable Area:</span> <strong>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</strong></div>
+                    <div><span style={{color:"#6b7080"}}>{lang==="ar"?"نوع الإيراد":"Rev Type"}:</span> <strong>{a.revType}</strong></div>
+                  </div>
+                </div>
+              </div>
+            </>);
+          })()}
+        </div>
+      )}
+
+      {/* ── TABLE VIEW ── */}
+      {viewMode === "table" && (<>
       <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
         <div style={{overflowX:"auto"}}>
           <table style={{...tblStyle,fontSize:11}}>
@@ -2449,6 +2617,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           </table>
         </div>
       </div>
+      </>)}
 
       {/* Hotel P&L Modal */}
       {modal?.type==="hotel"&&<HotelPLModal
@@ -2477,26 +2646,38 @@ function ProjectDash({ project, results, checks, t, financing }) {
   const f = financing;
   const h = results.horizon;
 
-  // Payback period
   let cumCF = 0, paybackYr = null;
   for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYr === null) paybackYr = y + 1; }
-
-  // Cash Yield (stabilized year income / total equity)
   const stabYear = Math.min(10, h - 1);
   const cashYield = f && f.totalEquity > 0 ? (c.income[stabYear] / f.totalEquity * 100) : null;
 
+  // Hero metric helper
+  const Hero = ({label, value, sub, color, size, icon}) => (
+    <div style={{background:`linear-gradient(135deg, ${color}08, ${color}15)`,borderRadius:12,border:`1px solid ${color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
+      {icon && <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{icon}</div>}
+      <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{label}</div>
+      <div style={{fontSize:size||28,fontWeight:800,color:color||"#1a1d23",lineHeight:1,letterSpacing:-0.5}}>{value}</div>
+      {sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{sub}</div>}
+    </div>
+  );
+
   return (<div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(170px, 1fr))",gap:10,marginBottom:20}}>
-      <KPI label={t.totalCapexLabel} value={fmtM(c.totalCapex)} sub={cur} color="#ef4444" />
+    {/* Hero KPIs Row */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14,marginBottom:22}}>
+      <Hero label={t.consolidatedIRR+" (Unlevered)"} value={c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A"} color={c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444"} icon="📈" />
+      {f && f.mode !== "self" && <Hero label="Levered IRR" value={f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A"} color={f.leveredIRR>0.15?"#16a34a":"#8b5cf6"} icon="🏦" />}
+      <Hero label={t.npv10} value={fmtM(c.npv10)} sub={cur} color={c.npv10>0?"#2563eb":"#ef4444"} icon={c.npv10>0?"✓":"✗"} />
+      <Hero label={t.totalCapexLabel} value={fmtM(c.totalCapex)} sub={cur} color="#ef4444" icon="🏗" />
+    </div>
+
+    {/* Secondary KPIs */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
       <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" />
-      <KPI label={t.consolidatedIRR+" (Unlevered)"} value={c.irr!==null?fmtPct(c.irr*100):"N/A"} color="#3b82f6" />
-      {f && f.mode !== "self" && <KPI label="Levered IRR" value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color="#8b5cf6" />}
-      {f && f.mode !== "self" && <KPI label="Total Debt" value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" />}
       <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" />
-      <KPI label={t.npv10} value={fmtM(c.npv10)} sub={cur} color="#06b6d4" />
+      {f && f.mode !== "self" && <KPI label="Total Debt" value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" />}
       <KPI label="Payback" value={paybackYr ? `Year ${paybackYr}` : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" />
       {cashYield !== null && <KPI label="Cash Yield" value={fmtPct(cashYield)} sub="on equity" color="#16a34a" />}
-      <KPI label={t.assetsLabel} value={project.assets.length} color="#f59e0b" />
+      <KPI label={t.assetsLabel} value={project.assets.length} color="#6b7080" />
       <KPI label={t.checksLabel} value={fc===0?t.allPass:`${fc} FAIL`} color={fc===0?"#22c55e":"#ef4444"} />
     </div>
 
