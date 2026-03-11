@@ -1735,6 +1735,18 @@ export default function ReDevModeler({ user, signOut }) {
 
   return (
     <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:"#f8f9fb",color:"#1a1d23",fontSize:13}}>
+      <style>{`
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hero-kpi { animation: fadeInUp 0.4s ease-out both; }
+        .hero-kpi:nth-child(1) { animation-delay: 0s; }
+        .hero-kpi:nth-child(2) { animation-delay: 0.08s; }
+        .hero-kpi:nth-child(3) { animation-delay: 0.16s; }
+        .hero-kpi:nth-child(4) { animation-delay: 0.24s; }
+        .asset-card { animation: fadeInUp 0.3s ease-out both; transition: box-shadow 0.15s, border-color 0.15s; }
+        .kpi-secondary { animation: fadeIn 0.5s ease-out both; animation-delay: 0.3s; }
+        table tbody tr { transition: background 0.1s; }
+      `}</style>
       {sidebarOpen && (
         <div style={{width:340,minWidth:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
@@ -1759,14 +1771,15 @@ export default function ReDevModeler({ user, signOut }) {
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
           {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
-        {/* ── Health Status Bar ── */}
+        {/* Health Status Bar */}
         {results && (project.assets||[]).length > 0 && (() => {
           const c = results.consolidated;
           const irr = c.irr;
-          const dscr = financing ? Math.min(...financing.dscr.filter(d=>d!==null).slice(0,20)) : null;
+          const dscrVals = financing ? financing.dscr.filter(d=>d!==null) : [];
+          const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
           const npv = c.npv10;
           const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
-          const dscrOk = !dscr ? -1 : dscr > 1.4 ? 2 : dscr > 1.25 ? 1 : 0;
+          const dscrOk = minDscr === null ? -1 : minDscr > 1.4 ? 2 : minDscr > 1.25 ? 1 : 0;
           const npvOk = npv > 0 ? 2 : 0;
           const score = irrOk + (dscrOk >= 0 ? dscrOk : 0) + npvOk;
           const maxScore = 4 + (dscrOk >= 0 ? 2 : 0);
@@ -1776,21 +1789,19 @@ export default function ReDevModeler({ user, signOut }) {
                         weak: { bg: "#fef2f2", border: "#fecaca", color: "#991b1b", icon: "✗", label: lang==="ar"?"المشروع ضعيف":"Project Health: Weak" } }[health];
           const metrics = [
             irr !== null && { label: "IRR", value: (irr*100).toFixed(1)+"%", ok: irrOk },
-            dscr !== null && { label: "DSCR", value: dscr.toFixed(2)+"x", ok: dscrOk },
-            { label: "NPV@10%", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv >= 0 ? "+" : (npv/1e6).toFixed(0)+"M", ok: npvOk },
+            minDscr !== null && { label: "DSCR", value: minDscr.toFixed(2)+"x", ok: dscrOk },
+            { label: "NPV", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv > 0 ? "+":"—", ok: npvOk },
           ].filter(Boolean);
           return (
-            <div style={{background:cfg.bg,borderBottom:`1px solid ${cfg.border}`,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11,transition:"all 0.3s"}}>
+            <div style={{background:cfg.bg,borderBottom:"1px solid "+cfg.border,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11}}>
               <span style={{fontWeight:700,color:cfg.color,fontSize:13}}>{cfg.icon}</span>
               <span style={{fontWeight:600,color:cfg.color}}>{cfg.label}</span>
               <div style={{width:1,height:16,background:cfg.border}} />
-              {metrics.map((m,i)=>(
-                <span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{width:7,height:7,borderRadius:4,background:m.ok>=2?"#16a34a":m.ok===1?"#eab308":"#ef4444"}} />
-                  <span style={{color:"#6b7080"}}>{m.label}:</span>
-                  <span style={{fontWeight:600,color:m.ok>=2?"#15803d":m.ok===1?"#92400e":"#991b1b"}}>{m.value}</span>
-                </span>
-              ))}
+              {metrics.map((m,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+                <span style={{width:7,height:7,borderRadius:4,background:m.ok>=2?"#16a34a":m.ok===1?"#eab308":"#ef4444"}} />
+                <span style={{color:"#6b7080"}}>{m.label}:</span>
+                <span style={{fontWeight:600,color:m.ok>=2?"#15803d":m.ok===1?"#92400e":"#991b1b"}}>{m.value}</span>
+              </span>)}
             </div>
           );
         })()}
@@ -1809,9 +1820,12 @@ export default function ReDevModeler({ user, signOut }) {
               </div>
             ))}
           </div>
-          {[{key:"dashboard",label:t.dashboard},{key:"assets",label:t.assetProgram},{key:"financing",label:lang==="ar"?"التمويل":"Financing"},{key:"waterfall",label:lang==="ar"?"شلال التوزيعات":"Waterfall"},{key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},{key:"reports",label:lang==="ar"?"التقارير":"Reports"},{key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},{key:"cashflow",label:t.cashFlow},{key:"checks",label:t.checks}].map(tb=>(
-            <button key={tb.key} onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:500,border:"none",cursor:"pointer",background:"none",color:activeTab===tb.key?"#2563eb":"#6b7080",borderBottom:activeTab===tb.key?"2px solid #2563eb":"2px solid transparent",whiteSpace:"nowrap"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
-          ))}
+          {[{key:"dashboard",label:t.dashboard},{key:"assets",label:t.assetProgram},{key:"cashflow",label:t.cashFlow},{key:"financing",label:lang==="ar"?"التمويل":"Financing"},{key:"waterfall",label:lang==="ar"?"الشلال":"Waterfall"},{key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},{key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},{key:"checks",label:lang==="ar"?"الفحوصات":"Checks"},{key:"reports",label:lang==="ar"?"التقارير":"Reports"}].map(tb=>{
+            const groupColors = {dashboard:"#2563eb",assets:"#2563eb",cashflow:"#2563eb",financing:"#8b5cf6",waterfall:"#8b5cf6",incentives:"#8b5cf6",scenarios:"#f59e0b",checks:"#f59e0b",reports:"#16a34a"};
+            const gc = groupColors[tb.key] || "#2563eb";
+            const isActive = activeTab===tb.key;
+            return <button key={tb.key} onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>;
+          })}
         </div>
         <div style={{flex:1,overflow:"auto",padding:18}}>
           {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} />}
@@ -1857,7 +1871,29 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           <div style={{fontSize:12,color:"#6b7080",alignSelf:"center"}}>{sorted.length} {t.projects}</div>
         </div>
         {sorted.length===0 ? (
-          <div style={{textAlign:"center",padding:64,border:"1px dashed #1e2230",borderRadius:8}}><div style={{fontSize:15,color:"#6b7080"}}>{t.noProjects}</div><div style={{fontSize:12,color:"#4b5060",marginTop:6}}>{t.noProjectsSub}</div></div>
+          <div style={{textAlign:"center",padding:48}}>
+            <div style={{fontSize:48,marginBottom:16,opacity:0.6}}>🏗</div>
+            <div style={{fontSize:20,fontWeight:700,color:"#fff",marginBottom:8}}>{lang==="ar"?"ابدأ مشروعك الأول":"Start Your First Project"}</div>
+            <div style={{fontSize:13,color:"#6b7080",marginBottom:32,maxWidth:400,margin:"0 auto 32px"}}>{lang==="ar"?"أنشئ مشروع جديد أو ابدأ من أحد القوالب الجاهزة":"Create a new project or start from a ready-made template"}</div>
+            <button onClick={onCreate} style={{...btnPrim,padding:"12px 28px",fontSize:14,marginBottom:32}}>{lang==="ar"?"+ مشروع جديد فارغ":"+ New Blank Project"}</button>
+            <div style={{fontSize:11,color:"#4b5060",textTransform:"uppercase",letterSpacing:1,marginBottom:16,fontWeight:600}}>{lang==="ar"?"أو ابدأ من قالب":"Or start from a template"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12,maxWidth:600,margin:"0 auto"}}>
+              {[
+                {icon:"🏠",name:lang==="ar"?"سكني":"Residential",desc:lang==="ar"?"أبراج سكنية / فلل":"Towers / Villas"},
+                {icon:"🛍",name:lang==="ar"?"تجاري":"Commercial",desc:lang==="ar"?"مولات / محلات":"Malls / Retail"},
+                {icon:"🏨",name:lang==="ar"?"فندقي":"Hospitality",desc:lang==="ar"?"فنادق / منتجعات":"Hotels / Resorts"},
+                {icon:"🏢",name:lang==="ar"?"مختلط":"Mixed-Use",desc:lang==="ar"?"سكني + تجاري + مكاتب":"Residential + Retail + Office"},
+              ].map((tmpl,i)=>(
+                <div key={i} onClick={onCreate} style={{background:"#161a24",border:"1px solid #1e2230",borderRadius:10,padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.background="#1a1f2e";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.background="#161a24";}}>
+                  <div style={{fontSize:28,marginBottom:8}}>{tmpl.icon}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#fff",marginBottom:4}}>{tmpl.name}</div>
+                  <div style={{fontSize:10,color:"#6b7080"}}>{tmpl.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {sorted.map(p=>(
@@ -1906,10 +1942,14 @@ function StatusBadge({status,onChange}) {
 // CONTROL PANEL
 // ═══════════════════════════════════════════════════════════════
 // ── Sidebar helper components (defined OUTSIDE ControlPanel to prevent re-creation) ──
-function Sec({title,children,def=true}) {
+function Sec({title,children,def=false,filled}) {
   const [open,setOpen]=useState(def);
   return (<div style={{borderBottom:"1px solid #1e2230"}}>
-    <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"left",cursor:"pointer",display:"flex",justifyContent:"space-between"}}>{title}<span style={{color:"#3b4050"}}>{open?"−":"+"}</span></button>
+    <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:open?"#d0d4dc":"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"color 0.15s"}}>
+      {filled!==undefined&&<span style={{width:7,height:7,borderRadius:4,background:filled?"#16a34a":"#3b4050",flexShrink:0}} />}
+      <span style={{flex:1}}>{title}</span>
+      <span style={{color:"#3b4050",fontSize:12,transition:"transform 0.2s",transform:open?"rotate(0)":"rotate(-90deg)"}}>▾</span>
+    </button>
     {open&&<div style={{padding:"0 16px 14px"}}>{children}</div>}
   </div>);
 }
@@ -1941,7 +1981,7 @@ function ControlPanel({ project, up, t, lang }) {
   const rmPhase=(i)=>up({phases:project.phases.filter((_,j)=>j!==i)});
 
   return (<>
-    <Sec title={t.general}>
+    <Sec title={t.general} def={true} filled={!!(project.location && project.startYear)}>
       <Fld label={t.location}><SidebarInput value={project.location} onChange={v=>up({location:v})} placeholder="e.g. Jazan, Saudi Arabia" /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.startYear}><SidebarInput type="number" value={project.startYear} onChange={v=>up({startYear:v})} /></Fld>
@@ -1950,7 +1990,7 @@ function ControlPanel({ project, up, t, lang }) {
       <Fld label={t.currency}><Sel lang={lang} value={project.currency} onChange={v=>up({currency:v})} options={CURRENCIES} /></Fld>
     </Sec>
 
-    <Sec title={t.landAcq}>
+    <Sec title={t.landAcq} filled={project.landArea > 0}>
       <Fld label={t.landType}><Sel lang={lang} value={project.landType} onChange={v=>up({landType:v})} options={LAND_TYPES} /></Fld>
       <Fld label={t.landArea}><SidebarInput type="number" value={project.landArea} onChange={v=>up({landArea:v})} /></Fld>
       {project.landType==="lease"&&<>
@@ -1972,15 +2012,15 @@ function ControlPanel({ project, up, t, lang }) {
       {project.landType==="bot"&&<Fld label={t.botYears}><SidebarInput type="number" value={project.botOperationYears} onChange={v=>up({botOperationYears:v})} /></Fld>}
     </Sec>
 
-    <Sec title={t.capexAssumptions}>
+    <Sec title={t.capexAssumptions} filled={project.softCostPct > 0}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.softCost} tip="Indirect costs: design, supervision, permits. Standard 8-12%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
         <Fld label={t.contingency} tip="Risk reserve for unexpected costs. Standard 3-7%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
       </div>
     </Sec>
 
-    <Sec title={t.revenueAssumptions}>
-      <Fld label={t.rentEsc}><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
+    <Sec title={t.revenueAssumptions} filled={project.rentEscalation > 0}>
+      <Fld label={t.rentEsc} tip="Annual rent increase %. Saudi prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.defEfficiency} tip="Leasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
         <Fld label={t.defLeaseRate}><SidebarInput type="number" value={project.defaultLeaseRate} onChange={v=>up({defaultLeaseRate:v})} /></Fld>
@@ -1988,7 +2028,7 @@ function ControlPanel({ project, up, t, lang }) {
       <Fld label={t.defCostSqm}><SidebarInput type="number" value={project.defaultCostPerSqm} onChange={v=>up({defaultCostPerSqm:v})} /></Fld>
     </Sec>
 
-    <Sec title={t.scenario}>
+    <Sec title={t.scenario} filled={project.activeScenario !== "Base Case"}>
       <Fld label={t.activeScenario}><Sel lang={lang} value={project.activeScenario} onChange={v=>up({activeScenario:v})} options={SCENARIOS} /></Fld>
       {project.activeScenario==="Custom"&&<>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -2002,7 +2042,7 @@ function ControlPanel({ project, up, t, lang }) {
       </>}
     </Sec>
 
-    <Sec title={lang==="ar"?"التمويل":"Financing"} def={false}>
+    <Sec title={lang==="ar"?"التمويل":"Financing"} def={false} filled={project.finMode !== "self"}>
       <Fld label={lang==="ar"?"نوع التمويل":"Financing Mode"}>
         <Sel lang={lang} value={project.finMode} onChange={v=>up({finMode:v})} options={[
           {value:"self",en:"Self-Funded (100% Equity)",ar:"تمويل ذاتي"},
@@ -2072,8 +2112,8 @@ function ControlPanel({ project, up, t, lang }) {
               <Fld label={lang==="ar"?"معدل الربح %":"Finance Rate %"} tip="Annual profit/interest rate. Saudi market: 5-8%"><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"}><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
-              <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"}><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
+              <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"} tip="Total loan period including grace. Standard 5-10 years"><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
+              <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"} tip="Interest-only period before repayment starts. Matches construction period"><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
@@ -2109,7 +2149,7 @@ function ControlPanel({ project, up, t, lang }) {
               <Fld label={lang==="ar"?"مضاعف الإيجار":"Exit Multiple (x)"} tip="Sale price = Annual Rent × Multiple"><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
             )}
             {project.exitStrategy === "caprate" && (
-              <Fld label={lang==="ar"?"معدل الرسملة %":"Cap Rate %"}><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
+              <Fld label={lang==="ar"?"معدل الرسملة %":"Cap Rate %"} tip="Exit value = NOI / Cap Rate. Saudi: 7-10% retail, 8-12% office"><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
             )}
             <Fld label={lang==="ar"?"تكاليف التخارج %":"Exit Cost %"}><SidebarInput type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></Fld>
           </>}
@@ -2155,7 +2195,7 @@ function ControlPanel({ project, up, t, lang }) {
       </>}
     </Sec>
 
-    <Sec title={t.phases}>
+    <Sec title={t.phases} filled={(project.phases||[]).length > 1}>
       {project.phases.map((ph,i)=>(
         <div key={i} style={{background:"#161a24",borderRadius:6,padding:10,marginBottom:8}}>
           <div style={{display:"flex",gap:6,marginBottom:6}}>
@@ -2314,8 +2354,8 @@ function MarinaPLModal({ data, onSave, onClose, t }) {
 function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject }) {
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
-  const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
-  const [editIdx, setEditIdx] = useState(null); // index of asset being edited in detail modal
+  const [viewMode, setViewMode] = useState("cards");
+  const [editIdx, setEditIdx] = useState(null);
   const fileRef = useRef(null);
   if (!project) return null;
   const assets = project.assets || [];
@@ -2394,20 +2434,19 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         <div style={{fontSize:15,fontWeight:600}}>{t.assetProgram}</div>
         <div style={{fontSize:12,color:"#6b7080"}}>{assets.length} {t.assets}</div>
         <div style={{flex:1}} />
-        {/* View toggle */}
         <div style={{display:"flex",background:"#f0f1f5",borderRadius:6,padding:2}}>
           <button onClick={()=>setViewMode("cards")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="cards"?"#fff":"transparent",color:viewMode==="cards"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="cards"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>▦ {lang==="ar"?"بطاقات":"Cards"}</button>
           <button onClick={()=>setViewMode("table")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="table"?"#fff":"transparent",color:viewMode==="table"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="table"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>☰ {lang==="ar"?"جدول":"Table"}</button>
         </div>
         <button onClick={()=>generateTemplate()} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
-          {lang==='ar'?'⬇ نموذج':'⬇ Template'}
+          {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
-        <button onClick={()=>exportAssetsToExcel(project, results)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}}>
+        <button onClick={()=>exportAssetsToExcel(project, results)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
           {lang==='ar'?'⬇ تصدير':'⬇ Export'}
         </button>
         <input type="file" accept=".csv,.tsv" ref={fileRef} onChange={handleUpload} style={{display:"none"}} />
-        <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}}>
-          {lang==='ar'?'⬆ رفع':'⬆ Upload'}
+        <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}} title={lang==='ar'?"رفع ملف Excel":"Upload Excel File"}>
+          {lang==='ar'?'⬆ رفع ملف':'⬆ Upload'}
         </button>
         <button onClick={addAsset} style={{...btnPrim,padding:"7px 16px",fontSize:12}}>{t.addAsset}</button>
       </div>
@@ -2425,131 +2464,81 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           <button onClick={()=>setImportMsg(null)} style={{...btnSm,background:"transparent",color:"inherit",fontSize:14,padding:"0 4px"}}>✕</button>
         </div>
       )}
-      {/* ── CARD VIEW ── */}
-      {viewMode === "cards" && (
-        <div>
-          {assets.length === 0 ? (
-            <div style={{textAlign:"center",padding:48,color:"#9ca3af",background:"#fff",borderRadius:12,border:"2px dashed #e5e7ec"}}>
-              <div style={{fontSize:32,marginBottom:8}}>🏗</div>
-              <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{lang==="ar"?"لا توجد أصول":"No assets yet"}</div>
-              <div style={{fontSize:12}}>{lang==="ar"?"اضغط '+ إضافة أصل' أو استخدم المساعد الذكي":"Click '+ Add Asset' or use the AI Assistant"}</div>
-            </div>
-          ) : (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:12}}>
-              {assets.map((a, i) => {
-                const comp = results?.assetSchedules?.[i];
-                const capex = comp?.totalCapex || computeAssetCapex(a, project);
-                const income = comp?.totalRevenue || 0;
-                const catColors = {Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899",Flexible:"#6366f1"};
-                const catColor = catColors[a.category] || "#6b7080";
-                const catIcons = {Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭",Flexible:"🔧","Open Space":"🌳",Utilities:"⚡",Infrastructure:"🛣",Amenity:"🎯"};
-                const catIcon = catIcons[a.category] || "📦";
-                return (
-                  <div key={a.id||i} onClick={()=>setEditIdx(i)} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:0,cursor:"pointer",transition:"all 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}
-                    onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)";e.currentTarget.style.borderColor="#c7d2fe";}}
-                    onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";e.currentTarget.style.borderColor="#e5e7ec";}}>
-                    {/* Card header */}
-                    <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                        <span style={{fontSize:18}}>{catIcon}</span>
-                        <div style={{flex:1}}>
-                          <div style={{fontSize:13,fontWeight:700,color:"#1a1d23",lineHeight:1.2}}>{a.name || `Asset ${i+1}`}</div>
-                          <div style={{fontSize:10,color:"#9ca3af"}}>{a.code ? `${a.code} · ` : ""}{a.phase}</div>
-                        </div>
-                        <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:`${catColor}15`,color:catColor,fontWeight:600}}>{a.category}</span>
-                      </div>
-                    </div>
-                    {/* Card body - key metrics */}
-                    <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
-                      <div><span style={{color:"#9ca3af"}}>GFA</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
-                      <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?"Rate":"EBITDA"}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":fmtM(a.opEbitda)}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>CAPEX</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>Income</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>{lang==="ar"?"البناء":"Construction"}</span><div style={{fontWeight:500}}>{a.constrDuration}mo · Yr {a.constrStart}</div></div>
-                      <div><span style={{color:"#9ca3af"}}>{lang==="ar"?"إشغال":"Occupancy"}</span><div style={{fontWeight:500}}>{a.stabilizedOcc}%</div></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Asset Detail Modal */}
-          {editIdx !== null && editIdx < assets.length && (() => {
-            const a = assets[editIdx];
-            const i = editIdx;
-            const comp = results?.assetSchedules?.[i];
-            const isOp = a.revType === "Operating";
-            const isHotel = isOp && a.category === "Hospitality";
-            const isMarina = isOp && a.category === "Marina";
-            const Fld2 = ({label, children}) => (<div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>);
-            const Inp = ({type,value,onChange,...rest}) => (<input type={type||"text"} value={value??""} onChange={e=>onChange(type==="number"?parseFloat(e.target.value)||0:e.target.value)} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,fontFamily:"inherit",background:"#fafbfc",outline:"none"}} {...rest} />);
-
-            return (<>
-              <div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
-              <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-                {/* Modal header */}
-                <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:16,fontWeight:700}}>{a.name || `Asset ${i+1}`}</div>
-                    <div style={{fontSize:11,color:"#9ca3af"}}>{a.category} · {a.phase}</div>
-                  </div>
-                  <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>{lang==="ar"?"حذف":"Delete"}</button>
-                  <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
-                </div>
-                {/* Modal body */}
-                <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"التصنيف":"Category"}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>upAsset(i,{category:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"نوع الإيراد":"Revenue Type"}><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></Fld2>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"اسم الأصل":"Asset Name"}><Inp value={a.name} onChange={v=>upAsset(i,{name:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"الرمز":"Code"}><Inp value={a.code} onChange={v=>upAsset(i,{code:v})} /></Fld2>
-                  </div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8,marginTop:4}}>{lang==="ar"?"المساحات":"Areas"}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label="Plot Area (m²)"><Inp type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></Fld2>
-                    <Fld2 label="Footprint (m²)"><Inp type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></Fld2>
-                    <Fld2 label="GFA (m²)"><Inp type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></Fld2>
-                  </div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{lang==="ar"?"الإيرادات":"Revenue"}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"الكفاءة %":"Efficiency %"}><Inp type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"إيجار/م²":"Lease Rate/m²"}><Inp type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} /></Fld2>
-                    <Fld2 label="Op EBITDA"><Inp type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"الزيادة %":"Escalation %"}><Inp type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"سنوات النمو":"Ramp-up Years"}><Inp type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"الإشغال %":"Occupancy %"}><Inp type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></Fld2>
-                  </div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{lang==="ar"?"البناء":"Construction"}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-                    <Fld2 label={lang==="ar"?"تكلفة/م²":"Cost/m²"}><Inp type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"بداية البناء (سنة)":"Start Year"}><Inp type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></Fld2>
-                    <Fld2 label={lang==="ar"?"مدة البناء (شهر)":"Duration (months)"}><Inp type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></Fld2>
-                  </div>
-                  {/* P&L buttons */}
-                  {(isHotel||isMarina) && (
-                    <button onClick={()=>setModal({type:isHotel?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>
-                      {isHotel?(lang==="ar"?"⚙ إعداد P&L الفندق":"⚙ Configure Hotel P&L"):(lang==="ar"?"⚙ إعداد P&L المارينا":"⚙ Configure Marina P&L")}
-                    </button>
-                  )}
-                  {/* Summary */}
-                  <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
-                    <div><span style={{color:"#6b7080"}}>Total CAPEX:</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
-                    <div><span style={{color:"#6b7080"}}>Total Income:</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
-                    <div><span style={{color:"#6b7080"}}>Leasable Area:</span> <strong>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</strong></div>
-                    <div><span style={{color:"#6b7080"}}>{lang==="ar"?"نوع الإيراد":"Rev Type"}:</span> <strong>{a.revType}</strong></div>
-                  </div>
-                </div>
+      {/* CARD VIEW */}
+      {viewMode === "cards" && (<div>
+        {assets.length===0 ? (
+          <div style={{textAlign:"center",padding:48,color:"#9ca3af",background:"#fff",borderRadius:12,border:"2px dashed #e5e7ec"}}>
+            <div style={{fontSize:32,marginBottom:8}}>🏗</div><div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{lang==="ar"?"لا توجد أصول":"No assets yet"}</div>
+            <div style={{fontSize:12}}>{lang==="ar"?"اضغط '+ إضافة أصل' أو استخدم المساعد الذكي":"Click '+ Add Asset' or use the AI Assistant"}</div>
+          </div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:12}}>
+            {assets.map((a,i)=>{const comp=results?.assetSchedules?.[i];const capex=comp?.totalCapex||computeAssetCapex(a,project);const income=comp?.totalRevenue||0;const catC={Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899"};const catI={Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭","Open Space":"🌳",Utilities:"⚡",Flexible:"🔧"};const cc=catC[a.category]||"#6b7080";
+            return <div key={a.id||i} className="asset-card" onClick={()=>setEditIdx(i)} style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)",animationDelay:i*0.05+"s"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
+              <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
+                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:10,color:"#9ca3af"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
+                <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:cc+"15",color:cc,fontWeight:600}}>{a.category}</span>
               </div>
-            </>);
-          })()}
-        </div>
-      )}
-
-      {/* ── TABLE VIEW ── */}
+              <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
+                <div><span style={{color:"#9ca3af"}}>GFA</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
+                <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?"Rate":"EBITDA"}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":fmtM(a.opEbitda)}</div></div>
+                <div><span style={{color:"#9ca3af"}}>CAPEX</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
+                <div><span style={{color:"#9ca3af"}}>Income</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
+              </div>
+            </div>;})}
+          </div>
+        )}
+        {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
+        const F2=({label,children})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>;
+        const Inp=({type,value,onChange})=><input type={type||"text"} value={value??""} onChange={e=>onChange(type==="number"?parseFloat(e.target.value)||0:e.target.value)} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,fontFamily:"inherit",background:"#fafbfc",outline:"none"}} />;
+        return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
+        <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
+            <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"#9ca3af"}}>{a.category} · {a.phase}</div></div>
+            <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>Delete</button>
+            <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
+          </div>
+          <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Phase"><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></F2>
+              <F2 label="Category"><EditableCell options={CATEGORIES} value={a.category} onChange={v=>upAsset(i,{category:v})} /></F2>
+              <F2 label="Rev Type"><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Name"><Inp value={a.name} onChange={v=>upAsset(i,{name:v})} /></F2>
+              <F2 label="Code"><Inp value={a.code} onChange={v=>upAsset(i,{code:v})} /></F2>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Areas</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Plot Area"><Inp type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></F2>
+              <F2 label="Footprint"><Inp type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></F2>
+              <F2 label="GFA (m²)"><Inp type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></F2>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Revenue</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Efficiency %"><Inp type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} /></F2>
+              <F2 label="Lease Rate"><Inp type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} /></F2>
+              <F2 label="Op EBITDA"><Inp type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} /></F2>
+              <F2 label="Escalation %"><Inp type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></F2>
+              <F2 label="Ramp Years"><Inp type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></F2>
+              <F2 label="Occupancy %"><Inp type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></F2>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>Construction</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+              <F2 label="Cost/m²"><Inp type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} /></F2>
+              <F2 label="Start Year"><Inp type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></F2>
+              <F2 label="Duration (mo)"><Inp type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></F2>
+            </div>
+            {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>{isH?"⚙ Hotel P&L":"⚙ Marina P&L"}</button>}
+            <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
+              <div><span style={{color:"#6b7080"}}>CAPEX:</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
+              <div><span style={{color:"#6b7080"}}>Income:</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
+            </div>
+          </div>
+        </div></>;})()}
+      </div>)}
+      {/* TABLE VIEW */}
       {viewMode === "table" && (<>
       <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
         <div style={{overflowX:"auto"}}>
@@ -2646,32 +2635,33 @@ function ProjectDash({ project, results, checks, t, financing }) {
   const f = financing;
   const h = results.horizon;
 
+  // Payback period
   let cumCF = 0, paybackYr = null;
   for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYr === null) paybackYr = y + 1; }
+
+  // Cash Yield (stabilized year income / total equity)
   const stabYear = Math.min(10, h - 1);
   const cashYield = f && f.totalEquity > 0 ? (c.income[stabYear] / f.totalEquity * 100) : null;
 
-  // Hero metric helper
-  const Hero = ({label, value, sub, color, size, icon}) => (
-    <div style={{background:`linear-gradient(135deg, ${color}08, ${color}15)`,borderRadius:12,border:`1px solid ${color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
-      {icon && <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{icon}</div>}
-      <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{label}</div>
-      <div style={{fontSize:size||28,fontWeight:800,color:color||"#1a1d23",lineHeight:1,letterSpacing:-0.5}}>{value}</div>
-      {sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{sub}</div>}
-    </div>
-  );
-
   return (<div>
-    {/* Hero KPIs Row */}
+    {/* Hero KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14,marginBottom:22}}>
-      <Hero label={t.consolidatedIRR+" (Unlevered)"} value={c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A"} color={c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444"} icon="📈" />
-      {f && f.mode !== "self" && <Hero label="Levered IRR" value={f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A"} color={f.leveredIRR>0.15?"#16a34a":"#8b5cf6"} icon="🏦" />}
-      <Hero label={t.npv10} value={fmtM(c.npv10)} sub={cur} color={c.npv10>0?"#2563eb":"#ef4444"} icon={c.npv10>0?"✓":"✗"} />
-      <Hero label={t.totalCapexLabel} value={fmtM(c.totalCapex)} sub={cur} color="#ef4444" icon="🏗" />
+      {[
+        {label:t.consolidatedIRR+" (Unlevered)",value:c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A",color:c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444",icon:"📈"},
+        f&&f.mode!=="self"&&{label:"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦"},
+        {label:t.npv10,value:fmtM(c.npv10),sub:cur,color:c.npv10>0?"#2563eb":"#ef4444",icon:c.npv10>0?"✓":"✗"},
+        {label:t.totalCapexLabel,value:fmtM(c.totalCapex),sub:cur,color:"#ef4444",icon:"🏗"},
+      ].filter(Boolean).map((h,i)=>(
+        <div key={i} className="hero-kpi" style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
+          <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{h.label}</div>
+          <div style={{fontSize:28,fontWeight:800,color:h.color,lineHeight:1,letterSpacing:-0.5}}>{h.value}</div>
+          {h.sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{h.sub}</div>}
+        </div>
+      ))}
     </div>
-
     {/* Secondary KPIs */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
+    <div className="kpi-secondary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
       <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" />
       <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" />
       {f && f.mode !== "self" && <KPI label="Total Debt" value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" />}
@@ -2752,6 +2742,7 @@ function KPI({label,value,sub,color}) {
 function CashFlowView({ project, results, t }) {
   if (!project||!results) return <div style={{color:"#9ca3af"}}>Add assets to see projections.</div>;
   const [showYrs,setShowYrs]=useState(15);
+  const [showCumulative,setShowCumulative]=useState(false);
   const {horizon,startYear}=results;
   const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
   const phases=Object.entries(results.phaseResults);
@@ -2759,20 +2750,35 @@ function CashFlowView({ project, results, t }) {
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
-    const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af";};
-    return <tr style={st}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500}}>{label}</td>
+    const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#d0d4dc";};
+    return <tr style={st} onMouseEnter={e=>{if(!bold)e.currentTarget.style.background="#fafbff";}} onMouseLeave={e=>{if(!bold)e.currentTarget.style.background="";}}>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:120}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-total:total)}}>{fmt(total)}</td>
-      {years.map(y=>{const v=values[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
+      {years.map(y=>{const v=values[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v),background:v===0?"":"transparent"}}>{v===0?"—":fmt(v)}</td>;})}
+    </tr>;
+  };
+
+  // Cumulative row helper
+  const CumRow=({label,values})=>{
+    let cum=0;
+    return <tr style={{background:"#fffbeb"}} onMouseEnter={e=>e.currentTarget.style.background="#fef9c3"} onMouseLeave={e=>e.currentTarget.style.background="#fffbeb"}>
+      <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:120}}>{label}</td>
+      <td style={tdN}></td>
+      {years.map(y=>{cum+=values[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
     </tr>;
   };
 
   return (<div>
-    <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12}}>
-      <div style={{fontSize:15,fontWeight:600}}>{t.unleveredCF}</div><div style={{flex:1}} />
-      <select value={showYrs} onChange={e=>setShowYrs(parseInt(e.target.value))} style={{...sideInputStyle,background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec",width:"auto",padding:"4px 8px"}}>
-        {[10,15,20,30,50].map(n=><option key={n} value={n}>{n} years</option>)}
-      </select>
+    <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12,flexWrap:"wrap"}}>
+      <div style={{fontSize:15,fontWeight:600}}>{t.unleveredCF}</div>
+      <div style={{flex:1}} />
+      <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7080",cursor:"pointer"}}>
+        <input type="checkbox" checked={showCumulative} onChange={e=>setShowCumulative(e.target.checked)} style={{accentColor:"#2563eb"}} />
+        {t.dashboard==="لوحة التحكم"?"تراكمي":"Cumulative"}
+      </label>
+      <div style={{display:"flex",background:"#f0f1f5",borderRadius:6,padding:2}}>
+        {[10,15,20,30,50].map(n=><button key={n} onClick={()=>setShowYrs(n)} style={{...btnS,padding:"4px 10px",fontSize:10,fontWeight:600,background:showYrs===n?"#fff":"transparent",color:showYrs===n?"#1a1d23":"#9ca3af",boxShadow:showYrs===n?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>{n}yr</button>)}
+      </div>
     </div>
     {phases.map(([name,pr])=>(
       <div key={name} style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:14}}>
@@ -2788,6 +2794,7 @@ function CashFlowView({ project, results, t }) {
           <CFRow label={t.landRentLabel} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate />
           <CFRow label={t.capex} values={pr.capex} total={pr.totalCapex} color="#ef4444" negate />
           <CFRow label={t.netCF} values={pr.netCF} total={pr.totalNetCF} bold />
+          {showCumulative&&<CumRow label="↳ Cumulative" values={pr.netCF} />}
         </tbody></table></div>
       </div>
     ))}
@@ -2804,6 +2811,7 @@ function CashFlowView({ project, results, t }) {
         <CFRow label={t.landRentLabel} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
         <CFRow label={t.capex} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
         <CFRow label={t.netCF} values={c.netCF} total={c.totalNetCF} bold />
+        {showCumulative&&<CumRow label="↳ Cumulative" values={c.netCF} />}
       </tbody></table></div>
     </div>
   </div>);
