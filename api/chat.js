@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-20250514',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 4096,
         system,
         messages,
@@ -38,6 +38,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.text();
+      console.error('Anthropic API error:', response.status, err);
       return res.status(response.status).json({ error: err });
     }
 
