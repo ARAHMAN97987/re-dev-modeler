@@ -2370,56 +2370,6 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FEATURES GRID (used in dashboard features tab)
-// ═══════════════════════════════════════════════════════════════
-function FeaturesGrid({ lang }) {
-  const ar = lang === "ar";
-  const features = [
-    { icon: "🏗", titleAr: "نمذجة متعددة الأصول", titleEn: "Multi-Asset Modeling",
-      descAr: "فنادق، محلات، مكاتب، سكني، مارينا - كلها في مشروع واحد مع P&L مستقل لكل أصل. جدول أصول كامل مع بطاقات ذكية أو عرض جدولي.",
-      descEn: "Hotels, retail, offices, residential, marina - all in one project with independent P&L per asset. Full asset table with smart cards or table view." },
-    { icon: "🏦", titleAr: "تمويل متقدم", titleEn: "Advanced Financing",
-      descAr: "4 أنماط: تمويل ذاتي، بنكي 100%، دين + ملكية، صندوق GP/LP. دعم المرابحة والإجارة. DSCR ومعادلة هيكل رأس المال.",
-      descEn: "4 modes: self-funded, 100% bank, debt + equity, GP/LP fund. Murabaha & Ijara support. DSCR and capital structure equation." },
-    { icon: "📊", titleAr: "شلال توزيعات 4 مراحل", titleEn: "4-Tier Waterfall",
-      descAr: "رد رأس المال → عائد تفضيلي → تعويض المطور → تقسيم الأرباح. LP/GP IRR و MOIC. تحليل بالمراحل (phases).",
-      descEn: "Return of Capital → Preferred Return → GP Catch-up → Profit Split. LP/GP IRR & MOIC. Phase-level analysis." },
-    { icon: "🎯", titleAr: "سيناريوهات وحساسية", titleEn: "Scenarios & Sensitivity",
-      descAr: "8 سيناريوهات جاهزة + مخصص. جدول حساسية ثنائي المتغير. تحليل نقطة التعادل للإشغال والإيجار والتكاليف.",
-      descEn: "8 preset scenarios + custom. Two-variable sensitivity table. Break-even analysis for occupancy, rent, and CAPEX." },
-    { icon: "📄", titleAr: "تقارير احترافية", titleEn: "Professional Reports",
-      descAr: "ملخص تنفيذي، حزمة البنك (10 سنوات CF + DSCR)، مذكرة المستثمر. تصدير PDF و Excel احترافي.",
-      descEn: "Executive summary, bank pack (10yr CF + DSCR), investor memo. Professional PDF & Excel export." },
-    { icon: "🎁", titleAr: "حوافز حكومية", titleEn: "Government Incentives",
-      descAr: "منحة CAPEX، دعم فوائد / قرض ميسر، إعفاء إيجار أرض، إعفاء رسوم. كلها قابلة للتفعيل بكل مرحلة.",
-      descEn: "CAPEX grant, interest subsidy / soft loan, land rent rebate, fee rebates. All toggleable per phase." },
-    { icon: "🌐", titleAr: "ثنائي اللغة + شرح ذكي", titleEn: "Bilingual + Smart Tooltips",
-      descAr: "واجهة كاملة بالعربي والإنجليزي. ⓘ tooltips تشرح كل مصطلح مالي بالعربي والإنجليزي.",
-      descEn: "Full Arabic & English UI. ⓘ tooltips explain every financial term in both languages." },
-    { icon: "🤖", titleAr: "مساعد ذكاء اصطناعي", titleEn: "AI Assistant",
-      descAr: "مساعد AI يفهم مشروعك ويساعدك في التحليل والإدخالات والتوصيات.",
-      descEn: "AI assistant that understands your project and helps with analysis, inputs, and recommendations." },
-  ];
-  return (
-    <div>
-      <div style={{fontSize:20,fontWeight:700,color:"#fff",marginBottom:6}}>{ar?"مزايا المنصة":"Platform Features"}</div>
-      <div style={{fontSize:13,color:"#6b7080",marginBottom:24}}>{ar?"كل ما تحتاجه لنمذجة مشاريع التطوير العقاري":"Everything you need to model real estate development projects"}</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:14}}>
-        {features.map((f, i) => (
-          <div key={i} style={{background:"#161a24",borderRadius:12,border:"1px solid #1e2230",padding:"20px 18px",transition:"all 0.15s"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf30";e.currentTarget.style.background="#1a1f2e";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.background="#161a24";}}>
-            <div style={{fontSize:28,marginBottom:10}}>{f.icon}</div>
-            <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:6}}>{ar?f.titleAr:f.titleEn}</div>
-            <div style={{fontSize:11,color:"#6b7080",lineHeight:1.6}}>{ar?f.descAr:f.descEn}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function StatusBadge({status,onChange}) {
   const [open,setOpen]=useState(false);
   const sts=["Draft","In Progress","Complete"];
