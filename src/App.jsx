@@ -1885,15 +1885,34 @@ function ReDevModelerInner({ user, signOut }) {
               </div>
             ))}
           </div>
-          {[{key:"dashboard",label:t.dashboard},{key:"assets",label:t.assetProgram},{key:"cashflow",label:t.cashFlow},{key:"financing",label:lang==="ar"?"التمويل":"Financing"},{key:"waterfall",label:lang==="ar"?"الشلال":"Waterfall"},{key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},{key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},{key:"checks",label:lang==="ar"?"الفحوصات":"Checks"},{key:"reports",label:lang==="ar"?"التقارير":"Reports"}].map(tb=>{
-            const groupColors = {dashboard:"#2563eb",assets:"#2563eb",cashflow:"#2563eb",financing:"#8b5cf6",waterfall:"#8b5cf6",incentives:"#8b5cf6",scenarios:"#f59e0b",checks:"#f59e0b",reports:"#16a34a"};
-            const gc = groupColors[tb.key] || "#2563eb";
-            const isActive = activeTab===tb.key;
-            return <button key={tb.key} onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>;
-          })}
+          {(() => {
+            const tabs = [
+              {key:"dashboard",label:t.dashboard,group:"project"},
+              {key:"assets",label:t.assetProgram,group:"project"},
+              {key:"cashflow",label:t.cashFlow,group:"project"},
+              {key:"financing",label:lang==="ar"?"التمويل":"Financing",group:"finance"},
+              {key:"waterfall",label:lang==="ar"?"الشلال":"Waterfall",group:"finance"},
+              {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
+              {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
+              {key:"checks",label:lang==="ar"?"الفحوصات":"Checks",group:"analysis"},
+              {key:"reports",label:lang==="ar"?"التقارير":"Reports",group:"export"},
+            ];
+            const groupColors = {project:"#2563eb",finance:"#8b5cf6",analysis:"#f59e0b",export:"#16a34a"};
+            let prevGroup = null;
+            return tabs.map(tb=>{
+              const gc = groupColors[tb.group];
+              const isActive = activeTab===tb.key;
+              const showSep = prevGroup && prevGroup !== tb.group;
+              prevGroup = tb.group;
+              return <span key={tb.key} style={{display:"inline-flex",alignItems:"center"}}>
+                {showSep && <span style={{width:1,height:20,background:"#e5e7ec",margin:"0 2px",flexShrink:0}} />}
+                <button onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
+              </span>;
+            });
+          })()}
         </div>
         <div style={{flex:1,overflow:"auto",padding:18}}>
-          {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} />}
+          {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} />}
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
           {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} t={t} up={up} lang={lang} />}
           {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} lang={lang} />}
@@ -2540,6 +2559,13 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   const assets = project.assets || [];
   const phaseNames = project.phases.map(p => p.name);
 
+  // Auto-open detail modal after adding a new asset
+  const handleAddAsset = () => {
+    addAsset();
+    // Open the newly added asset (will be at end of list)
+    setTimeout(() => setEditIdx(assets.length), 50);
+  };
+
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2627,7 +2653,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}} title={lang==='ar'?"رفع ملف Excel":"Upload Excel File"}>
           {lang==='ar'?'⬆ رفع ملف':'⬆ Upload'}
         </button>
-        <button onClick={addAsset} style={{...btnPrim,padding:"7px 16px",fontSize:12}}>{t.addAsset}</button>
+        <button onClick={handleAddAsset} style={{...btnPrim,padding:"7px 16px",fontSize:12}}>{t.addAsset}</button>
       </div>
 
       {/* Import message */}
@@ -2804,7 +2830,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
 // ═══════════════════════════════════════════════════════════════
 // PROJECT DASHBOARD
 // ═══════════════════════════════════════════════════════════════
-function ProjectDash({ project, results, checks, t, financing }) {
+function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang }) {
   if (!project || !results) return null;
   const c = results.consolidated;
   const cur = project.currency || "SAR";
@@ -2812,6 +2838,8 @@ function ProjectDash({ project, results, checks, t, financing }) {
   const fc = checks.filter(ch => !ch.pass).length;
   const f = financing;
   const h = results.horizon;
+  const ar = lang === "ar";
+  const hasAssets = (project.assets||[]).length > 0;
 
   // Payback period
   let cumCF = 0, paybackYr = null;
@@ -2820,6 +2848,38 @@ function ProjectDash({ project, results, checks, t, financing }) {
   // Cash Yield (stabilized year income / total equity)
   const stabYear = Math.min(10, h - 1);
   const cashYield = f && f.totalEquity > 0 ? (c.income[stabYear] / f.totalEquity * 100) : null;
+
+  // ── Getting Started Guide (no assets) ──
+  if (!hasAssets) {
+    return (<div>
+      <div style={{background:"linear-gradient(135deg, #0f766e08, #1e40af12)",borderRadius:16,border:"1px solid #2563eb20",padding:"32px 28px",textAlign:"center",marginBottom:20}}>
+        <div style={{fontSize:36,marginBottom:12}}>🚀</div>
+        <div style={{fontSize:20,fontWeight:700,color:"#1a1d23",marginBottom:8}}>{ar?"مشروعك جاهز! الخطوة التالية":"Your Project is Ready! Next Step"}</div>
+        <div style={{fontSize:13,color:"#6b7080",marginBottom:24,maxWidth:480,margin:"0 auto 24px"}}>{ar?"أضف أصول مشروعك (محلات، فنادق، مكاتب، سكني...) عشان تبدأ تشوف الأرقام والتحليلات":"Add your project assets (retail, hotels, offices, residential...) to start seeing numbers and analytics"}</div>
+        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={onGoToAssets} style={{...btnPrim,padding:"12px 28px",fontSize:14,borderRadius:10,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:18}}>➕</span> {ar?"أضف أصل الآن":"Add Asset Now"}
+          </button>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:14}}>
+        {[
+          {icon:"1️⃣",title:ar?"أضف الأصول":"Add Assets",desc:ar?"عرّف كل أصل: نوعه، مساحته، تكلفته، إيراداته":"Define each asset: type, area, cost, revenue",done:false},
+          {icon:"2️⃣",title:ar?"راجع الأرقام":"Review Numbers",desc:ar?"شوف التدفقات النقدية، IRR، NPV في لوحة التحكم":"Check cash flows, IRR, NPV in the dashboard",done:false},
+          {icon:"3️⃣",title:ar?"اضبط التمويل":"Configure Financing",desc:ar?"عدّل شروط الدين والتمويل من الشريط الجانبي":"Adjust debt terms and financing from sidebar",done:project.finMode!=="self"},
+          {icon:"4️⃣",title:ar?"صدّر التقارير":"Export Reports",desc:ar?"حمّل تقارير البنك والمستثمرين بصيغة PDF أو Excel":"Download bank and investor reports as PDF or Excel",done:false},
+        ].map((s,i)=>(
+          <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px",opacity:s.done?0.7:1}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <span style={{fontSize:20}}>{s.icon}</span>
+              <span style={{fontSize:13,fontWeight:600,color:s.done?"#16a34a":"#1a1d23"}}>{s.title}{s.done?" ✓":""}</span>
+            </div>
+            <div style={{fontSize:11,color:"#6b7080",lineHeight:1.5}}>{s.desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>);
+  }
 
   return (<div>
     {/* Hero KPIs */}
