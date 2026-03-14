@@ -1,11 +1,41 @@
-import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, memo, Component } from "react";
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
 import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
-// RE-DEV MODELER — Phase 1: Project Engine v3 (Stable)
+// ZAN Financial Modeler — Project Engine v3 (Stable)
 // ═══════════════════════════════════════════════════════════════
+
+// ── Error Boundary — prevents white screen on runtime errors ──
+class AppErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { console.error("ZAN Error Boundary caught:", error, info?.componentStack); }
+  render() {
+    if (this.state.hasError) {
+      const isAr = document.documentElement.lang === "ar";
+      return (
+        <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif",color:"#d0d4dc"}}>
+          <div style={{textAlign:"center",maxWidth:460,padding:32}}>
+            <div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2,marginBottom:8}}>ZAN</div>
+            <div style={{fontSize:16,fontWeight:600,color:"#f87171",marginBottom:16}}>{isAr?"حدث خطأ غير متوقع":"An unexpected error occurred"}</div>
+            <div style={{fontSize:12,color:"#6b7080",marginBottom:24,lineHeight:1.6}}>{isAr?"يمكنك إعادة المحاولة أو تحميل الصفحة من جديد. بياناتك محفوظة.":"You can retry or reload the page. Your data is saved."}</div>
+            <div style={{display:"flex",gap:12,justifyContent:"center"}}>
+              <button onClick={()=>this.setState({hasError:false,error:null})} style={{padding:"10px 24px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"إعادة المحاولة":"Retry"}</button>
+              <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"#1e2230",color:"#d0d4dc",border:"1px solid #282d3a",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"تحديث الصفحة":"Reload Page"}</button>
+            </div>
+            <details style={{marginTop:24,textAlign:"left"}}>
+              <summary style={{fontSize:10,color:"#4b5060",cursor:"pointer"}}>{isAr?"تفاصيل الخطأ":"Error details"}</summary>
+              <pre style={{fontSize:10,color:"#6b7080",background:"#161a24",padding:12,borderRadius:6,marginTop:8,overflow:"auto",maxHeight:120,whiteSpace:"pre-wrap"}}>{this.state.error?.message || "Unknown error"}{"\n"}{this.state.error?.stack?.split("\n").slice(0,4).join("\n")}</pre>
+            </details>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ── CSV helpers (always available, no dependencies) ──
 function csvEscape(v) {
@@ -924,6 +954,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
 function computeWaterfall(project, projectResults, financing) {
   if (!project || !projectResults || !financing) return null;
   if (project.finMode === "self" || project.finMode === "bank100") return null;
+  const h = project.horizon || 50;
   const sy = project.startYear || 2026;
   const c = projectResults.consolidated;
   const f = financing;
@@ -1664,7 +1695,7 @@ const SidebarInput = memo(function SidebarInput({ value, onChange, type = "text"
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 
-export default function ReDevModeler({ user, signOut }) {
+function ReDevModelerInner({ user, signOut }) {
   const [view, setView] = useState("dashboard");
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
@@ -1691,12 +1722,12 @@ export default function ReDevModeler({ user, signOut }) {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [project, view]);
 
-  const results = useMemo(() => project ? computeProjectCashFlows(project) : null, [project]);
-  const incentivesResult = useMemo(() => project && results ? computeIncentives(project, results) : null, [project, results]);
-  const financing = useMemo(() => project && results ? computeFinancing(project, results, incentivesResult) : null, [project, results, incentivesResult]);
-  const waterfall = useMemo(() => project && results && financing ? computeWaterfall(project, results, financing) : null, [project, results, financing]);
-  const phaseWaterfalls = useMemo(() => computePhaseWaterfalls(project, results, financing, waterfall), [project, results, financing, waterfall]);
-  const checks = useMemo(() => project && results ? runChecks(project, results, financing, waterfall) : [], [project, results, financing, waterfall]);
+  const results = useMemo(() => { try { return project ? computeProjectCashFlows(project) : null; } catch(e) { console.error("computeProjectCashFlows error:", e); return null; } }, [project]);
+  const incentivesResult = useMemo(() => { try { return project && results ? computeIncentives(project, results) : null; } catch(e) { console.error("computeIncentives error:", e); return null; } }, [project, results]);
+  const financing = useMemo(() => { try { return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult]);
+  const waterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing]);
+  const phaseWaterfalls = useMemo(() => { try { return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall]);
+  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall]);
 
   const createProject = async () => { const p = defaultProject(); await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); };
   const openProject = async (id) => { setLoading(true); const p = await loadProject(id); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
@@ -1756,6 +1787,7 @@ export default function ReDevModeler({ user, signOut }) {
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
   if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
+  if (!project) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#f87171",letterSpacing:2}}>!</div><div style={{fontSize:14,color:"#d0d4dc",marginTop:8}}>{lang==="ar"?"لم يتم تحميل المشروع":"Project failed to load"}</div><button onClick={goBack} style={{marginTop:16,padding:"8px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{lang==="ar"?"رجوع":"Go Back"}</button></div></div>;
 
   const dir = lang === "ar" ? "rtl" : "ltr";
 
@@ -1800,11 +1832,13 @@ export default function ReDevModeler({ user, signOut }) {
         </div>
         {/* Health Status Bar */}
         {results && (project.assets||[]).length > 0 && (() => {
+          try {
           const c = results.consolidated;
+          if (!c) return null;
           const irr = c.irr;
-          const dscrVals = financing ? financing.dscr.filter(d=>d!==null) : [];
+          const dscrVals = financing && financing.dscr ? financing.dscr.filter(d=>d!==null) : [];
           const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
-          const npv = c.npv10;
+          const npv = c.npv10 || 0;
           const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
           const dscrOk = minDscr === null ? -1 : minDscr > 1.4 ? 2 : minDscr > 1.25 ? 1 : 0;
           const npvOk = npv > 0 ? 2 : 0;
@@ -1831,6 +1865,7 @@ export default function ReDevModeler({ user, signOut }) {
               </span>)}
             </div>
           );
+          } catch(e) { console.error("Health bar render error:", e); return null; }
         })()}
         <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
           {/* Progress steps */}
@@ -4172,3 +4207,10 @@ const tblStyle={width:"100%",borderCollapse:"collapse"};
 const thSt={padding:"7px 8px",textAlign:"left",fontSize:10,fontWeight:600,color:"#6b7080",background:"#f8f9fb",borderBottom:"1px solid #e5e7ec",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
 const tdSt={padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:12,whiteSpace:"nowrap"};
 const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
+
+// ═══════════════════════════════════════════════════════════════
+// ERROR BOUNDARY WRAPPER
+// ═══════════════════════════════════════════════════════════════
+export default function ReDevModeler(props) {
+  return <AppErrorBoundary><ReDevModelerInner {...props} /></AppErrorBoundary>;
+}
