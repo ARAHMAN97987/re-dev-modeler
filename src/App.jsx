@@ -1836,7 +1836,7 @@ const SidebarInput = memo(function SidebarInput({ value, onChange, type = "text"
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 
-function ReDevModelerInner({ user, signOut }) {
+function ReDevModelerInner({ user, signOut, onSignIn }) {
   const [view, setView] = useState("dashboard");
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
@@ -1849,6 +1849,9 @@ function ReDevModelerInner({ user, signOut }) {
   const t = L[lang];
   const autoSaveTimer = useRef(null);
   const sidebarRef = useRef(null);
+
+  // Show landing page if not logged in
+  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} />;
 
   useEffect(() => { (async () => { setProjectIndex(await loadProjectIndex()); setLoading(false); })(); }, []);
 
@@ -2171,16 +2174,117 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// FEATURES GRID (shared between landing page and dashboard)
+// ═══════════════════════════════════════════════════════════════
+function FeaturesGrid({ lang }) {
+  const ar = lang === "ar";
+  const features = [
+    { icon: "🏗", color: "#2563eb", title: ar?"نمذجة متعددة الأصول":"Multi-Asset Modeling", desc: ar?"فنادق، محلات، مكاتب، مارينا، سكني - كل أنواع العقارات في نموذج واحد مع P&L مفصّل للفنادق والمارينا":"Hotels, retail, offices, marina, residential - all property types in one model with detailed Hotel & Marina P&L" },
+    { icon: "🏦", color: "#8b5cf6", title: ar?"تمويل متقدم":"Advanced Financing", desc: ar?"تمويل بنكي، صندوق استثماري GP/LP، تمويل إسلامي (مرابحة/إجارة)، رسملة الأرض، هيكل رأس المال":"Bank debt, GP/LP fund structure, Islamic finance (Murabaha/Ijara), land capitalization, capital structure" },
+    { icon: "📊", color: "#16a34a", title: ar?"شلال توزيعات 4 مراحل":"4-Tier Waterfall", desc: ar?"رد رأس المال → العائد التفضيلي → تعويض المطور → تقسيم الأرباح مع IRR وMOIC لكل طرف":"Return of Capital → Preferred Return → GP Catch-up → Profit Split with IRR & MOIC per party" },
+    { icon: "📈", color: "#f59e0b", title: ar?"سيناريوهات وتحليل حساسية":"Scenarios & Sensitivity", desc: ar?"8 سيناريوهات جاهزة، جدول حساسية ثنائي المتغيرات، تحليل نقطة التعادل مع ملخص المخاطر":"8 built-in scenarios, 2-variable sensitivity table, break-even analysis with risk summary" },
+    { icon: "📄", color: "#ef4444", title: ar?"تقارير جاهزة للبنك والمستثمر":"Bank & Investor Reports", desc: ar?"ملخص تنفيذي، حزمة البنك (مع DSCR)، مذكرة المستثمر - كلها بصيغة PDF وExcel":"Executive summary, Bank pack (with DSCR), Investor memo - all exportable as PDF & Excel" },
+    { icon: "🌐", color: "#06b6d4", title: ar?"ثنائي اللغة + حوافز حكومية":"Bilingual + Gov Incentives", desc: ar?"واجهة عربي/إنجليزي كاملة مع دعم منح CAPEX، إعفاء إيجار الأرض، دعم التمويل، واسترداد الرسوم":"Full Arabic/English interface with CAPEX grants, land rent rebates, finance subsidies, and fee waivers" },
+  ];
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))",gap:16}}>
+      {features.map((f, i) => (
+        <div key={i} style={{background:"#161a24",borderRadius:12,border:"1px solid #1e2230",padding:"20px 18px",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=f.color+"60";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.transform="translateY(0)";}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+            <div style={{width:40,height:40,borderRadius:10,background:f.color+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{f.icon}</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>{f.title}</div>
+          </div>
+          <div style={{fontSize:12,color:"#8b90a0",lineHeight:1.6}}>{f.desc}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LANDING PAGE (before sign-in: split screen - features + auth)
+// ═══════════════════════════════════════════════════════════════
+function LandingPage({ onSignIn, lang, setLang }) {
+  const ar = lang === "ar";
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState("signin"); // signin | signup
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email || !password) { setError(ar?"أدخل البريد وكلمة المرور":"Enter email and password"); return; }
+    setLoading(true); setError(null);
+    try {
+      if (onSignIn) await onSignIn(email, password, mode);
+    } catch (e) { setError(e.message || "Error"); }
+    setLoading(false);
+  };
+
+  return (
+    <div dir={ar?"rtl":"ltr"} style={{minHeight:"100vh",display:"flex",fontFamily:"'DM Sans',system-ui,sans-serif",background:"#0f1117"}}>
+      {/* ── Left/Right: Features ── */}
+      <div style={{flex:1,padding:"48px 40px",display:"flex",flexDirection:"column",justifyContent:"center",overflowY:"auto"}}>
+        <div style={{maxWidth:600}}>
+          <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Destination Development</div>
+          <div style={{fontSize:32,fontWeight:800,color:"#fff",lineHeight:1.2,marginBottom:8}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
+          <div style={{fontSize:14,color:"#6b7080",marginBottom:32,lineHeight:1.6}}>{ar?"منصة نمذجة مالية احترافية لمشاريع التطوير العقاري. صُممت للسوق السعودي.":"Professional financial modeling platform for real estate development projects. Built for the Saudi market."}</div>
+          <FeaturesGrid lang={lang} />
+          <div style={{marginTop:32,display:"flex",gap:16,fontSize:11,color:"#4b5060"}}>
+            <span>📐 {ar?"5 مراحل نمذجة":"5 modeling phases"}</span>
+            <span>🔢 {ar?"50+ سنة افتراضات":"50+ year projections"}</span>
+            <span>🤖 {ar?"مساعد AI مدمج":"Built-in AI assistant"}</span>
+          </div>
+        </div>
+      </div>
+      {/* ── Right/Left: Auth ── */}
+      <div style={{width:420,minWidth:380,background:"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:"48px 36px",borderLeft:ar?"none":"1px solid #1e2230",borderRight:ar?"1px solid #1e2230":"none"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2,marginBottom:6}}>ZAN</div>
+          <div style={{fontSize:12,color:"#6b7080"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div>
+            <label style={{fontSize:11,color:"#6b7080",marginBottom:4,display:"block"}}>{ar?"البريد الإلكتروني":"Email"}</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #282d3a",background:"#0f1117",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+          </div>
+          <div>
+            <label style={{fontSize:11,color:"#6b7080",marginBottom:4,display:"block"}}>{ar?"كلمة المرور":"Password"}</label>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #282d3a",background:"#0f1117",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+          </div>
+          {error && <div style={{fontSize:11,color:"#f87171",background:"#2a0a0a",padding:"8px 12px",borderRadius:6}}>{error}</div>}
+          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"#2563eb",color:"#fff",fontSize:14,fontWeight:600,cursor:loading?"wait":"pointer",fontFamily:"inherit",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#1d4ed8"} onMouseLeave={e=>e.currentTarget.style.background="#2563eb"}>
+            {loading?"...":(mode==="signin"?(ar?"دخول":"Sign In"):(ar?"إنشاء حساب":"Create Account"))}
+          </button>
+          <div style={{textAlign:"center",fontSize:11,color:"#6b7080"}}>
+            {mode==="signin"?(
+              <span>{ar?"ما عندك حساب؟":"Don't have an account?"} <button onClick={()=>setMode("signup")} style={{color:"#5fbfbf",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"سجّل الآن":"Sign up"}</button></span>
+            ):(
+              <span>{ar?"عندك حساب؟":"Already have an account?"} <button onClick={()=>setMode("signin")} style={{color:"#5fbfbf",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"دخول":"Sign in"}</button></span>
+            )}
+          </div>
+        </div>
+        <div style={{marginTop:32,textAlign:"center"}}>
+          <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"6px 16px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut }) {
   const [confirmDel, setConfirmDel] = useState(null);
+  const [dashTab, setDashTab] = useState("projects");
   const sorted = [...index].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+  const ar = lang === "ar";
   return (
     <div style={{minHeight:"100vh",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif",color:"#d0d4dc"}}>
       <div style={{maxWidth:900,margin:"0 auto",padding:"48px 24px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:48}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:32}}>
           <div>
             <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Destination Development</div>
-            <div style={{fontSize:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</div>
+            <div style={{fontSize:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
             <div style={{fontSize:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -2189,6 +2293,22 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>
+
+        {/* Dashboard tabs: Projects | Features */}
+        <div style={{display:"flex",gap:0,marginBottom:24,background:"#1e2230",borderRadius:8,padding:3,maxWidth:300}}>
+          <button onClick={()=>setDashTab("projects")} style={{flex:1,padding:"9px 16px",fontSize:12,fontWeight:600,border:"none",borderRadius:6,cursor:"pointer",fontFamily:"inherit",background:dashTab==="projects"?"#0f1117":"transparent",color:dashTab==="projects"?"#d0d4dc":"#6b7080",transition:"all 0.15s"}}>{ar?"المشاريع":"Projects"}</button>
+          <button onClick={()=>setDashTab("features")} style={{flex:1,padding:"9px 16px",fontSize:12,fontWeight:600,border:"none",borderRadius:6,cursor:"pointer",fontFamily:"inherit",background:dashTab==="features"?"#0f1117":"transparent",color:dashTab==="features"?"#d0d4dc":"#6b7080",transition:"all 0.15s"}}>{ar?"المزايا":"Features"}</button>
+        </div>
+
+        {/* Features Tab */}
+        {dashTab === "features" && (
+          <div>
+            <FeaturesGrid lang={lang} />
+          </div>
+        )}
+
+        {/* Projects Tab */}
+        {dashTab === "projects" && (<>
         <div style={{display:"flex",gap:12,marginBottom:32}}>
           <button onClick={onCreate} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
           <div style={{flex:1}} />
@@ -2244,6 +2364,57 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             ))}
           </div>
         )}
+        </>)}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURES GRID (used in dashboard features tab)
+// ═══════════════════════════════════════════════════════════════
+function FeaturesGrid({ lang }) {
+  const ar = lang === "ar";
+  const features = [
+    { icon: "🏗", titleAr: "نمذجة متعددة الأصول", titleEn: "Multi-Asset Modeling",
+      descAr: "فنادق، محلات، مكاتب، سكني، مارينا - كلها في مشروع واحد مع P&L مستقل لكل أصل. جدول أصول كامل مع بطاقات ذكية أو عرض جدولي.",
+      descEn: "Hotels, retail, offices, residential, marina - all in one project with independent P&L per asset. Full asset table with smart cards or table view." },
+    { icon: "🏦", titleAr: "تمويل متقدم", titleEn: "Advanced Financing",
+      descAr: "4 أنماط: تمويل ذاتي، بنكي 100%، دين + ملكية، صندوق GP/LP. دعم المرابحة والإجارة. DSCR ومعادلة هيكل رأس المال.",
+      descEn: "4 modes: self-funded, 100% bank, debt + equity, GP/LP fund. Murabaha & Ijara support. DSCR and capital structure equation." },
+    { icon: "📊", titleAr: "شلال توزيعات 4 مراحل", titleEn: "4-Tier Waterfall",
+      descAr: "رد رأس المال → عائد تفضيلي → تعويض المطور → تقسيم الأرباح. LP/GP IRR و MOIC. تحليل بالمراحل (phases).",
+      descEn: "Return of Capital → Preferred Return → GP Catch-up → Profit Split. LP/GP IRR & MOIC. Phase-level analysis." },
+    { icon: "🎯", titleAr: "سيناريوهات وحساسية", titleEn: "Scenarios & Sensitivity",
+      descAr: "8 سيناريوهات جاهزة + مخصص. جدول حساسية ثنائي المتغير. تحليل نقطة التعادل للإشغال والإيجار والتكاليف.",
+      descEn: "8 preset scenarios + custom. Two-variable sensitivity table. Break-even analysis for occupancy, rent, and CAPEX." },
+    { icon: "📄", titleAr: "تقارير احترافية", titleEn: "Professional Reports",
+      descAr: "ملخص تنفيذي، حزمة البنك (10 سنوات CF + DSCR)، مذكرة المستثمر. تصدير PDF و Excel احترافي.",
+      descEn: "Executive summary, bank pack (10yr CF + DSCR), investor memo. Professional PDF & Excel export." },
+    { icon: "🎁", titleAr: "حوافز حكومية", titleEn: "Government Incentives",
+      descAr: "منحة CAPEX، دعم فوائد / قرض ميسر، إعفاء إيجار أرض، إعفاء رسوم. كلها قابلة للتفعيل بكل مرحلة.",
+      descEn: "CAPEX grant, interest subsidy / soft loan, land rent rebate, fee rebates. All toggleable per phase." },
+    { icon: "🌐", titleAr: "ثنائي اللغة + شرح ذكي", titleEn: "Bilingual + Smart Tooltips",
+      descAr: "واجهة كاملة بالعربي والإنجليزي. ⓘ tooltips تشرح كل مصطلح مالي بالعربي والإنجليزي.",
+      descEn: "Full Arabic & English UI. ⓘ tooltips explain every financial term in both languages." },
+    { icon: "🤖", titleAr: "مساعد ذكاء اصطناعي", titleEn: "AI Assistant",
+      descAr: "مساعد AI يفهم مشروعك ويساعدك في التحليل والإدخالات والتوصيات.",
+      descEn: "AI assistant that understands your project and helps with analysis, inputs, and recommendations." },
+  ];
+  return (
+    <div>
+      <div style={{fontSize:20,fontWeight:700,color:"#fff",marginBottom:6}}>{ar?"مزايا المنصة":"Platform Features"}</div>
+      <div style={{fontSize:13,color:"#6b7080",marginBottom:24}}>{ar?"كل ما تحتاجه لنمذجة مشاريع التطوير العقاري":"Everything you need to model real estate development projects"}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:14}}>
+        {features.map((f, i) => (
+          <div key={i} style={{background:"#161a24",borderRadius:12,border:"1px solid #1e2230",padding:"20px 18px",transition:"all 0.15s"}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf30";e.currentTarget.style.background="#1a1f2e";}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.background="#161a24";}}>
+            <div style={{fontSize:28,marginBottom:10}}>{f.icon}</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:6}}>{ar?f.titleAr:f.titleEn}</div>
+            <div style={{fontSize:11,color:"#6b7080",lineHeight:1.6}}>{ar?f.descAr:f.descEn}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
