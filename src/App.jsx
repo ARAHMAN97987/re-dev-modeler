@@ -1457,7 +1457,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
 function FinancingView({ project, results, financing, t, up, lang }) {
   const [showYrs, setShowYrs] = useState(15);
-  const [showConfig, setShowConfig] = useState(!financing);
+  const [showConfig, setShowConfig] = useState(true);
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
 
@@ -1498,13 +1498,17 @@ function FinancingView({ project, results, financing, t, up, lang }) {
 
   return (<div>
     {/* ═══ FINANCING CONFIGURATION PANEL ═══ */}
-    <div style={{background:"#f8f9fb",borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
-      <button onClick={()=>setShowConfig(!showConfig)} style={{width:"100%",padding:"12px 18px",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10,fontFamily:"inherit"}}>
-        <span style={{fontSize:13,fontWeight:600,color:"#1a1d23"}}>{ar?"⚙ إعدادات التمويل والتخارج":"⚙ Financing & Exit Settings"}</span>
-        <span style={{flex:1}} />
-        <span style={{fontSize:11,color:"#6b7080"}}>{({self:ar?"ذاتي":"Self-Funded",bank100:ar?"بنكي 100%":"Bank 100%",debt:ar?"دين + ملكية":"Debt + Equity",fund:ar?"صندوق":"Fund"})[project.finMode]||""}{project.finMode!=="self"?` | ${project.maxLtvPct||70}% LTV | ${project.financeRate||6.5}%`:""}</span>
-        <span style={{fontSize:10,color:"#9ca3af",transition:"transform 0.2s",transform:showConfig?"rotate(0)":"rotate(-90deg)"}}>▾</span>
-      </button>
+    <div style={{background:showConfig?"#fff":"#f8f9fb",borderRadius:12,border:showConfig?"2px solid #2563eb":"1px solid #e5e7ec",marginBottom:18,overflow:"hidden",boxShadow:showConfig?"0 2px 12px rgba(37,99,235,0.08)":"none",transition:"all 0.2s"}}>
+      <div onClick={()=>setShowConfig(!showConfig)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:showConfig?"linear-gradient(135deg, #eff6ff, #f0f4ff)":"#f8f9fb",borderBottom:showConfig?"1px solid #dbeafe":"none"}}>
+        <div style={{width:32,height:32,borderRadius:8,background:showConfig?"#2563eb":"#e5e7ec",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:showConfig?"#fff":"#6b7080",transition:"all 0.2s"}}>⚙</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{ar?"إعدادات التمويل والتخارج":"Financing & Exit Settings"}</div>
+          {!showConfig && <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{({self:ar?"ذاتي":"Self-Funded",bank100:ar?"بنكي 100%":"Bank 100%",debt:ar?"دين + ملكية":"Debt + Equity",fund:ar?"صندوق":"Fund"})[project.finMode]||""}{project.finMode!=="self"?` · ${project.maxLtvPct||70}% LTV · ${project.financeRate||6.5}%`:""}</div>}
+        </div>
+        <button onClick={e=>{e.stopPropagation();setShowConfig(!showConfig);}} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:showConfig?"#fff":"#2563eb",color:showConfig?"#6b7080":"#fff",border:showConfig?"1px solid #e5e7ec":"none",borderRadius:6}}>
+          {showConfig?(ar?"▲ إغلاق":"▲ Close"):(ar?"✎ تعديل":"✎ Edit")}
+        </button>
+      </div>
       {showConfig && (
         <div style={{padding:"0 18px 18px"}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
