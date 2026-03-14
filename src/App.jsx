@@ -3294,6 +3294,60 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const failCount = checks.filter(ch => !ch.pass).length;
   const phaseNames = Object.keys(results.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
+
+  // Compute filtered consolidated data based on selected phases
+  const fc = useMemo(() => {
+    if (!isFiltered) return c;
+    const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
+    activePh.forEach(pName => {
+      const pr = results.phaseResults[pName];
+      if (!pr) return;
+      for (let y = 0; y < h; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
+    });
+    return {
+      income, capex, landRent, netCF,
+      totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0),
+      totalLandRent: landRent.reduce((a,b)=>a+b,0), totalNetCF: netCF.reduce((a,b)=>a+b,0),
+      irr: calcIRR(netCF), npv10: calcNPV(netCF,0.10), npv12: calcNPV(netCF,0.12), npv14: calcNPV(netCF,0.14),
+    };
+  }, [isFiltered, selectedPhases, results, h]);
+
+  // Filtered assets
+  const filteredAssets = isFiltered ? results.assetSchedules.filter(a => activePh.includes(a.phase)) : results.assetSchedules;
+
+  // Filtered waterfall (use phaseWaterfalls if single phase selected)
+  const fw = useMemo(() => {
+    if (!isFiltered || !waterfall) return waterfall;
+    if (!phaseWaterfalls || Object.keys(phaseWaterfalls).length === 0) return waterfall;
+    // Aggregate selected phase waterfalls
+    const pwList = activePh.map(p => phaseWaterfalls[p]).filter(Boolean);
+    if (pwList.length === 0) return waterfall;
+    const sum = (arr) => arr.reduce((a,b)=>a+b,0);
+    const sumArrays = (key) => { const out = new Array(h).fill(0); pwList.forEach(pw => { const arr = pw[key]; if (arr) for(let y=0;y<h;y++) out[y]+=(arr[y]||0); }); return out; };
+    const lpNetCF = sumArrays('lpNetCF'), gpNetCF = sumArrays('gpNetCF');
+    return {
+      ...waterfall,
+      tier1: sumArrays('tier1'), tier2: sumArrays('tier2'), tier3: sumArrays('tier3'),
+      tier4LP: sumArrays('tier4LP'), tier4GP: sumArrays('tier4GP'),
+      lpDist: sumArrays('lpDist'), gpDist: sumArrays('gpDist'),
+      cashAvail: sumArrays('cashAvail'), equityCalls: sumArrays('equityCalls'),
+      lpNetCF, gpNetCF,
+      lpTotalDist: pwList.reduce((s,pw)=>s+(pw.lpTotalDist||0),0),
+      gpTotalDist: pwList.reduce((s,pw)=>s+(pw.gpTotalDist||0),0),
+      lpTotalInvested: pwList.reduce((s,pw)=>s+(pw.lpTotalInvested||0),0),
+      gpTotalInvested: pwList.reduce((s,pw)=>s+(pw.gpTotalInvested||0),0),
+      lpIRR: calcIRR(lpNetCF), gpIRR: calcIRR(gpNetCF),
+      lpMOIC: pwList.reduce((s,pw)=>s+(pw.lpTotalInvested||0),0) > 0 ? pwList.reduce((s,pw)=>s+(pw.lpTotalDist||0),0) / pwList.reduce((s,pw)=>s+(pw.lpTotalInvested||0),0) : 0,
+      gpMOIC: pwList.reduce((s,pw)=>s+(pw.gpTotalInvested||0),0) > 0 ? pwList.reduce((s,pw)=>s+(pw.gpTotalDist||0),0) / pwList.reduce((s,pw)=>s+(pw.gpTotalInvested||0),0) : 0,
+      lpNPV10: calcNPV(lpNetCF,0.10), gpNPV10: calcNPV(gpNetCF,0.10),
+      lpNPV12: calcNPV(lpNetCF,0.12), gpNPV12: calcNPV(gpNetCF,0.12),
+      lpNPV14: calcNPV(lpNetCF,0.14), gpNPV14: calcNPV(gpNetCF,0.14),
+      gpEquity: pwList.reduce((s,pw)=>s+(pw.gpEquity||0),0),
+      lpEquity: pwList.reduce((s,pw)=>s+(pw.lpEquity||0),0),
+      totalFees: pwList.reduce((s,pw)=>s+(pw.fees||0),0),
+    };
+  }, [isFiltered, selectedPhases, waterfall, phaseWaterfalls, h]);
 
   const togglePhase = (p) => {
     setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
@@ -3379,12 +3433,12 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
           <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8,marginBottom:18}}>
             {[
-              {l:"Total CAPEX",v:fmtM(c.totalCapex),c:"#ef4444"},
-              {l:"Total Income",v:fmtM(c.totalIncome),c:"#16a34a"},
-              {l:"Unlevered IRR",v:c.irr?fmtPct(c.irr*100):"N/A",c:"#2563eb"},
-              {l:"NPV @10%",v:fmtM(c.npv10),c:"#06b6d4"},
-              ...(f&&f.mode!=="self"?[{l:"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",c:"#8b5cf6"},{l:"Total Debt",v:fmtM(f.totalDebt),c:"#f59e0b"}]:[]),
-              ...(w?[{l:"LP IRR",v:w.lpIRR?fmtPct(w.lpIRR*100):"N/A",c:"#8b5cf6"},{l:"LP MOIC",v:w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"N/A",c:"#8b5cf6"}]:[]),
+              {l:"Total CAPEX",v:fmtM(fc.totalCapex),c:"#ef4444"},
+              {l:"Total Income",v:fmtM(fc.totalIncome),c:"#16a34a"},
+              {l:"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",c:"#2563eb"},
+              {l:"NPV @10%",v:fmtM(fc.npv10),c:"#06b6d4"},
+              ...(f&&f.mode!=="self"&&!isFiltered?[{l:"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",c:"#8b5cf6"},{l:"Total Debt",v:fmtM(f.totalDebt),c:"#f59e0b"}]:[]),
+              ...(fw?[{l:"LP IRR",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",c:"#8b5cf6"},{l:"LP MOIC",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",c:"#8b5cf6"}]:[]),
             ].map((k,i) => (
               <div key={i} style={{border:"1px solid #e5e7ec",borderRadius:6,padding:"8px 10px"}}>
                 <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{k.l}</div>
@@ -3399,7 +3453,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               {["Phase","Assets","CAPEX","Income","Net CF","IRR"].map(h=><th key={h} style={{color:"#fff",padding:"5px 6px",textAlign:"left",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
             </tr></thead>
             <tbody>
-              {Object.entries(results.phaseResults).map(([name,pr])=>(
+              {Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name)).map(([name,pr])=>(
                 <tr key={name}>
                   <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",fontWeight:600}}>{name}</td>
                   <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",textAlign:"right"}}>{pr.assetCount}</td>
@@ -3412,13 +3466,13 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </tbody>
           </table>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4,marginTop:18}}>Asset Program ({results.assetSchedules.length} assets)</h2>
+          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4,marginTop:18}}>Asset Program ({filteredAssets.length} assets){isFiltered?" - "+activePh.join(", "):""}</h2>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
             <thead><tr style={{background:"#1e3a5f"}}>
               {["#","Asset","Category","Phase","GFA","CAPEX","Income","Type"].map(h=><th key={h} style={{color:"#fff",padding:"4px 6px",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
             </tr></thead>
             <tbody>
-              {results.assetSchedules.map((a,i)=>(
+              {filteredAssets.map((a,i)=>(
                 <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{i+1}</td>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{a.name}</td>
@@ -3448,9 +3502,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <tbody>
               {[
                 ["Project Name",project.name],["Location",project.location],["Land Area",fmt(project.landArea)+" sqm"],
-                ["Land Type",project.landType],["Total GFA",fmt(results.assetSchedules.reduce((s,a)=>s+(a.gfa||0),0))+" sqm"],
-                ["Number of Assets",results.assetSchedules.length],["Total Development Cost",fmt(c.totalCapex)+" "+cur],
-                ["Projected Annual Income (Stabilized)",fmt(c.income[Math.min(10,h-1)])+" "+cur],
+                ["Land Type",project.landType],["Total GFA",fmt(filteredAssets.reduce((s,a)=>s+(a.gfa||0),0))+" sqm"],
+                ["Number of Assets",filteredAssets.length],["Total Development Cost",fmt(fc.totalCapex)+" "+cur],
+                ["Projected Annual Income (Stabilized)",fmt(fc.income[Math.min(10,h-1)])+" "+cur],
               ].map(([k,v],i)=>(
                 <tr key={i}><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",color:"#6b7080",width:"40%"}}>{k}</td><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",fontWeight:500}}>{v}</td></tr>
               ))}
@@ -3489,10 +3543,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               <div style={{fontSize:12,fontWeight:600,marginBottom:6}}>Uses</div>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <tbody>
-                  <tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Development CAPEX</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(c.totalCapex)}</td></tr>
+                  <tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Development CAPEX</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(fc.totalCapex)}</td></tr>
                   {project.landType==="purchase"&&<tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Land Purchase</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(project.landPurchasePrice)}</td></tr>}
                   <tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Interest During Constr.</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(f?.totalInterest||0)}</td></tr>
-                  <tr style={{fontWeight:700}}><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f"}}>Total Uses</td><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f",textAlign:"right"}}>{fmt(c.totalCapex+(f?.totalInterest||0))}</td></tr>
+                  <tr style={{fontWeight:700}}><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f"}}>Total Uses</td><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f",textAlign:"right"}}>{fmt(fc.totalCapex+(f?.totalInterest||0))}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3506,16 +3560,16 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </tr></thead>
             <tbody>
               {[
-                {l:"Income",v:c.income,cl:"#16a34a"},
-                {l:"Land Rent",v:c.landRent,cl:"#ef4444"},
-                {l:"NOI",v:bankYears.map(y=>c.income[y]-c.landRent[y]),cl:"#1a1d23",b:true},
-                {l:"CAPEX",v:c.capex,cl:"#ef4444"},
+                {l:"Income",v:fc.income,cl:"#16a34a"},
+                {l:"Land Rent",v:fc.landRent,cl:"#ef4444"},
+                {l:"NOI",v:bankYears.map(y=>(fc.income[y]||0)-(fc.landRent[y]||0)),cl:"#1a1d23",b:true},
+                {l:"CAPEX",v:fc.capex,cl:"#ef4444"},
                 ...(f&&f.mode!=="self"?[
                   {l:"Debt Service",v:f.debtService,cl:"#ef4444"},
                   {l:"Debt Balance",v:f.debtBalClose,cl:"#3b82f6"},
                   {l:"DSCR",v:bankYears.map(y=>f.dscr[y]),cl:"#1a1d23",b:true,isDscr:true},
                 ]:[]),
-                {l:"Net CF",v:f&&f.mode!=="self"?f.leveredCF:c.netCF,cl:"#1a1d23",b:true},
+                {l:"Net CF",v:f&&f.mode!=="self"&&!isFiltered?f.leveredCF:fc.netCF,cl:"#1a1d23",b:true},
               ].map((row,ri)=>(
                 <tr key={ri} style={row.b?{fontWeight:700,background:"#f8f9fb"}:{}}>
                   <td style={{padding:"3px 5px",borderBottom:"1px solid #f0f1f5",fontSize:9}}>{row.l}</td>
@@ -3539,8 +3593,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>Investment Highlights</h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8,marginBottom:16}}>
             {[
-              {l:"Target LP IRR",v:w?.lpIRR?fmtPct(w.lpIRR*100):"N/A"},{l:"Target LP MOIC",v:w?.lpMOIC?w.lpMOIC.toFixed(2)+"x":"N/A"},
-              {l:"Preferred Return",v:(project.prefReturnPct||15)+"%"},{l:"Exit Timeline",v:w?w.exitYear:"TBD"},
+              {l:"Target LP IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A"},{l:"Target LP MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A"},
+              {l:"Preferred Return",v:(project.prefReturnPct||15)+"%"},{l:"Exit Timeline",v:fw?fw.exitYear:"TBD"},
             ].map((k,i) => (
               <div key={i} style={{border:"1px solid #e5e7ec",borderRadius:6,padding:"10px 12px",textAlign:"center"}}>
                 <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{k.l}</div>
@@ -3554,8 +3608,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <tbody>
               {[
                 ["Fund Strategy","Develop & Hold"],["Currency",cur],
-                ["GP Equity (Land Contribution)",w?fmt(w.gpEquity)+" "+cur+" ("+fmtPct(w.gpPct*100)+")":"—"],
-                ["LP Equity Required",w?fmt(w.lpEquity)+" "+cur+" ("+fmtPct(w.lpPct*100)+")":"—"],
+                ["GP Equity (Land Contribution)",fw?fmt(fw.gpEquity)+" "+cur+" ("+fmtPct(fw.gpPct*100)+")":"—"],
+                ["LP Equity Required",fw?fmt(fw.lpEquity)+" "+cur+" ("+fmtPct(fw.lpPct*100)+")":"—"],
                 ["Preferred Return",(project.prefReturnPct||15)+"% p.a. on unreturned capital"],
                 ["GP Catch-up",project.gpCatchup?"Yes":"No"],
                 ["Carry / Performance Fee",(project.carryPct||30)+"%"],
@@ -3569,14 +3623,14 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </tbody>
           </table>
 
-          {w && <>
+          {fw && <>
             <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>Waterfall Distribution Summary</h2>
             <div style={{display:"flex",gap:8,marginBottom:16}}>
               {[
-                {l:"Return of Capital",v:fmtM(w.tier1.reduce((a,b)=>a+b,0)),bg:"#dbeafe"},
-                {l:"Preferred Return",v:fmtM(w.tier2.reduce((a,b)=>a+b,0)),bg:"#dcfce7"},
-                {l:"GP Catch-up",v:fmtM(w.tier3.reduce((a,b)=>a+b,0)),bg:"#fef3c7"},
-                {l:"Profit Split",v:fmtM((w.tier4LP.reduce((a,b)=>a+b,0))+(w.tier4GP.reduce((a,b)=>a+b,0))),bg:"#ede9fe"},
+                {l:"Return of Capital",v:fmtM(fw.tier1.reduce((a,b)=>a+b,0)),bg:"#dbeafe"},
+                {l:"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"#dcfce7"},
+                {l:"GP Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"#fef3c7"},
+                {l:"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"#ede9fe"},
               ].map((t,i)=>(
                 <div key={i} style={{flex:1,background:t.bg,borderRadius:6,padding:"10px",textAlign:"center"}}>
                   <div style={{fontSize:9,fontWeight:600}}>{t.l}</div>
@@ -3595,13 +3649,13 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               </tr></thead>
               <tbody>
                 {[
-                  ["Net IRR",w.lpIRR?fmtPct(w.lpIRR*100):"—",w.gpIRR?fmtPct(w.gpIRR*100):"—",c.irr?fmtPct(c.irr*100):"—"],
-                  ["MOIC",w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—",w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—","—"],
-                  ["Total Invested",fmt(w.lpTotalInvested),fmt(w.gpTotalInvested),fmt(c.totalCapex)],
-                  ["Total Distributions",fmt(w.lpTotalDist),fmt(w.gpTotalDist),"—"],
-                  ["NPV @10%",fmt(w.lpNPV10),fmt(w.gpNPV10),fmt(w.projNPV10)],
-                  ["NPV @12%",fmt(w.lpNPV12),fmt(w.gpNPV12),fmt(w.projNPV12)],
-                  ["NPV @14%",fmt(w.lpNPV14),fmt(w.gpNPV14),fmt(w.projNPV14)],
+                  ["Net IRR",fw.lpIRR?fmtPct(fw.lpIRR*100):"—",fw.gpIRR?fmtPct(fw.gpIRR*100):"—",fc.irr?fmtPct(fc.irr*100):"—"],
+                  ["MOIC",fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"—",fw.gpMOIC?fw.gpMOIC.toFixed(2)+"x":"—","—"],
+                  ["Total Invested",fmt(fw.lpTotalInvested),fmt(fw.gpTotalInvested),fmt(fc.totalCapex)],
+                  ["Total Distributions",fmt(fw.lpTotalDist),fmt(fw.gpTotalDist),"—"],
+                  ["NPV @10%",fmt(fw.lpNPV10),fmt(fw.gpNPV10),fmt(fw.projNPV10)],
+                  ["NPV @12%",fmt(fw.lpNPV12),fmt(fw.gpNPV12),fmt(fw.projNPV12)],
+                  ["NPV @14%",fmt(fw.lpNPV14),fmt(fw.gpNPV14),fmt(fw.projNPV14)],
                 ].map(([metric,...vals],i)=>(
                   <tr key={i}><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",fontWeight:600}}>{metric}</td>
                     {vals.map((v,j)=><td key={j} style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",textAlign:"center"}}>{v}</td>)}
@@ -3639,10 +3693,36 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
   const [activeSection, setActiveSection] = useState("compare");
   const [sensRow, setSensRow] = useState("rentEscalation");
   const [sensCol, setSensCol] = useState("softCostPct");
+  const [selectedPhases, setSelectedPhases] = useState([]);
   if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
 
   const cur = project.currency || "SAR";
   const c = results.consolidated;
+  const h = results.horizon;
+  const phaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
+
+  const togglePhase = (p) => {
+    setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  };
+
+  // Helper: extract phase-level consolidated from scenario result
+  const getScenarioData = (s) => {
+    if (!isFiltered) return s.results.consolidated;
+    const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
+    activePh.forEach(pName => {
+      const pr = s.results.phaseResults?.[pName];
+      if (!pr) return;
+      for (let y = 0; y < h; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
+    });
+    return {
+      income, capex, landRent, netCF,
+      totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0),
+      totalNetCF: netCF.reduce((a,b)=>a+b,0),
+      irr: calcIRR(netCF), npv10: calcNPV(netCF,0.10), npv12: calcNPV(netCF,0.12), npv14: calcNPV(netCF,0.14),
+    };
+  };
 
   // ── Section 1: Scenario Comparison ──
   const scenarioDefs = [
@@ -3687,9 +3767,14 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           [colParam.key]: colParam.base + cStep,
         };
         const s = runScenario(project, overrides);
+        const sd = isFiltered ? (() => {
+          const income = new Array(h).fill(0), capex = new Array(h).fill(0), netCF = new Array(h).fill(0);
+          activePh.forEach(pName => { const pr = s.results.phaseResults?.[pName]; if (!pr) return; for (let y = 0; y < h; y++) { income[y]+=pr.income[y]||0; capex[y]+=pr.capex[y]||0; netCF[y]+=pr.netCF[y]||0; }});
+          return { irr: calcIRR(netCF), npv10: calcNPV(netCF,0.10) };
+        })() : s.results.consolidated;
         row.push({
-          irr: s.results.consolidated.irr,
-          npv: s.results.consolidated.npv10,
+          irr: sd.irr,
+          npv: sd.npv10,
           levIrr: s.financing?.leveredIRR || null,
           rVal: rowParam.base + rStep,
           cVal: colParam.base + cStep,
@@ -3754,6 +3839,23 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
       ))}
     </div>
 
+    {/* Phase filter */}
+    {phaseNames.length > 1 && (
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:12,color:"#6b7080",marginBottom:6}}>{lang==="ar"?"اختر المراحل للتحليل":"Select phases for analysis"}</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec")}}>
+            {lang==="ar"?"الكل":"All"}
+          </button>
+          {phaseNames.map(p=>(
+            <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"5px 12px",fontSize:11,background:activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#f0f1f5",color:activePh.includes(p)&&selectedPhases.length>0?"#fff":"#1a1d23",border:"1px solid "+(activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#e5e7ec")}}>
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+
     {/* ── Scenario Comparison ── */}
     {activeSection === "compare" && (
       <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
@@ -3768,15 +3870,17 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
             </tr></thead>
             <tbody>
               {[
-                { label: lang==="ar"?"إجمالي التكاليف":"Total CAPEX", fn: s => s.results.consolidated.totalCapex, fmt: v => fmt(v), color: "#ef4444" },
-                { label: lang==="ar"?"إجمالي الإيرادات":"Total Income", fn: s => s.results.consolidated.totalIncome, fmt: v => fmt(v), color: "#16a34a" },
-                { label: "Unlevered IRR", fn: s => s.results.consolidated.irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "#2563eb" },
-                { label: "NPV @10%", fn: s => s.results.consolidated.npv10, fmt: v => fmtM(v), color: "#06b6d4" },
-                { label: "NPV @12%", fn: s => s.results.consolidated.npv12, fmt: v => fmtM(v) },
-                { label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6" },
-                { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => s.results.consolidated.totalNetCF, fmt: v => fmtM(v) },
-                { label: "LP IRR", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6" },
-                { label: "LP MOIC", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—" },
+                { label: lang==="ar"?"إجمالي التكاليف":"Total CAPEX", fn: s => getScenarioData(s).totalCapex, fmt: v => fmt(v), color: "#ef4444" },
+                { label: lang==="ar"?"إجمالي الإيرادات":"Total Income", fn: s => getScenarioData(s).totalIncome, fmt: v => fmt(v), color: "#16a34a" },
+                { label: "Unlevered IRR", fn: s => getScenarioData(s).irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "#2563eb" },
+                { label: "NPV @10%", fn: s => getScenarioData(s).npv10, fmt: v => fmtM(v), color: "#06b6d4" },
+                { label: "NPV @12%", fn: s => getScenarioData(s).npv12, fmt: v => fmtM(v) },
+                ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6" }]:[]),
+                { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => getScenarioData(s).totalNetCF, fmt: v => fmtM(v) },
+                ...(!isFiltered?[
+                  { label: "LP IRR", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6" },
+                  { label: "LP MOIC", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—" },
+                ]:[]),
               ].map((metric, mi) => {
                 const baseVal = metric.fn(scenarioResults[0]);
                 return (
