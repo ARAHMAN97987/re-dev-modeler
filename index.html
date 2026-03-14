@@ -1,18 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RE-DEV MODELER</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', system-ui, sans-serif; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
-</body>
-</html>
+# RE-DEV MODELER - Continue Development Session
+
+## CRITICAL ISSUE TO FIX FIRST
+The live site https://re-dev-modeler.vercel.app/ is showing a WRONG page ("PQR Jurídico Colombia" - a completely different project). This is a Vercel build cache corruption issue. The latest deployment (commit c6527ba) built successfully WITH "Skipping build cache" but the production domain is still serving stale/wrong cached content. Need to diagnose and fix this - possibly need to purge CDN cache, check domain assignment, or redeploy.
+
+## Project Overview
+**RE-DEV MODELER** (public name: **ZAN Financial Modeler**) - Web-based real estate development financial modeling platform replacing Excel workflows for Saudi market projects.
+
+- **GitHub:** https://github.com/ARAHMAN97987/re-dev-modeler
+- **Vercel:** https://re-dev-modeler.vercel.app/
+- **Vercel Team ID:** team_HhGFmKe6CH03aHIbcwOHrTXl
+- **Vercel Project ID:** prj_O5IAasB3QMZrxKrXBPjJVNPZ22tz
+- **Stack:** Vite + React + ExcelJS + Supabase on Vercel
+- **Supabase project ID:** nfokqooqfmbmwtsqhztf
+
+## Branding Rule
+Internal codename "RE-DEV MODELER" must NEVER appear in user-facing UI. All public branding uses "ZAN" and "ZAN Financial Modeler."
+
+## Current Codebase (4,174 lines in src/App.jsx)
+
+### All 5 Phases Complete:
+- **P1** – Project CRUD, assets, Hotel/Marina P&L, bilingual (EN/AR, default Arabic), CSV, CAPEX/Revenue/IRR/NPV, cash flow
+- **P2** – Financing (debt/equity/DSCR/Islamic/land cap)
+- **P3** – Waterfall (4-tier/GP-LP/fees/MOIC)
+- **P4** – Reports (exec/bank/investor/PDF/CSV)
+- **P5** – Scenarios (8-scenario compare, sensitivity, break-even)
+- **Incentives** – CAPEX grant, interest subsidy/soft loan, land rent rebate, fee rebates
+
+### Recent Features Added (this session):
+1. **Quick Setup Wizard** - 4-step modal on new project: name/location → land type → financing mode → exit strategy. Smart step-skipping (self-funded skips exit step). Bilingual. Skip button available.
+2. **30-state Undo system** - Ctrl+Z + visible "↩ Undo" button in header. All operations (up, upAsset, addAsset, rmAsset) push to undo stack.
+3. **Input Focus Fix** - Replaced inline `Inp` component in asset detail modal with `EditableCell` (which handles focus correctly via local state + commit-on-blur). 34 fields fixed.
+4. **bank100 financing mode** - "100% Bank Debt (Developer-Owned)" - bank finances 100%, no LP, no waterfall, no land capitalization.
+5. **Smart Conditional Sidebar** - sections show/hide per finMode (self/bank100/debt/fund).
+6. **Default language: Arabic** - `useState("ar")` instead of "en".
+7. **Sprint 1-3 UI**: Health Bar, Hero KPIs, Asset Cards with toggle, Tab color grouping, Contextual tooltips, Smart cash flow tables (year pills + cumulative toggle), Empty state templates, Micro-animations.
+
+### Key Files:
+- `src/App.jsx` - Main app (4,174 lines) - ALL calculation logic + UI
+- `src/AiAssistant.jsx` - AI chat assistant component
+- `api/chat.js` - Vercel serverless function proxying to Anthropic API (needs ANTHROPIC_API_KEY env var)
+- `tests/test_suite.js` - 115 tests, all passing
+
+### Test Suite (CRITICAL - run after every change):
+```
+node tests/test_suite.js
+```
+Must show: **115 PASSED | 0 FAILED** across 12 categories (T1-T12).
+
+### Known Bugs Fixed:
+- BUG-001: `stabilizedOcc=0` was treated as 100% (fixed with null check)
+- BUG-002: Land rent rebate was adding instead of subtracting (fixed)
+
+### GitHub Upload Method (IMPORTANT):
+App.jsx is 4,000+ lines. GitHub editor truncates on paste.
+1. Navigate to https://github.com/ARAHMAN97987/re-dev-modeler/tree/main/src (MUST be inside src folder)
+2. Add file → Upload files → drag App.jsx → Commit
+
+### Architecture Notes:
+- All calculations: pure functions (computeProjectCashFlows, computeFinancing, computeWaterfall, computeIncentives)
+- Storage: Supabase kv_store + localStorage fallback
+- IRR: Newton-Raphson (200 iterations, 1e-7 tolerance)
+- Interest: average balance method
+- MOIC denominator = equity invested (not equity calls)
+- Grace period starts from first drawdown year
+
+### AI Assistant Issue:
+The AI Assistant feature needs ANTHROPIC_API_KEY set in Vercel Environment Variables. User needs to verify this is configured at: https://vercel.com/arahman97987s-projects/re-dev-modeler/settings/environment-variables
+
+## Pending Issues (in order of priority):
+1. **SITE SHOWING WRONG PAGE** - Production domain serving cached content from different project. Needs CDN purge or domain reassignment.
+2. **White screen on large projects** - User reports opening projects with lots of data shows blank page. Likely a JavaScript runtime error - need to add error boundaries and debug.
+3. **Verify all recent changes are live** - After fixing deployment, confirm: Arabic default, Setup Wizard, Undo button, Focus fix, bank100 mode all working.
+
+## What to do:
+1. First fix the deployment/caching issue so the site works
+2. Then address the white screen bug on large projects
+3. Then continue with any new feature requests
