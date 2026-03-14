@@ -2929,7 +2929,7 @@ function Tip({text,children}) {
   return <span style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
     {children}
     <span onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)} onClick={()=>setShow(!show)} style={{cursor:"help",fontSize:10,color:"#9ca3af",marginLeft:3,lineHeight:1}}>ⓘ</span>
-    {show&&<div style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:6,background:"#1a1d23",color:"#d0d4dc",padding:"8px 11px",borderRadius:6,fontSize:10,lineHeight:1.5,zIndex:999,boxShadow:"0 4px 16px rgba(0,0,0,0.5)",minWidth:180,maxWidth:280,whiteSpace:"normal",textAlign:"left",pointerEvents:"none"}}>{text}</div>}
+    {show&&<div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",marginTop:6,background:"#1a1d23",color:"#d0d4dc",padding:"8px 11px",borderRadius:6,fontSize:10,lineHeight:1.5,zIndex:9999,boxShadow:"0 4px 16px rgba(0,0,0,0.5)",minWidth:200,maxWidth:300,whiteSpace:"normal",textAlign:"left",pointerEvents:"none"}}>{text}</div>}
   </span>;
 }
 
@@ -3892,22 +3892,22 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
             </tr></thead>
             <tbody>
               {[
-                { label: lang==="ar"?"إجمالي التكاليف":"Total CAPEX", fn: s => getScenarioData(s).totalCapex, fmt: v => fmt(v), color: "#ef4444" },
-                { label: lang==="ar"?"إجمالي الإيرادات":"Total Income", fn: s => getScenarioData(s).totalIncome, fmt: v => fmt(v), color: "#16a34a" },
-                { label: "Unlevered IRR", fn: s => getScenarioData(s).irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "#2563eb" },
-                { label: "NPV @10%", fn: s => getScenarioData(s).npv10, fmt: v => fmtM(v), color: "#06b6d4" },
-                { label: "NPV @12%", fn: s => getScenarioData(s).npv12, fmt: v => fmtM(v) },
-                ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6" }]:[]),
-                { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => getScenarioData(s).totalNetCF, fmt: v => fmtM(v) },
+                { label: lang==="ar"?"إجمالي التكاليف":"Total CAPEX", fn: s => getScenarioData(s).totalCapex, fmt: v => fmt(v), color: "#ef4444", tip:"إجمالي البناء + غير مباشرة + طوارئ\nAll construction + soft costs + contingency" },
+                { label: lang==="ar"?"إجمالي الإيرادات":"Total Income", fn: s => getScenarioData(s).totalIncome, fmt: v => fmt(v), color: "#16a34a", tip:"مجموع الإيرادات خلال كامل فترة النموذج\nTotal revenue over entire projection period" },
+                { label: "Unlevered IRR", fn: s => getScenarioData(s).irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "#2563eb", tip:"معدل العائد بدون تمويل. فوق 12% قوي\nReturn ignoring debt. Above 12% is strong" },
+                { label: "NPV @10%", fn: s => getScenarioData(s).npv10, fmt: v => fmtM(v), color: "#06b6d4", tip:"القيمة الحالية بخصم 10%. موجب = يخلق قيمة\nPresent value at 10% discount. Positive = value-creating" },
+                { label: "NPV @12%", fn: s => getScenarioData(s).npv12, fmt: v => fmtM(v), tip:"القيمة الحالية بخصم 12%\nPresent value at 12% discount rate" },
+                ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل العائد بعد التمويل\nReturn after debt service" }]:[]),
+                { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => getScenarioData(s).totalNetCF, fmt: v => fmtM(v), tip:"صافي التدفق = إيرادات - تكاليف - إيجار أرض\nNet CF = Income - CAPEX - Land Rent" },
                 ...(!isFiltered?[
-                  { label: "LP IRR", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6" },
-                  { label: "LP MOIC", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—" },
+                  { label: "LP IRR", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
+                  { label: "LP MOIC", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
                 ]:[]),
               ].map((metric, mi) => {
                 const baseVal = metric.fn(scenarioResults[0]);
                 return (
                   <tr key={mi} style={mi%2===0?{}:{background:"#fafbfc"}}>
-                    <td style={{...tdSt,position:"sticky",left:0,background:mi%2===0?"#fff":"#fafbfc",zIndex:1,fontWeight:600,fontSize:11}}>{metric.label}</td>
+                    <td style={{...tdSt,position:"sticky",left:0,background:mi%2===0?"#fff":"#fafbfc",zIndex:1,fontWeight:600,fontSize:11}}>{metric.tip?<Tip text={metric.tip}>{metric.label}</Tip>:metric.label}</td>
                     {scenarioResults.map((s, si) => {
                       const val = metric.fn(s);
                       const isBase = si === 0;
@@ -4029,7 +4029,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           {/* Occupancy break-even */}
           <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
             <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
-              {lang==="ar"?"نقطة تعادل الإشغال":"Occupancy Break-Even"}
+              <Tip text="أقل نسبة إشغال تخلي NPV موجب. تحتها المشروع يخسر قيمة&#10;Minimum occupancy where NPV stays positive. Below this, project loses value">{lang==="ar"?"نقطة تعادل الإشغال":"Occupancy Break-Even"}</Tip>
             </div>
             <div style={{fontSize:28,fontWeight:700,color:breakeven.occupancy?"#f59e0b":"#16a34a"}}>
               {breakeven.occupancy ? breakeven.occupancy + "%" : "> 0%"}
@@ -4048,7 +4048,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           {/* Rent drop tolerance */}
           <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
             <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
-              {lang==="ar"?"تحمل انخفاض الإيجار":"Rent Drop Tolerance"}
+              <Tip text="أقصى انخفاض بالإيجار قبل ما يصير NPV سالب&#10;Maximum rent decrease before NPV turns negative">{lang==="ar"?"تحمل انخفاض الإيجار":"Rent Drop Tolerance"}</Tip>
             </div>
             <div style={{fontSize:28,fontWeight:700,color:breakeven.rentDrop?"#f59e0b":"#16a34a"}}>
               {breakeven.rentDrop ? "-" + breakeven.rentDrop + "%" : "> -100%"}
@@ -4067,7 +4067,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           {/* CAPEX increase tolerance */}
           <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
             <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
-              {lang==="ar"?"تحمل زيادة التكاليف":"CAPEX Increase Tolerance"}
+              <Tip text="أقصى زيادة بالتكاليف قبل ما يصير NPV سالب&#10;Maximum cost overrun before NPV turns negative">{lang==="ar"?"تحمل زيادة التكاليف":"CAPEX Increase Tolerance"}</Tip>
             </div>
             <div style={{fontSize:28,fontWeight:700,color:breakeven.capexIncrease?"#f59e0b":"#16a34a"}}>
               {breakeven.capexIncrease ? "+" + breakeven.capexIncrease + "%" : "> +100%"}
@@ -4090,10 +4090,10 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           <table style={{...tblStyle,fontSize:12}}>
             <thead><tr>
               <th style={thSt}>{lang==="ar"?"المتغير":"Variable"}</th>
-              <th style={{...thSt,textAlign:"center"}}>{lang==="ar"?"نقطة التعادل":"Break-Even"}</th>
+              <th style={{...thSt,textAlign:"center"}}><Tip text="القيمة اللي عندها NPV يصير صفر&#10;Value where NPV becomes zero">{lang==="ar"?"نقطة التعادل":"Break-Even"}</Tip></th>
               <th style={{...thSt,textAlign:"center"}}>{lang==="ar"?"القيمة الحالية":"Current Value"}</th>
-              <th style={{...thSt,textAlign:"center"}}>{lang==="ar"?"هامش الأمان":"Safety Margin"}</th>
-              <th style={{...thSt,textAlign:"center"}}>{lang==="ar"?"التقييم":"Assessment"}</th>
+              <th style={{...thSt,textAlign:"center"}}><Tip text="الفرق بين الوضع الحالي ونقطة التعادل. أكبر = أأمن&#10;Gap between current and break-even. Larger = safer">{lang==="ar"?"هامش الأمان":"Safety Margin"}</Tip></th>
+              <th style={{...thSt,textAlign:"center"}}><Tip text="منخفض = هامش أمان كبير. مرتفع = قريب من نقطة التعادل&#10;Low = large safety margin. High = close to break-even">{lang==="ar"?"التقييم":"Assessment"}</Tip></th>
             </tr></thead>
             <tbody>
               {[
