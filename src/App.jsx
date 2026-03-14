@@ -2926,10 +2926,16 @@ function ProjectDash({ project, results, checks, t, financing }) {
 // ── Inline tooltip component for KPIs and table headers ──
 function Tip({text,children}) {
   const [show,setShow]=useState(false);
-  return <span style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
+  const ref=useRef(null);
+  const [pos,setPos]=useState({top:0,left:0});
+  const onEnter=()=>{
+    if(ref.current){const r=ref.current.getBoundingClientRect();setPos({top:r.bottom+6,left:r.left+r.width/2});}
+    setShow(true);
+  };
+  return <span style={{display:"inline-flex",alignItems:"center"}}>
     {children}
-    <span onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)} onClick={()=>setShow(!show)} style={{cursor:"help",fontSize:10,color:"#9ca3af",marginLeft:3,lineHeight:1}}>ⓘ</span>
-    {show&&<div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",marginTop:6,background:"#1a1d23",color:"#d0d4dc",padding:"8px 11px",borderRadius:6,fontSize:10,lineHeight:1.5,zIndex:9999,boxShadow:"0 4px 16px rgba(0,0,0,0.5)",minWidth:200,maxWidth:300,whiteSpace:"normal",textAlign:"left",pointerEvents:"none"}}>{text}</div>}
+    <span ref={ref} onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)} onClick={()=>{if(!show)onEnter();else setShow(false);}} style={{cursor:"help",fontSize:10,color:"#9ca3af",marginLeft:3,lineHeight:1}}>ⓘ</span>
+    {show&&<div style={{position:"fixed",top:pos.top,left:Math.max(10,Math.min(pos.left-140,window.innerWidth-300)),width:280,background:"#1a1d23",color:"#d0d4dc",padding:"10px 13px",borderRadius:8,fontSize:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"left",pointerEvents:"none"}}>{text}</div>}
   </span>;
 }
 
