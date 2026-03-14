@@ -2275,7 +2275,7 @@ function LandingPage({ onSignIn, lang, setLang }) {
 
 function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut }) {
   const [confirmDel, setConfirmDel] = useState(null);
-  const [dashTab, setDashTab] = useState("projects");
+  const [showFeatures, setShowFeatures] = useState(false);
   const sorted = [...index].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
   const ar = lang === "ar";
   return (
@@ -2288,27 +2288,25 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <div style={{fontSize:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#1e2230",color:"#5fbfbf",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid #2e3340"}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
             {user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} style={{...btnS,background:"#2a0a0a",color:"#f87171",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>
 
-        {/* Dashboard tabs: Projects | Features */}
-        <div style={{display:"flex",gap:0,marginBottom:24,background:"#1e2230",borderRadius:8,padding:3,maxWidth:300}}>
-          <button onClick={()=>setDashTab("projects")} style={{flex:1,padding:"9px 16px",fontSize:12,fontWeight:600,border:"none",borderRadius:6,cursor:"pointer",fontFamily:"inherit",background:dashTab==="projects"?"#0f1117":"transparent",color:dashTab==="projects"?"#d0d4dc":"#6b7080",transition:"all 0.15s"}}>{ar?"المشاريع":"Projects"}</button>
-          <button onClick={()=>setDashTab("features")} style={{flex:1,padding:"9px 16px",fontSize:12,fontWeight:600,border:"none",borderRadius:6,cursor:"pointer",fontFamily:"inherit",background:dashTab==="features"?"#0f1117":"transparent",color:dashTab==="features"?"#d0d4dc":"#6b7080",transition:"all 0.15s"}}>{ar?"المزايا":"Features"}</button>
-        </div>
-
-        {/* Features Tab */}
-        {dashTab === "features" && (
-          <div>
+        {/* Features Modal Overlay */}
+        {showFeatures && (
+          <><div onClick={()=>setShowFeatures(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9998}} />
+          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:800,maxWidth:"94vw",maxHeight:"85vh",background:"#0f1117",borderRadius:16,border:"1px solid #1e2230",boxShadow:"0 24px 80px rgba(0,0,0,0.5)",zIndex:9999,overflow:"auto",padding:"28px 32px"}}>
+            <div style={{display:"flex",alignItems:"center",marginBottom:20}}>
+              <div style={{flex:1,fontSize:18,fontWeight:700,color:"#fff"}}>{ar?"مزايا المنصة":"Platform Features"}</div>
+              <button onClick={()=>setShowFeatures(false)} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"6px 12px",fontSize:14,lineHeight:1}}>✕</button>
+            </div>
             <FeaturesGrid lang={lang} />
-          </div>
+          </div></>
         )}
 
-        {/* Projects Tab */}
-        {dashTab === "projects" && (<>
         <div style={{display:"flex",gap:12,marginBottom:32}}>
           <button onClick={onCreate} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
           <div style={{flex:1}} />
@@ -2364,7 +2362,6 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             ))}
           </div>
         )}
-        </>)}
       </div>
     </div>
   );
