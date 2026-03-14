@@ -1825,6 +1825,9 @@ function ReDevModelerInner({ user, signOut }) {
           <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 10px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩ Undo</button>
           <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
           <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
+          <select value={project?.activeScenario||"Base Case"} onChange={e=>up({activeScenario:e.target.value})} style={{padding:"4px 8px",fontSize:10,borderRadius:4,border:"1px solid #e5e7ec",background:project?.activeScenario!=="Base Case"?"#fef3c7":"#f8f9fb",color:project?.activeScenario!=="Base Case"?"#92400e":"#6b7080",fontFamily:"inherit",cursor:"pointer"}} title={lang==="ar"?"السيناريو النشط":"Active Scenario"}>
+            {SCENARIOS.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
           <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"EN"}</button>
           <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const shared=[...(project.sharedWith||[])];if(!shared.includes(email)){shared.push(email);up({sharedWith:shared});alert(lang==="ar"?"تمت المشاركة مع "+email:"Shared with "+email);}else{alert(lang==="ar"?"مشارك مسبقاً":"Already shared");}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}</button>
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
@@ -2103,12 +2106,13 @@ function StatusBadge({status,onChange}) {
 // CONTROL PANEL
 // ═══════════════════════════════════════════════════════════════
 // ── Sidebar helper components (defined OUTSIDE ControlPanel to prevent re-creation) ──
-function Sec({title,children,def=false,filled}) {
+function Sec({title,children,def=false,filled,summary}) {
   const [open,setOpen]=useState(def);
   return (<div style={{borderBottom:"1px solid #1e2230"}}>
     <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:open?"#d0d4dc":"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"color 0.15s"}}>
       {filled!==undefined&&<span style={{width:7,height:7,borderRadius:4,background:filled?"#16a34a":"#3b4050",flexShrink:0}} />}
       <span style={{flex:1}}>{title}</span>
+      {!open&&summary&&<span style={{fontSize:9,color:"#4b5060",fontWeight:400,letterSpacing:0,textTransform:"none",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{summary}</span>}
       <span style={{color:"#3b4050",fontSize:12,transition:"transform 0.2s",transform:open?"rotate(0)":"rotate(-90deg)"}}>▾</span>
     </button>
     {open&&<div style={{padding:"0 16px 14px"}}>{children}</div>}
@@ -2140,9 +2144,13 @@ function ControlPanel({ project, up, t, lang }) {
   const addPhase=()=>{const n=project.phases.length+1;up({phases:[...project.phases,{name:`Phase ${n}`,startYearOffset:n,footprint:0}]});};
   const upPhase=(i,u)=>{const ph=[...project.phases];ph[i]={...ph[i],...u};up({phases:ph});};
   const rmPhase=(i)=>up({phases:project.phases.filter((_,j)=>j!==i)});
+  const cur = project.currency || "SAR";
+  const ar = lang==="ar";
+  const finLabel = {self:ar?"ذاتي":"Self",bank100:ar?"بنكي 100%":"Bank 100%",debt:ar?"دين+ملكية":"Debt+Equity",fund:ar?"صندوق":"Fund"}[project.finMode]||"";
 
   return (<>
-    <Sec title={t.general} def={true} filled={!!(project.location && project.startYear)}>
+    {/* ── 1. GENERAL ── */}
+    <Sec title={t.general} def={true} filled={!!(project.location && project.startYear)} summary={project.location ? `${project.startYear} | ${project.horizon}yr` : ""}>
       <Fld label={t.location}><SidebarInput value={project.location} onChange={v=>up({location:v})} placeholder="e.g. Jazan, Saudi Arabia" /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.startYear}><SidebarInput type="number" value={project.startYear} onChange={v=>up({startYear:v})} /></Fld>
@@ -2151,7 +2159,25 @@ function ControlPanel({ project, up, t, lang }) {
       <Fld label={t.currency}><Sel lang={lang} value={project.currency} onChange={v=>up({currency:v})} options={CURRENCIES} /></Fld>
     </Sec>
 
-    <Sec title={t.landAcq} filled={project.landArea > 0}>
+    {/* ── 2. PHASES (moved up) ── */}
+    <Sec title={t.phases} filled={(project.phases||[]).length > 1} summary={project.phases.map(p=>p.name).join(", ")}>
+      {project.phases.map((ph,i)=>(
+        <div key={i} style={{background:"#161a24",borderRadius:6,padding:10,marginBottom:8}}>
+          <div style={{display:"flex",gap:6,marginBottom:6}}>
+            <SidebarInput value={ph.name} onChange={v=>upPhase(i,{name:v})} style={{flex:1,fontWeight:600}} placeholder="Phase name" />
+            {project.phases.length>1&&<button onClick={()=>rmPhase(i)} style={{...btnSm,background:"#2a0a0a",color:"#f87171"}}>✕</button>}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{t.startOffset}</div><SidebarInput type="number" value={ph.startYearOffset} onChange={v=>upPhase(i,{startYearOffset:v})} /></div>
+            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{t.footprint}</div><SidebarInput type="number" value={ph.footprint} onChange={v=>upPhase(i,{footprint:v})} /></div>
+          </div>
+        </div>
+      ))}
+      <button onClick={addPhase} style={{...btnS,width:"100%",background:"#1e2230",color:"#9ca3af",padding:"8px",fontSize:11}}>{t.addPhase}</button>
+    </Sec>
+
+    {/* ── 3. LAND ── */}
+    <Sec title={t.landAcq} filled={project.landArea > 0} summary={project.landArea > 0 ? `${project.landType} | ${fmt(project.landArea)} m²` : ""}>
       <Fld label={t.landType}><Sel lang={lang} value={project.landType} onChange={v=>up({landType:v})} options={LAND_TYPES} /></Fld>
       <Fld label={t.landArea}><SidebarInput type="number" value={project.landArea} onChange={v=>up({landArea:v})} /></Fld>
       {project.landType==="lease"&&<>
@@ -2173,14 +2199,12 @@ function ControlPanel({ project, up, t, lang }) {
       {project.landType==="bot"&&<Fld label={t.botYears}><SidebarInput type="number" value={project.botOperationYears} onChange={v=>up({botOperationYears:v})} /></Fld>}
     </Sec>
 
-    <Sec title={t.capexAssumptions} filled={project.softCostPct > 0}>
+    {/* ── 4. ASSUMPTIONS (CAPEX + Revenue merged) ── */}
+    <Sec title={ar?"افتراضات التكاليف والإيرادات":"Cost & Revenue Assumptions"} filled={project.softCostPct > 0 || project.rentEscalation > 0} summary={`${project.softCostPct}% soft | ${project.rentEscalation}% esc`}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.softCost} tip="Indirect costs: design, supervision, permits. Standard 8-12%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
         <Fld label={t.contingency} tip="Risk reserve for unexpected costs. Standard 3-7%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
       </div>
-    </Sec>
-
-    <Sec title={t.revenueAssumptions} filled={project.rentEscalation > 0}>
       <Fld label={t.rentEsc} tip="Annual rent increase %. Saudi prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.defEfficiency} tip="Leasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
@@ -2189,22 +2213,9 @@ function ControlPanel({ project, up, t, lang }) {
       <Fld label={t.defCostSqm}><SidebarInput type="number" value={project.defaultCostPerSqm} onChange={v=>up({defaultCostPerSqm:v})} /></Fld>
     </Sec>
 
-    <Sec title={t.scenario} filled={project.activeScenario !== "Base Case"}>
-      <Fld label={t.activeScenario}><Sel lang={lang} value={project.activeScenario} onChange={v=>up({activeScenario:v})} options={SCENARIOS} /></Fld>
-      {project.activeScenario==="Custom"&&<>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <Fld label={t.capexMult}><SidebarInput type="number" value={project.customCapexMult} onChange={v=>up({customCapexMult:v})} /></Fld>
-          <Fld label={t.rentMult}><SidebarInput type="number" value={project.customRentMult} onChange={v=>up({customRentMult:v})} /></Fld>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <Fld label={t.delayMonths}><SidebarInput type="number" value={project.customDelay} onChange={v=>up({customDelay:v})} /></Fld>
-          <Fld label={t.escAdj}><SidebarInput type="number" value={project.customEscAdj} onChange={v=>up({customEscAdj:v})} /></Fld>
-        </div>
-      </>}
-    </Sec>
-
-    <Sec title={lang==="ar"?"التمويل":"Financing"} def={false} filled={project.finMode !== "self"}>
-      <Fld label={lang==="ar"?"نوع التمويل":"Financing Mode"} tip="Choose how the project will be funded">
+    {/* ── 5. FINANCING (core only) ── */}
+    <Sec title={ar?"التمويل":"Financing"} def={false} filled={project.finMode !== "self"} summary={finLabel + (project.finMode!=="self"?` | ${project.maxLtvPct||70}% LTV`:"")}>
+      <Fld label={ar?"نوع التمويل":"Financing Mode"} tip="Choose how the project will be funded">
         <Sel lang={lang} value={project.finMode} onChange={v=>up({finMode:v, ...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
           {value:"self",en:"Self-Funded (100% Equity)",ar:"تمويل ذاتي (رأس مال كامل)"},
           {value:"bank100",en:"100% Bank Debt (Developer-Owned)",ar:"تمويل بنكي 100% (ملك المطور)"},
@@ -2213,9 +2224,8 @@ function ControlPanel({ project, up, t, lang }) {
         ]} />
       </Fld>
       {project.finMode !== "self" && <>
-        {/* Vehicle Type - fund only */}
         {project.finMode === "fund" && (
-          <Fld label={lang==="ar"?"نوع الأداة":"Vehicle Type"}>
+          <Fld label={ar?"نوع الأداة":"Vehicle Type"}>
             <Sel lang={lang} value={project.vehicleType} onChange={v=>up({vehicleType:v})} options={[
               {value:"fund",en:"Fund (full fees)",ar:"صندوق (رسوم كاملة)"},
               {value:"direct",en:"Direct Investors (no fund fees)",ar:"مستثمرين مباشرين"},
@@ -2223,188 +2233,162 @@ function ControlPanel({ project, up, t, lang }) {
             ]} />
           </Fld>
         )}
-        {/* Fund info - fund only */}
         {project.finMode === "fund" && project.vehicleType === "fund" && <>
-          <Fld label={lang==="ar"?"اسم الصندوق":"Fund Name"}><SidebarInput value={project.fundName} onChange={v=>up({fundName:v})} placeholder="e.g. ZAN Infrastructure Fund" /></Fld>
-          <Fld label={lang==="ar"?"الاستراتيجية":"Strategy"}>
+          <Fld label={ar?"اسم الصندوق":"Fund Name"}><SidebarInput value={project.fundName} onChange={v=>up({fundName:v})} placeholder="e.g. ZAN Infrastructure Fund" /></Fld>
+          <Fld label={ar?"الاستراتيجية":"Strategy"}>
             <Sel lang={lang} value={project.fundStrategy} onChange={v=>up({fundStrategy:v})} options={["Develop & Hold","Develop & Sell","Develop & Operate"]} />
           </Fld>
         </>}
-        {/* ── Land Capitalization - debt/fund only, not bank100 ── */}
-        {project.finMode !== "bank100" && (
-        <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-          <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"رسملة الأرض":"Land Capitalization"}</div>
-          <Fld label={lang==="ar"?"هل ترسمل الأرض؟":"Capitalize Land?"} tip="Convert leasehold right to equity contribution">
-            <Sel lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
-          </Fld>
-          {project.landCapitalize && <>
-            <Fld label={lang==="ar"?"سعر الرسملة (ريال/م²)":"Cap Rate (SAR/sqm)"} hint={`${lang==="ar"?"القيمة":"Value"}: ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${project.currency}`}>
-              <SidebarInput type="number" value={project.landCapRate} onChange={v=>up({landCapRate:v})} />
-            </Fld>
-            {project.finMode === "fund" && <>
-              <Fld label={lang==="ar"?"ترسمل لصالح":"Capitalize To"}>
-                <Sel lang={lang} value={project.landCapTo} onChange={v=>up({landCapTo:v})} options={[
-                  {value:"gp",en:"GP (as in-kind equity)",ar:"المطور (كحصة عينية)"},
-                  {value:"lp",en:"LP (investor equity)",ar:"المستثمرين"},
-                  {value:"split",en:"Split pro-rata",ar:"توزع بالتساوي"},
-                ]} />
-              </Fld>
-              {project.landType==="lease" && (
-                <Fld label={lang==="ar"?"GP يتحمل إيجار الأرض وحده؟":"GP bears land rent alone?"}>
-                  <Sel lang={lang} value={project.landCapGpBearRent?"Y":"N"} onChange={v=>up({landCapGpBearRent:v==="Y"})} options={["Y","N"]} />
-                </Fld>
-              )}
-            </>}
-          </>}
-        </div>
+        {/* Debt params */}
+        {project.finMode === "bank100" && (
+          <div style={{background:"#0a1a2a",borderRadius:6,padding:8,marginBottom:10,fontSize:10,color:"#60a5fa"}}>
+            {ar?"💡 البنك يموّل 100% من تكلفة المشروع.":"💡 Bank finances 100% of project cost."}
+          </div>
         )}
-        {/* ── Equity Structure - fund/debt only, not bank100 ── */}
         {project.finMode !== "bank100" && (
-        <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-          <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"هيكل رأس المال":"Equity Structure"}</div>
-          <Fld label={lang==="ar"?"GP Equity (ريال)":"GP Equity (SAR)"} hint={`0 = ${lang==="ar"?"تلقائي من رسملة الأرض":"auto from land cap"}`}>
-            <SidebarInput type="number" value={project.gpEquityManual} onChange={v=>up({gpEquityManual:v})} />
+          <Fld label={ar?"هل الدين مسموح؟":"Debt Allowed"}>
+            <Sel lang={lang} value={project.debtAllowed?"Y":"N"} onChange={v=>up({debtAllowed:v==="Y"})} options={["Y","N"]} />
           </Fld>
-          {project.finMode === "fund" && (
-            <Fld label={lang==="ar"?"LP Equity (ريال)":"LP Equity (SAR)"} hint={`0 = ${lang==="ar"?"الباقي تلقائياً":"auto remainder"}`}>
-              <SidebarInput type="number" value={project.lpEquityManual} onChange={v=>up({lpEquityManual:v})} />
-            </Fld>
-          )}
-        </div>
         )}
-        {/* ── Debt ── */}
-        <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-          <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"الدين":"Debt"}</div>
-          {project.finMode === "bank100" && (
-            <div style={{background:"#0a1a2a",borderRadius:6,padding:8,marginBottom:10,fontSize:10,color:"#60a5fa"}}>
-              {lang==="ar"?"💡 البنك يموّل 100% من تكلفة المشروع. المطور هو المالك الوحيد.":"💡 Bank finances 100% of project cost. Developer is the sole owner."}
-            </div>
-          )}
-          {project.finMode !== "bank100" && (
-            <Fld label={lang==="ar"?"هل الدين مسموح؟":"Debt Allowed"}>
-              <Sel lang={lang} value={project.debtAllowed?"Y":"N"} onChange={v=>up({debtAllowed:v==="Y"})} options={["Y","N"]} />
-            </Fld>
-          )}
-          {(project.debtAllowed || project.finMode === "bank100") && <>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {project.finMode !== "bank100" && (
-                <Fld label="Max LTV %" tip="Loan-to-Value ratio. Saudi banks: 50-70%"><SidebarInput type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></Fld>
-              )}
-              <Fld label={lang==="ar"?"معدل الربح %":"Finance Rate %"} tip="Annual profit/interest rate. Saudi market: 5-8%"><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
-              {project.finMode === "bank100" && (
-                <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
-              )}
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"مدة القرض":"Tenor (yrs)"} tip="Total loan period including grace. Standard 5-10 years"><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
-              <Fld label={lang==="ar"?"فترة السماح":"Grace (yrs)"} tip="Interest-only period before repayment starts. Matches construction period"><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
-            </div>
+        {(project.debtAllowed || project.finMode === "bank100") && <>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             {project.finMode !== "bank100" && (
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
-                <Fld label={lang==="ar"?"نوع السداد":"Repayment"} tip="أقساط = دفعات متساوية. دفعة واحدة = فوائد فقط والأصل نهاية المدة\nAmortizing = equal installments. Bullet = interest only, principal at maturity">
-                  <Sel lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[
-                    {value:"amortizing",en:"Amortizing",ar:"أقساط"},
-                    {value:"bullet",en:"Bullet",ar:"دفعة واحدة"},
-                  ]} />
-                </Fld>
-              </div>
+              <Fld label="Max LTV %" tip="Loan-to-Value ratio. Saudi banks: 50-70%"><SidebarInput type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></Fld>
             )}
+            <Fld label={ar?"معدل الربح %":"Finance Rate %"} tip="Annual profit/interest rate. Saudi market: 5-8%"><SidebarInput type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></Fld>
             {project.finMode === "bank100" && (
-              <Fld label={lang==="ar"?"نوع السداد":"Repayment"} tip="أقساط = دفعات متساوية. دفعة واحدة = فوائد فقط والأصل نهاية المدة\nAmortizing = equal installments. Bullet = interest only, principal at maturity">
+              <Fld label={ar?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
+            )}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <Fld label={ar?"مدة القرض":"Tenor (yrs)"} tip="Total loan period including grace. Standard 5-10 years"><SidebarInput type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></Fld>
+            <Fld label={ar?"فترة السماح":"Grace (yrs)"} tip="Interest-only period before repayment starts. Matches construction period"><SidebarInput type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></Fld>
+          </div>
+          {project.finMode !== "bank100" && (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <Fld label={ar?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
+              <Fld label={ar?"نوع السداد":"Repayment"} tip="أقساط = دفعات متساوية. دفعة واحدة = فوائد فقط والأصل نهاية المدة\nAmortizing = equal installments. Bullet = interest only, principal at maturity">
                 <Sel lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[
                   {value:"amortizing",en:"Amortizing",ar:"أقساط"},
                   {value:"bullet",en:"Bullet",ar:"دفعة واحدة"},
                 ]} />
               </Fld>
-            )}
-            <Fld label={lang==="ar"?"هيكل التمويل":"Finance Structure"} tip="مرابحة = بيع بربح معلوم (الأكثر شيوعاً). إجارة = إيجار تنتهي بالتمليك\nMurabaha = cost-plus sale (most common). Ijara = lease-to-own">
-              <Sel lang={lang} value={project.islamicMode} onChange={v=>up({islamicMode:v})} options={[
-                {value:"conventional",en:"Conventional",ar:"تقليدي"},
-                {value:"murabaha",en:"Murabaha (مرابحة)",ar:"مرابحة"},
-                {value:"ijara",en:"Ijara (إجارة)",ar:"إجارة"},
+            </div>
+          )}
+          {project.finMode === "bank100" && (
+            <Fld label={ar?"نوع السداد":"Repayment"} tip="أقساط = دفعات متساوية. دفعة واحدة = فوائد فقط والأصل نهاية المدة\nAmortizing = equal installments. Bullet = interest only, principal at maturity">
+              <Sel lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[
+                {value:"amortizing",en:"Amortizing",ar:"أقساط"},
+                {value:"bullet",en:"Bullet",ar:"دفعة واحدة"},
               ]} />
             </Fld>
-          </>}
-        </div>
-        {/* ── Exit ── */}
-        <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-          <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"التخارج":"Exit"}</div>
-          <Fld label={lang==="ar"?"استراتيجية التخارج":"Exit Strategy"}>
-            <Sel lang={lang} value={project.exitStrategy||"sale"} onChange={v=>up({exitStrategy:v})} options={[
-              {value:"sale",en:"Asset Sale (Multiple)",ar:"بيع الأصل (مضاعف)"},
-              {value:"caprate",en:"Asset Sale (Cap Rate)",ar:"بيع الأصل (معدل رسملة)"},
-              {value:"hold",en:"Hold for Income (No Sale)",ar:"احتفاظ بالدخل (بدون بيع)"},
+          )}
+          <Fld label={ar?"هيكل التمويل":"Finance Structure"} tip="مرابحة = بيع بربح معلوم (الأكثر شيوعاً). إجارة = إيجار تنتهي بالتمليك\nMurabaha = cost-plus sale (most common). Ijara = lease-to-own">
+            <Sel lang={lang} value={project.islamicMode} onChange={v=>up({islamicMode:v})} options={[
+              {value:"conventional",en:"Conventional",ar:"تقليدي"},
+              {value:"murabaha",en:"Murabaha (مرابحة)",ar:"مرابحة"},
+              {value:"ijara",en:"Ijara (إجارة)",ar:"إجارة"},
             ]} />
           </Fld>
-          {(project.exitStrategy||"sale") !== "hold" && <>
-            <Fld label={lang==="ar"?"سنة التخارج":"Exit Year"} hint="0 = auto"><SidebarInput type="number" value={project.exitYear} onChange={v=>up({exitYear:v})} /></Fld>
-            {(project.exitStrategy||"sale") === "sale" && (
-              <Fld label={lang==="ar"?"مضاعف الإيجار":"Exit Multiple (x)"} tip="Sale price = Annual Rent × Multiple"><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
-            )}
-            {project.exitStrategy === "caprate" && (
-              <Fld label={lang==="ar"?"معدل الرسملة %":"Cap Rate %"} tip="Exit value = NOI / Cap Rate. Saudi: 7-10% retail, 8-12% office"><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
-            )}
-            <Fld label={lang==="ar"?"تكاليف التخارج %":"Exit Cost %"}><SidebarInput type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></Fld>
-          </>}
-          {project.finMode === "fund" && project.vehicleType === "fund" && (
-            <Fld label={lang==="ar"?"سنة بداية الصندوق":"Fund Start Year"} tip="Fund establishment year. Usually 1 year before construction" hint={`0 = ${lang==="ar"?"تلقائي":"auto"}`}>
-              <SidebarInput type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} />
-            </Fld>
-          )}
-        </div>
-        {/* ── Waterfall - fund only ── */}
-        {project.finMode === "fund" && (
-        <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-          <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"شلال التوزيعات":"Waterfall"}</div>
-          <Fld label={lang==="ar"?"العائد التفضيلي %":"Preferred Return %"} tip="Priority return to investors before profit split. Standard 8-15%"><SidebarInput type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></Fld>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <Fld label={lang==="ar"?"حصة الأداء %":"Carry %"} tip="Developer profit share after preferred return. Standard 20-30%"><SidebarInput type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></Fld>
-            <Fld label={lang==="ar"?"حصة LP %":"LP Split %"} tip="Investor share of remaining profits. Standard 70-80%"><SidebarInput type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></Fld>
-          </div>
-          <Fld label={lang==="ar"?"تعويض المطور؟":"GP Catch-up"} tip="المطور يحصل توزيعات إضافية حتى يوصل لنسبة الأداء المتفق عليها\nDeveloper gets extra distributions until reaching agreed carry %">
-            <Sel lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} />
-          </Fld>
-        </div>
-        )}
-        {/* ── Fees ── */}
-        {project.finMode === "fund" && project.vehicleType === "fund" && (
-          <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-            <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{lang==="ar"?"رسوم الصندوق":"Fund Fees"}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"اكتتاب %":"Subscription %"} tip="One-time fund entry fee. Standard 1-3%"><SidebarInput type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></Fld>
-              <Fld label={lang==="ar"?"إدارة %":"Mgmt Fee %"} tip="Annual management fee. Standard 0.5-2%"><SidebarInput type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></Fld>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"تطوير %":"Developer Fee %"} tip="رسوم المطور كنسبة من CAPEX. تُدفع خلال فترة البناء\nDeveloper fee as % of CAPEX. Paid during construction period"><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
-              <Fld label={lang==="ar"?"هيكلة %":"Structuring %"} tip="One-time deal structuring fee. Standard 0.1-1%"><SidebarInput type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></Fld>
-            </div>
-            <Fld label={lang==="ar"?"رسوم حفظ سنوية":"Custody Fee (annual)"} tip="Annual custody & admin (fixed SAR). Standard 100-200K"><SidebarInput type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></Fld>
-          </div>
-        )}
+        </>}
         {project.finMode !== "fund" && project.finMode !== "bank100" && (
-          <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-            <Fld label={lang==="ar"?"رسوم تطوير %":"Developer Fee %"} tip="رسوم المطور كنسبة من CAPEX. تُوزع حسب جدول التكاليف\nDeveloper fee as % of CAPEX. Distributed per CAPEX schedule"><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
-          </div>
+          <Fld label={ar?"رسوم تطوير %":"Developer Fee %"} tip="رسوم المطور كنسبة من CAPEX. تُوزع حسب جدول التكاليف\nDeveloper fee as % of CAPEX. Distributed per CAPEX schedule"><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
         )}
       </>}
     </Sec>
 
-    <Sec title={t.phases} filled={(project.phases||[]).length > 1}>
-      {project.phases.map((ph,i)=>(
-        <div key={i} style={{background:"#161a24",borderRadius:6,padding:10,marginBottom:8}}>
-          <div style={{display:"flex",gap:6,marginBottom:6}}>
-            <SidebarInput value={ph.name} onChange={v=>upPhase(i,{name:v})} style={{flex:1,fontWeight:600}} placeholder="Phase name" />
-            {project.phases.length>1&&<button onClick={()=>rmPhase(i)} style={{...btnSm,background:"#2a0a0a",color:"#f87171"}}>✕</button>}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{t.startOffset}</div><SidebarInput type="number" value={ph.startYearOffset} onChange={v=>upPhase(i,{startYearOffset:v})} /></div>
-            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{t.footprint}</div><SidebarInput type="number" value={ph.footprint} onChange={v=>upPhase(i,{footprint:v})} /></div>
-          </div>
-        </div>
-      ))}
-      <button onClick={addPhase} style={{...btnS,width:"100%",background:"#1e2230",color:"#9ca3af",padding:"8px",fontSize:11}}>{t.addPhase}</button>
+    {/* ── 6. EXIT (separate section) ── */}
+    {project.finMode !== "self" && (
+    <Sec title={ar?"التخارج":"Exit Strategy"} filled={(project.exitStrategy||"sale")!=="sale"||project.exitYear>0} summary={`${({sale:ar?"بيع":"Sale",caprate:"Cap Rate",hold:ar?"احتفاظ":"Hold"})[project.exitStrategy||"sale"]||""}${project.exitYear>0?" | "+project.exitYear:""}`}>
+      <Fld label={ar?"الاستراتيجية":"Strategy"}>
+        <Sel lang={lang} value={project.exitStrategy||"sale"} onChange={v=>up({exitStrategy:v})} options={[
+          {value:"sale",en:"Asset Sale (Multiple)",ar:"بيع الأصل (مضاعف)"},
+          {value:"caprate",en:"Asset Sale (Cap Rate)",ar:"بيع الأصل (معدل رسملة)"},
+          {value:"hold",en:"Hold for Income (No Sale)",ar:"احتفاظ بالدخل (بدون بيع)"},
+        ]} />
+      </Fld>
+      {(project.exitStrategy||"sale") !== "hold" && <>
+        <Fld label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto"><SidebarInput type="number" value={project.exitYear} onChange={v=>up({exitYear:v})} /></Fld>
+        {(project.exitStrategy||"sale") === "sale" && (
+          <Fld label={ar?"مضاعف الإيجار":"Exit Multiple (x)"} tip="Sale price = Annual Rent × Multiple"><SidebarInput type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></Fld>
+        )}
+        {project.exitStrategy === "caprate" && (
+          <Fld label={ar?"معدل الرسملة %":"Cap Rate %"} tip="Exit value = NOI / Cap Rate. Saudi: 7-10% retail, 8-12% office"><SidebarInput type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></Fld>
+        )}
+        <Fld label={ar?"تكاليف التخارج %":"Exit Cost %"}><SidebarInput type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></Fld>
+      </>}
+      {project.finMode === "fund" && project.vehicleType === "fund" && (
+        <Fld label={ar?"سنة بداية الصندوق":"Fund Start Year"} tip="Fund establishment year. Usually 1 year before construction" hint={`0 = ${ar?"تلقائي":"auto"}`}>
+          <SidebarInput type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} />
+        </Fld>
+      )}
     </Sec>
+    )}
+
+    {/* ── 7. CAPITAL STRUCTURE (fund/debt only) ── */}
+    {project.finMode !== "self" && project.finMode !== "bank100" && (
+    <Sec title={ar?"هيكل رأس المال":"Capital Structure"} filled={project.landCapitalize} summary={project.landCapitalize?`${ar?"رسملة":"Cap"} ${fmtM((project.landArea||0)*(project.landCapRate||1000))}`:""}>
+      <Fld label={ar?"هل ترسمل الأرض؟":"Capitalize Land?"} tip="Convert leasehold right to equity contribution">
+        <Sel lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
+      </Fld>
+      {project.landCapitalize && <>
+        <Fld label={ar?"سعر الرسملة (ريال/م²)":"Cap Rate (SAR/sqm)"} hint={`${ar?"القيمة":"Value"}: ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${cur}`}>
+          <SidebarInput type="number" value={project.landCapRate} onChange={v=>up({landCapRate:v})} />
+        </Fld>
+        {project.finMode === "fund" && <>
+          <Fld label={ar?"ترسمل لصالح":"Capitalize To"}>
+            <Sel lang={lang} value={project.landCapTo} onChange={v=>up({landCapTo:v})} options={[
+              {value:"gp",en:"GP (as in-kind equity)",ar:"المطور (كحصة عينية)"},
+              {value:"lp",en:"LP (investor equity)",ar:"المستثمرين"},
+              {value:"split",en:"Split pro-rata",ar:"توزع بالتساوي"},
+            ]} />
+          </Fld>
+          {project.landType==="lease" && (
+            <Fld label={ar?"GP يتحمل إيجار الأرض وحده؟":"GP bears land rent alone?"}>
+              <Sel lang={lang} value={project.landCapGpBearRent?"Y":"N"} onChange={v=>up({landCapGpBearRent:v==="Y"})} options={["Y","N"]} />
+            </Fld>
+          )}
+        </>}
+      </>}
+      <Fld label={ar?"GP Equity (ريال)":"GP Equity (SAR)"} hint={`0 = ${ar?"تلقائي من رسملة الأرض":"auto from land cap"}`}>
+        <SidebarInput type="number" value={project.gpEquityManual} onChange={v=>up({gpEquityManual:v})} />
+      </Fld>
+      {project.finMode === "fund" && (
+        <Fld label={ar?"LP Equity (ريال)":"LP Equity (SAR)"} hint={`0 = ${ar?"الباقي تلقائياً":"auto remainder"}`}>
+          <SidebarInput type="number" value={project.lpEquityManual} onChange={v=>up({lpEquityManual:v})} />
+        </Fld>
+      )}
+    </Sec>
+    )}
+
+    {/* ── 8. WATERFALL (fund only) ── */}
+    {project.finMode === "fund" && (
+    <Sec title={ar?"شلال التوزيعات":"Waterfall"} filled={true} summary={`Pref ${project.prefReturnPct||15}% | Carry ${project.carryPct||30}%`}>
+      <Fld label={ar?"العائد التفضيلي %":"Preferred Return %"} tip="Priority return to investors before profit split. Standard 8-15%"><SidebarInput type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></Fld>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <Fld label={ar?"حصة الأداء %":"Carry %"} tip="Developer profit share after preferred return. Standard 20-30%"><SidebarInput type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></Fld>
+        <Fld label={ar?"حصة LP %":"LP Split %"} tip="Investor share of remaining profits. Standard 70-80%"><SidebarInput type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></Fld>
+      </div>
+      <Fld label={ar?"تعويض المطور؟":"GP Catch-up"} tip="المطور يحصل توزيعات إضافية حتى يوصل لنسبة الأداء المتفق عليها\nDeveloper gets extra distributions until reaching agreed carry %">
+        <Sel lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} />
+      </Fld>
+      {/* Fund fees */}
+      {project.vehicleType === "fund" && <>
+        <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
+          <div style={{fontSize:10,fontWeight:600,color:"#8b90a0",letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{ar?"رسوم الصندوق":"Fund Fees"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <Fld label={ar?"اكتتاب %":"Subscription %"} tip="One-time fund entry fee. Standard 1-3%"><SidebarInput type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></Fld>
+            <Fld label={ar?"إدارة %":"Mgmt Fee %"} tip="Annual management fee. Standard 0.5-2%"><SidebarInput type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></Fld>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <Fld label={ar?"تطوير %":"Developer Fee %"} tip="رسوم المطور كنسبة من CAPEX. تُدفع خلال فترة البناء\nDeveloper fee as % of CAPEX. Paid during construction period"><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
+            <Fld label={ar?"هيكلة %":"Structuring %"} tip="One-time deal structuring fee. Standard 0.1-1%"><SidebarInput type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></Fld>
+          </div>
+          <Fld label={ar?"رسوم حفظ سنوية":"Custody Fee (annual)"} tip="Annual custody & admin (fixed SAR). Standard 100-200K"><SidebarInput type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></Fld>
+        </div>
+      </>}
+    </Sec>
+    )}
   </>);
 }
 
