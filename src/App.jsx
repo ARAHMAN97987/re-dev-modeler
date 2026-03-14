@@ -1309,14 +1309,14 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
     {/* Returns KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:10,marginBottom:18}}>
-      <KPI label="LP Equity" value={fmtM(w.lpEquity)} sub={`${fmtPct(w.lpPct*100)}`} color="#8b5cf6" />
-      <KPI label="GP Equity" value={fmtM(w.gpEquity)} sub={`${fmtPct(w.gpPct*100)}`} color="#3b82f6" />
-      <KPI label="LP IRR" value={w.lpIRR!==null?fmtPct(w.lpIRR*100):"N/A"} color="#16a34a" />
-      <KPI label="GP IRR" value={w.gpIRR!==null?fmtPct(w.gpIRR*100):"N/A"} color="#2563eb" />
-      <KPI label="LP MOIC" value={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"N/A"} color="#8b5cf6" />
-      <KPI label="GP MOIC" value={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"N/A"} color="#3b82f6" />
-      <KPI label="Total Fees" value={fmtM(w.totalFees)} sub={cur} color="#f59e0b" />
-      <KPI label="Exit Year" value={w.exitYear} color="#6b7080" />
+      <KPI label="LP Equity" value={fmtM(w.lpEquity)} sub={`${fmtPct(w.lpPct*100)}`} color="#8b5cf6" tip="حصة المستثمرين. مسؤولية محدودة، عوائد بأولوية\nInvestor capital. Limited liability, priority returns" />
+      <KPI label="GP Equity" value={fmtM(w.gpEquity)} sub={`${fmtPct(w.gpPct*100)}`} color="#3b82f6" tip="حصة المطور. يدير المشروع ويحصل حصة الأداء\nDeveloper capital. Manages project, earns carry" />
+      <KPI label="LP IRR" value={w.lpIRR!==null?fmtPct(w.lpIRR*100):"N/A"} color="#16a34a" tip="معدل عائد المستثمر السنوي بعد كل الرسوم والتوزيعات\nInvestor annual return after all fees and distributions" />
+      <KPI label="GP IRR" value={w.gpIRR!==null?fmtPct(w.gpIRR*100):"N/A"} color="#2563eb" tip="معدل عائد المطور السنوي شامل حصة الأداء\nDeveloper annual return including carry" />
+      <KPI label="LP MOIC" value={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"N/A"} color="#8b5cf6" tip="مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. Total distributions / Total invested. 2x = doubled money" />
+      <KPI label="GP MOIC" value={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"N/A"} color="#3b82f6" tip="مضاعف رأس مال المطور\nDeveloper multiple on invested capital" />
+      <KPI label="Total Fees" value={fmtM(w.totalFees)} sub={cur} color="#f59e0b" tip="مجموع كل الرسوم: اكتتاب + إدارة + حفظ + تطوير + هيكلة\nAll fees: subscription + mgmt + custody + dev + structuring" />
+      <KPI label="Exit Year" value={w.exitYear} color="#6b7080" tip="سنة بيع المشروع أو التخارج. عادة 5-10 سنوات بعد الاستقرار\nYear of asset sale/exit. Usually 5-10 years post-stabilization" />
     </div>
 
     {/* Capital structure & returns */}
@@ -1349,14 +1349,14 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       <div style={{fontSize:13,fontWeight:600,marginBottom:12}}>{lang==="ar"?"شلال التوزيعات":"Distribution Waterfall"}</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         {[
-          {label: lang==="ar"?"رد رأس المال":"Tier 1: Return of Capital", val: w.tier1.reduce((a,b)=>a+b,0), bg:"#dbeafe", fg:"#1e40af"},
-          {label: lang==="ar"?"العائد التفضيلي":"Tier 2: Preferred Return", val: w.tier2.reduce((a,b)=>a+b,0), bg:"#dcfce7", fg:"#166534"},
-          {label: lang==="ar"?"تعويض المطور":"Tier 3: GP Catch-up", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e"},
-          {label: lang==="ar"?"تقسيم الأرباح (LP)":"Tier 4: LP Profit Split", val: w.tier4LP.reduce((a,b)=>a+b,0), bg:"#ede9fe", fg:"#5b21b6"},
-          {label: lang==="ar"?"تقسيم الأرباح (GP)":"Tier 4: GP Profit Split", val: w.tier4GP.reduce((a,b)=>a+b,0), bg:"#e0f2fe", fg:"#075985"},
+          {label: lang==="ar"?"رد رأس المال":"Tier 1: Return of Capital", val: w.tier1.reduce((a,b)=>a+b,0), bg:"#dbeafe", fg:"#1e40af", tip:"الأولوية 1: إرجاع كامل رأس المال قبل أي أرباح\nFirst priority: return all invested equity before any profits"},
+          {label: lang==="ar"?"العائد التفضيلي":"Tier 2: Preferred Return", val: w.tier2.reduce((a,b)=>a+b,0), bg:"#dcfce7", fg:"#166534", tip:"عائد سنوي بأولوية على رأس المال غير المسترد. يتراكم إذا ما دُفع\nPriority annual return on unreturned capital. Accrues if unpaid"},
+          {label: lang==="ar"?"تعويض المطور":"Tier 3: GP Catch-up", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e", tip:"المطور يحصل توزيعات حتى يوصل لنسبة حصة الأداء المستهدفة\nDeveloper receives until reaching target carry percentage"},
+          {label: lang==="ar"?"تقسيم الأرباح (LP)":"Tier 4: LP Profit Split", val: w.tier4LP.reduce((a,b)=>a+b,0), bg:"#ede9fe", fg:"#5b21b6", tip:"حصة المستثمر من باقي الأرباح بعد المراحل السابقة\nInvestor share of remaining profits after prior tiers"},
+          {label: lang==="ar"?"تقسيم الأرباح (GP)":"Tier 4: GP Profit Split", val: w.tier4GP.reduce((a,b)=>a+b,0), bg:"#e0f2fe", fg:"#075985", tip:"حصة المطور من باقي الأرباح\nDeveloper share of remaining profits"},
         ].map((t,i)=>(
           <div key={i} style={{background:t.bg,borderRadius:6,padding:"10px 14px",flex:"1 1 150px",minWidth:150}}>
-            <div style={{fontSize:10,color:t.fg,fontWeight:600,marginBottom:4}}>{t.label}</div>
+            <div style={{fontSize:10,color:t.fg,fontWeight:600,marginBottom:4}}>{t.tip?<Tip text={t.tip}>{t.label}</Tip>:t.label}</div>
             <div style={{fontSize:16,fontWeight:700,color:t.fg}}>{fmtM(t.val)}</div>
           </div>
         ))}
@@ -1482,14 +1482,14 @@ function FinancingView({ project, results, financing, t, up, lang }) {
   return (<div>
     {/* Financing KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(155px, 1fr))",gap:10,marginBottom:18}}>
-      <KPI label={lang==="ar"?"تكلفة التطوير بدون الأرض":"Dev Cost Excl Land"} value={fmtM(f.devCostExclLand)} sub={cur} color="#6b7080" />
-      {f.landCapValue > 0 && <KPI label={lang==="ar"?"رسملة الأرض":"Land Capitalization"} value={fmtM(f.landCapValue)} sub={cur} color="#f59e0b" />}
-      <KPI label={lang==="ar"?"تكلفة التطوير مع الأرض":"Dev Cost Incl Land"} value={fmtM(f.devCostInclLand)} sub={cur} color="#1a1d23" />
-      <KPI label={lang==="ar"?"سقف الدين":"Max Debt (LTV)"} value={fmtM(f.maxDebt)} sub={`${project.maxLtvPct}%`} color="#ef4444" />
-      <KPI label="GP Equity" value={fmtM(f.gpEquity)} sub={fmtPct(f.gpPct*100)} color="#3b82f6" />
-      <KPI label="LP Equity" value={fmtM(f.lpEquity)} sub={fmtPct(f.lpPct*100)} color="#8b5cf6" />
-      <KPI label={lang==="ar"?"إجمالي الفوائد":"Total Interest"} value={fmtM(f.totalInterest)} sub={cur} color="#ef4444" />
-      <KPI label="Levered IRR" value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color="#16a34a" />
+      <KPI label={lang==="ar"?"تكلفة التطوير بدون الأرض":"Dev Cost Excl Land"} value={fmtM(f.devCostExclLand)} sub={cur} color="#6b7080" tip="تكلفة البناء الكاملة بدون قيمة الأرض\nTotal construction cost excluding land value" />
+      {f.landCapValue > 0 && <KPI label={lang==="ar"?"رسملة الأرض":"Land Capitalization"} value={fmtM(f.landCapValue)} sub={cur} color="#f59e0b" tip="تحويل حق الانتفاع لقيمة رأسمالية = المساحة × سعر/م²\nConverting leasehold to capital value = Area × Rate/sqm" />}
+      <KPI label={lang==="ar"?"تكلفة التطوير مع الأرض":"Dev Cost Incl Land"} value={fmtM(f.devCostInclLand)} sub={cur} color="#1a1d23" tip="إجمالي التكلفة شامل الأرض = أساس حساب الدين والحقوق\nTotal cost incl land = basis for debt and equity calculation" />
+      <KPI label={lang==="ar"?"سقف الدين":"Max Debt (LTV)"} value={fmtM(f.maxDebt)} sub={`${project.maxLtvPct}%`} color="#ef4444" tip="أقصى قرض = LTV% × تكلفة التطوير. البنوك السعودية: 50-70%\nMax loan = LTV% × Dev Cost. Saudi banks: 50-70%" />
+      <KPI label="GP Equity" value={fmtM(f.gpEquity)} sub={fmtPct(f.gpPct*100)} color="#3b82f6" tip="حصة المطور من رأس المال. عادة تشمل قيمة الأرض\nDeveloper equity. Usually includes land value" />
+      <KPI label="LP Equity" value={fmtM(f.lpEquity)} sub={fmtPct(f.lpPct*100)} color="#8b5cf6" tip="حصة المستثمرين من رأس المال = الباقي بعد الدين وGP\nInvestor equity = remainder after Debt and GP" />
+      <KPI label={lang==="ar"?"إجمالي الفوائد":"Total Interest"} value={fmtM(f.totalInterest)} sub={cur} color="#ef4444" tip="مجموع الفوائد المدفوعة خلال كامل مدة القرض\nTotal interest paid over entire loan period" />
+      <KPI label="Levered IRR" value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color="#16a34a" tip="معدل العائد بعد خدمة الدين. أعلى من Unlevered عادة\nReturn after debt service. Usually higher than unlevered" />
     </div>
 
     {/* Equation check */}
@@ -1528,7 +1528,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
 
     {/* DSCR chart-like display */}
     <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"14px 18px",marginBottom:18}}>
-      <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>DSCR (Debt Service Coverage Ratio)</div>
+      <div style={{fontSize:13,fontWeight:600,marginBottom:10}}><Tip text="صافي الدخل التشغيلي / خدمة الدين. البنوك تطلب 1.25x كحد أدنى&#10;NOI / Debt Service. Banks require min 1.25x">DSCR (Debt Service Coverage Ratio)</Tip></div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
         {years.filter(y=>f.dscr[y]!==null).map(y=>{
           const v = f.dscr[y];
@@ -1545,7 +1545,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
 
     {/* Year selector */}
     <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12}}>
-      <div style={{fontSize:15,fontWeight:600}}>Levered Cash Flow</div><div style={{flex:1}} />
+      <div style={{fontSize:15,fontWeight:600}}><Tip text="التدفق النقدي بعد خدمة الدين. اللي يحصل عليه المالك فعلياً&#10;Cash flow after debt service. What equity holder actually receives">Levered Cash Flow</Tip></div><div style={{flex:1}} />
       <select value={showYrs} onChange={e=>setShowYrs(parseInt(e.target.value))} style={{padding:"4px 8px",borderRadius:4,border:"1px solid #e5e7ec",fontSize:12}}>
         {[10,15,20,30,50].map(n=><option key={n} value={n}>{n} years</option>)}
       </select>
@@ -2302,7 +2302,7 @@ function ControlPanel({ project, up, t, lang }) {
             {project.finMode !== "bank100" && (
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <Fld label={lang==="ar"?"رسوم تأسيس %":"Upfront Fee %"} tip="One-time loan fee at first drawdown"><SidebarInput type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></Fld>
-                <Fld label={lang==="ar"?"نوع السداد":"Repayment"}>
+                <Fld label={lang==="ar"?"نوع السداد":"Repayment"} tip="أقساط = دفعات متساوية. دفعة واحدة = فوائد فقط والأصل نهاية المدة\nAmortizing = equal installments. Bullet = interest only, principal at maturity">
                   <Sel lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[
                     {value:"amortizing",en:"Amortizing",ar:"أقساط"},
                     {value:"bullet",en:"Bullet",ar:"دفعة واحدة"},
@@ -2311,14 +2311,14 @@ function ControlPanel({ project, up, t, lang }) {
               </div>
             )}
             {project.finMode === "bank100" && (
-              <Fld label={lang==="ar"?"نوع السداد":"Repayment"}>
+              <Fld label={lang==="ar"?"نوع السداد":"Repayment"} tip="أقساط = دفعات متساوية. دفعة واحدة = فوائد فقط والأصل نهاية المدة\nAmortizing = equal installments. Bullet = interest only, principal at maturity">
                 <Sel lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[
                   {value:"amortizing",en:"Amortizing",ar:"أقساط"},
                   {value:"bullet",en:"Bullet",ar:"دفعة واحدة"},
                 ]} />
               </Fld>
             )}
-            <Fld label={lang==="ar"?"هيكل التمويل":"Finance Structure"}>
+            <Fld label={lang==="ar"?"هيكل التمويل":"Finance Structure"} tip="مرابحة = بيع بربح معلوم (الأكثر شيوعاً). إجارة = إيجار تنتهي بالتمليك\nMurabaha = cost-plus sale (most common). Ijara = lease-to-own">
               <Sel lang={lang} value={project.islamicMode} onChange={v=>up({islamicMode:v})} options={[
                 {value:"conventional",en:"Conventional",ar:"تقليدي"},
                 {value:"murabaha",en:"Murabaha (مرابحة)",ar:"مرابحة"},
@@ -2362,7 +2362,7 @@ function ControlPanel({ project, up, t, lang }) {
             <Fld label={lang==="ar"?"حصة الأداء %":"Carry %"} tip="Developer profit share after preferred return. Standard 20-30%"><SidebarInput type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></Fld>
             <Fld label={lang==="ar"?"حصة LP %":"LP Split %"} tip="Investor share of remaining profits. Standard 70-80%"><SidebarInput type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></Fld>
           </div>
-          <Fld label={lang==="ar"?"تعويض المطور؟":"GP Catch-up"}>
+          <Fld label={lang==="ar"?"تعويض المطور؟":"GP Catch-up"} tip="المطور يحصل توزيعات إضافية حتى يوصل لنسبة الأداء المتفق عليها\nDeveloper gets extra distributions until reaching agreed carry %">
             <Sel lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} />
           </Fld>
         </div>
@@ -2376,7 +2376,7 @@ function ControlPanel({ project, up, t, lang }) {
               <Fld label={lang==="ar"?"إدارة %":"Mgmt Fee %"} tip="Annual management fee. Standard 0.5-2%"><SidebarInput type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></Fld>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Fld label={lang==="ar"?"تطوير %":"Developer Fee %"}><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
+              <Fld label={lang==="ar"?"تطوير %":"Developer Fee %"} tip="رسوم المطور كنسبة من CAPEX. تُدفع خلال فترة البناء\nDeveloper fee as % of CAPEX. Paid during construction period"><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
               <Fld label={lang==="ar"?"هيكلة %":"Structuring %"} tip="One-time deal structuring fee. Standard 0.1-1%"><SidebarInput type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></Fld>
             </div>
             <Fld label={lang==="ar"?"رسوم حفظ سنوية":"Custody Fee (annual)"} tip="Annual custody & admin (fixed SAR). Standard 100-200K"><SidebarInput type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></Fld>
@@ -2384,7 +2384,7 @@ function ControlPanel({ project, up, t, lang }) {
         )}
         {project.finMode !== "fund" && project.finMode !== "bank100" && (
           <div style={{borderTop:"1px solid #262a35",marginTop:10,paddingTop:10}}>
-            <Fld label={lang==="ar"?"رسوم تطوير %":"Developer Fee %"}><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
+            <Fld label={lang==="ar"?"رسوم تطوير %":"Developer Fee %"} tip="رسوم المطور كنسبة من CAPEX. تُوزع حسب جدول التكاليف\nDeveloper fee as % of CAPEX. Distributed per CAPEX schedule"><SidebarInput type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></Fld>
           </div>
         )}
       </>}
@@ -2841,14 +2841,14 @@ function ProjectDash({ project, results, checks, t, financing }) {
     {/* Hero KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14,marginBottom:22}}>
       {[
-        {label:t.consolidatedIRR+" (Unlevered)",value:c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A",color:c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444",icon:"📈"},
-        f&&f.mode!=="self"&&{label:"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦"},
-        {label:t.npv10,value:fmtM(c.npv10),sub:cur,color:c.npv10>0?"#2563eb":"#ef4444",icon:c.npv10>0?"✓":"✗"},
-        {label:t.totalCapexLabel,value:fmtM(c.totalCapex),sub:cur,color:"#ef4444",icon:"🏗"},
+        {label:t.consolidatedIRR+" (Unlevered)",value:c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A",color:c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444",icon:"📈",tip:"معدل العائد السنوي بدون تمويل. فوق 12% قوي\nAnnual return ignoring debt. Above 12% is strong"},
+        f&&f.mode!=="self"&&{label:"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦",tip:"معدل العائد بعد التمويل. أعلى من Unlevered بسبب الرافعة\nReturn after debt. Higher due to leverage effect"},
+        {label:t.npv10,value:fmtM(c.npv10),sub:cur,color:c.npv10>0?"#2563eb":"#ef4444",icon:c.npv10>0?"✓":"✗",tip:"قيمة المشروع اليوم بخصم 10%. موجب = يخلق قيمة\nProject value today at 10% discount. Positive = value-creating"},
+        {label:t.totalCapexLabel,value:fmtM(c.totalCapex),sub:cur,color:"#ef4444",icon:"🏗",tip:"إجمالي البناء + غير مباشرة + طوارئ. لا يشمل إيجار الأرض\nAll construction + soft costs + contingency. Excludes land rent"},
       ].filter(Boolean).map((h,i)=>(
         <div key={i} className="hero-kpi" style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
-          <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{h.label}</div>
+          <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{h.tip?<Tip text={h.tip}>{h.label}</Tip>:h.label}</div>
           <div style={{fontSize:28,fontWeight:800,color:h.color,lineHeight:1,letterSpacing:-0.5}}>{h.value}</div>
           {h.sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{h.sub}</div>}
         </div>
@@ -2856,11 +2856,11 @@ function ProjectDash({ project, results, checks, t, financing }) {
     </div>
     {/* Secondary KPIs */}
     <div className="kpi-secondary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
-      <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" />
-      <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" />
-      {f && f.mode !== "self" && <KPI label="Total Debt" value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" />}
-      <KPI label="Payback" value={paybackYr ? `Year ${paybackYr}` : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" />
-      {cashYield !== null && <KPI label="Cash Yield" value={fmtPct(cashYield)} sub="on equity" color="#16a34a" />}
+      <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" tip="مجموع كل الإيرادات خلال فترة النموذج\nSum of all revenue over the projection horizon" />
+      <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" tip="صافي التدفق = الإيرادات - التكاليف - إيجار الأرض\nNet CF = Income - CAPEX - Land Rent" />
+      {f && f.mode !== "self" && <KPI label="Total Debt" value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" tip="إجمالي القرض المسحوب من البنك\nTotal loan drawn from bank" />}
+      <KPI label="Payback" value={paybackYr ? `Year ${paybackYr}` : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" tip="عدد السنوات حتى يصبح التدفق التراكمي موجب\nYears until cumulative cash flow turns positive" />
+      {cashYield !== null && <KPI label="Cash Yield" value={fmtPct(cashYield)} sub="on equity" color="#16a34a" tip="التوزيعات السنوية / رأس المال المستثمر\nAnnual distributions / Equity invested" />}
       <KPI label={t.assetsLabel} value={project.assets.length} color="#6b7080" />
       <KPI label={t.checksLabel} value={fc===0?t.allPass:`${fc} FAIL`} color={fc===0?"#22c55e":"#ef4444"} />
     </div>
@@ -2923,9 +2923,19 @@ function ProjectDash({ project, results, checks, t, financing }) {
   </div>);
 }
 
-function KPI({label,value,sub,color}) {
+// ── Inline tooltip component for KPIs and table headers ──
+function Tip({text,children}) {
+  const [show,setShow]=useState(false);
+  return <span style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
+    {children}
+    <span onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)} onClick={()=>setShow(!show)} style={{cursor:"help",fontSize:10,color:"#9ca3af",marginLeft:3,lineHeight:1}}>ⓘ</span>
+    {show&&<div style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:6,background:"#1a1d23",color:"#d0d4dc",padding:"8px 11px",borderRadius:6,fontSize:10,lineHeight:1.5,zIndex:999,boxShadow:"0 4px 16px rgba(0,0,0,0.5)",minWidth:180,maxWidth:280,whiteSpace:"normal",textAlign:"left",pointerEvents:"none"}}>{text}</div>}
+  </span>;
+}
+
+function KPI({label,value,sub,color,tip}) {
   return <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"12px 14px"}}>
-    <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{label}</div>
+    <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{tip?<Tip text={tip}>{label}</Tip>:label}</div>
     <div style={{fontSize:19,fontWeight:700,color:color||"#1a1d23",lineHeight:1.1}}>{value}{sub&&<span style={{fontSize:11,fontWeight:400,color:"#9ca3af",marginLeft:4}}>{sub}</span>}</div>
   </div>;
 }
@@ -3783,26 +3793,38 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
       table.push(row);
     }
     return table;
-  }, [project, sensRow, sensCol]);
+  }, [project, sensRow, sensCol, selectedPhases]);
 
   // ── Section 3: Break-even ──
+  // Helper to get NPV from scenario result respecting phase filter
+  const getFilteredNPV = (r) => {
+    if (!isFiltered) return r.consolidated.npv10;
+    const netCF = new Array(h).fill(0);
+    activePh.forEach(pName => { const pr = r.phaseResults?.[pName]; if (!pr) return; for (let y=0;y<h;y++) netCF[y]+=pr.netCF[y]||0; });
+    return calcNPV(netCF, 0.10);
+  };
+
   const breakeven = useMemo(() => {
     const results = {};
     // Break-even occupancy: find occ where NPV=0
-    // We adjust all asset occupancy proportionally
+    const filteredAssetPhases = isFiltered ? activePh : null;
     for (let occ = 100; occ >= 0; occ -= 5) {
-      const p2 = { ...project, assets: project.assets.map(a => ({ ...a, stabilizedOcc: occ })) };
+      const assets = project.assets.map(a => {
+        if (filteredAssetPhases && !filteredAssetPhases.includes(a.phase)) return a;
+        return { ...a, stabilizedOcc: occ };
+      });
+      const p2 = { ...project, assets };
       const r = computeProjectCashFlows(p2);
-      if (r.consolidated.npv10 <= 0) {
+      if (getFilteredNPV(r) <= 0) {
         results.occupancy = occ + 5;
         break;
       }
     }
-    // Break-even rent reduction: how much can rent drop
+    // Break-even rent reduction
     for (let mult = 100; mult >= 0; mult -= 5) {
       const p2 = { ...project, activeScenario: "Custom", customRentMult: mult, customCapexMult: 100, customDelay: 0, customEscAdj: 0 };
       const r = computeProjectCashFlows(p2);
-      if (r.consolidated.npv10 <= 0) {
+      if (getFilteredNPV(r) <= 0) {
         results.rentDrop = 100 - mult - 5;
         break;
       }
@@ -3811,13 +3833,13 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
     for (let mult = 100; mult <= 200; mult += 5) {
       const p2 = { ...project, activeScenario: "Custom", customCapexMult: mult, customRentMult: 100, customDelay: 0, customEscAdj: 0 };
       const r = computeProjectCashFlows(p2);
-      if (r.consolidated.npv10 <= 0) {
+      if (getFilteredNPV(r) <= 0) {
         results.capexIncrease = mult - 100 - 5;
         break;
       }
     }
     return results;
-  }, [project]);
+  }, [project, selectedPhases]);
 
   const sections = [
     { key: "compare", label: lang==="ar"?"مقارنة السيناريوهات":"Scenario Comparison" },
@@ -4173,11 +4195,11 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   return (<div>
     {/* Summary KPIs */}
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 18 }}>
-      <KPI label={lang === "ar" ? "إجمالي الحوافز" : "Total Incentives"} value={fmtM(ir?.totalIncentiveValue || 0)} sub={cur} color="#16a34a" />
-      <KPI label={lang === "ar" ? "منحة CAPEX" : "CAPEX Grant"} value={fmtM(ir?.capexGrantTotal || 0)} sub={inc.capexGrant?.enabled ? "ON" : "OFF"} color={inc.capexGrant?.enabled ? "#2563eb" : "#9ca3af"} />
-      <KPI label={lang === "ar" ? "وفر إيجار الأرض" : "Land Rent Savings"} value={fmtM(ir?.landRentSavingTotal || 0)} sub={inc.landRentRebate?.enabled ? "ON" : "OFF"} color={inc.landRentRebate?.enabled ? "#f59e0b" : "#9ca3af"} />
-      <KPI label={lang === "ar" ? "دعم التمويل" : "Finance Support"} value={fmtM(financing?.interestSubsidyTotal || 0)} sub={inc.financeSupport?.enabled ? "ON" : "OFF"} color={inc.financeSupport?.enabled ? "#8b5cf6" : "#9ca3af"} />
-      <KPI label={lang === "ar" ? "استرداد رسوم" : "Fee Rebates"} value={fmtM(ir?.feeRebateTotal || 0)} sub={inc.feeRebates?.enabled ? "ON" : "OFF"} color={inc.feeRebates?.enabled ? "#06b6d4" : "#9ca3af"} />
+      <KPI label={lang === "ar" ? "إجمالي الحوافز" : "Total Incentives"} value={fmtM(ir?.totalIncentiveValue || 0)} sub={cur} color="#16a34a" tip="مجموع كل الحوافز الحكومية (منح + دعم + إعفاءات)\nSum of all government incentives" />
+      <KPI label={lang === "ar" ? "منحة CAPEX" : "CAPEX Grant"} value={fmtM(ir?.capexGrantTotal || 0)} sub={inc.capexGrant?.enabled ? "ON" : "OFF"} color={inc.capexGrant?.enabled ? "#2563eb" : "#9ca3af"} tip="الحكومة تغطي نسبة من تكاليف البناء. تقلل رأس المال المطلوب\nGov covers % of construction cost. Reduces equity needed" />
+      <KPI label={lang === "ar" ? "وفر إيجار الأرض" : "Land Rent Savings"} value={fmtM(ir?.landRentSavingTotal || 0)} sub={inc.landRentRebate?.enabled ? "ON" : "OFF"} color={inc.landRentRebate?.enabled ? "#f59e0b" : "#9ca3af"} tip="الحكومة تعفي أو تخفض إيجار الأرض لسنوات محددة\nGov waives/reduces land rent for specified years" />
+      <KPI label={lang === "ar" ? "دعم التمويل" : "Finance Support"} value={fmtM(financing?.interestSubsidyTotal || 0)} sub={inc.financeSupport?.enabled ? "ON" : "OFF"} color={inc.financeSupport?.enabled ? "#8b5cf6" : "#9ca3af"} tip="الحكومة تدفع جزء من فوائد البنك أو تقدم قرض ميسر\nGov pays portion of bank interest or provides soft loan" />
+      <KPI label={lang === "ar" ? "استرداد رسوم" : "Fee Rebates"} value={fmtM(ir?.feeRebateTotal || 0)} sub={inc.feeRebates?.enabled ? "ON" : "OFF"} color={inc.feeRebates?.enabled ? "#06b6d4" : "#9ca3af"} tip="إعفاء أو تخفيض رسوم حكومية (تراخيص، ربط خدمات)\nGov fee waivers/reductions (permits, utility connections)" />
     </div>
 
     {/* Incentive cards */}
