@@ -1461,17 +1461,18 @@ function FinancingView({ project, results, financing, t, up, lang }) {
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
 
-  // ── Inline input helpers (light theme for main content area) ──
-  const inpSt = {padding:"6px 10px",borderRadius:5,border:"1px solid #e5e7ec",background:"#fff",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box"};
-  const selSt = {...inpSt,cursor:"pointer"};
+  // ── Inline input helpers (polished light theme) ──
+  const inpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
+  const selSt = {...inpSt,cursor:"pointer",appearance:"auto"};
+  const focusSt = "input:focus,select:focus{border-color:#2563eb !important;box-shadow:0 0 0 2px rgba(37,99,235,0.12) !important;background:#fff !important}";
   const FL = ({label,children,tip,hint}) => (
-    <div style={{marginBottom:8}}>
-      <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#6b7080",marginBottom:3}}>{tip?<Tip text={tip}>{label}</Tip>:label}</label>
+    <div style={{marginBottom:10}}>
+      <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#6b7080",marginBottom:4,fontWeight:500,letterSpacing:0.2}}>{tip?<Tip text={tip}>{label}</Tip>:label}</label>
       {children}
-      {hint&&<div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{hint}</div>}
+      {hint&&<div style={{fontSize:9,color:"#9ca3af",marginTop:3}}>{hint}</div>}
     </div>
   );
-  const Inp = ({value,onChange,type="text",...rest}) => <input type={type} value={value??""} onChange={e=>onChange(type==="number"?+e.target.value:e.target.value)} style={inpSt} {...rest} />;
+  const Inp = ({value,onChange,type="text",...rest}) => <input type={type} value={value??""} onChange={e=>onChange(type==="number"?+e.target.value:e.target.value)} style={inpSt} onFocus={e=>{e.target.style.borderColor="#2563eb";e.target.style.boxShadow="0 0 0 2px rgba(37,99,235,0.12)";e.target.style.background="#fff";}} onBlur={e=>{e.target.style.borderColor="#e0e3ea";e.target.style.boxShadow="none";e.target.style.background="#f8f9fb";}} {...rest} />;
   const Drp = ({value,onChange,options}) => <select value={value} onChange={e=>onChange(e.target.value)} style={selSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[lang]||o.en||o.label}</option>)}</select>;
 
   if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
@@ -1510,11 +1511,11 @@ function FinancingView({ project, results, financing, t, up, lang }) {
         </button>
       </div>
       {showConfig && (
-        <div style={{padding:"0 18px 18px"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+        <div style={{padding:"4px 18px 18px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
             {/* Column 1: Financing Mode + Debt */}
-            <div>
-              <div style={{fontSize:10,fontWeight:600,color:"#6b7080",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"التمويل":"Financing"}</div>
+            <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#2563eb",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dbeafe"}}>{ar?"التمويل":"Financing"}</div>
               <FL label={ar?"نوع التمويل":"Mode"} tip="Choose how the project will be funded">
                 <Drp value={project.finMode} onChange={v=>up({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
                   {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
@@ -1551,8 +1552,8 @@ function FinancingView({ project, results, financing, t, up, lang }) {
               </>}
             </div>
             {/* Column 2: Exit + Capital Structure */}
-            <div>
-              <div style={{fontSize:10,fontWeight:600,color:"#6b7080",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"التخارج وهيكل رأس المال":"Exit & Capital"}</div>
+            <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #ede9fe"}}>{ar?"التخارج وهيكل رأس المال":"Exit & Capital"}</div>
               {project.finMode !== "self" && <>
                 <FL label={ar?"استراتيجية التخارج":"Exit Strategy"}>
                   <Drp value={project.exitStrategy||"sale"} onChange={v=>up({exitStrategy:v})} options={[{value:"sale",en:"Sale (Multiple)",ar:"بيع (مضاعف)"},{value:"caprate",en:"Sale (Cap Rate)",ar:"بيع (رسملة)"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
@@ -1577,9 +1578,9 @@ function FinancingView({ project, results, financing, t, up, lang }) {
               </>}
             </div>
             {/* Column 3: Fund details (only if fund mode) */}
-            <div>
+            <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               {project.finMode === "fund" ? <>
-                <div style={{fontSize:10,fontWeight:600,color:"#6b7080",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"الصندوق والشلال":"Fund & Waterfall"}</div>
+                <div style={{fontSize:10,fontWeight:700,color:"#16a34a",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dcfce7"}}>{ar?"الصندوق والشلال":"Fund & Waterfall"}</div>
                 <FL label={ar?"نوع الأداة":"Vehicle"}><Drp value={project.vehicleType} onChange={v=>up({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
                 {project.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"}><Inp value={project.fundName} onChange={v=>up({fundName:v})} /></FL>}
                 <FL label={ar?"سنة بداية الصندوق":"Fund Start"} hint="0=auto"><Inp type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} /></FL>
@@ -1594,7 +1595,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                 </div>
                 {project.vehicleType==="fund"&&<>
                   <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
-                  <div style={{fontSize:10,fontWeight:600,color:"#6b7080",marginBottom:6}}>{ar?"الرسوم":"Fees"}</div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#6b7080",marginBottom:8}}>{ar?"الرسوم":"Fees"}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"اكتتاب %":"Sub %"}><Inp type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></FL>
                     <FL label={ar?"إدارة %":"Mgmt %"}><Inp type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></FL>
@@ -1606,7 +1607,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                   <FL label={ar?"حفظ سنوي":"Custody/yr"}><Inp type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></FL>
                 </>}
               </> : project.finMode !== "self" && project.finMode !== "bank100" ? <>
-                <div style={{fontSize:10,fontWeight:600,color:"#6b7080",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"الرسوم":"Fees"}</div>
+                <div style={{fontSize:10,fontWeight:700,color:"#6b7080",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #e5e7ec"}}>{ar?"الرسوم":"Fees"}</div>
                 <FL label={ar?"رسوم تطوير %":"Dev Fee %"} tip="Developer fee as % of CAPEX"><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
               </> : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#9ca3af",fontSize:12}}>{project.finMode==="self"?ar?"لا يوجد تمويل خارجي":"No external financing":""}</div>}
             </div>
