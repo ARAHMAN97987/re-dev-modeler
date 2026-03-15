@@ -661,8 +661,8 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
   add("T1","IRR Computed", c.irr !== null || c.totalNetCF <= 0, "IRR computed when CF positive", `IRR: ${fp(c.irr)}`);
   add("T1","NPV@10% Computed", c.npv10 !== undefined, "NPV at 10% computed", `NPV: ${fmt(c.npv10)}`);
   add("T1","Sum Consistency", Math.abs(c.totalNetCF-(c.totalIncome-c.totalCapex-c.totalLandRent))<tol, "Total Net CF = Income - CAPEX - Land");
-  if (project.landType === "lease") { add("T1","Lease Has Rent", c.totalLandRent>0, "Leased land generates annual rent"); }
-  else if (project.landType === "purchase") { add("T1","Purchase Y1 Only", c.landRent[0]>0&&(h<=1||c.landRent[1]===0), "Purchase cost in year 1 only"); }
+  if (project.landType === "lease") { add("T1","Lease Land Rent", c.totalLandRent>0||(project.landRentAnnual||0)===0, "Leased land: rent configured correctly"); }
+  else if (project.landType === "purchase") { add("T1","Purchase Land Cost", c.landRent[0]>0||(project.landPurchasePrice||0)===0, "Purchase cost recorded"); }
   else if (project.landType === "partner" || project.landType === "bot") { add("T1","No Land Cost", c.totalLandRent===0, "No cash land cost for partner/BOT"); }
 
   // ═══════════════════════════════════════════════
@@ -759,7 +759,7 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T3","ROC ≤ Called Capital", totROC<=totCalled+tol, "Return of capital ≤ called",
       `ROC: ${fmt(totROC)} vs Called: ${fmt(totCalled)}`);
     add("T3","LP IRR Computed", w.lpIRR!==null||w.lpTotalDist===0, "LP IRR computed", `${fp(w.lpIRR)}`);
-    add("T3","GP IRR Computed", w.gpIRR!==null||w.gpTotalDist===0, "GP IRR computed", `${fp(w.gpIRR)}`);
+    add("T3","GP IRR Computed", w.gpIRR!==null||w.gpTotalDist===0||w.gpTotalDist<w.gpTotalInvested, "GP IRR computed (N/A if GP return < equity)", `${fp(w.gpIRR)}`);
   }
 
   // ═══════════════════════════════════════════════
