@@ -7,7 +7,7 @@ import AiAssistant from "./AiAssistant";
 // ZAN Financial Modeler — Project Engine v3 (Stable)
 // ═══════════════════════════════════════════════════════════════
 
-// ── Error Boundary — prevents white screen on runtime errors ──
+// ── Error Boundary — prevents white screen on runtime errors ─
 class AppErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
@@ -679,12 +679,12 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     let intOk=true;
     for (let y=0;y<Math.min(h,20);y++) {
       if ((f.debtBalOpen[y]||0)>0||(f.debtBalClose[y]||0)>0||(f.drawdown?.[y]||0)>0) {
-        const exp=((f.debtBalOpen[y]||0)+(f.drawdown?.[y]||0)+(f.debtBalClose[y]||0))/2*f.rate;
+        const exp=Math.max(0,((f.debtBalOpen[y]||0)+0.5*(f.drawdown?.[y]||0)-0.5*(f.repayment?.[y]||0))*f.rate);
         const act=Math.abs(f.originalInterest?.[y]||f.interest[y]||0);
         if (exp>0&&Math.abs(act-exp)/exp>0.05) { intOk=false; break; }
       }
     }
-    add("T2","Interest = Avg Balance × Rate", intOk, "Interest uses (open+draw+close)/2 × rate");
+    add("T2","Interest = Midpoint × Rate", intOk, "Interest uses Open+0.5×Draw-0.5×Repay × rate");
     const totEqC=(f.equityCalls||[]).reduce((s,v)=>s+v,0);
     add("T2","Equity Calls ≥ Equity", totEqC>=f.totalEquity-10000, "Equity calls cover equity",
       `Calls: ${fmt(totEqC)} vs Equity: ${fmt(f.totalEquity)}`);
@@ -1103,8 +1103,9 @@ function computeFinancing(project, projectResults, incentivesResult) {
       repay[y] = bal;
     }
     debtBalClose[y] = bal - repay[y];
-    // Interest on AVERAGE balance (open+close)/2 - matches Excel methodology
-    interest[y] = ((debtBalOpen[y] + drawdown[y] + debtBalClose[y]) / 2) * rate;
+    // Interest on midpoint balance: Open + 0.5×Draw - 0.5×Repay (avoids drawdown double-count)
+    interest[y] = (debtBalOpen[y] + 0.5 * drawdown[y] - 0.5 * repay[y]) * rate;
+    if (interest[y] < 0) interest[y] = 0;
     debtService[y] = repay[y] + interest[y];
   }
 
@@ -1144,6 +1145,8 @@ function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   // ── DSCR (using adjusted interest) ──
+  // NOTE: DSCR uses (Income - Land Rent) as proxy for NOI/CFADS.
+  // For lender-grade models, replace with actual NOI after opex deduction per asset.
   const dscr = new Array(h).fill(null);
   for (let y = 0; y < h; y++) {
     if (adjustedDebtService[y] > 0) { dscr[y] = (c.income[y] - adjustedLandRent[y]) / adjustedDebtService[y]; }
@@ -1846,7 +1849,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
       <KPI label="GP Equity" value={fmtM(f.gpEquity)} sub={fmtPct(f.gpPct*100)} color="#3b82f6" tip="حصة المطور من رأس المال. عادة تشمل قيمة الأرض\nDeveloper equity. Usually includes land value" />
       <KPI label="LP Equity" value={fmtM(f.lpEquity)} sub={fmtPct(f.lpPct*100)} color="#8b5cf6" tip="حصة المستثمرين من رأس المال = الباقي بعد الدين وGP\nInvestor equity = remainder after Debt and GP" />
       <KPI label={lang==="ar"?"إجمالي الفوائد":"Total Interest"} value={fmtM(f.totalInterest)} sub={cur} color="#ef4444" tip="مجموع الفوائد المدفوعة خلال كامل مدة القرض\nTotal interest paid over entire loan period" />
-      <KPI label="Levered IRR" value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color="#16a34a" tip="معدل العائد بعد خدمة الدين. أعلى من Unlevered عادة\nReturn after debt service. Usually higher than unlevered" />
+      <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color="#16a34a" tip="معدل العائد بعد خدمة الدين. أعلى من Unlevered عادة\nReturn after debt service. Usually higher than unlevered" />
     </div>
 
     {/* Equation check */}
@@ -1902,7 +1905,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
 
     {/* Year selector */}
     <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12}}>
-      <div style={{fontSize:15,fontWeight:600}}><Tip text="التدفق النقدي بعد خدمة الدين. اللي يحصل عليه المالك فعلياً&#10;Cash flow after debt service. What equity holder actually receives">Levered Cash Flow</Tip></div><div style={{flex:1}} />
+      <div style={{fontSize:15,fontWeight:600}}><Tip text="التدفق النقدي بعد خدمة الدين. اللي يحصل عليه المالك فعلياً&#10;Cash flow after debt service. What equity holder actually receives">{ar?"التدفق النقدي الممول":"Levered Cash Flow"}</Tip></div><div style={{flex:1}} />
       <select value={showYrs} onChange={e=>setShowYrs(parseInt(e.target.value))} style={{padding:"4px 8px",borderRadius:4,border:"1px solid #e5e7ec",fontSize:12}}>
         {[10,15,20,30,50].map(n=><option key={n} value={n}>{n} years</option>)}
       </select>
@@ -3251,7 +3254,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14,marginBottom:22}}>
       {[
         {label:t.consolidatedIRR+" (Unlevered)"+(hasIncentives?` ${ar?"+ حوافز":"+ Incentives"}`:""),value:displayIRR!==null?(displayIRR*100).toFixed(2)+"%":"N/A",color:displayIRR>0.12?"#16a34a":displayIRR>0.08?"#eab308":"#ef4444",icon:"📈",tip:"معدل العائد السنوي بدون تمويل"+(hasIncentives?" (شامل الحوافز الحكومية)":"")+"\nAnnual return ignoring debt"+(hasIncentives?" (incl. gov incentives)":"")},
-        f&&f.mode!=="self"&&{label:"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦",tip:"معدل العائد بعد التمويل. أعلى من Unlevered بسبب الرافعة\nReturn after debt. Higher due to leverage effect"},
+        f&&f.mode!=="self"&&{label:ar?"IRR بعد التمويل":"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦",tip:"معدل العائد بعد التمويل. أعلى من Unlevered بسبب الرافعة\nReturn after debt. Higher due to leverage effect"},
         {label:t.npv10,value:fmtM(displayNPV10),sub:cur,color:displayNPV10>0?"#2563eb":"#ef4444",icon:displayNPV10>0?"✓":"✗",tip:"قيمة المشروع اليوم بخصم 10%"+(hasIncentives?" (شامل الحوافز)":"")+"\nProject value at 10% discount"+(hasIncentives?" (incl. incentives)":"")},
         {label:t.totalCapexLabel,value:fmtM(hasIncentives?(c.totalCapex-ir.capexGrantTotal):c.totalCapex),sub:cur+(hasIncentives?` (${ar?"بعد المنحة":"after grant"})`:""),color:"#ef4444",icon:"🏗",tip:"إجمالي البناء + غير مباشرة + احتياطي"+(hasIncentives?". مخصوم منها منحة CAPEX":"")+"\nAll construction + soft costs + contingency"+(hasIncentives?". Net of CAPEX grant":"")},
       ].filter(Boolean).map((h,i)=>(
@@ -3627,7 +3630,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
   sections.push(["Land Type", project.landType]);
   sections.push(["Total CAPEX", c?.totalCapex || 0]);
   sections.push(["Total Income (" + h + "yr)", c?.totalIncome || 0]);
-  sections.push(["Unlevered IRR", c?.irr ? (c.irr * 100).toFixed(2) + "%" : "N/A"]);
+  sections.push([ar?"IRR قبل التمويل":"Unlevered IRR", c?.irr ? (c.irr * 100).toFixed(2) + "%" : "N/A"]);
   sections.push(["NPV @10%", c?.npv10 || 0]);
   sections.push(["NPV @12%", c?.npv12 || 0]);
   sections.push(["NPV @14%", c?.npv14 || 0]);
@@ -4310,7 +4313,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
               {[
                 { label: lang==="ar"?"إجمالي التكاليف":"Total CAPEX", fn: s => getScenarioData(s).totalCapex, fmt: v => fmt(v), color: "#ef4444", tip:"إجمالي البناء + غير مباشرة + طوارئ\nAll construction + soft costs + contingency" },
                 { label: lang==="ar"?"إجمالي الإيرادات":"Total Income", fn: s => getScenarioData(s).totalIncome, fmt: v => fmt(v), color: "#16a34a", tip:"مجموع الإيرادات خلال كامل فترة النموذج\nTotal revenue over entire projection period" },
-                { label: "Unlevered IRR", fn: s => getScenarioData(s).irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "#2563eb", tip:"معدل العائد بدون تمويل. فوق 12% قوي\nReturn ignoring debt. Above 12% is strong" },
+                { label: ar?"IRR قبل التمويل":"Unlevered IRR", fn: s => getScenarioData(s).irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "#2563eb", tip:"معدل العائد بدون تمويل. فوق 12% قوي\nReturn ignoring debt. Above 12% is strong" },
                 { label: "NPV @10%", fn: s => getScenarioData(s).npv10, fmt: v => fmtM(v), color: "#06b6d4", tip:"القيمة الحالية بخصم 10%. موجب = يخلق قيمة\nPresent value at 10% discount. Positive = value-creating" },
                 { label: "NPV @12%", fn: s => getScenarioData(s).npv12, fmt: v => fmtM(v), tip:"القيمة الحالية بخصم 12%\nPresent value at 12% discount rate" },
                 ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل العائد بعد التمويل\nReturn after debt service" }]:[]),
