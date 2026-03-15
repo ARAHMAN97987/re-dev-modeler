@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo, Component } from "react";
 import { storage } from "./lib/storage";
-import { generateProfessionalExcel } from "./excelExport";
+
 import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
@@ -3710,13 +3710,14 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const [selectedPhases, setSelectedPhases] = useState([]);
   if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
 
+  const ar = lang === "ar";
   const c = results.consolidated;
   const f = financing;
   const w = waterfall;
   const cur = project.currency || "SAR";
   const sy = results.startYear;
   const h = results.horizon;
-  const failCount = checks.filter(ch => !ch.pass).length;
+  const failCount = (checks||[]).filter(ch => !ch.pass).length;
   const phaseNames = Object.keys(results.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
@@ -3844,7 +3845,6 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18}}>
       {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
-      <button onClick={() => generateProfessionalExcel(project, results, financing, waterfall, null, checks)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 18px",fontSize:12,border:"1px solid #bbf7d0",fontWeight:500}}>
         {lang==="ar"?"⬇ تصدير النموذج الكامل (Excel)":"⬇ Export Full Model (Excel)"}
       </button>
     </div>
