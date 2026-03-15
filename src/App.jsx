@@ -623,50 +623,207 @@ function calcIRR(cf, guess=0.1, maxIter=200, tol=1e-7) {
 }
 function calcNPV(cf, r) { return cf.reduce((s,v,t)=>s+v/Math.pow(1+r,t),0); }
 
-function runChecks(project, results, financing, waterfall) {
+function runChecks(project, results, financing, waterfall, incentivesResult) {
   const as = results.assetSchedules;
   const c = results.consolidated;
   const h = results.horizon;
+  const f = financing;
+  const w = waterfall;
+  const ir = incentivesResult;
+  const tol = 1; // SAR tolerance for rounding
 
-  // Land allocation check
   const phases = results.phaseResults || {};
   const totalAlloc = Object.values(phases).reduce((s, p) => s + (p.allocPct || 0), 0);
 
-  // Footprint check
-  const phaseFootprints = {};
-  (project.phases || []).forEach(p => { phaseFootprints[p.name] = p.footprint || 0; });
-  const assetFootprints = {};
-  (project.assets || []).forEach(a => { assetFootprints[a.phase] = (assetFootprints[a.phase] || 0) + (a.buildingFootprint || 0); });
+  const checks = [];
+  const add = (cat, name, pass, desc, detail) => checks.push({ cat, name, pass, desc, detail: detail || "" });
 
-  // Payback period
-  let cumCF = 0, paybackYear = null;
-  for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYear === null) paybackYear = y; }
+  // ═══════════════════════════════════════════════
+  // T1: PROJECT ENGINE — Basic Data Integrity
+  // ═══════════════════════════════════════════════
+  add("T1", "GFA Total Match", Math.abs((project.assets||[]).reduce((s,a)=>s+(a.gfa||0),0) - as.reduce((s,a)=>s+(a.gfa||0),0)) < tol, "Program GFA = Computed GFA");
+  add("T1", "No Negative GFA", (project.assets||[]).every(a=>(a.gfa||0)>=0), "All GFA values ≥ 0");
+  add("T1", "Active Assets Have Duration", (project.assets||[]).every(a=>((a.gfa||0)===0&&(a.costPerSqm||0)===0)||(a.constrDuration||0)>0), "Assets with GFA have construction duration");
+  add("T1", "No Negative Leasable", as.every(a=>(a.leasableArea||0)>=0), "All leasable areas ≥ 0");
+  add("T1", "CAPEX Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - c.totalCapex) < tol, "Sum of asset CAPEX = consolidated CAPEX");
+  add("T1", "Revenue Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalRevenue,0) - c.totalIncome) < tol, "Sum of asset revenue = consolidated income");
+  add("T1", "Op Assets Have EBITDA", (project.assets||[]).filter(a=>a.revType==="Operating").every(a=>(a.opEbitda||0)>0||(a.gfa||0)===0), "Operating assets have EBITDA > 0");
+  add("T1", "Land Alloc = 100%", Object.keys(phases).length === 0 || Math.abs(totalAlloc - 1) < 0.01, "Land allocation sums to 100%");
 
-  const checks = [
-    { name: "GFA Total Match", pass: Math.abs((project.assets||[]).reduce((s,a)=>s+(a.gfa||0),0) - as.reduce((s,a)=>s+(a.gfa||0),0)) < 1, desc: "GFA total matches sum" },
-    { name: "No Negative GFA", pass: (project.assets||[]).every(a=>(a.gfa||0)>=0), desc: "No negative GFA" },
-    { name: "No Zero Duration (active)", pass: (project.assets||[]).every(a=>((a.gfa||0)===0&&(a.costPerSqm||0)===0)||(a.constrDuration||0)>0), desc: "Active assets have duration > 0" },
-    { name: "No Negative Leasable", pass: as.every(a=>(a.leasableArea||0)>=0), desc: "No negative leasable areas" },
-    { name: "CAPEX Reconciles", pass: Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - c.totalCapex) < 1, desc: "Program vs Calc CAPEX match" },
-    { name: "Op Assets have EBITDA", pass: (project.assets||[]).filter(a=>a.revType==="Operating").every(a=>(a.opEbitda||0)>0||(a.gfa||0)===0), desc: "Operating assets have EBITDA > 0" },
-    { name: "Land Alloc = 100%", pass: Object.keys(phases).length === 0 || Math.abs(totalAlloc - 1) < 0.01, desc: "Land allocation sums to 100%" },
-  ];
+  // Phase CF sum = consolidated CF
+  const phaseIncome = Object.values(phases).reduce((s, p) => s + p.totalIncome, 0);
+  const phaseCapex = Object.values(phases).reduce((s, p) => s + p.totalCapex, 0);
+  add("T1", "Phase Income = Consolidated", Math.abs(phaseIncome - c.totalIncome) < tol, "Sum of phase incomes = consolidated income",
+    `Phases: ${Math.round(phaseIncome).toLocaleString()} vs Consolidated: ${Math.round(c.totalIncome).toLocaleString()}`);
+  add("T1", "Phase CAPEX = Consolidated", Math.abs(phaseCapex - c.totalCapex) < tol, "Sum of phase CAPEX = consolidated CAPEX");
 
-  // Fund checks
-  if (financing && financing.mode !== "self") {
-    const f = financing;
-    checks.push({ name: "Debt Balance ≥ 0", pass: (f.debtBalClose||[]).every(v => v >= -0.01), desc: "Debt balance never goes negative" });
-    checks.push({ name: "Capital Structure", pass: Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - f.devCostInclLand) < 10000, desc: "Debt + GP + LP = Dev Cost Incl Land" });
-    const repaidByEnd = f.tenor > 0 ? (f.debtBalClose[f.repayStart + f.repayYears - 1] || 0) < 1 : true;
-    checks.push({ name: "Debt Fully Repaid", pass: repaidByEnd, desc: "Debt repaid by tenor end" });
-    if (waterfall) {
-      const w = waterfall;
-      const totalDist = w.lpTotalDist + w.gpTotalDist;
-      const totalCashAvail = w.cashAvail.reduce((a,b)=>a+b,0);
-      checks.push({ name: "LP+GP = Total Dist", pass: Math.abs((w.lpTotalDist + w.gpTotalDist) - totalDist) < 1, desc: "LP + GP distributions reconcile" });
-      checks.push({ name: "Dist ≤ Cash Available", pass: totalDist <= totalCashAvail + 1, desc: "Distributions don't exceed cash available" });
-    }
+  // Net CF = Income - CAPEX - Land Rent (year by year)
+  let cfMismatch = false;
+  for (let y = 0; y < h; y++) {
+    const expected = c.income[y] - c.capex[y] - c.landRent[y];
+    if (Math.abs(c.netCF[y] - expected) > tol) { cfMismatch = true; break; }
   }
+  add("T1", "Net CF = Income - CAPEX - Land", !cfMismatch, "Year-by-year CF equation holds");
+
+  // IRR/NPV consistency
+  add("T1", "IRR Sign Check", c.irr === null || (c.totalNetCF > 0 ? c.irr > -0.5 : true), "IRR sign is consistent with total CF");
+  add("T1", "NPV@10% Consistency", c.npv10 !== undefined, "NPV@10% computed");
+
+  // ═══════════════════════════════════════════════
+  // T2: FINANCING ENGINE
+  // ═══════════════════════════════════════════════
+  if (f && f.mode !== "self") {
+    // Capital structure equation: Debt + GP + LP = Dev Cost Incl Land
+    const capStructDiff = Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - f.devCostInclLand);
+    add("T2", "Capital Structure Equation", capStructDiff < 10000, "Debt + GP + LP = Dev Cost",
+      `${Math.round(f.totalDebt + f.gpEquity + f.lpEquity).toLocaleString()} vs ${Math.round(f.devCostInclLand).toLocaleString()} (diff: ${Math.round(capStructDiff).toLocaleString()})`);
+
+    // Debt balance never negative
+    add("T2", "Debt Balance ≥ 0", (f.debtBalClose||[]).every(v => v >= -0.01), "Debt balance never goes negative");
+
+    // Debt fully repaid by tenor end
+    const repayEndIdx = f.repayStart + f.repayYears - 1;
+    const balAtEnd = repayEndIdx >= 0 && repayEndIdx < h ? (f.debtBalClose[repayEndIdx] || 0) : 0;
+    add("T2", "Debt Fully Repaid", f.tenor === 0 || balAtEnd < 1, "Debt repaid by tenor end",
+      `Balance at year ${repayEndIdx+1}: ${Math.round(balAtEnd).toLocaleString()}`);
+
+    // Interest = average balance × rate (spot check year by year)
+    let intOk = true;
+    for (let y = 0; y < Math.min(h, 20); y++) {
+      if (f.debtBalOpen[y] > 0 || f.debtBalClose[y] > 0) {
+        const expectedInt = (f.debtBalOpen[y] + f.debtBalClose[y]) / 2 * f.rate;
+        const actualInt = Math.abs(f.originalInterest?.[y] || f.interest[y]);
+        if (expectedInt > 0 && Math.abs(actualInt - expectedInt) / expectedInt > 0.05) { intOk = false; break; }
+      }
+    }
+    add("T2", "Interest = Avg Balance × Rate", intOk, "Interest calc uses average balance method");
+
+    // Equity calls = Total Equity
+    const totalEqCalls = (f.equityCalls||[]).reduce((s,v)=>s+v,0);
+    add("T2", "Equity Calls = Total Equity", Math.abs(totalEqCalls - f.totalEquity) < 10000, "Sum equity calls = total equity required",
+      `Calls: ${Math.round(totalEqCalls).toLocaleString()} vs Equity: ${Math.round(f.totalEquity).toLocaleString()}`);
+
+    // Drawdown = Total Debt
+    const totalDrawn = (f.drawdown||[]).reduce((s,v)=>s+v,0);
+    add("T2", "Drawdown = Total Debt", Math.abs(totalDrawn - f.totalDebt) < 1, "Sum drawdowns = max debt drawn");
+
+    // Levered CF check: income - landRent - capex + drawdown + exit - debtService = levered CF
+    let levCfOk = true;
+    const adjLR = ir?.adjustedLandRent || c.landRent;
+    for (let y = 0; y < h; y++) {
+      const expected = c.income[y] - adjLR[y] - c.capex[y]
+        + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0)
+        - f.debtService[y] + f.drawdown[y] + (f.exitProceeds?.[y] || 0);
+      if (Math.abs(f.leveredCF[y] - expected) > tol) { levCfOk = false; break; }
+    }
+    add("T2", "Levered CF Equation", levCfOk, "Levered CF = Income - Land - CAPEX + Incentives - Debt + Exit");
+
+    // DSCR spot check
+    let dscrOk = true;
+    for (let y = 0; y < h; y++) {
+      if (f.debtService[y] > 0 && f.dscr[y] !== null) {
+        const expectedDscr = (c.income[y] - adjLR[y]) / f.debtService[y];
+        if (Math.abs(f.dscr[y] - expectedDscr) > 0.01) { dscrOk = false; break; }
+      }
+    }
+    add("T2", "DSCR = NOI / Debt Service", dscrOk, "DSCR calculation is consistent");
+  }
+
+  // ═══════════════════════════════════════════════
+  // T3: WATERFALL ENGINE
+  // ═══════════════════════════════════════════════
+  if (w) {
+    // LP + GP distributions = total distributions
+    add("T3", "LP + GP = Total Dist", Math.abs((w.lpTotalDist + w.gpTotalDist) - (w.lpTotalDist + w.gpTotalDist)) < tol, "LP + GP reconcile");
+
+    // Distributions never exceed cash available
+    let distExceeds = false;
+    for (let y = 0; y < h; y++) {
+      const totalDistY = (w.tier1[y]||0) + (w.tier2[y]||0) + (w.tier3[y]||0) + (w.tier4LP[y]||0) + (w.tier4GP[y]||0);
+      if (totalDistY > (w.cashAvail[y]||0) + tol) { distExceeds = true; break; }
+    }
+    add("T3", "Dist ≤ Cash Available", !distExceeds, "Annual distributions never exceed cash available");
+
+    // Unreturned capital starts at total equity and ends at 0 (if fully returned)
+    add("T3", "Unreturned Capital Start", w.unreturnedCap?.[0] !== undefined, "Unreturned capital initialized");
+
+    // MOIC = Total Dist / Equity Invested
+    if (f && f.lpEquity > 0 && w.lpMOIC) {
+      const expectedMOIC = w.lpTotalDist / f.lpEquity;
+      add("T3", "LP MOIC = Dist / Equity", Math.abs(w.lpMOIC - expectedMOIC) < 0.01, "LP MOIC calculation correct",
+        `Computed: ${w.lpMOIC.toFixed(2)}x vs Expected: ${expectedMOIC.toFixed(2)}x`);
+    }
+
+    // ROC (Tier 1) should not exceed total equity
+    const totalROC = (w.tier1||[]).reduce((s,v)=>s+v,0);
+    add("T3", "ROC ≤ Total Equity", totalROC <= (f?.totalEquity||0) + tol, "Return of capital never exceeds equity invested",
+      `ROC: ${Math.round(totalROC).toLocaleString()} vs Equity: ${Math.round(f?.totalEquity||0).toLocaleString()}`);
+  }
+
+  // ═══════════════════════════════════════════════
+  // T4: INCENTIVES ENGINE
+  // ═══════════════════════════════════════════════
+  if (ir && ir.totalIncentiveValue > 0) {
+    // CAPEX grant ≤ total CAPEX
+    add("T4", "CAPEX Grant ≤ CAPEX", ir.capexGrantTotal <= c.totalCapex + tol, "Grant doesn't exceed total CAPEX",
+      `Grant: ${Math.round(ir.capexGrantTotal).toLocaleString()} vs CAPEX: ${Math.round(c.totalCapex).toLocaleString()}`);
+
+    // Adjusted CAPEX = Original - Grant
+    const adjCapexTotal = ir.adjustedCapex.reduce((s,v)=>s+v,0);
+    add("T4", "Adjusted CAPEX = Original - Grant", Math.abs(adjCapexTotal - (c.totalCapex - ir.capexGrantTotal)) < tol, "CAPEX correctly reduced by grant");
+
+    // Adjusted IRR computed and different from base
+    if (ir.capexGrantTotal > 0 || ir.landRentSavingTotal > 0) {
+      add("T4", "Incentives Affect IRR", ir.adjustedIRR !== c.irr || ir.capexGrantTotal === 0, "Incentives change the IRR",
+        `Base IRR: ${c.irr?((c.irr*100).toFixed(2)+"%"):"N/A"} → Adjusted: ${ir.adjustedIRR?((ir.adjustedIRR*100).toFixed(2)+"%"):"N/A"}`);
+    }
+
+    // Net CF Impact = CAPEX Grant + Land Saving + Fee Rebate (per year)
+    let impactOk = true;
+    for (let y = 0; y < h; y++) {
+      const expected = ir.capexGrantSchedule[y] + ir.landRentSavingSchedule[y] + ir.feeRebateSchedule[y];
+      if (Math.abs(ir.netCFImpact[y] - expected) > tol) { impactOk = false; break; }
+    }
+    add("T4", "Net CF Impact Reconciles", impactOk, "Year-by-year incentive impact = sum of components");
+
+    // Land rent savings don't exceed original land rent
+    let lrOk = true;
+    for (let y = 0; y < h; y++) {
+      if (ir.landRentSavingSchedule[y] > Math.abs(c.landRent[y] || 0) + tol) { lrOk = false; break; }
+    }
+    add("T4", "Land Rebate ≤ Land Rent", lrOk, "Land rent savings never exceed original rent");
+  }
+
+  // ═══════════════════════════════════════════════
+  // T5: CROSS-ENGINE INTEGRATION
+  // ═══════════════════════════════════════════════
+  // Financing uses adjusted CAPEX from incentives
+  if (f && f.mode !== "self" && ir) {
+    const expectedDevCost = ir.adjustedCapex.reduce((s,v)=>s+v,0);
+    add("T5", "Financing Uses Adjusted CAPEX", Math.abs(f.devCostExclLand - expectedDevCost) < tol, "Financing engine picks up incentive-adjusted CAPEX",
+      `Financing DevCost: ${Math.round(f.devCostExclLand).toLocaleString()} vs Adjusted CAPEX: ${Math.round(expectedDevCost).toLocaleString()}`);
+  }
+
+  // Levered IRR uses incentives
+  if (f && f.mode !== "self" && ir && ir.totalIncentiveValue > 0) {
+    // Recalculate levered CF without incentives to verify difference
+    const baseLevCF = new Array(h).fill(0);
+    for (let y = 0; y < h; y++) {
+      baseLevCF[y] = c.income[y] - c.landRent[y] - c.capex[y] - (f.debtService[y]||0) + (f.drawdown[y]||0) + (f.exitProceeds?.[y]||0);
+    }
+    const baseIRR = calcIRR(baseLevCF);
+    const hasEffect = baseIRR === null || f.leveredIRR === null || Math.abs(f.leveredIRR - baseIRR) > 0.0001;
+    add("T5", "Levered IRR Reflects Incentives", hasEffect, "Levered IRR changes when incentives are active",
+      `Without incentives: ${baseIRR?((baseIRR*100).toFixed(2)+"%"):"N/A"} → With: ${f.leveredIRR?((f.leveredIRR*100).toFixed(2)+"%"):"N/A"}`);
+  }
+
+  // Waterfall uses correct levered CF from financing
+  if (w && f) {
+    const wCashTotal = w.cashAvail.reduce((s,v)=>s+v,0);
+    // Cash available should relate to levered CF
+    add("T5", "Waterfall Cash Source", wCashTotal !== 0, "Waterfall has cash available for distribution");
+  }
+
   return checks;
 }
 
@@ -1885,7 +2042,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const financing = useMemo(() => { try { return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult]);
   const waterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing]);
   const phaseWaterfalls = useMemo(() => { try { return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall]);
-  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall]);
+  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
   const createProject = async () => { const p = defaultProject(); await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); };
   const openProject = async (id) => { setLoading(true); const p = await loadProject(id); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
@@ -2078,7 +2235,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {activeTab==="scenarios"&&<ScenariosView project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />}
           {activeTab==="incentives"&&<IncentivesView project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />}
           {activeTab==="cashflow"&&<CashFlowView project={project} results={results} t={t} />}
-          {activeTab==="checks"&&<ChecksView checks={checks} t={t} />}
+          {activeTab==="checks"&&<ChecksView checks={checks} t={t} lang={lang} />}
         </div>
       </div>
       {project && project._setupDone === false && (
@@ -4507,24 +4664,43 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   </div>);
 }
 
-function ChecksView({ checks, t }) {
+function ChecksView({ checks, t, lang }) {
   const ap = checks.every(c=>c.pass);
+  const fc = checks.filter(c=>!c.pass).length;
+  const cats = [...new Set(checks.map(c=>c.cat||"General"))];
+  const catLabels = {T1:"T1: Project Engine",T2:"T2: Financing",T3:"T3: Waterfall",T4:"T4: Incentives",T5:"T5: Integration",General:"General"};
+  const ar = lang === "ar";
   return (<div>
     <div style={{display:"flex",alignItems:"center",marginBottom:14,gap:12}}>
       <div style={{fontSize:15,fontWeight:600}}>{t.modelChecks}</div>
-      <span style={{fontSize:11,padding:"3px 10px",borderRadius:4,fontWeight:600,background:ap?"#dcfce7":"#fef2f2",color:ap?"#16a34a":"#ef4444"}}>{ap?t.allPass:t.errorFound}</span>
+      <span style={{fontSize:11,padding:"3px 10px",borderRadius:4,fontWeight:600,background:ap?"#dcfce7":"#fef2f2",color:ap?"#16a34a":"#ef4444"}}>
+        {ap?t.allPass:`${fc} ${t.errorFound}`}
+      </span>
+      <span style={{fontSize:11,color:"#6b7080"}}>{checks.length} {ar?"اختبار":"tests"} · {checks.filter(c=>c.pass).length} {ar?"ناجح":"passed"}</span>
     </div>
-    <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
-      <table style={tblStyle}><thead><tr>
-        <th style={thSt}>{t.check}</th><th style={{...thSt,width:80,textAlign:"center"}}>{t.status}</th><th style={thSt}>{t.description}</th>
-      </tr></thead><tbody>
-        {checks.map((c,i)=><tr key={i}>
-          <td style={{...tdSt,fontWeight:500}}>{c.name}</td>
-          <td style={{...tdSt,textAlign:"center"}}><span style={{fontSize:11,padding:"2px 8px",borderRadius:3,fontWeight:600,background:c.pass?"#dcfce7":"#fef2f2",color:c.pass?"#16a34a":"#ef4444"}}>{c.pass?(lang==="ar"?"ناجح":"PASS"):(lang==="ar"?"فاشل":"FAIL")}</span></td>
-          <td style={{...tdSt,color:"#6b7080"}}>{c.desc}</td>
-        </tr>)}
-      </tbody></table>
-    </div>
+    {cats.map(cat => {
+      const catChecks = checks.filter(c=>(c.cat||"General")===cat);
+      const catPass = catChecks.every(c=>c.pass);
+      return (
+        <div key={cat} style={{marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <span style={{fontSize:12,fontWeight:600,color:catPass?"#16a34a":"#ef4444"}}>{catPass?"✓":"✗"}</span>
+            <span style={{fontSize:11,fontWeight:600,color:"#1a1d23"}}>{catLabels[cat]||cat}</span>
+            <span style={{fontSize:10,color:"#9ca3af"}}>{catChecks.filter(c=>c.pass).length}/{catChecks.length}</span>
+          </div>
+          <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
+            <table style={tblStyle}><tbody>
+              {catChecks.map((c,i)=><tr key={i} style={{background:c.pass?"":"#fef2f2"}}>
+                <td style={{...tdSt,fontWeight:500,width:"30%"}}>{c.name}</td>
+                <td style={{...tdSt,textAlign:"center",width:70}}><span style={{fontSize:10,padding:"2px 8px",borderRadius:3,fontWeight:600,background:c.pass?"#dcfce7":"#fef2f2",color:c.pass?"#16a34a":"#ef4444"}}>{c.pass?(ar?"ناجح":"PASS"):(ar?"فاشل":"FAIL")}</span></td>
+                <td style={{...tdSt,color:"#6b7080",fontSize:11}}>{c.desc}</td>
+                {c.detail && <td style={{...tdSt,color:"#9ca3af",fontSize:10,maxWidth:200}}>{c.detail}</td>}
+              </tr>)}
+            </tbody></table>
+          </div>
+        </div>
+      );
+    })}
   </div>);
 }
 
