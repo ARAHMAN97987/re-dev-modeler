@@ -1733,7 +1733,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
             {/* Column 1: Financing Mode + Debt */}
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               <div style={{fontSize:10,fontWeight:700,color:"#2563eb",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dbeafe"}}>{ar?"التمويل":"Financing"}</div>
-              <FL label={ar?"آلية التمويل":"Mode"} tip="Choose how the project will be funded">
+              <FL label={ar?"آلية التمويل":"Mode"} tip="يحدد طريقة تمويل المشروع: ذاتي، بنكي، أو عبر صندوق استثماري\nChoose how the project will be funded: self, bank, or fund structure">
                 <Drp lang={lang} value={project.finMode} onChange={v=>up({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
                   {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
                   {value:"bank100",en:"100% Bank Debt",ar:"بنكي 100%"},
@@ -1749,20 +1749,20 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                 )}
                 {(project.debtAllowed || project.finMode === "bank100") && <>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    {project.finMode!=="bank100"&&<FL label="LTV %" tip="Loan-to-Value. Saudi: 50-70%"><Inp type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></FL>}
-                    <FL label={ar?"معدل %":"Rate %"} tip="Annual profit rate. 5-8%"><Inp type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></FL>
+                    {project.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى قيمة المشروع. في السعودية 50-70%\nLoan-to-Value ratio. Saudi: 50-70%"><Inp type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></FL>}
+                    <FL label={ar?"معدل %":"Rate %"} tip="معدل تكلفة التمويل السنوي. في السعودية 5-8%\nAnnual financing cost rate. Saudi: 5-8%"><Inp type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    <FL label={ar?"مدة القرض":"Tenor"} tip="Total years incl grace"><Inp type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></FL>
-                    <FL label={ar?"فترة السماح":"Grace"} tip="Interest-only years"><Inp type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></FL>
+                    <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years"><Inp type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></FL>
+                    <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years"><Inp type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم %":"Fee %"}><Inp type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></FL>
-                    <FL label={ar?"سداد":"Repay"} tip="Amortizing = equal installments. Bullet = principal at end">
+                    <FL label={ar?"سداد":"Repay"} tip="Amortizing = أقساط دورية تقلل الرصيد. Bullet = سداد الأصل دفعة واحدة بالنهاية\nAmortizing = regular installments. Bullet = principal at end">
                       <Drp lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[{value:"amortizing",en:"Amortizing",ar:"أقساط"},{value:"bullet",en:"Bullet",ar:"دفعة واحدة"}]} />
                     </FL>
                   </div>
-                  <FL label={ar?"هيكل":"Structure"} tip="Murabaha = cost-plus (common). Ijara = lease-to-own">
+                  <FL label={ar?"هيكل":"Structure"} tip="مرابحة = تكلفة + ربح (الأشيع). إجارة = تأجير منتهي بالتملك\nMurabaha = cost-plus (common). Ijara = lease-to-own">
                     <Drp lang={lang} value={project.islamicMode} onChange={v=>up({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
                   </FL>
                 </>}
@@ -1777,20 +1777,20 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                 </FL>
                 {(project.exitStrategy||"sale")!=="hold"&&<>
                   <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto"><Inp type="number" value={project.exitYear} onChange={v=>up({exitYear:v})} /></FL>
-                  {(project.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="Sale price = Rent × Multiple"><Inp type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></FL>}
-                  {project.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="Exit = NOI / Cap Rate"><Inp type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></FL>}
+                  {(project.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="قيمة البيع = الإيجار × المضاعف. عادة 8x-15x\nSale price = Rent × Multiple. Usually 8x-15x"><Inp type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></FL>}
+                  {project.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="قيمة التخارج = NOI / Cap Rate. في السعودية 7-10% للأصول المستقرة\nExit = NOI / Cap Rate. Saudi stabilized: 7-10%"><Inp type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></FL>}
                   <FL label={ar?"تكاليف التخارج %":"Exit Cost %"}><Inp type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></FL>
                 </>}
               </>}
               {project.finMode !== "self" && project.finMode !== "bank100" && <>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
-                <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="Convert leasehold to equity">
+                <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض إلى حصة Equity في الحسابات التمويلية\nConvert leasehold land value to equity in financing calculations">
                   <Drp lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
                 </FL>
                 {project.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} hint={`= ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${cur}`}><Inp type="number" value={project.landCapRate} onChange={v=>up({landCapRate:v})} /></FL>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <FL label="GP Equity" hint="0=auto"><Inp type="number" value={project.gpEquityManual} onChange={v=>up({gpEquityManual:v})} /></FL>
-                  {project.finMode==="fund"&&<FL label="LP Equity" hint="0=auto"><Inp type="number" value={project.lpEquityManual} onChange={v=>up({lpEquityManual:v})} /></FL>}
+                  <FL label={ar?"حصة المطور":"GP Equity"} hint="0=auto"><Inp type="number" value={project.gpEquityManual} onChange={v=>up({gpEquityManual:v})} /></FL>
+                  {project.finMode==="fund"&&<FL label={ar?"حصة المستثمرين":"LP Equity"} hint="0=auto"><Inp type="number" value={project.lpEquityManual} onChange={v=>up({lpEquityManual:v})} /></FL>}
                 </div>
               </>}
             </div>
@@ -1803,8 +1803,8 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                 <FL label={ar?"سنة بداية الصندوق":"Fund Start"} hint="0=auto"><Inp type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} /></FL>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="Priority return before split. 8-15%"><Inp type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></FL>
-                  <FL label={ar?"Carry % / حصة الأداء":"Carry %"} tip="Developer share. 20-30%"><Inp type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></FL>
+                  <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="الحد الأدنى للعائد السنوي لـ LP قبل مشاركة GP. عادة 8-15%\nMinimum annual return for LP before GP shares profits. Usually 8-15%"><Inp type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></FL>
+                  <FL label={ar?"Carry % / حصة الأداء":"Carry %"} tip="نسبة أرباح GP بعد تجاوز العائد التفضيلي. عادة 20-30%\nGP profit share after pref return is met. Usually 20-30%"><Inp type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></FL>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"نسبة توزيع LP":"LP Split %"}><Inp type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></FL>
@@ -1825,7 +1825,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                 </>}
               </> : project.finMode !== "self" && project.finMode !== "bank100" ? <>
                 <div style={{fontSize:10,fontWeight:700,color:"#6b7080",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #e5e7ec"}}>{ar?"الرسوم":"Fees"}</div>
-                <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="Developer fee as % of CAPEX"><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
+                <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
               </> : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#9ca3af",fontSize:12}}>{project.finMode==="self"?ar?"لا يوجد تمويل خارجي":"No external financing":""}</div>}
             </div>
           </div>
@@ -2681,12 +2681,12 @@ function ControlPanel({ project, up, t, lang }) {
     {/* ── 4. ASSUMPTIONS (CAPEX + Revenue merged) ── */}
     <Sec title={ar?"افتراضات التكاليف والإيرادات":"Cost & Revenue Assumptions"} filled={project.softCostPct > 0 || project.rentEscalation > 0} summary={`${project.softCostPct}% soft | ${project.rentEscalation}% esc`}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.softCost} tip="Indirect costs: design, supervision, permits. Standard 8-12%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
-        <Fld label={t.contingency} tip="Risk reserve for unexpected costs. Standard 3-7%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
+        <Fld label={t.softCost} tip="تكاليف غير مباشرة: تصميم، إشراف، تصاريح. عادة 8-15%\nIndirect costs: design, supervision, permits. Standard 8-15%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
+        <Fld label={t.contingency} tip="احتياطي طوارئ للمخاطر غير المتوقعة. عادة 5-10%\nRisk reserve for unexpected costs. Standard 5-10%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
       </div>
-      <Fld label={t.rentEsc} tip="Annual rent increase %. Saudi prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
+      <Fld label={t.rentEsc} tip="نسبة الزيادة السنوية في الإيجار. المناطق الرئيسية 2-5%، الثانوية 0.5-2%\nAnnual rent increase %. Prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.defEfficiency} tip="Leasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
+        <Fld label={t.defEfficiency} tip="نسبة المساحة القابلة للتأجير من GFA. مكاتب 80-90%، تجزئة 70-85%\nLeasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
         <Fld label={t.defLeaseRate}><SidebarInput type="number" value={project.defaultLeaseRate} onChange={v=>up({defaultLeaseRate:v})} /></Fld>
       </div>
       <Fld label={t.defCostSqm}><SidebarInput type="number" value={project.defaultCostPerSqm} onChange={v=>up({defaultCostPerSqm:v})} /></Fld>
