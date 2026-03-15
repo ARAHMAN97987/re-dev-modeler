@@ -1479,10 +1479,6 @@ function FinancingView({ project, results, financing, t, up, lang }) {
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
 
-  // Styles defined here but components are top-level (below) to prevent focus loss
-  const ar = lang === "ar";
-  const cur = project.currency || "SAR";
-
   if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:32,marginBottom:12}}>📊</div>
     <div style={{fontSize:14,fontWeight:500,color:"#6b7080",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
