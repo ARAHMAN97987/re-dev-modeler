@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo, Component } from "react";
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
-import { generateFormulaExcel } from "./excelFormulaExport";
 import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
@@ -3586,10 +3585,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     <div style={{display:"flex",gap:10,marginBottom:18}}>
       {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
       <button onClick={() => generateProfessionalExcel(project, results, financing, waterfall, null, checks)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 18px",fontSize:12,border:"1px solid #bbf7d0",fontWeight:500}}>
-        {lang==="ar"?"⬇ تصدير Excel (بيانات)":"⬇ Export Excel (Data)"}
-      </button>
-      <button onClick={() => generateFormulaExcel(project, results, financing, waterfall)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"8px 18px",fontSize:12,border:"1px solid #bfdbfe",fontWeight:600}}>
-        {lang==="ar"?"⬇ تصدير النموذج الكامل (معادلات)":"⬇ Full Model (with Formulas)"}
+        {lang==="ar"?"⬇ تصدير النموذج الكامل (Excel)":"⬇ Export Full Model (Excel)"}
       </button>
     </div>
 
