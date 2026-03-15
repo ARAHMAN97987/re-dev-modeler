@@ -960,16 +960,19 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const devCostInclLand = devCostExclLand + landCapValue;
 
   if (project.finMode === "self") {
+    // For self-funded: use incentive-adjusted CF if available
+    const selfCF = ir && ir.adjustedNetCF ? [...ir.adjustedNetCF] : [...c.netCF];
+    const selfIRR = ir && ir.adjustedIRR !== null ? ir.adjustedIRR : c.irr;
     return {
       mode: "self", landCapValue, devCostExclLand, devCostInclLand, capexGrantTotal,
       gpEquity: devCostInclLand, lpEquity: 0, totalEquity: devCostInclLand, gpPct: 1, lpPct: 0,
-      leveredCF: [...c.netCF], debtBalOpen: new Array(h).fill(0), debtBalClose: new Array(h).fill(0),
+      leveredCF: selfCF, debtBalOpen: new Array(h).fill(0), debtBalClose: new Array(h).fill(0),
       debtService: new Array(h).fill(0),
       interest: new Array(h).fill(0), originalInterest: new Array(h).fill(0),
       repayment: new Array(h).fill(0), drawdown: new Array(h).fill(0),
       equityCalls: c.capex.map((v, i) => Math.max(0, v + (c.landRent[i]||0))), dscr: new Array(h).fill(null),
       totalDebt: 0, totalInterest: 0, interestSubsidyTotal: 0, interestSubsidySchedule: new Array(h).fill(0),
-      upfrontFee: 0, leveredIRR: c.irr, exitProceeds: new Array(h).fill(0),
+      upfrontFee: 0, leveredIRR: selfIRR, exitProceeds: new Array(h).fill(0),
       maxDebt: 0, rate: 0, tenor: 0, grace: 0, repayYears: 0, constrEnd: 0, repayStart: 0, exitYear: 0,
     };
   }
@@ -2153,10 +2156,12 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           try {
           const c = results.consolidated;
           if (!c) return null;
-          const irr = c.irr;
+          const _ir = incentivesResult;
+          const _hasInc = _ir && _ir.totalIncentiveValue > 0;
+          const irr = _hasInc && _ir.adjustedIRR !== null ? _ir.adjustedIRR : c.irr;
+          const npv = _hasInc ? _ir.adjustedNPV10 : (c.npv10 || 0);
           const dscrVals = financing && financing.dscr ? financing.dscr.filter(d=>d!==null) : [];
           const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
-          const npv = c.npv10 || 0;
           const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
           const dscrOk = minDscr === null ? -1 : minDscr > 1.4 ? 2 : minDscr > 1.25 ? 1 : 0;
           const npvOk = npv > 0 ? 2 : 0;
@@ -2234,7 +2239,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} checks={checks} lang={lang} />}
           {activeTab==="scenarios"&&<ScenariosView project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />}
           {activeTab==="incentives"&&<IncentivesView project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />}
-          {activeTab==="cashflow"&&<CashFlowView project={project} results={results} t={t} />}
+          {activeTab==="cashflow"&&<CashFlowView project={project} results={results} t={t} incentivesResult={incentivesResult} />}
           {activeTab==="checks"&&<ChecksView checks={checks} t={t} lang={lang} />}
         </div>
       </div>
@@ -3244,8 +3249,8 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
           <td style={{...tdSt,textAlign:"center"}}>{project.assets.length}</td>
           <td style={tdN}>{fmt(c.totalCapex)}</td><td style={tdN}>{fmt(c.totalIncome)}</td>
           <td style={{...tdN,color:"#ef4444"}}>{fmt(c.totalLandRent)}</td>
-          <td style={{...tdN,color:c.totalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(c.totalNetCF)}</td>
-          <td style={{...tdN,fontWeight:700}}>{c.irr!==null?fmtPct(c.irr*100):"—"}</td>
+          <td style={{...tdN,color:displayTotalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(displayTotalNetCF)}</td>
+          <td style={{...tdN,fontWeight:700}}>{displayIRR!==null?fmtPct(displayIRR*100):"—"}{hasIncentives?" *":""}</td>
           <td style={tdN}></td><td style={tdN}></td>
         </tr>
       </tbody></table></div>
@@ -3307,7 +3312,7 @@ function KPI({label,value,sub,color,tip}) {
 // ═══════════════════════════════════════════════════════════════
 // CASH FLOW VIEW
 // ═══════════════════════════════════════════════════════════════
-function CashFlowView({ project, results, t }) {
+function CashFlowView({ project, results, t, incentivesResult }) {
   if (!project||!results) return <div style={{color:"#9ca3af"}}>Add assets to see projections.</div>;
   const [showYrs,setShowYrs]=useState(15);
   const [showCumulative,setShowCumulative]=useState(false);
@@ -3368,7 +3373,7 @@ function CashFlowView({ project, results, t }) {
     ))}
     <div style={{background:"#fff",borderRadius:8,border:"2px solid #2563eb",overflow:"hidden"}}>
       <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,background:"#f0f4ff",display:"flex",justifyContent:"space-between"}}>
-        <span>{t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>IRR: <strong style={{color:"#2563eb"}}>{c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
+        <span>{t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>IRR: <strong style={{color:"#2563eb"}}>{(incentivesResult&&incentivesResult.totalIncentiveValue>0&&incentivesResult.adjustedIRR!==null)?fmtPct(incentivesResult.adjustedIRR*100):c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
       </div>
       <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
         <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:100}}>{t.lineItem}</th>
