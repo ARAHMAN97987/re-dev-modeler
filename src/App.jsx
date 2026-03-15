@@ -915,6 +915,20 @@ function computeIncentives(project, projectResults) {
   }
   result.totalIncentiveValue = result.capexGrantTotal + result.landRentSavingTotal + result.feeRebateTotal;
 
+  // ── Finance Support value (calculated later in computeFinancing, but estimate here for display) ──
+  const fs = project.incentives?.financeSupport;
+  if (fs?.enabled) {
+    if (fs.subType === 'interestSubsidy') {
+      // Estimate: subsidy saves subsidyPct of total interest. Rough estimate for KPI card.
+      // Actual calculation happens in applyInterestSubsidy inside computeFinancing.
+      result.finSupportEstimate = true; // Flag that finance support is active
+    } else if (fs.subType === 'softLoan') {
+      const slAmt = fs.softLoanAmount || 0;
+      result.softLoanAmount = slAmt;
+      result.finSupportEstimate = true;
+    }
+  }
+
   // ── Adjusted CF with incentives (for correct IRR/NPV) ──
   const adjCF = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
@@ -929,23 +943,51 @@ function computeIncentives(project, projectResults) {
   return result;
 }
 
-// Interest subsidy applied inside computeFinancing
-function applyInterestSubsidy(project, interest, constrEnd) {
+// Interest subsidy AND soft loan applied inside computeFinancing
+function applyInterestSubsidy(project, interest, constrEnd, totalDebt, rate) {
   const inc = project.incentives?.financeSupport;
-  if (!inc?.enabled || inc.subType !== "interestSubsidy") return { adjusted: interest, savings: new Array(interest.length).fill(0), total: 0 };
+  if (!inc?.enabled) return { adjusted: interest, savings: new Array(interest.length).fill(0), total: 0, softLoanSavings: 0 };
   const h = interest.length;
-  const startYr = inc.subsidyStart === "operation" ? constrEnd + 1 : 0;
-  const endYr = startYr + (inc.subsidyYears || 5);
-  const pct = (inc.subsidyPct || 0) / 100;
   const adjusted = [...interest];
   const savings = new Array(h).fill(0);
   let total = 0;
-  for (let y = startYr; y < endYr && y < h; y++) {
-    savings[y] = interest[y] * pct;
-    adjusted[y] = interest[y] * (1 - pct);
-    total += savings[y];
+
+  if (inc.subType === "interestSubsidy") {
+    const startYr = inc.subsidyStart === "operation" ? constrEnd + 1 : 0;
+    const endYr = startYr + (inc.subsidyYears || 5);
+    const pct = (inc.subsidyPct || 0) / 100;
+    for (let y = startYr; y < endYr && y < h; y++) {
+      savings[y] = interest[y] * pct;
+      adjusted[y] = interest[y] * (1 - pct);
+      total += savings[y];
+    }
+  } else if (inc.subType === "softLoan") {
+    // Soft loan = government provides 0% loan, reducing commercial interest
+    // Benefit = portion of debt that's interest-free × commercial rate
+    const slAmt = Math.min(inc.softLoanAmount || 0, totalDebt);
+    const slTenor = inc.softLoanTenor || 10;
+    const slGrace = inc.softLoanGrace || 3;
+    if (slAmt > 0 && rate > 0) {
+      // Soft loan portion doesn't accrue interest
+      // Savings each year = (soft loan outstanding) × commercial rate
+      let slBalance = slAmt;
+      const slRepayYrs = Math.max(1, slTenor - slGrace);
+      const slAnnualRepay = slAmt / slRepayYrs;
+      for (let y = 0; y < h && slBalance > 0; y++) {
+        // Interest saving = soft loan balance × commercial rate (would have paid this)
+        const saving = slBalance * rate;
+        savings[y] = Math.min(saving, interest[y]); // Can't save more than actual interest
+        adjusted[y] = interest[y] - savings[y];
+        total += savings[y];
+        // Repay soft loan after grace
+        if (y >= slGrace) {
+          slBalance = Math.max(0, slBalance - slAnnualRepay);
+        }
+      }
+    }
   }
-  return { adjusted, savings, total };
+
+  return { adjusted, savings, total, softLoanSavings: total };
 }
 
 function computeFinancing(project, projectResults, incentivesResult) {
@@ -1087,7 +1129,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   // ── Apply interest subsidy ──
-  const intSub = applyInterestSubsidy(project, interest, constrEnd);
+  const intSub = applyInterestSubsidy(project, interest, constrEnd, totalDrawn, rate);
   const adjustedInterest = intSub.adjusted;
   const adjustedDebtService = new Array(h).fill(0);
   for (let y = 0; y < h; y++) adjustedDebtService[y] = repay[y] + adjustedInterest[y];
@@ -2159,9 +2201,12 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           const c = results.consolidated;
           if (!c) return null;
           const _ir = incentivesResult;
-          const _hasInc = _ir && _ir.totalIncentiveValue > 0;
-          const irr = _hasInc && _ir.adjustedIRR !== null ? _ir.adjustedIRR : c.irr;
-          const npv = _hasInc ? _ir.adjustedNPV10 : (c.npv10 || 0);
+          const _fin = financing;
+          const _hasInc = (_ir && _ir.totalIncentiveValue > 0) || (_ir && _ir.finSupportEstimate) || (_fin && _fin.interestSubsidyTotal > 0);
+          // Use levered IRR if financing exists (includes all incentives), otherwise adjusted unlevered
+          const irr = _fin && _fin.mode !== "self" && _fin.leveredIRR !== null ? _fin.leveredIRR
+            : (_ir && _ir.totalIncentiveValue > 0 && _ir.adjustedIRR !== null) ? _ir.adjustedIRR : c.irr;
+          const npv = (_ir && _ir.totalIncentiveValue > 0) ? _ir.adjustedNPV10 : (c.npv10 || 0);
           const dscrVals = financing && financing.dscr ? financing.dscr.filter(d=>d!==null) : [];
           const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
           const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
@@ -3157,10 +3202,10 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const ir = incentivesResult;
 
   // Use incentive-adjusted values if incentives are active
-  const hasIncentives = ir && ir.totalIncentiveValue > 0;
-  const displayIRR = hasIncentives && ir.adjustedIRR !== null ? ir.adjustedIRR : c.irr;
-  const displayNPV10 = hasIncentives ? ir.adjustedNPV10 : c.npv10;
-  const displayTotalNetCF = hasIncentives ? ir.adjustedTotalNetCF : c.totalNetCF;
+  const hasIncentives = (ir && ir.totalIncentiveValue > 0) || (ir && ir.finSupportEstimate) || (f && f.interestSubsidyTotal > 0);
+  const displayIRR = (ir && ir.totalIncentiveValue > 0 && ir.adjustedIRR !== null) ? ir.adjustedIRR : c.irr;
+  const displayNPV10 = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedNPV10 : c.npv10;
+  const displayTotalNetCF = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedTotalNetCF : c.totalNetCF;
 
   // Payback period
   let cumCF = 0, paybackYr = null;
