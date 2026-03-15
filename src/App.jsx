@@ -3845,6 +3845,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18}}>
       {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
+      <button onClick={()=>generateFullModelXLSX(project, results, financing, waterfall)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 18px",fontSize:12,border:"1px solid #bbf7d0",fontWeight:500}}>
         {lang==="ar"?"⬇ تصدير النموذج الكامل (Excel)":"⬇ Export Full Model (Excel)"}
       </button>
     </div>
