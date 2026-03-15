@@ -2223,7 +2223,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           const metrics = [
             irr !== null && { label: "IRR", value: (irr*100).toFixed(1)+"%", ok: irrOk },
             minDscr !== null && { label: "DSCR", value: minDscr.toFixed(2)+"x", ok: dscrOk },
-            { label: "NPV", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv > 0 ? "+":"—", ok: npvOk },
+            { label: ar?"صافي القيمة":"NPV", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv > 0 ? "+":"—", ok: npvOk },
           ].filter(Boolean);
           return (
             <div style={{background:cfg.bg,borderBottom:"1px solid "+cfg.border,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11}}>
@@ -2684,12 +2684,12 @@ function ControlPanel({ project, up, t, lang }) {
     {/* ── 4. ASSUMPTIONS (CAPEX + Revenue merged) ── */}
     <Sec title={ar?"افتراضات التكاليف والإيرادات":"Cost & Revenue Assumptions"} filled={project.softCostPct > 0 || project.rentEscalation > 0} summary={`${project.softCostPct}% soft | ${project.rentEscalation}% esc`}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.softCost} tip="تكاليف غير مباشرة: تصميم، إشراف، تصاريح. عادة 8-15%\nIndirect costs: design, supervision, permits. Standard 8-15%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
-        <Fld label={t.contingency} tip="احتياطي طوارئ للمخاطر غير المتوقعة. عادة 5-10%\nRisk reserve for unexpected costs. Standard 5-10%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
+        <Fld label={t.softCost} tip="تشمل التصميم، الدراسات، الإشراف، التصاريح وإدارة المشروع. عادة 8-15%\nDesign, studies, supervision, permits, project management. Usually 8-15%: تصميم، إشراف، تصاريح. عادة 8-15%\nIndirect costs: design, supervision, permits. Standard 8-15%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
+        <Fld label={t.contingency} tip="هامش احتياطي لزيادات الأسعار أو تغييرات التنفيذ. عادة 5-10%\nReserve for cost overruns or scope changes. Usually 5-10% للمخاطر غير المتوقعة. عادة 5-10%\nRisk reserve for unexpected costs. Standard 5-10%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
       </div>
-      <Fld label={t.rentEsc} tip="نسبة الزيادة السنوية في الإيجار. المناطق الرئيسية 2-5%، الثانوية 0.5-2%\nAnnual rent increase %. Prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
+      <Fld label={t.rentEsc} tip="الزيادة السنوية المفترضة في الإيجار. المناطق الرئيسية 2-5%، الثانوية 0.5-2%\nAssumed annual rent increase. Prime areas 2-5%, secondary 0.5-2% في الإيجار. المناطق الرئيسية 2-5%، الثانوية 0.5-2%\nAnnual rent increase %. Prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.defEfficiency} tip="نسبة المساحة القابلة للتأجير من GFA. مكاتب 80-90%، تجزئة 70-85%\nLeasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
+        <Fld label={t.defEfficiency} tip="نسبة المساحة المدرة للدخل من GFA. مكاتب 75-85%، تجزئة 80-90%\nIncome-generating share of GFA. Offices 75-85%, Retail 80-90% للتأجير من GFA. مكاتب 80-90%، تجزئة 70-85%\nLeasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
         <Fld label={t.defLeaseRate}><SidebarInput type="number" value={project.defaultLeaseRate} onChange={v=>up({defaultLeaseRate:v})} /></Fld>
       </div>
       <Fld label={t.defCostSqm}><SidebarInput type="number" value={project.defaultCostPerSqm} onChange={v=>up({defaultCostPerSqm:v})} /></Fld>
@@ -3268,7 +3268,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     </div>
     {/* Secondary KPIs */}
     <div className="kpi-secondary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
-      <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" tip="مجموع كل الإيرادات خلال فترة النموذج\nSum of all revenue over the projection horizon" />
+      <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" tip="مجموع كل الإيرادات خلال فترة النموذج\nTotal revenue over the full projection horizon" />
       <KPI label={t.totalNetCF} value={fmtM(displayTotalNetCF)} sub={cur+(hasIncentives?` (${ar?"شامل الحوافز":"incl. incentives"})`:"")} color="#8b5cf6" tip="صافي التدفق = الإيرادات - التكاليف - إيجار الأرض\nNet CF = Income - CAPEX - Land Rent" />
       {f && f.mode !== "self" && <KPI label={ar?"إجمالي الدين":"Total Debt"} value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" tip="إجمالي القرض المسحوب من البنك\nTotal loan drawn from bank" />}
       <KPI label={ar?"فترة الاسترداد":"Payback"} value={paybackYr ? (ar?`سنة ${paybackYr}`:`Year ${paybackYr}`) : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" tip="عدد السنوات حتى يصبح التدفق التراكمي موجب\nYears until cumulative cash flow turns positive" />
