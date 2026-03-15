@@ -293,41 +293,41 @@ const L = {
     partner: "Land as Equity (Partner)", bot: "Land Swap / BOT",
   },
   ar: {
-    title: "ZAN", subtitle: "منصة النمذجة المالية للتطوير العقاري",
+    title: "ZAN", subtitle: "منصة النمذجة المالية لمشاريع التطوير العقاري",
     newProject: "+ مشروع جديد", projects: "مشاريع", noProjects: "لا توجد مشاريع",
     noProjectsSub: "أنشئ مشروعك الأول للبدء",
     back: "→ رجوع", saved: "تم الحفظ", saving: "جاري الحفظ...", error: "خطأ",
     dashboard: "لوحة التحكم", assetProgram: "برنامج الأصول", cashFlow: "التدفق النقدي", checks: "فحوصات",
     general: "عام", location: "الموقع", startYear: "سنة البداية", horizon: "الأفق (سنوات)",
     currency: "العملة",
-    landAcq: "حيازة الأرض", landType: "النوع", landArea: "إجمالي مساحة الأرض (م²)",
+    landAcq: "الاستحواذ على الأرض", landType: "النوع", landArea: "إجمالي مساحة الأرض (م²)",
     annualRent: "الإيجار السنوي للأرض", escalation: "نسبة الزيادة %", everyN: "كل N سنة",
     grace: "فترة السماح (سنوات)", leaseTerm: "مدة الإيجار (سنوات)", purchasePrice: "سعر الشراء",
     landValuation: "تقييم الأرض", partnerEquity: "نسبة الشريك %", botYears: "فترة التشغيل (سنوات)",
-    capexAssumptions: "افتراضات التكاليف", softCost: "تكاليف غير مباشرة %", contingency: "طوارئ %",
+    capexAssumptions: "افتراضات التكاليف", softCost: "تكاليف غير مباشرة %", contingency: "احتياطي %",
     revenueAssumptions: "افتراضات الإيرادات", rentEsc: "الزيادة السنوية للإيجار %",
     defEfficiency: "الكفاءة الافتراضية %", defLeaseRate: "سعر الإيجار الافتراضي", defCostSqm: "تكلفة المتر الافتراضية",
     scenario: "سيناريو", activeScenario: "السيناريو النشط",
     capexMult: "معامل التكاليف %", rentMult: "معامل الإيجار %",
     delayMonths: "التأخير (أشهر)", escAdj: "تعديل الزيادة %",
-    phases: "المراحل", startOffset: "بداية المرحلة", footprint: "المسطح البنائي (م²)",
+    phases: "المراحل", startOffset: "إزاحة سنة البداية", footprint: "المسطح البنائي (م²)",
     addPhase: "+ إضافة مرحلة",
     addAsset: "+ إضافة أصل", assets: "أصول", noAssets: "لا توجد أصول. اضغط \"+ إضافة أصل\" للبدء.",
     phase: "المرحلة", category: "التصنيف", assetName: "اسم الأصل", code: "الرمز",
-    plotArea: "مساحة القطعة", bldgFootprint: "المسطح البنائي", gfa: "المساحة (م²)", revType: "نوع الإيراد",
+    plotArea: "مساحة القطعة", bldgFootprint: "المسطح البنائي", gfa: "GFA (م²)", revType: "نوع الإيراد",
     efficiency: "الكفاءة %", leasable: "المساحة التأجيرية", leaseRate: "إيجار/م²", opEbitda: "الأرباح التشغيلية",
     escPct: "الزيادة %", rampYrs: "سنوات النمو", occPct: "الإشغال %", costSqm: "تكلفة/م²",
     constrStart: "سنة البناء", constrDur: "المدة (شهر)", totalCapex: "إجمالي التكاليف",
     totalIncome: "إجمالي الإيرادات",
     totalCapexLabel: "إجمالي تكاليف التطوير", totalIncomeLabel: "إجمالي الإيرادات",
-    consolidatedIRR: "العائد الموحد", totalNetCF: "صافي التدفق النقدي",
+    consolidatedIRR: "IRR الموحّد", totalNetCF: "صافي التدفق النقدي",
     npv10: "القيمة الحالية @10%", npv12: "القيمة الحالية @12%",
     assetsLabel: "الأصول", checksLabel: "الفحوصات",
     phaseSummary: "ملخص المراحل", landConfig: "إعدادات الأرض",
     assetOverview: "نظرة عامة على الأصول",
-    unleveredCF: "التدفق النقدي غير المرفوع", lineItem: "البند", total: "الإجمالي",
+    unleveredCF: "التدفق النقدي قبل التمويل", lineItem: "البند", total: "الإجمالي",
     income: "الإيرادات", landRentLabel: "إيجار الأرض", capex: "تكاليف التطوير", netCF: "صافي التدفق النقدي",
-    consolidated: "الإجمالي الموحد",
+    consolidated: "الموحّد",
     modelChecks: "فحوصات سلامة النموذج", allPass: "الكل ناجح", errorFound: "يوجد أخطاء",
     check: "الفحص", status: "الحالة", description: "الوصف",
     hotelPL: "قائمة أرباح وخسائر الفندق / المنتجع", keys: "عدد الغرف", adr: "متوسط سعر الغرفة (ريال/ليلة)",
@@ -345,7 +345,7 @@ const L = {
     downloadTemplate: "تحميل النموذج", uploadFile: "رفع ملف Excel", exportAssets: "تصدير إلى Excel",
     importSuccess: "تم الاستيراد بنجاح", importError: "خطأ في الاستيراد",
     lease: "إيجار أرض (حق انتفاع)", purchase: "شراء أرض (تملك حر)",
-    partner: "أرض كحصة عينية (شراكة)", bot: "بناء-تشغيل-تحويل",
+    partner: "أرض كحصة عينية (شراكة)", bot: "مبادلة أرض / BOT",
   }
 };
 
@@ -358,7 +358,7 @@ const LAND_TYPES = [
   { value: "lease", en: "Land Lease (Leasehold)", ar: "إيجار أرض (حق انتفاع)" },
   { value: "purchase", en: "Land Purchase (Freehold)", ar: "شراء أرض (تملك حر)" },
   { value: "partner", en: "Land as Equity (Partner)", ar: "أرض كحصة عينية (شراكة)" },
-  { value: "bot", en: "Land Swap / BOT", ar: "بناء-تشغيل-تحويل" },
+  { value: "bot", en: "Land Swap / BOT", ar: "مبادلة أرض / BOT" },
 ];
 
 // Hotel presets from ZAN Excel
@@ -1439,7 +1439,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <CFRow label={lang==="ar"?"تعويض المطور":"T3: GP Catch-up"} values={w.tier3} total={w.tier3.reduce((a,b)=>a+b,0)} color="#f59e0b" />
         <CFRow label={lang==="ar"?"حصة LP من الأرباح":"T4: LP Profit Split"} values={w.tier4LP} total={w.tier4LP.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
         <CFRow label={lang==="ar"?"حصة GP من الأرباح":"T4: GP Profit Split"} values={w.tier4GP} total={w.tier4GP.reduce((a,b)=>a+b,0)} color="#3b82f6" />
-        <tr style={{background:"#f0f4ff"}}><td colSpan={years.length+2} style={{padding:"4px 10px",fontSize:10,fontWeight:600,color:"#6b7080"}}>{lang==="ar"?"التوزيعات الصافية":"NET DISTRIBUTIONS"}</td></tr>
+        <tr style={{background:"#f0f4ff"}}><td colSpan={years.length+2} style={{padding:"4px 10px",fontSize:10,fontWeight:600,color:"#6b7080"}}>{lang==="ar"?"صافي التوزيعات":"NET DISTRIBUTIONS"}</td></tr>
         <CFRow label={lang==="ar"?"توزيعات LP":"LP Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
         <CFRow label={lang==="ar"?"توزيعات GP":"GP Distributions"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
         <tr style={{background:"#fefce8"}}><td colSpan={years.length+2} style={{padding:"4px 10px",fontSize:10,fontWeight:600,color:"#6b7080"}}>{lang==="ar"?"صافي التدفق النقدي":"NET CASH FLOW"}</td></tr>
@@ -1519,7 +1519,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
             {/* Column 1: Financing Mode + Debt */}
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               <div style={{fontSize:10,fontWeight:700,color:"#2563eb",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dbeafe"}}>{ar?"التمويل":"Financing"}</div>
-              <FL label={ar?"نوع التمويل":"Mode"} tip="Choose how the project will be funded">
+              <FL label={ar?"آلية التمويل":"Mode"} tip="Choose how the project will be funded">
                 <Drp lang={lang} value={project.finMode} onChange={v=>up({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
                   {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
                   {value:"bank100",en:"100% Bank Debt",ar:"بنكي 100%"},
@@ -1539,8 +1539,8 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                     <FL label={ar?"معدل %":"Rate %"} tip="Annual profit rate. 5-8%"><Inp type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    <FL label={ar?"مدة":"Tenor"} tip="Total years incl grace"><Inp type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></FL>
-                    <FL label={ar?"سماح":"Grace"} tip="Interest-only years"><Inp type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></FL>
+                    <FL label={ar?"مدة القرض":"Tenor"} tip="Total years incl grace"><Inp type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></FL>
+                    <FL label={ar?"فترة السماح":"Grace"} tip="Interest-only years"><Inp type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم %":"Fee %"}><Inp type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></FL>
@@ -1584,17 +1584,17 @@ function FinancingView({ project, results, financing, t, up, lang }) {
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               {project.finMode === "fund" ? <>
                 <div style={{fontSize:10,fontWeight:700,color:"#16a34a",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dcfce7"}}>{ar?"الصندوق والشلال":"Fund & Waterfall"}</div>
-                <FL label={ar?"نوع الأداة":"Vehicle"}><Drp lang={lang} value={project.vehicleType} onChange={v=>up({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
+                <FL label={ar?"الهيكل القانوني":"Vehicle"}><Drp lang={lang} value={project.vehicleType} onChange={v=>up({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
                 {project.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"}><Inp value={project.fundName} onChange={v=>up({fundName:v})} /></FL>}
                 <FL label={ar?"سنة بداية الصندوق":"Fund Start"} hint="0=auto"><Inp type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} /></FL>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="Priority return before split. 8-15%"><Inp type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></FL>
-                  <FL label={ar?"حصة الأداء %":"Carry %"} tip="Developer share. 20-30%"><Inp type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></FL>
+                  <FL label={ar?"Carry % / حصة الأداء":"Carry %"} tip="Developer share. 20-30%"><Inp type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></FL>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <FL label={ar?"حصة LP %":"LP Split %"}><Inp type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></FL>
-                  <FL label={ar?"تعويض GP؟":"Catch-up"}><Drp lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
+                  <FL label={ar?"نسبة توزيع LP":"LP Split %"}><Inp type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></FL>
+                  <FL label={ar?"GP Catch-up":"Catch-up"}><Drp lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
                 </div>
                 {project.vehicleType==="fund"&&<>
                   <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
@@ -1604,14 +1604,14 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                     <FL label={ar?"إدارة %":"Mgmt %"}><Inp type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    <FL label={ar?"تطوير %":"Dev Fee %"}><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
+                    <FL label={ar?"رسوم التطوير %":"Dev Fee %"}><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
                     <FL label={ar?"هيكلة %":"Struct %"}><Inp type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></FL>
                   </div>
-                  <FL label={ar?"حفظ سنوي":"Custody/yr"}><Inp type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></FL>
+                  <FL label={ar?"رسوم الحفظ السنوية":"Custody/yr"}><Inp type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></FL>
                 </>}
               </> : project.finMode !== "self" && project.finMode !== "bank100" ? <>
                 <div style={{fontSize:10,fontWeight:700,color:"#6b7080",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #e5e7ec"}}>{ar?"الرسوم":"Fees"}</div>
-                <FL label={ar?"رسوم تطوير %":"Dev Fee %"} tip="Developer fee as % of CAPEX"><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
+                <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="Developer fee as % of CAPEX"><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
               </> : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#9ca3af",fontSize:12}}>{project.finMode==="self"?ar?"لا يوجد تمويل خارجي":"No external financing":""}</div>}
             </div>
           </div>
@@ -1709,7 +1709,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
         <CFRow label={lang==="ar"?"تكاليف التطوير":"CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
         <CFRow label={lang==="ar"?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.totalDebt} color="#3b82f6" />
         <CFRow label={lang==="ar"?"سداد أصل الدين":"Debt Repayment"} values={f.repayment} total={f.repayment.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
-        <CFRow label={project.islamicMode==="conventional"?(lang==="ar"?"فوائد":"Interest"):(lang==="ar"?"تكلفة الربح":"Profit Cost")} values={f.interest} total={f.totalInterest} color="#ef4444" negate />
+        <CFRow label={project.islamicMode==="conventional"?(lang==="ar"?"فوائد":"Interest"):(lang==="ar"?"تكلفة التمويل":"Profit Cost")} values={f.interest} total={f.totalInterest} color="#ef4444" negate />
         <CFRow label={lang==="ar"?"إجمالي خدمة الدين":"Total Debt Service"} values={f.debtService} total={f.debtService.reduce((a,b)=>a+b,0)} color="#dc2626" negate />
         <CFRow label={lang==="ar"?"حصيلة التخارج":"Exit Proceeds"} values={f.exitProceeds} total={f.exitProceeds.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
         <CFRow label={lang==="ar"?"صافي التدفق الممول":"Levered Net CF"} values={f.leveredCF} total={f.leveredCF.reduce((a,b)=>a+b,0)} bold />
@@ -1995,9 +1995,9 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           const score = irrOk + (dscrOk >= 0 ? dscrOk : 0) + npvOk;
           const maxScore = 4 + (dscrOk >= 0 ? 2 : 0);
           const health = score >= maxScore * 0.7 ? "strong" : score >= maxScore * 0.4 ? "moderate" : "weak";
-          const cfg = { strong: { bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d", icon: "✓", label: lang==="ar"?"المشروع قوي":"Project Health: Strong" },
-                        moderate: { bg: "#fefce8", border: "#fde68a", color: "#92400e", icon: "⚠", label: lang==="ar"?"المشروع مقبول":"Project Health: Moderate" },
-                        weak: { bg: "#fef2f2", border: "#fecaca", color: "#991b1b", icon: "✗", label: lang==="ar"?"المشروع ضعيف":"Project Health: Weak" } }[health];
+          const cfg = { strong: { bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d", icon: "✓", label: lang==="ar"?"صحة المشروع: قوية":"Project Health: Strong" },
+                        moderate: { bg: "#fefce8", border: "#fde68a", color: "#92400e", icon: "⚠", label: lang==="ar"?"صحة المشروع: متوسطة":"Project Health: Moderate" },
+                        weak: { bg: "#fef2f2", border: "#fecaca", color: "#991b1b", icon: "✗", label: lang==="ar"?"صحة المشروع: ضعيفة":"Project Health: Weak" } }[health];
           const metrics = [
             irr !== null && { label: "IRR", value: (irr*100).toFixed(1)+"%", ok: irrOk },
             minDscr !== null && { label: "DSCR", value: minDscr.toFixed(2)+"x", ok: dscrOk },
@@ -2738,7 +2738,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                 {editingPhase === i ? (
                   <input value={ph.name} onChange={e => renamePhase(i, e.target.value)} onBlur={() => setEditingPhase(null)} onKeyDown={e => { if (e.key === "Enter") setEditingPhase(null); }} autoFocus style={{fontSize:11,fontWeight:600,border:"1px solid #2563eb",borderRadius:3,padding:"1px 5px",width:80,fontFamily:"inherit",outline:"none"}} />
                 ) : (
-                  <span onClick={() => setEditingPhase(i)} style={{fontSize:11,fontWeight:600,color:"#1a1d23",cursor:"pointer"}} title={ar?"اضغط للتعديل":"Click to rename"}>{ph.name}</span>
+                  <span onClick={() => setEditingPhase(i)} style={{fontSize:11,fontWeight:600,color:"#1a1d23",cursor:"pointer"}} title={ar?"اضغط لإعادة التسمية":"Click to rename"}>{ph.name}</span>
                 )}
                 <span style={{fontSize:9,color:"#9ca3af",background:"#e5e7ec",borderRadius:8,padding:"1px 5px"}}>{assetCount}</span>
                 {project.phases.length > 1 && (
@@ -2861,7 +2861,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
               <F2 label={ar?"الكفاءة %":"Efficiency %"}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"إيجار/م²":"Lease Rate"}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
-              <F2 label={ar?"أرباح تشغيلية":"Op EBITDA"}><EditableCell type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"EBITDA التشغيلية":"Op EBITDA"}><EditableCell type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"الزيادة %":"Escalation %"}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"سنوات النمو":"Ramp Years"}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"الإشغال %":"Occupancy %"}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
@@ -2993,7 +2993,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     return (<div>
       <div style={{background:"linear-gradient(135deg, #0f766e08, #1e40af12)",borderRadius:16,border:"1px solid #2563eb20",padding:"32px 28px",textAlign:"center",marginBottom:20}}>
         <div style={{fontSize:36,marginBottom:12}}>🚀</div>
-        <div style={{fontSize:20,fontWeight:700,color:"#1a1d23",marginBottom:8}}>{ar?"مشروعك جاهز! الخطوة التالية":"Your Project is Ready! Next Step"}</div>
+        <div style={{fontSize:20,fontWeight:700,color:"#1a1d23",marginBottom:8}}>{ar?"مشروعك جاهز. هذه هي الخطوة التالية":"Your Project is Ready! Next Step"}</div>
         <div style={{fontSize:13,color:"#6b7080",marginBottom:24,maxWidth:480,margin:"0 auto 24px"}}>{ar?"أضف أصول مشروعك (محلات، فنادق، مكاتب، سكني...) عشان تبدأ تشوف الأرقام والتحليلات":"Add your project assets (retail, hotels, offices, residential...) to start seeing numbers and analytics"}</div>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onGoToAssets} style={{...btnPrim,padding:"12px 28px",fontSize:14,borderRadius:10,display:"flex",alignItems:"center",gap:8}}>
@@ -3043,7 +3043,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
       <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" tip="صافي التدفق = الإيرادات - التكاليف - إيجار الأرض\nNet CF = Income - CAPEX - Land Rent" />
       {f && f.mode !== "self" && <KPI label={ar?"إجمالي الدين":"Total Debt"} value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" tip="إجمالي القرض المسحوب من البنك\nTotal loan drawn from bank" />}
       <KPI label={ar?"فترة الاسترداد":"Payback"} value={paybackYr ? (ar?`سنة ${paybackYr}`:`Year ${paybackYr}`) : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" tip="عدد السنوات حتى يصبح التدفق التراكمي موجب\nYears until cumulative cash flow turns positive" />
-      {cashYield !== null && <KPI label={ar?"العائد النقدي":"Cash Yield"} value={fmtPct(cashYield)} sub={ar?"على رأس المال":"on equity"} color="#16a34a" tip="التوزيعات السنوية / رأس المال المستثمر\nAnnual distributions / Equity invested" />}
+      {cashYield !== null && <KPI label={ar?"العائد النقدي":"Cash Yield"} value={fmtPct(cashYield)} sub={ar?"على حقوق الملكية":"on equity"} color="#16a34a" tip="التوزيعات السنوية / رأس المال المستثمر\nAnnual distributions / Equity invested" />}
       <KPI label={t.assetsLabel} value={project.assets.length} color="#6b7080" />
       <KPI label={t.checksLabel} value={fc===0?t.allPass:`${fc} FAIL`} color={fc===0?"#22c55e":"#ef4444"} />
     </div>
@@ -3634,9 +3634,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             {[
               {l:ar?"إجمالي التكاليف":"Total CAPEX",v:fmtM(fc.totalCapex),c:"#ef4444"},
               {l:ar?"إجمالي الإيرادات":"Total Income",v:fmtM(fc.totalIncome),c:"#16a34a"},
-              {l:ar?"IRR (غير ممول)":"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",c:"#2563eb"},
+              {l:ar?"IRR (قبل التمويل)":"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",c:"#2563eb"},
               {l:"NPV @10%",v:fmtM(fc.npv10),c:"#06b6d4"},
-              ...(f&&f.mode!=="self"&&!isFiltered?[{l:ar?"IRR (ممول)":"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",c:"#8b5cf6"},{l:ar?"إجمالي الدين":"Total Debt",v:fmtM(f.totalDebt),c:"#f59e0b"}]:[]),
+              ...(f&&f.mode!=="self"&&!isFiltered?[{l:ar?"IRR (بعد التمويل)":"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",c:"#8b5cf6"},{l:ar?"إجمالي الدين":"Total Debt",v:fmtM(f.totalDebt),c:"#f59e0b"}]:[]),
               ...(fw?[{l:"LP IRR",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",c:"#8b5cf6"},{l:"LP MOIC",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",c:"#8b5cf6"}]:[]),
             ].map((k,i) => (
               <div key={i} style={{border:"1px solid #e5e7ec",borderRadius:6,padding:"8px 10px"}}>
@@ -3946,7 +3946,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
   const sensParams = [
     { key: "rentEscalation", label: lang==="ar"?"زيادة الإيجار %":"Rent Escalation %", base: project.rentEscalation, steps: [-0.5, -0.25, 0, 0.25, 0.5] },
     { key: "softCostPct", label: lang==="ar"?"تكاليف غير مباشرة %":"Soft Cost %", base: project.softCostPct, steps: [-3, -1.5, 0, 1.5, 3] },
-    { key: "contingencyPct", label: lang==="ar"?"طوارئ %":"Contingency %", base: project.contingencyPct, steps: [-2, -1, 0, 1, 2] },
+    { key: "contingencyPct", label: lang==="ar"?"احتياطي %":"Contingency %", base: project.contingencyPct, steps: [-2, -1, 0, 1, 2] },
     { key: "financeRate", label: lang==="ar"?"معدل الربح %":"Finance Rate %", base: project.financeRate, steps: [-1.5, -0.75, 0, 0.75, 1.5] },
     { key: "maxLtvPct", label: "LTV %", base: project.maxLtvPct, steps: [-15, -7.5, 0, 7.5, 15] },
     { key: "landRentAnnual", label: lang==="ar"?"إيجار الأرض":"Land Rent", base: project.landRentAnnual, steps: [-2000000, -1000000, 0, 1000000, 2000000] },
@@ -4317,7 +4317,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
                     <span style={{padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:600,
                       background:r.risk==="low"?"#dcfce7":r.risk==="med"?"#fefce8":"#fef2f2",
                       color:r.risk==="low"?"#16a34a":r.risk==="med"?"#a16207":"#ef4444"}}>
-                      {r.risk==="low"?(lang==="ar"?"منخفض":"LOW RISK"):r.risk==="med"?(lang==="ar"?"متوسط":"MEDIUM"):lang==="ar"?"مرتفع":"HIGH RISK"}
+                      {r.risk==="low"?(lang==="ar"?"مخاطر منخفضة":"LOW RISK"):r.risk==="med"?(lang==="ar"?"مخاطر متوسطة":"MEDIUM"):lang==="ar"?"مخاطر مرتفعة":"HIGH RISK"}
                     </span>
                   </td>
                 </tr>
@@ -4502,7 +4502,7 @@ function ChecksView({ checks, t }) {
       </tr></thead><tbody>
         {checks.map((c,i)=><tr key={i}>
           <td style={{...tdSt,fontWeight:500}}>{c.name}</td>
-          <td style={{...tdSt,textAlign:"center"}}><span style={{fontSize:11,padding:"2px 8px",borderRadius:3,fontWeight:600,background:c.pass?"#dcfce7":"#fef2f2",color:c.pass?"#16a34a":"#ef4444"}}>{c.pass?(lang==="ar"?"نجح":"PASS"):(lang==="ar"?"فشل":"FAIL")}</span></td>
+          <td style={{...tdSt,textAlign:"center"}}><span style={{fontSize:11,padding:"2px 8px",borderRadius:3,fontWeight:600,background:c.pass?"#dcfce7":"#fef2f2",color:c.pass?"#16a34a":"#ef4444"}}>{c.pass?(lang==="ar"?"ناجح":"PASS"):(lang==="ar"?"فاشل":"FAIL")}</span></td>
           <td style={{...tdSt,color:"#6b7080"}}>{c.desc}</td>
         </tr>)}
       </tbody></table>
