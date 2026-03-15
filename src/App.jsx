@@ -2724,26 +2724,25 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
 
   return (
     <div>
-      <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"12px 16px",marginBottom:14}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-          <span style={{fontSize:12,fontWeight:600,color:"#1a1d23"}}>{ar?"المراحل":"Phases"}</span>
+      <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"8px 12px",marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+          <span style={{fontSize:10,fontWeight:600,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5}}>{ar?"المراحل":"Phases"}</span>
           <div style={{flex:1}} />
-          <button onClick={addPhase} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 12px",fontSize:10,fontWeight:600,border:"1px solid #bfdbfe"}}>+ {ar?"مرحلة":"Phase"}</button>
+          <button onClick={addPhase} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"3px 10px",fontSize:9,fontWeight:600,border:"1px solid #bfdbfe"}}>+ {ar?"مرحلة":"Phase"}</button>
         </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {project.phases.map((ph, i) => {
             const assetCount = assets.filter(a => a.phase === ph.name).length;
-            const fp = phaseFootprints[ph.name] || 0;
             return (
-              <div key={i} style={{background:"#f8f9fb",borderRadius:8,border:"1px solid #e5e7ec",padding:"8px 12px",minWidth:140,flex:"1 1 140px",position:"relative"}}>
+              <div key={i} style={{background:"#f8f9fb",borderRadius:6,border:"1px solid #e5e7ec",padding:"4px 10px",display:"flex",alignItems:"center",gap:6}}>
                 {editingPhase === i ? (
-                  <input value={ph.name} onChange={e => renamePhase(i, e.target.value)} onBlur={() => setEditingPhase(null)} onKeyDown={e => { if (e.key === "Enter") setEditingPhase(null); }} autoFocus style={{fontSize:12,fontWeight:600,border:"1px solid #2563eb",borderRadius:4,padding:"2px 6px",width:"100%",fontFamily:"inherit",outline:"none"}} />
+                  <input value={ph.name} onChange={e => renamePhase(i, e.target.value)} onBlur={() => setEditingPhase(null)} onKeyDown={e => { if (e.key === "Enter") setEditingPhase(null); }} autoFocus style={{fontSize:11,fontWeight:600,border:"1px solid #2563eb",borderRadius:3,padding:"1px 5px",width:80,fontFamily:"inherit",outline:"none"}} />
                 ) : (
-                  <div onClick={() => setEditingPhase(i)} style={{fontSize:12,fontWeight:600,color:"#1a1d23",cursor:"pointer"}} title={ar?"اضغط للتعديل":"Click to rename"}>{ph.name}</div>
+                  <span onClick={() => setEditingPhase(i)} style={{fontSize:11,fontWeight:600,color:"#1a1d23",cursor:"pointer"}} title={ar?"اضغط للتعديل":"Click to rename"}>{ph.name}</span>
                 )}
-                <div style={{fontSize:10,color:"#6b7080",marginTop:3}}>{assetCount} {ar?"أصول":"assets"} · {fmt(fp)} m²</div>
+                <span style={{fontSize:9,color:"#9ca3af",background:"#e5e7ec",borderRadius:8,padding:"1px 5px"}}>{assetCount}</span>
                 {project.phases.length > 1 && (
-                  <button onClick={() => rmPhase(i)} style={{position:"absolute",top:4,right:4,...btnS,background:"transparent",color:"#d0d4dc",padding:"0 4px",fontSize:11,lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#d0d4dc"} title={ar?"حذف المرحلة":"Delete phase"}>✕</button>
+                  <button onClick={()=>rmPhase(i)} style={{background:"none",border:"none",color:"#d0d4dc",padding:0,fontSize:11,cursor:"pointer",lineHeight:1,fontFamily:"inherit"}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#d0d4dc"} title={ar?"حذف":"Delete"}>✕</button>
                 )}
               </div>
             );
