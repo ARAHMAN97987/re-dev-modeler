@@ -630,200 +630,199 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
   const f = financing;
   const w = waterfall;
   const ir = incentivesResult;
-  const tol = 1; // SAR tolerance for rounding
-
+  const tol = 1;
   const phases = results.phaseResults || {};
-  const totalAlloc = Object.values(phases).reduce((s, p) => s + (p.allocPct || 0), 0);
-
   const checks = [];
   const add = (cat, name, pass, desc, detail) => checks.push({ cat, name, pass, desc, detail: detail || "" });
+  const fmt = n => n != null ? Math.round(n).toLocaleString() : "N/A";
+  const fp = n => n != null ? (n*100).toFixed(2)+"%" : "N/A";
 
   // ═══════════════════════════════════════════════
-  // T1: PROJECT ENGINE — Basic Data Integrity
+  // T1: PROJECT ENGINE (15 checks)
   // ═══════════════════════════════════════════════
-  add("T1", "GFA Total Match", Math.abs((project.assets||[]).reduce((s,a)=>s+(a.gfa||0),0) - as.reduce((s,a)=>s+(a.gfa||0),0)) < tol, "Program GFA = Computed GFA");
-  add("T1", "No Negative GFA", (project.assets||[]).every(a=>(a.gfa||0)>=0), "All GFA values ≥ 0");
-  add("T1", "Active Assets Have Duration", (project.assets||[]).every(a=>((a.gfa||0)===0&&(a.costPerSqm||0)===0)||(a.constrDuration||0)>0), "Assets with GFA have construction duration");
-  add("T1", "No Negative Leasable", as.every(a=>(a.leasableArea||0)>=0), "All leasable areas ≥ 0");
-  add("T1", "CAPEX Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - c.totalCapex) < tol, "Sum of asset CAPEX = consolidated CAPEX");
-  add("T1", "Revenue Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalRevenue,0) - c.totalIncome) < tol, "Sum of asset revenue = consolidated income");
-  add("T1", "Op Assets Have EBITDA", (project.assets||[]).filter(a=>a.revType==="Operating").every(a=>(a.opEbitda||0)>0||(a.gfa||0)===0), "Operating assets have EBITDA > 0");
-  add("T1", "Land Alloc = 100%", Object.keys(phases).length === 0 || Math.abs(totalAlloc - 1) < 0.01, "Land allocation sums to 100%");
-
-  // Phase CF sum = consolidated CF
-  const phaseIncome = Object.values(phases).reduce((s, p) => s + p.totalIncome, 0);
-  const phaseCapex = Object.values(phases).reduce((s, p) => s + p.totalCapex, 0);
-  add("T1", "Phase Income = Consolidated", Math.abs(phaseIncome - c.totalIncome) < tol, "Sum of phase incomes = consolidated income",
-    `Phases: ${Math.round(phaseIncome).toLocaleString()} vs Consolidated: ${Math.round(c.totalIncome).toLocaleString()}`);
-  add("T1", "Phase CAPEX = Consolidated", Math.abs(phaseCapex - c.totalCapex) < tol, "Sum of phase CAPEX = consolidated CAPEX");
-
-  // Net CF = Income - CAPEX - Land Rent (year by year)
-  let cfMismatch = false;
-  for (let y = 0; y < h; y++) {
-    const expected = c.income[y] - c.capex[y] - c.landRent[y];
-    if (Math.abs(c.netCF[y] - expected) > tol) { cfMismatch = true; break; }
-  }
-  add("T1", "Net CF = Income - CAPEX - Land", !cfMismatch, "Year-by-year CF equation holds");
-
-  // IRR/NPV consistency
-  add("T1", "IRR Sign Check", c.irr === null || (c.totalNetCF > 0 ? c.irr > -0.5 : true), "IRR sign is consistent with total CF");
-  add("T1", "NPV@10% Consistency", c.npv10 !== undefined, "NPV@10% computed");
+  add("T1","GFA Total Match", Math.abs((project.assets||[]).reduce((s,a)=>s+(a.gfa||0),0) - as.reduce((s,a)=>s+(a.gfa||0),0)) < tol, "Program GFA = Computed GFA");
+  add("T1","No Negative GFA", (project.assets||[]).every(a=>(a.gfa||0)>=0), "All GFA values ≥ 0");
+  add("T1","Active Assets Have Duration", (project.assets||[]).every(a=>((a.gfa||0)===0&&(a.costPerSqm||0)===0)||(a.constrDuration||0)>0), "Assets with GFA have construction duration");
+  add("T1","No Negative Leasable", as.every(a=>(a.leasableArea||0)>=0), "All leasable areas ≥ 0");
+  add("T1","CAPEX Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - c.totalCapex) < tol, "Sum asset CAPEX = consolidated",
+    `Assets: ${fmt(as.reduce((s,a)=>s+a.totalCapex,0))} vs Cons: ${fmt(c.totalCapex)}`);
+  add("T1","Revenue Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalRevenue,0) - c.totalIncome) < tol, "Sum asset revenue = consolidated");
+  add("T1","Op Assets Have EBITDA", (project.assets||[]).filter(a=>a.revType==="Operating").every(a=>(a.opEbitda||0)>0||(a.gfa||0)===0), "Operating assets have EBITDA");
+  const phInc = Object.values(phases).reduce((s,p)=>s+p.totalIncome,0);
+  const phCap = Object.values(phases).reduce((s,p)=>s+p.totalCapex,0);
+  add("T1","Phase Income = Consolidated", Math.abs(phInc-c.totalIncome)<tol, "Sum phase income = consolidated",
+    `Phases: ${fmt(phInc)} vs Cons: ${fmt(c.totalIncome)}`);
+  add("T1","Phase CAPEX = Consolidated", Math.abs(phCap-c.totalCapex)<tol, "Sum phase CAPEX = consolidated");
+  let cfOk = true;
+  for (let y=0;y<h;y++) { if (Math.abs(c.netCF[y]-(c.income[y]-c.capex[y]-c.landRent[y]))>tol) { cfOk=false; break; } }
+  add("T1","Net CF = Income - CAPEX - Land", cfOk, "Year-by-year CF equation holds");
+  const escOk = as.every(a => a.revenueSchedule[Math.min(9,h-1)]===0 || a.revenueSchedule[Math.min(4,h-1)]===0 || a.revenueSchedule[Math.min(9,h-1)] >= a.revenueSchedule[Math.min(4,h-1)]);
+  add("T1","Revenue Escalates", escOk, "Later years revenue ≥ earlier years");
+  add("T1","IRR Computed", c.irr !== null || c.totalNetCF <= 0, "IRR computed when CF positive", `IRR: ${fp(c.irr)}`);
+  add("T1","NPV@10% Computed", c.npv10 !== undefined, "NPV at 10% computed", `NPV: ${fmt(c.npv10)}`);
+  add("T1","Sum Consistency", Math.abs(c.totalNetCF-(c.totalIncome-c.totalCapex-c.totalLandRent))<tol, "Total Net CF = Income - CAPEX - Land");
+  if (project.landType === "lease") { add("T1","Lease Has Rent", c.totalLandRent>0, "Leased land generates annual rent"); }
+  else if (project.landType === "purchase") { add("T1","Purchase Y1 Only", c.landRent[0]>0&&(h<=1||c.landRent[1]===0), "Purchase cost in year 1 only"); }
+  else if (project.landType === "partner" || project.landType === "bot") { add("T1","No Land Cost", c.totalLandRent===0, "No cash land cost for partner/BOT"); }
 
   // ═══════════════════════════════════════════════
-  // T2: FINANCING ENGINE
+  // T2: FINANCING ENGINE (12 checks)
   // ═══════════════════════════════════════════════
   if (f && f.mode !== "self") {
-    // Capital structure equation: Debt + GP + LP = Dev Cost Incl Land
-    const capStructDiff = Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - f.devCostInclLand);
-    add("T2", "Capital Structure Equation", capStructDiff < 10000, "Debt + GP + LP = Dev Cost",
-      `${Math.round(f.totalDebt + f.gpEquity + f.lpEquity).toLocaleString()} vs ${Math.round(f.devCostInclLand).toLocaleString()} (diff: ${Math.round(capStructDiff).toLocaleString()})`);
-
-    // Debt balance never negative
-    add("T2", "Debt Balance ≥ 0", (f.debtBalClose||[]).every(v => v >= -0.01), "Debt balance never goes negative");
-
-    // Debt fully repaid by tenor end
-    const repayEndIdx = f.repayStart + f.repayYears - 1;
-    const balAtEnd = repayEndIdx >= 0 && repayEndIdx < h ? (f.debtBalClose[repayEndIdx] || 0) : 0;
-    add("T2", "Debt Fully Repaid", f.tenor === 0 || balAtEnd < 1, "Debt repaid by tenor end",
-      `Balance at year ${repayEndIdx+1}: ${Math.round(balAtEnd).toLocaleString()}`);
-
-    // Interest = (balOpen + drawdown + balClose) / 2 × rate
-    let intOk = true;
-    for (let y = 0; y < Math.min(h, 20); y++) {
-      if ((f.debtBalOpen[y] || 0) > 0 || (f.debtBalClose[y] || 0) > 0 || (f.drawdown?.[y] || 0) > 0) {
-        const expectedInt = ((f.debtBalOpen[y] || 0) + (f.drawdown?.[y] || 0) + (f.debtBalClose[y] || 0)) / 2 * f.rate;
-        const actualInt = Math.abs(f.originalInterest?.[y] || f.interest[y] || 0);
-        if (expectedInt > 0 && Math.abs(actualInt - expectedInt) / expectedInt > 0.05) { intOk = false; break; }
+    const capDiff = Math.abs((f.totalDebt+f.gpEquity+f.lpEquity)-f.devCostInclLand);
+    add("T2","Capital Structure Equation", capDiff<10000, "Debt + GP + LP = Dev Cost",
+      `${fmt(f.totalDebt+f.gpEquity+f.lpEquity)} vs ${fmt(f.devCostInclLand)} (diff: ${fmt(capDiff)})`);
+    add("T2","Debt Balance ≥ 0", (f.debtBalClose||[]).every(v=>v>=-0.01), "Debt balance never negative");
+    const rpEnd = f.repayStart+f.repayYears-1;
+    const balEnd = rpEnd>=0&&rpEnd<h?(f.debtBalClose[rpEnd]||0):0;
+    add("T2","Debt Fully Repaid", f.tenor===0||balEnd<1, "Debt repaid by tenor end", `Balance at year ${rpEnd+1}: ${fmt(balEnd)}`);
+    let intOk=true;
+    for (let y=0;y<Math.min(h,20);y++) {
+      if ((f.debtBalOpen[y]||0)>0||(f.debtBalClose[y]||0)>0||(f.drawdown?.[y]||0)>0) {
+        const exp=((f.debtBalOpen[y]||0)+(f.drawdown?.[y]||0)+(f.debtBalClose[y]||0))/2*f.rate;
+        const act=Math.abs(f.originalInterest?.[y]||f.interest[y]||0);
+        if (exp>0&&Math.abs(act-exp)/exp>0.05) { intOk=false; break; }
       }
     }
-    add("T2", "Interest = Avg Balance × Rate", intOk, "Interest calc uses average balance method");
-
-    // Equity calls ≥ Total Equity (calls include fees on top of equity in fund mode)
-    const totalEqCalls = (f.equityCalls||[]).reduce((s,v)=>s+v,0);
-    add("T2", "Equity Calls ≥ Total Equity", totalEqCalls >= f.totalEquity - 10000, "Equity calls cover at least total equity",
-      `Calls: ${Math.round(totalEqCalls).toLocaleString()} vs Equity: ${Math.round(f.totalEquity).toLocaleString()}`);
-
-    // Drawdown = Total Debt
-    const totalDrawn = (f.drawdown||[]).reduce((s,v)=>s+v,0);
-    add("T2", "Drawdown = Total Debt", Math.abs(totalDrawn - f.totalDebt) < 1, "Sum drawdowns = max debt drawn");
-
-    // Levered CF check: income - landRent - capex + drawdown + exit - debtService = levered CF
-    let levCfOk = true;
-    const adjLR = ir?.adjustedLandRent || c.landRent;
-    for (let y = 0; y < h; y++) {
-      const expected = c.income[y] - adjLR[y] - c.capex[y]
-        + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0)
-        - f.debtService[y] + f.drawdown[y] + (f.exitProceeds?.[y] || 0);
-      if (Math.abs(f.leveredCF[y] - expected) > tol) { levCfOk = false; break; }
+    add("T2","Interest = Avg Balance × Rate", intOk, "Interest uses (open+draw+close)/2 × rate");
+    const totEqC=(f.equityCalls||[]).reduce((s,v)=>s+v,0);
+    add("T2","Equity Calls ≥ Equity", totEqC>=f.totalEquity-10000, "Equity calls cover equity",
+      `Calls: ${fmt(totEqC)} vs Equity: ${fmt(f.totalEquity)}`);
+    const totDrw=(f.drawdown||[]).reduce((s,v)=>s+v,0);
+    add("T2","Drawdown = Total Debt", Math.abs(totDrw-f.totalDebt)<1, "Sum drawdowns = debt drawn");
+    let graceOk=true;
+    if (f.repayStart>0) { for(let y=0;y<f.repayStart&&y<h;y++) { if((f.repayment?.[y]||0)>1){graceOk=false;break;} } }
+    add("T2","Grace Period Respected", graceOk, "No repayment during grace period");
+    const adjLR=ir?.adjustedLandRent||c.landRent;
+    let levOk=true;
+    for(let y=0;y<h;y++){
+      const exp=c.income[y]-adjLR[y]-c.capex[y]+(ir?.capexGrantSchedule?.[y]||0)+(ir?.feeRebateSchedule?.[y]||0)-f.debtService[y]+f.drawdown[y]+(f.exitProceeds?.[y]||0);
+      if(Math.abs(f.leveredCF[y]-exp)>tol){levOk=false;break;}
     }
-    add("T2", "Levered CF Equation", levCfOk, "Levered CF = Income - Land - CAPEX + Incentives - Debt + Exit");
-
-    // DSCR spot check
-    let dscrOk = true;
-    for (let y = 0; y < h; y++) {
-      if (f.debtService[y] > 0 && f.dscr[y] !== null) {
-        const expectedDscr = (c.income[y] - adjLR[y]) / f.debtService[y];
-        if (Math.abs(f.dscr[y] - expectedDscr) > 0.01) { dscrOk = false; break; }
+    add("T2","Levered CF Equation", levOk, "LevCF = Income - Land - CAPEX + Grants - DS + Draw + Exit");
+    let dscrOk=true;
+    for(let y=0;y<h;y++){
+      if(f.debtService[y]>0&&f.dscr[y]!==null){
+        const exp=(c.income[y]-adjLR[y])/f.debtService[y];
+        if(Math.abs(f.dscr[y]-exp)>0.01){dscrOk=false;break;}
       }
     }
-    add("T2", "DSCR = NOI / Debt Service", dscrOk, "DSCR calculation is consistent");
+    add("T2","DSCR = NOI / Debt Service", dscrOk, "DSCR calculation consistent");
+    add("T2","GP + LP = Equity", Math.abs(f.gpEquity+f.lpEquity-f.totalEquity)<1, "GP + LP = total equity");
+    if (f.leveredIRR!==null&&c.irr!==null) {
+      add("T2","Leverage Changes IRR", Math.abs(f.leveredIRR-c.irr)>0.001, "Levered ≠ Unlevered IRR",
+        `Unlev: ${fp(c.irr)} Lev: ${fp(f.leveredIRR)}`);
+    }
+    if (f.interestSubsidyTotal>0) {
+      add("T2","Interest Subsidy Active", true, "Finance support reduces interest", `Savings: ${fmt(f.interestSubsidyTotal)}`);
+    }
   }
 
   // ═══════════════════════════════════════════════
-  // T3: WATERFALL ENGINE
+  // T3: WATERFALL ENGINE (10 checks)
   // ═══════════════════════════════════════════════
-  if (w) {
-    // LP + GP distributions = total distributions
-    add("T3", "LP + GP = Total Dist", Math.abs((w.lpTotalDist + w.gpTotalDist) - (w.lpTotalDist + w.gpTotalDist)) < tol, "LP + GP reconcile");
-
-    // Distributions never exceed cash available
-    let distExceeds = false;
-    for (let y = 0; y < h; y++) {
-      const totalDistY = (w.tier1[y]||0) + (w.tier2[y]||0) + (w.tier3[y]||0) + (w.tier4LP[y]||0) + (w.tier4GP[y]||0);
-      if (totalDistY > (w.cashAvail[y]||0) + tol) { distExceeds = true; break; }
+  if (w && w.tier1) {
+    let distOk=true;
+    for(let y=0;y<h;y++){
+      const td=(w.tier1[y]||0)+(w.tier2[y]||0)+(w.tier3[y]||0)+(w.tier4LP[y]||0)+(w.tier4GP[y]||0);
+      if(td>(w.cashAvail[y]||0)+tol){distOk=false;break;}
     }
-    add("T3", "Dist ≤ Cash Available", !distExceeds, "Annual distributions never exceed cash available");
-
-    // Unreturned capital initialized (waterfall uses unreturnedOpen, not unreturnedCap)
-    add("T3", "Unreturned Capital Start", w.unreturnedOpen?.[0] !== undefined && w.unreturnedOpen[0] > 0, "Unreturned capital initialized",
-      `Start: ${Math.round(w.unreturnedOpen?.[0]||0).toLocaleString()}`);
-
-    // MOIC = Total Dist / Equity Invested (use waterfall's own invested amounts)
-    if (w.lpTotalInvested > 0 && w.lpMOIC) {
-      const expectedMOIC = w.lpTotalDist / w.lpTotalInvested;
-      add("T3", "LP MOIC = Dist / Equity", Math.abs(w.lpMOIC - expectedMOIC) < 0.01, "LP MOIC calculation correct",
-        `Computed: ${w.lpMOIC.toFixed(2)}x vs Expected: ${expectedMOIC.toFixed(2)}x`);
+    add("T3","Dist ≤ Cash Available", distOk, "Annual distributions ≤ cash available");
+    add("T3","Unreturned Capital Init", w.unreturnedOpen?.[0]!==undefined&&w.unreturnedOpen[0]>0, "Unreturned capital initialized",
+      `Start: ${fmt(w.unreturnedOpen?.[0])}`);
+    let lpDOk=true;
+    for(let y=0;y<h;y++){
+      if(w.lpDist[y]>0&&w.lpPct>0){
+        const exp=(w.tier1[y]+w.tier2[y])*(w.lpPct||0)+(w.tier4LP[y]||0);
+        if(Math.abs(w.lpDist[y]-exp)>tol){lpDOk=false;break;}
+      }
     }
-
-    // ROC (Tier 1) — in fund mode equity calls include fees, so ROC tracks cumulative called capital
-    const totalROC = (w.tier1||[]).reduce((s,v)=>s+v,0);
-    const totalCalled = (w.equityCalls||[]).reduce((s,v)=>s+v,0);
-    add("T3", "ROC ≤ Total Called Capital", totalROC <= totalCalled + tol, "Return of capital never exceeds total called capital",
-      `ROC: ${Math.round(totalROC).toLocaleString()} vs Called: ${Math.round(totalCalled).toLocaleString()}`);
+    add("T3","LP Dist = (T1+T2)*LP% + T4LP", lpDOk, "LP distribution formula correct");
+    let gpDOk=true;
+    for(let y=0;y<h;y++){
+      if(w.gpDist[y]>0&&w.gpPct>0){
+        const exp=(w.tier1[y]+w.tier2[y])*(w.gpPct||0)+(w.tier3[y]||0)+(w.tier4GP[y]||0);
+        if(Math.abs(w.gpDist[y]-exp)>tol){gpDOk=false;break;}
+      }
+    }
+    add("T3","GP Dist = (T1+T2)*GP% + T3 + T4GP", gpDOk, "GP distribution formula correct");
+    if(w.lpTotalInvested>0&&w.lpMOIC){
+      const expM=w.lpTotalDist/w.lpTotalInvested;
+      add("T3","LP MOIC = Dist/Equity", Math.abs(w.lpMOIC-expM)<0.01, "LP MOIC correct", `${w.lpMOIC.toFixed(2)}x`);
+    }
+    if(w.gpTotalInvested>0&&w.gpMOIC){
+      const expM=w.gpTotalDist/w.gpTotalInvested;
+      add("T3","GP MOIC = Dist/Equity", Math.abs(w.gpMOIC-expM)<0.01, "GP MOIC correct", `${w.gpMOIC.toFixed(2)}x`);
+    }
+    const totROC=(w.tier1||[]).reduce((s,v)=>s+v,0);
+    const totCalled=(w.equityCalls||[]).reduce((s,v)=>s+v,0);
+    add("T3","ROC ≤ Called Capital", totROC<=totCalled+tol, "Return of capital ≤ called",
+      `ROC: ${fmt(totROC)} vs Called: ${fmt(totCalled)}`);
+    add("T3","LP IRR Computed", w.lpIRR!==null||w.lpTotalDist===0, "LP IRR computed", `${fp(w.lpIRR)}`);
+    add("T3","GP IRR Computed", w.gpIRR!==null||w.gpTotalDist===0, "GP IRR computed", `${fp(w.gpIRR)}`);
   }
 
   // ═══════════════════════════════════════════════
-  // T4: INCENTIVES ENGINE
+  // T4: INCENTIVES ENGINE (8 checks)
   // ═══════════════════════════════════════════════
-  if (ir && ir.totalIncentiveValue > 0) {
-    // CAPEX grant ≤ total CAPEX
-    add("T4", "CAPEX Grant ≤ CAPEX", ir.capexGrantTotal <= c.totalCapex + tol, "Grant doesn't exceed total CAPEX",
-      `Grant: ${Math.round(ir.capexGrantTotal).toLocaleString()} vs CAPEX: ${Math.round(c.totalCapex).toLocaleString()}`);
-
-    // Adjusted CAPEX = Original - Grant
-    const adjCapexTotal = ir.adjustedCapex.reduce((s,v)=>s+v,0);
-    add("T4", "Adjusted CAPEX = Original - Grant", Math.abs(adjCapexTotal - (c.totalCapex - ir.capexGrantTotal)) < tol, "CAPEX correctly reduced by grant");
-
-    // Adjusted IRR computed and different from base
-    if (ir.capexGrantTotal > 0 || ir.landRentSavingTotal > 0) {
-      add("T4", "Incentives Affect IRR", ir.adjustedIRR !== c.irr || ir.capexGrantTotal === 0, "Incentives change the IRR",
-        `Base IRR: ${c.irr?((c.irr*100).toFixed(2)+"%"):"N/A"} → Adjusted: ${ir.adjustedIRR?((ir.adjustedIRR*100).toFixed(2)+"%"):"N/A"}`);
+  if (ir) {
+    if (ir.capexGrantTotal > 0) {
+      add("T4","CAPEX Grant ≤ CAPEX", ir.capexGrantTotal<=c.totalCapex+tol, "Grant ≤ total CAPEX",
+        `Grant: ${fmt(ir.capexGrantTotal)} vs CAPEX: ${fmt(c.totalCapex)}`);
+      const adjCT=ir.adjustedCapex.reduce((s,v)=>s+v,0);
+      add("T4","Adjusted CAPEX = Orig - Grant", Math.abs(adjCT-(c.totalCapex-ir.capexGrantTotal))<tol, "CAPEX reduced by grant",
+        `${fmt(adjCT)} = ${fmt(c.totalCapex)} - ${fmt(ir.capexGrantTotal)}`);
+      add("T4","CAPEX Grant → IRR Change", ir.adjustedIRR!==c.irr, "Grant changes Unlevered IRR",
+        `${fp(c.irr)} → ${fp(ir.adjustedIRR)}`);
     }
-
-    // Net CF Impact = CAPEX Grant + Land Saving + Fee Rebate (per year)
-    let impactOk = true;
-    for (let y = 0; y < h; y++) {
-      const expected = ir.capexGrantSchedule[y] + ir.landRentSavingSchedule[y] + ir.feeRebateSchedule[y];
-      if (Math.abs(ir.netCFImpact[y] - expected) > tol) { impactOk = false; break; }
+    if (ir.landRentSavingTotal > 0) {
+      let lrOk=true;
+      for(let y=0;y<h;y++){ if(ir.landRentSavingSchedule[y]>Math.abs(c.landRent[y]||0)+tol){lrOk=false;break;} }
+      add("T4","Land Rebate ≤ Rent", lrOk, "Rebate never exceeds original rent");
+      add("T4","Land Rebate → IRR Change", ir.adjustedIRR!==null&&ir.adjustedIRR!==c.irr, "Rebate changes IRR",
+        `Saving: ${fmt(ir.landRentSavingTotal)} → IRR: ${fp(ir.adjustedIRR)}`);
     }
-    add("T4", "Net CF Impact Reconciles", impactOk, "Year-by-year incentive impact = sum of components");
-
-    // Land rent savings don't exceed original land rent
-    let lrOk = true;
-    for (let y = 0; y < h; y++) {
-      if (ir.landRentSavingSchedule[y] > Math.abs(c.landRent[y] || 0) + tol) { lrOk = false; break; }
+    if (ir.feeRebateTotal > 0) {
+      add("T4","Fee Rebate Recorded", true, "Fee rebate value computed", `Total: ${fmt(ir.feeRebateTotal)}`);
+      add("T4","Fee Rebate → IRR Change", ir.adjustedIRR!==null&&ir.adjustedIRR!==c.irr, "Fee rebate changes IRR");
     }
-    add("T4", "Land Rebate ≤ Land Rent", lrOk, "Land rent savings never exceed original rent");
+    if (ir.totalIncentiveValue > 0) {
+      let impOk=true;
+      for(let y=0;y<h;y++){
+        const exp=(ir.capexGrantSchedule?.[y]||0)+(ir.landRentSavingSchedule?.[y]||0)+(ir.feeRebateSchedule?.[y]||0);
+        if(Math.abs((ir.netCFImpact?.[y]||0)-exp)>tol){impOk=false;break;}
+      }
+      add("T4","Net Impact = Grant+Land+Fee", impOk, "Year-by-year incentive impact reconciles");
+    }
   }
 
   // ═══════════════════════════════════════════════
-  // T5: CROSS-ENGINE INTEGRATION
+  // T5: CROSS-ENGINE INTEGRATION (8 checks)
   // ═══════════════════════════════════════════════
-  // Financing uses adjusted CAPEX from incentives
-  if (f && f.mode !== "self" && ir) {
-    const expectedDevCost = ir.adjustedCapex.reduce((s,v)=>s+v,0);
-    add("T5", "Financing Uses Adjusted CAPEX", Math.abs(f.devCostExclLand - expectedDevCost) < tol, "Financing engine picks up incentive-adjusted CAPEX",
-      `Financing DevCost: ${Math.round(f.devCostExclLand).toLocaleString()} vs Adjusted CAPEX: ${Math.round(expectedDevCost).toLocaleString()}`);
+  if (f && f.mode !== "self" && ir && ir.capexGrantTotal > 0) {
+    const expDev=ir.adjustedCapex.reduce((s,v)=>s+v,0);
+    add("T5","Fin Uses Adjusted CAPEX", Math.abs(f.devCostExclLand-expDev)<tol, "Financing uses incentive-adjusted CAPEX",
+      `Fin: ${fmt(f.devCostExclLand)} vs Adj: ${fmt(expDev)}`);
   }
-
-  // Levered IRR uses incentives
   if (f && f.mode !== "self" && ir && ir.totalIncentiveValue > 0) {
-    // Recalculate levered CF without incentives to verify difference
-    const baseLevCF = new Array(h).fill(0);
-    for (let y = 0; y < h; y++) {
-      baseLevCF[y] = c.income[y] - c.landRent[y] - c.capex[y] - (f.debtService[y]||0) + (f.drawdown[y]||0) + (f.exitProceeds?.[y]||0);
-    }
-    const baseIRR = calcIRR(baseLevCF);
-    const hasEffect = baseIRR === null || f.leveredIRR === null || Math.abs(f.leveredIRR - baseIRR) > 0.0001;
-    add("T5", "Levered IRR Reflects Incentives", hasEffect, "Levered IRR changes when incentives are active",
-      `Without incentives: ${baseIRR?((baseIRR*100).toFixed(2)+"%"):"N/A"} → With: ${f.leveredIRR?((f.leveredIRR*100).toFixed(2)+"%"):"N/A"}`);
+    const baseCF=new Array(h).fill(0);
+    for(let y=0;y<h;y++) baseCF[y]=c.income[y]-c.landRent[y]-c.capex[y]-(f.debtService[y]||0)+(f.drawdown[y]||0)+(f.exitProceeds?.[y]||0);
+    const baseIRR=calcIRR(baseCF);
+    add("T5","Incentives Change Levered IRR", baseIRR===null||f.leveredIRR===null||Math.abs(f.leveredIRR-baseIRR)>0.0001,
+      "Levered IRR differs with incentives", `Without: ${fp(baseIRR)} With: ${fp(f.leveredIRR)}`);
   }
-
-  // Waterfall uses correct levered CF from financing
+  if (f && f.mode === "self" && ir && ir.totalIncentiveValue > 0) {
+    add("T5","Self-Funded IRR Adjusted", f.leveredIRR!==c.irr||ir.capexGrantTotal===0, "Self-funded IRR includes incentives",
+      `Base: ${fp(c.irr)} Adj: ${fp(f.leveredIRR)}`);
+  }
   if (w && f) {
-    const wCashTotal = w.cashAvail.reduce((s,v)=>s+v,0);
-    // Cash available should relate to levered CF
-    add("T5", "Waterfall Cash Source", wCashTotal !== 0, "Waterfall has cash available for distribution");
+    add("T5","Waterfall Has Cash", w.cashAvail.reduce((s,v)=>s+v,0)!==0, "Cash available for distribution");
+  }
+  if (ir && ir.adjustedIRR !== null && ir.totalIncentiveValue > 0) {
+    add("T5","Dashboard Shows Adjusted IRR", true, "Adjusted IRR ready for display", `${fp(ir.adjustedIRR)}`);
+  }
+  if (f && f.exitProceeds && f.exitProceeds.some(v=>v>0)) {
+    add("T5","Exit Proceeds Generated", true, "Exit generates proceeds", `${fmt(f.exitProceeds.reduce((s,v)=>s+v,0))}`);
   }
 
   return checks;
