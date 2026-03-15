@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo, Component } from "react";
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
+import { generateFormulaExcel } from "./excelFormulaExport";
 import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
@@ -1455,25 +1456,32 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   </div>);
 }
 
+// ── Financing Panel Input Components (MUST be outside FinancingView to keep focus) ──
+const _finInpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
+const _finSelSt = {..._finInpSt,cursor:"pointer",appearance:"auto"};
+function FL({label,children,tip,hint}) {
+  return (<div style={{marginBottom:10}}>
+    <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#6b7080",marginBottom:4,fontWeight:500,letterSpacing:0.2}}>{tip?<Tip text={tip}>{label}</Tip>:label}</label>
+    {children}
+    {hint&&<div style={{fontSize:9,color:"#9ca3af",marginTop:3}}>{hint}</div>}
+  </div>);
+}
+function Inp({value,onChange,type="text",...rest}) {
+  return <input type={type} value={value??""} onChange={e=>onChange(type==="number"?+e.target.value:e.target.value)} style={_finInpSt} onFocus={e=>{e.target.style.borderColor="#2563eb";e.target.style.boxShadow="0 0 0 2px rgba(37,99,235,0.12)";e.target.style.background="#fff";}} onBlur={e=>{e.target.style.borderColor="#e0e3ea";e.target.style.boxShadow="none";e.target.style.background="#f8f9fb";}} {...rest} />;
+}
+function Drp({value,onChange,options,lang:dl}) {
+  return <select value={value} onChange={e=>onChange(e.target.value)} style={_finSelSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[dl]||o.en||o.label}</option>)}</select>;
+}
+
 function FinancingView({ project, results, financing, t, up, lang }) {
   const [showYrs, setShowYrs] = useState(15);
   const [showConfig, setShowConfig] = useState(true);
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
 
-  // ── Inline input helpers (polished light theme) ──
-  const inpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
-  const selSt = {...inpSt,cursor:"pointer",appearance:"auto"};
-  const focusSt = "input:focus,select:focus{border-color:#2563eb !important;box-shadow:0 0 0 2px rgba(37,99,235,0.12) !important;background:#fff !important}";
-  const FL = ({label,children,tip,hint}) => (
-    <div style={{marginBottom:10}}>
-      <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#6b7080",marginBottom:4,fontWeight:500,letterSpacing:0.2}}>{tip?<Tip text={tip}>{label}</Tip>:label}</label>
-      {children}
-      {hint&&<div style={{fontSize:9,color:"#9ca3af",marginTop:3}}>{hint}</div>}
-    </div>
-  );
-  const Inp = ({value,onChange,type="text",...rest}) => <input type={type} value={value??""} onChange={e=>onChange(type==="number"?+e.target.value:e.target.value)} style={inpSt} onFocus={e=>{e.target.style.borderColor="#2563eb";e.target.style.boxShadow="0 0 0 2px rgba(37,99,235,0.12)";e.target.style.background="#fff";}} onBlur={e=>{e.target.style.borderColor="#e0e3ea";e.target.style.boxShadow="none";e.target.style.background="#f8f9fb";}} {...rest} />;
-  const Drp = ({value,onChange,options}) => <select value={value} onChange={e=>onChange(e.target.value)} style={selSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[lang]||o.en||o.label}</option>)}</select>;
+  // Styles defined here but components are top-level (below) to prevent focus loss
+  const ar = lang === "ar";
+  const cur = project.currency || "SAR";
 
   if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:32,marginBottom:12}}>📊</div>
@@ -1517,7 +1525,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               <div style={{fontSize:10,fontWeight:700,color:"#2563eb",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dbeafe"}}>{ar?"التمويل":"Financing"}</div>
               <FL label={ar?"نوع التمويل":"Mode"} tip="Choose how the project will be funded">
-                <Drp value={project.finMode} onChange={v=>up({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
+                <Drp lang={lang} value={project.finMode} onChange={v=>up({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
                   {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
                   {value:"bank100",en:"100% Bank Debt",ar:"بنكي 100%"},
                   {value:"debt",en:"Debt + Equity",ar:"دين + ملكية"},
@@ -1527,7 +1535,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
               {project.finMode !== "self" && <>
                 {project.finMode !== "bank100" && (
                   <FL label={ar?"هل الدين مسموح؟":"Debt Allowed"}>
-                    <Drp value={project.debtAllowed?"Y":"N"} onChange={v=>up({debtAllowed:v==="Y"})} options={["Y","N"]} />
+                    <Drp lang={lang} value={project.debtAllowed?"Y":"N"} onChange={v=>up({debtAllowed:v==="Y"})} options={["Y","N"]} />
                   </FL>
                 )}
                 {(project.debtAllowed || project.finMode === "bank100") && <>
@@ -1542,11 +1550,11 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم %":"Fee %"}><Inp type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></FL>
                     <FL label={ar?"سداد":"Repay"} tip="Amortizing = equal installments. Bullet = principal at end">
-                      <Drp value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[{value:"amortizing",en:"Amortizing",ar:"أقساط"},{value:"bullet",en:"Bullet",ar:"دفعة واحدة"}]} />
+                      <Drp lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[{value:"amortizing",en:"Amortizing",ar:"أقساط"},{value:"bullet",en:"Bullet",ar:"دفعة واحدة"}]} />
                     </FL>
                   </div>
                   <FL label={ar?"هيكل":"Structure"} tip="Murabaha = cost-plus (common). Ijara = lease-to-own">
-                    <Drp value={project.islamicMode} onChange={v=>up({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
+                    <Drp lang={lang} value={project.islamicMode} onChange={v=>up({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
                   </FL>
                 </>}
               </>}
@@ -1556,7 +1564,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
               <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #ede9fe"}}>{ar?"التخارج وهيكل رأس المال":"Exit & Capital"}</div>
               {project.finMode !== "self" && <>
                 <FL label={ar?"استراتيجية التخارج":"Exit Strategy"}>
-                  <Drp value={project.exitStrategy||"sale"} onChange={v=>up({exitStrategy:v})} options={[{value:"sale",en:"Sale (Multiple)",ar:"بيع (مضاعف)"},{value:"caprate",en:"Sale (Cap Rate)",ar:"بيع (رسملة)"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
+                  <Drp lang={lang} value={project.exitStrategy||"sale"} onChange={v=>up({exitStrategy:v})} options={[{value:"sale",en:"Sale (Multiple)",ar:"بيع (مضاعف)"},{value:"caprate",en:"Sale (Cap Rate)",ar:"بيع (رسملة)"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
                 </FL>
                 {(project.exitStrategy||"sale")!=="hold"&&<>
                   <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto"><Inp type="number" value={project.exitYear} onChange={v=>up({exitYear:v})} /></FL>
@@ -1568,7 +1576,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
               {project.finMode !== "self" && project.finMode !== "bank100" && <>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="Convert leasehold to equity">
-                  <Drp value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
+                  <Drp lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
                 </FL>
                 {project.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} hint={`= ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${cur}`}><Inp type="number" value={project.landCapRate} onChange={v=>up({landCapRate:v})} /></FL>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
@@ -1581,7 +1589,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               {project.finMode === "fund" ? <>
                 <div style={{fontSize:10,fontWeight:700,color:"#16a34a",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dcfce7"}}>{ar?"الصندوق والشلال":"Fund & Waterfall"}</div>
-                <FL label={ar?"نوع الأداة":"Vehicle"}><Drp value={project.vehicleType} onChange={v=>up({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
+                <FL label={ar?"نوع الأداة":"Vehicle"}><Drp lang={lang} value={project.vehicleType} onChange={v=>up({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
                 {project.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"}><Inp value={project.fundName} onChange={v=>up({fundName:v})} /></FL>}
                 <FL label={ar?"سنة بداية الصندوق":"Fund Start"} hint="0=auto"><Inp type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} /></FL>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
@@ -1591,7 +1599,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"حصة LP %":"LP Split %"}><Inp type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></FL>
-                  <FL label={ar?"تعويض GP؟":"Catch-up"}><Drp value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
+                  <FL label={ar?"تعويض GP؟":"Catch-up"}><Drp lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
                 </div>
                 {project.vehicleType==="fund"&&<>
                   <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
@@ -3582,7 +3590,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     <div style={{display:"flex",gap:10,marginBottom:18}}>
       {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
       <button onClick={() => generateProfessionalExcel(project, results, financing, waterfall, null, checks)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 18px",fontSize:12,border:"1px solid #bbf7d0",fontWeight:500}}>
-        {lang==="ar"?"⬇ تصدير النموذج الكامل (Excel)":"⬇ Export Full Model (Excel)"}
+        {lang==="ar"?"⬇ تصدير Excel (بيانات)":"⬇ Export Excel (Data)"}
+      </button>
+      <button onClick={() => generateFormulaExcel(project, results, financing, waterfall)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"8px 18px",fontSize:12,border:"1px solid #bfdbfe",fontWeight:600}}>
+        {lang==="ar"?"⬇ تصدير النموذج الكامل (معادلات)":"⬇ Full Model (with Formulas)"}
       </button>
     </div>
 
