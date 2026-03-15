@@ -687,12 +687,12 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T2", "Debt Fully Repaid", f.tenor === 0 || balAtEnd < 1, "Debt repaid by tenor end",
       `Balance at year ${repayEndIdx+1}: ${Math.round(balAtEnd).toLocaleString()}`);
 
-    // Interest = average balance × rate (use ORIGINAL interest, before subsidy)
+    // Interest = (balOpen + drawdown + balClose) / 2 × rate
     let intOk = true;
     for (let y = 0; y < Math.min(h, 20); y++) {
-      if (f.debtBalOpen[y] > 0 || f.debtBalClose[y] > 0) {
-        const expectedInt = (f.debtBalOpen[y] + f.debtBalClose[y]) / 2 * f.rate;
-        const actualInt = Math.abs(f.originalInterest?.[y] || f.interest[y]);
+      if ((f.debtBalOpen[y] || 0) > 0 || (f.debtBalClose[y] || 0) > 0 || (f.drawdown?.[y] || 0) > 0) {
+        const expectedInt = ((f.debtBalOpen[y] || 0) + (f.drawdown?.[y] || 0) + (f.debtBalClose[y] || 0)) / 2 * f.rate;
+        const actualInt = Math.abs(f.originalInterest?.[y] || f.interest[y] || 0);
         if (expectedInt > 0 && Math.abs(actualInt - expectedInt) / expectedInt > 0.05) { intOk = false; break; }
       }
     }
