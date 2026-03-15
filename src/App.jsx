@@ -756,6 +756,17 @@ function computeIncentives(project, projectResults) {
   }
   result.totalIncentiveValue = result.capexGrantTotal + result.landRentSavingTotal + result.feeRebateTotal;
 
+  // ── Adjusted CF with incentives (for correct IRR/NPV) ──
+  const adjCF = new Array(h).fill(0);
+  for (let y = 0; y < h; y++) {
+    adjCF[y] = c.netCF[y] + result.netCFImpact[y];
+  }
+  result.adjustedNetCF = adjCF;
+  result.adjustedIRR = calcIRR(adjCF);
+  result.adjustedNPV10 = calcNPV(adjCF, 0.10);
+  result.adjustedNPV12 = calcNPV(adjCF, 0.12);
+  result.adjustedTotalNetCF = adjCF.reduce((a, b) => a + b, 0);
+
   return result;
 }
 
@@ -2059,7 +2070,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           })()}
         </div>
         <div style={{flex:1,overflow:"auto",padding:18}}>
-          {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} />}
+          {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} />}
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
           {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} t={t} up={up} lang={lang} />}
           {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} lang={lang} />}
@@ -2969,7 +2980,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
 // ═══════════════════════════════════════════════════════════════
 // PROJECT DASHBOARD
 // ═══════════════════════════════════════════════════════════════
-function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang }) {
+function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang, incentivesResult }) {
   if (!project || !results) return null;
   const c = results.consolidated;
   const cur = project.currency || "SAR";
@@ -2979,6 +2990,13 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const h = results.horizon;
   const ar = lang === "ar";
   const hasAssets = (project.assets||[]).length > 0;
+  const ir = incentivesResult;
+
+  // Use incentive-adjusted values if incentives are active
+  const hasIncentives = ir && ir.totalIncentiveValue > 0;
+  const displayIRR = hasIncentives && ir.adjustedIRR !== null ? ir.adjustedIRR : c.irr;
+  const displayNPV10 = hasIncentives ? ir.adjustedNPV10 : c.npv10;
+  const displayTotalNetCF = hasIncentives ? ir.adjustedTotalNetCF : c.totalNetCF;
 
   // Payback period
   let cumCF = 0, paybackYr = null;
@@ -3024,10 +3042,10 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     {/* Hero KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14,marginBottom:22}}>
       {[
-        {label:t.consolidatedIRR+" (Unlevered)",value:c.irr!==null?(c.irr*100).toFixed(2)+"%":"N/A",color:c.irr>0.12?"#16a34a":c.irr>0.08?"#eab308":"#ef4444",icon:"📈",tip:"معدل العائد السنوي بدون تمويل. فوق 12% قوي\nAnnual return ignoring debt. Above 12% is strong"},
+        {label:t.consolidatedIRR+" (Unlevered)"+(hasIncentives?` ${ar?"+ حوافز":"+ Incentives"}`:""),value:displayIRR!==null?(displayIRR*100).toFixed(2)+"%":"N/A",color:displayIRR>0.12?"#16a34a":displayIRR>0.08?"#eab308":"#ef4444",icon:"📈",tip:"معدل العائد السنوي بدون تمويل"+(hasIncentives?" (شامل الحوافز الحكومية)":"")+"\nAnnual return ignoring debt"+(hasIncentives?" (incl. gov incentives)":"")},
         f&&f.mode!=="self"&&{label:"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦",tip:"معدل العائد بعد التمويل. أعلى من Unlevered بسبب الرافعة\nReturn after debt. Higher due to leverage effect"},
-        {label:t.npv10,value:fmtM(c.npv10),sub:cur,color:c.npv10>0?"#2563eb":"#ef4444",icon:c.npv10>0?"✓":"✗",tip:"قيمة المشروع اليوم بخصم 10%. موجب = يخلق قيمة\nProject value today at 10% discount. Positive = value-creating"},
-        {label:t.totalCapexLabel,value:fmtM(c.totalCapex),sub:cur,color:"#ef4444",icon:"🏗",tip:"إجمالي البناء + غير مباشرة + طوارئ. لا يشمل إيجار الأرض\nAll construction + soft costs + contingency. Excludes land rent"},
+        {label:t.npv10,value:fmtM(displayNPV10),sub:cur,color:displayNPV10>0?"#2563eb":"#ef4444",icon:displayNPV10>0?"✓":"✗",tip:"قيمة المشروع اليوم بخصم 10%"+(hasIncentives?" (شامل الحوافز)":"")+"\nProject value at 10% discount"+(hasIncentives?" (incl. incentives)":"")},
+        {label:t.totalCapexLabel,value:fmtM(hasIncentives?(c.totalCapex-ir.capexGrantTotal):c.totalCapex),sub:cur+(hasIncentives?` (${ar?"بعد المنحة":"after grant"})`:""),color:"#ef4444",icon:"🏗",tip:"إجمالي البناء + غير مباشرة + احتياطي"+(hasIncentives?". مخصوم منها منحة CAPEX":"")+"\nAll construction + soft costs + contingency"+(hasIncentives?". Net of CAPEX grant":"")},
       ].filter(Boolean).map((h,i)=>(
         <div key={i} className="hero-kpi" style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
@@ -3040,7 +3058,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     {/* Secondary KPIs */}
     <div className="kpi-secondary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
       <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" tip="مجموع كل الإيرادات خلال فترة النموذج\nSum of all revenue over the projection horizon" />
-      <KPI label={t.totalNetCF} value={fmtM(c.totalNetCF)} sub={cur} color="#8b5cf6" tip="صافي التدفق = الإيرادات - التكاليف - إيجار الأرض\nNet CF = Income - CAPEX - Land Rent" />
+      <KPI label={t.totalNetCF} value={fmtM(displayTotalNetCF)} sub={cur+(hasIncentives?` (${ar?"شامل الحوافز":"incl. incentives"})`:"")} color="#8b5cf6" tip="صافي التدفق = الإيرادات - التكاليف - إيجار الأرض\nNet CF = Income - CAPEX - Land Rent" />
       {f && f.mode !== "self" && <KPI label={ar?"إجمالي الدين":"Total Debt"} value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" tip="إجمالي القرض المسحوب من البنك\nTotal loan drawn from bank" />}
       <KPI label={ar?"فترة الاسترداد":"Payback"} value={paybackYr ? (ar?`سنة ${paybackYr}`:`Year ${paybackYr}`) : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" tip="عدد السنوات حتى يصبح التدفق التراكمي موجب\nYears until cumulative cash flow turns positive" />
       {cashYield !== null && <KPI label={ar?"العائد النقدي":"Cash Yield"} value={fmtPct(cashYield)} sub={ar?"على حقوق الملكية":"on equity"} color="#16a34a" tip="التوزيعات السنوية / رأس المال المستثمر\nAnnual distributions / Equity invested" />}
