@@ -687,7 +687,7 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T2", "Debt Fully Repaid", f.tenor === 0 || balAtEnd < 1, "Debt repaid by tenor end",
       `Balance at year ${repayEndIdx+1}: ${Math.round(balAtEnd).toLocaleString()}`);
 
-    // Interest = average balance × rate (spot check year by year)
+    // Interest = average balance × rate (use ORIGINAL interest, before subsidy)
     let intOk = true;
     for (let y = 0; y < Math.min(h, 20); y++) {
       if (f.debtBalOpen[y] > 0 || f.debtBalClose[y] > 0) {
@@ -698,9 +698,9 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     }
     add("T2", "Interest = Avg Balance × Rate", intOk, "Interest calc uses average balance method");
 
-    // Equity calls = Total Equity
+    // Equity calls ≥ Total Equity (calls include fees on top of equity in fund mode)
     const totalEqCalls = (f.equityCalls||[]).reduce((s,v)=>s+v,0);
-    add("T2", "Equity Calls = Total Equity", Math.abs(totalEqCalls - f.totalEquity) < 10000, "Sum equity calls = total equity required",
+    add("T2", "Equity Calls ≥ Total Equity", totalEqCalls >= f.totalEquity - 10000, "Equity calls cover at least total equity",
       `Calls: ${Math.round(totalEqCalls).toLocaleString()} vs Equity: ${Math.round(f.totalEquity).toLocaleString()}`);
 
     // Drawdown = Total Debt
@@ -744,20 +744,22 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     }
     add("T3", "Dist ≤ Cash Available", !distExceeds, "Annual distributions never exceed cash available");
 
-    // Unreturned capital starts at total equity and ends at 0 (if fully returned)
-    add("T3", "Unreturned Capital Start", w.unreturnedCap?.[0] !== undefined, "Unreturned capital initialized");
+    // Unreturned capital initialized (waterfall uses unreturnedOpen, not unreturnedCap)
+    add("T3", "Unreturned Capital Start", w.unreturnedOpen?.[0] !== undefined && w.unreturnedOpen[0] > 0, "Unreturned capital initialized",
+      `Start: ${Math.round(w.unreturnedOpen?.[0]||0).toLocaleString()}`);
 
-    // MOIC = Total Dist / Equity Invested
-    if (f && f.lpEquity > 0 && w.lpMOIC) {
-      const expectedMOIC = w.lpTotalDist / f.lpEquity;
+    // MOIC = Total Dist / Equity Invested (use waterfall's own invested amounts)
+    if (w.lpTotalInvested > 0 && w.lpMOIC) {
+      const expectedMOIC = w.lpTotalDist / w.lpTotalInvested;
       add("T3", "LP MOIC = Dist / Equity", Math.abs(w.lpMOIC - expectedMOIC) < 0.01, "LP MOIC calculation correct",
         `Computed: ${w.lpMOIC.toFixed(2)}x vs Expected: ${expectedMOIC.toFixed(2)}x`);
     }
 
-    // ROC (Tier 1) should not exceed total equity
+    // ROC (Tier 1) — in fund mode equity calls include fees, so ROC tracks cumulative called capital
     const totalROC = (w.tier1||[]).reduce((s,v)=>s+v,0);
-    add("T3", "ROC ≤ Total Equity", totalROC <= (f?.totalEquity||0) + tol, "Return of capital never exceeds equity invested",
-      `ROC: ${Math.round(totalROC).toLocaleString()} vs Equity: ${Math.round(f?.totalEquity||0).toLocaleString()}`);
+    const totalCalled = (w.equityCalls||[]).reduce((s,v)=>s+v,0);
+    add("T3", "ROC ≤ Total Called Capital", totalROC <= totalCalled + tol, "Return of capital never exceeds total called capital",
+      `ROC: ${Math.round(totalROC).toLocaleString()} vs Called: ${Math.round(totalCalled).toLocaleString()}`);
   }
 
   // ═══════════════════════════════════════════════
