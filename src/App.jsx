@@ -476,14 +476,33 @@ const fmtM = (n) => { if (!n || isNaN(n)) return "—"; const a = Math.abs(n); i
 // ── Storage ──
 async function loadProjectIndex() { try { const r = await storage.get(STORAGE_KEY); return r ? JSON.parse(r.value) : []; } catch { return []; } }
 async function saveProjectIndex(index) { await storage.set(STORAGE_KEY, JSON.stringify(index)); }
-async function loadProject(id) {
+async function loadSharedProjects(email) {
   try {
-    const r = await storage.get(PROJECT_PREFIX + id);
+    const rows = await storage.getSharedProjects(email);
+    return rows.map(row => {
+      try {
+        const proj = JSON.parse(row.value);
+        return { id: proj.id, name: proj.name, status: proj.status, updatedAt: proj.updatedAt, createdAt: proj.createdAt, _shared: true, _ownerId: row.ownerId };
+      } catch { return null; }
+    }).filter(Boolean);
+  } catch { return []; }
+}
+async function loadProject(id, ownerId) {
+  try {
+    let r;
+    if (ownerId) {
+      // Load from another user's storage (shared project)
+      r = await storage.getSharedProject(PROJECT_PREFIX + id, ownerId);
+    } else {
+      r = await storage.get(PROJECT_PREFIX + id);
+    }
     if (!r) return null;
     const p = JSON.parse(r.value);
     // Migrate: fill missing fields from defaults
     const def = defaultProject();
     const migrated = { ...def, ...p };
+    if (ownerId) migrated._shared = true;
+    if (ownerId) migrated._ownerId = ownerId;
     // Deep merge incentives
     if (!migrated.incentives) migrated.incentives = def.incentives;
     else {
@@ -2113,10 +2132,18 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   // Show landing page if not logged in
   if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} />;
 
-  useEffect(() => { (async () => { setProjectIndex(await loadProjectIndex()); setLoading(false); })(); }, []);
+  useEffect(() => { (async () => {
+    const own = await loadProjectIndex();
+    const shared = user?.email ? await loadSharedProjects(user.email) : [];
+    // Merge: own projects + shared (avoid duplicates)
+    const ownIds = new Set(own.map(p => p.id));
+    const merged = [...own, ...shared.filter(p => !ownIds.has(p.id))];
+    setProjectIndex(merged);
+    setLoading(false);
+  })(); }, [user]);
 
   useEffect(() => {
-    if (!project || view !== "editor") return;
+    if (!project || view !== "editor" || project._shared) return;
     setSaveStatus("unsaved");
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(async () => {
@@ -2134,7 +2161,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
   const createProject = async () => { const p = defaultProject(); await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); };
-  const openProject = async (id) => { setLoading(true); const p = await loadProject(id); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
+  const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
   const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); }};
   const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} };
 
@@ -2231,9 +2258,10 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         <div style={{height:50,minHeight:50,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 16px",gap:10}}>
           <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13}}>{sidebarOpen?(lang==="ar"?"▷":"◁"):(lang==="ar"?"◁":"▷")}</button>
           <div style={{flex:1}}>
-            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
+            <EditableCell value={project?.name||""} onChange={v=>{ if (!project?._shared) up({name:v}); }} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
-          <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
+          {project?._shared && <span style={{fontSize:10,padding:"4px 12px",borderRadius:4,fontWeight:600,background:"#dbeafe",color:"#1d4ed8"}}>{lang==="ar"?"🔒 للقراءة فقط":"🔒 Read-only"}</span>}
+          <StatusBadge status={project?.status} onChange={s=>{ if (!project?._shared) up({status:s}); }} />
           <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 10px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩ Undo</button>
           <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
           <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
@@ -2241,7 +2269,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
             {SCENARIOS.map(s=><option key={s} value={s}>{s}</option>)}
           </select>
           <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"EN"}</button>
-          <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const shared=[...(project.sharedWith||[])];if(!shared.includes(email)){shared.push(email);up({sharedWith:shared});alert(lang==="ar"?"تمت المشاركة مع "+email:"Shared with "+email);}else{alert(lang==="ar"?"مشارك مسبقاً":"Already shared");}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}</button>
+          {!project?._shared && <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const emailLower=email.toLowerCase().trim();const shared=[...(project.sharedWith||[])];if(!shared.some(e=>e.toLowerCase()===emailLower)){shared.push(emailLower);up({sharedWith:shared});alert(lang==="ar"?"تمت المشاركة مع "+emailLower:"Shared with "+emailLower);}else{alert(lang==="ar"?"مشارك مسبقاً مع "+emailLower:"Already shared with "+emailLower);}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}{project?.sharedWith?.length>0?` (${project.sharedWith.length})`:""}</button>}
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
           {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
@@ -2612,25 +2640,27 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {sorted.map(p=>(
-              <div key={p.id} style={{background:"#161a24",borderRadius:8,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,border:"1px solid #1e2230",cursor:"pointer",transition:"border-color 0.15s"}}
-                onMouseEnter={e=>e.currentTarget.style.borderColor="#2e3340"} onMouseLeave={e=>e.currentTarget.style.borderColor="#1e2230"} onClick={()=>onOpen(p.id)}>
-                <div style={{width:38,height:38,borderRadius:6,background:p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>
-                  {p.status==="Complete"?"✓":p.status==="In Progress"?"▶":"◇"}
+              <div key={p.id} style={{background:p._shared?"#0f1520":"#161a24",borderRadius:8,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,border:p._shared?"1px solid #1e3a5f":"1px solid #1e2230",cursor:"pointer",transition:"border-color 0.15s"}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor=p._shared?"#2563eb":"#2e3340"} onMouseLeave={e=>e.currentTarget.style.borderColor=p._shared?"#1e3a5f":"#1e2230"} onClick={()=>onOpen(p.id)}>
+                <div style={{width:38,height:38,borderRadius:6,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>
+                  {p._shared?"👤":p.status==="Complete"?"✓":p.status==="In Progress"?"▶":"◇"}
                 </div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}</div>
+                  <div style={{fontSize:14,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}{p._shared?<span style={{fontSize:10,color:"#60a5fa",marginInlineStart:8,fontWeight:500}}>{lang==="ar"?"(مشارك معك)":"(Shared)"}</span>:null}</div>
                   <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
                 </div>
-                <span style={{fontSize:10,padding:"3px 10px",borderRadius:4,fontWeight:500,background:p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af"}}>{p.status||"Draft"}</span>
-                <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>
-                {confirmDel===p.id ? (
+                <span style={{fontSize:10,padding:"3px 10px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p._shared?"#60a5fa":p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af"}}>{p._shared?(lang==="ar"?"للقراءة":"Read-only"):p.status||"Draft"}</span>
+                {!p._shared && <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>}
+                {!p._shared && (confirmDel===p.id ? (
                   <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>{onDel(p.id);setConfirmDel(null);}} style={{...btnSm,background:"#7f1d1d",color:"#fca5a5"}}>Yes</button>
                     <button onClick={()=>setConfirmDel(null)} style={{...btnSm,background:"#1e2230",color:"#9ca3af"}}>No</button>
                   </div>
                 ) : (
                   <button onClick={e=>{e.stopPropagation();setConfirmDel(p.id);}} style={{...btnSm,background:"#1e2230",color:"#6b7080"}} title="Delete">✕</button>
-                )}
+                ))}
+              </div>
+            ))}
               </div>
             ))}
           </div>
