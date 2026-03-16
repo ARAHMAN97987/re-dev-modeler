@@ -1500,7 +1500,20 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
   const phaseNames = Object.keys(results.phaseResults || {});
   const hasPhases = phaseNames.length > 1 && phaseWaterfalls && Object.keys(phaseWaterfalls).length > 0;
-  const w = (selectedPhase !== "all" && phaseWaterfalls?.[selectedPhase]) ? phaseWaterfalls[selectedPhase] : waterfall;
+  const _pw = (selectedPhase !== "all" && phaseWaterfalls?.[selectedPhase]) ? phaseWaterfalls[selectedPhase] : null;
+  const h0 = new Array(results.horizon || 50).fill(0);
+  const w = _pw ? {
+    ..._pw,
+    feeSub: _pw.feeSub || h0, feeMgmt: _pw.feeMgmt || h0, feeCustody: _pw.feeCustody || h0,
+    feeDev: _pw.feeDev || h0, feeStruct: _pw.feeStruct || h0, fees: _pw.fees || h0,
+    totalFees: _pw.totalFees ?? (_pw.fees ? _pw.fees : 0),
+    totalEquity: _pw.equity || 0, exitYear: waterfall.exitYear || 0,
+    lpNPV12: _pw.lpNPV12 ?? null, lpNPV14: _pw.lpNPV14 ?? null,
+    gpNPV12: _pw.gpNPV12 ?? null, gpNPV14: _pw.gpNPV14 ?? null,
+    unreturnedClose: _pw.unreturnedClose || h0, unreturnedOpen: _pw.unreturnedOpen || h0,
+    prefAccrual: _pw.prefAccrual || h0, prefAccumulated: _pw.prefAccumulated || h0,
+    exitProceeds: _pw.exitProceeds || (waterfall.exitProceeds ? waterfall.exitProceeds.map(v => v * (_pw.exitPct || 0)) : h0),
+  } : waterfall;
   const cur = project.currency || "SAR";
 
   const CFRow=({label,values,total,bold,color,negate})=>{
