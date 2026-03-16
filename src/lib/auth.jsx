@@ -13,7 +13,7 @@ function LoadingScreen() {
 }
 
 function PasswordStrength({ strength }) {
-  const labels = ['','Weak','Fair','Good','Strong']
+  const labels = ['','Short','OK','Good','Strong']
   const colors = ['','#ef4444','#f59e0b','#22c55e','#16a34a']
   return (
     <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}>
@@ -112,7 +112,7 @@ export function AuthGate({ children }) {
   if (loading) return <LoadingScreen />
   if (session) return children({ user: session.user, userId: session.user.id, signOut: () => supabase.auth.signOut() })
 
-  const calcPwd = (p) => { let s=0; if(p.length>=8)s++; if(/[a-z]/.test(p)&&/[A-Z]/.test(p))s++; if(/[0-9]/.test(p))s++; if(/[^a-zA-Z0-9]/.test(p))s++; setPwdStr(s) }
+  const calcPwd = (p) => { let s=0; if(p.length>=4)s++; if(p.length>=6)s++; if(p.length>=8)s++; if(p.length>=10)s++; setPwdStr(s) }
   const switchMode = (m) => { setMode(m); setError(''); setMessage(''); setConfirm(''); setPwdStr(0) }
 
   const go = async () => {
@@ -125,8 +125,8 @@ export function AuthGate({ children }) {
       }
       if (mode === 'signup') {
         if (password !== confirm) { setError(ar?'كلمات المرور غير متطابقة.':'Passwords don\'t match.'); setBusy(false); return }
-        if (pwdStr < 2) { setError(ar?'كلمة المرور ضعيفة.':'Password too weak.'); setBusy(false); return }
-        const { error: e } = await supabase.auth.signUp({ email, password })
+        if (password.length < 6) { setError(ar?'كلمة المرور قصيرة (6 أحرف على الأقل).':'Password too short (min 6 characters).'); setBusy(false); return }
+        const { error: e } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } })
         if (e) setError(e.message)
         else setMessage(ar?'تم إنشاء حسابك! تحقق من بريدك لتأكيد الحساب.':'Account created! Check email to confirm.')
       } else {
@@ -192,7 +192,7 @@ export function AuthGate({ children }) {
           {mode !== 'forgot' && (
             <div>
               <label style={{fontSize:11,color:'#6b7080',marginBottom:4,display:'block',fontWeight:500}}>{ar?'كلمة المرور':'Password'}</label>
-              <input type="password" value={password} onChange={e=>{setPassword(e.target.value);if(mode==='signup')calcPwd(e.target.value)}} placeholder="••••••••" style={inputStyle} onKeyDown={e=>e.key==='Enter'&&go()} />
+              <input type="password" value={password} onChange={e=>{setPassword(e.target.value);if(mode==='signup')calcPwd(e.target.value)}} placeholder={ar?"6 أحرف أو أرقام":"6+ characters"} style={inputStyle} onKeyDown={e=>e.key==='Enter'&&go()} />
               {mode === 'signup' && <PasswordStrength strength={pwdStr} />}
             </div>
           )}
