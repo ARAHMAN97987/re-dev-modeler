@@ -728,8 +728,10 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
       if(td>(w.cashAvail[y]||0)+tol){distOk=false;break;}
     }
     add("T3","Dist ≤ Cash Available", distOk, "Annual distributions ≤ cash available");
-    add("T3","Unreturned Capital Init", w.unreturnedOpen?.[0]!==undefined&&w.unreturnedOpen[0]>0, "Unreturned capital initialized",
-      `Start: ${fmt(w.unreturnedOpen?.[0])}`);
+    const firstEqCallYr = (w.equityCalls||[]).findIndex(v => v > 0);
+    const unretAfterFirstCall = firstEqCallYr >= 0 ? (w.unreturnedOpen?.[firstEqCallYr] || 0) + (w.equityCalls?.[firstEqCallYr] || 0) : 0;
+    add("T3","Unreturned Capital Init", unretAfterFirstCall > 0, "Unreturned capital initialized",
+      `Start: ${fmt(unretAfterFirstCall)} (yr ${firstEqCallYr >= 0 ? firstEqCallYr + 1 : '?'})`);
     let lpDOk=true;
     for(let y=0;y<h;y++){
       if(w.lpDist[y]>0&&w.lpPct>0){
@@ -1076,6 +1078,8 @@ function computeFinancing(project, projectResults, incentivesResult) {
     }
     equityCalls[y] = Math.max(0, c.capex[y] - drawdown[y]);
   }
+  // Land capitalization value added as equity call in year 0 (non-cash but counts as equity)
+  if (landCapValue > 0) equityCalls[0] += landCapValue;
   // Upfront fee added to equity calls in first drawdown year
   let firstDrawYear = -1;
   for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { firstDrawYear = y; break; } }
@@ -4145,12 +4149,18 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 // ═══════════════════════════════════════════════════════════════
 
 function runScenario(project, overrides) {
-  const p = { ...project, ...overrides };
-  const r = computeProjectCashFlows(p);
-  const ir = computeIncentives(p, r);
-  const f = computeFinancing(p, r, ir);
-  const w = computeWaterfall(p, r, f);
-  return { project: p, results: r, financing: f, waterfall: w };
+  try {
+    const p = { ...project, ...overrides };
+    const r = computeProjectCashFlows(p);
+    const ir = computeIncentives(p, r);
+    const f = computeFinancing(p, r, ir);
+    const w = computeWaterfall(p, r, f);
+    return { project: p, results: r, financing: f, waterfall: w };
+  } catch (e) {
+    console.error("runScenario error:", e);
+    const r = computeProjectCashFlows({ ...project, ...overrides, activeScenario: "Base Case" });
+    return { project: { ...project, ...overrides }, results: r, financing: null, waterfall: null };
+  }
 }
 
 function ScenariosView({ project, results, financing, waterfall, lang }) {
