@@ -57,19 +57,36 @@ class StorageAdapter {
   // Find shared projects: search all projects where sharedWith contains this user's email
   async getSharedProjects(email) {
     if (!this.useSupabase || !email) return []
-    const { data, error } = await supabase
-      .from('kv_store')
-      .select('key, value, user_id')
-      .like('key', 'redev_project_%')
-      .neq('user_id', this.userId || 'anonymous')
-    if (error || !data) return []
-    // Filter projects that include this email in sharedWith
-    return data.filter(row => {
-      try {
-        const proj = JSON.parse(row.value)
-        return (proj.sharedWith || []).includes(email)
-      } catch { return false }
-    }).map(row => ({ key: row.key, value: row.value, ownerId: row.user_id }))
+    try {
+      const { data, error } = await supabase
+        .from('kv_store')
+        .select('key, value, user_id')
+        .like('key', 'redev:project:%')
+        .neq('user_id', this.userId || 'anonymous')
+      if (error || !data) return []
+      // Filter projects that include this email in sharedWith
+      return data.filter(row => {
+        try {
+          const proj = JSON.parse(row.value)
+          return Array.isArray(proj.sharedWith) && proj.sharedWith.some(e => e.toLowerCase() === email.toLowerCase())
+        } catch { return false }
+      }).map(row => ({ key: row.key, value: row.value, ownerId: row.user_id }))
+    } catch { return [] }
+  }
+
+  // Load a specific project from another user (for shared access)
+  async getSharedProject(key, ownerId) {
+    if (!this.useSupabase) return null
+    try {
+      const { data, error } = await supabase
+        .from('kv_store')
+        .select('value')
+        .eq('key', key)
+        .eq('user_id', ownerId)
+        .single()
+      if (error || !data) return null
+      return { key, value: data.value }
+    } catch { return null }
   }
 
   // ── localStorage methods ──
