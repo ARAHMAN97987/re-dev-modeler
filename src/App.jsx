@@ -482,27 +482,26 @@ async function loadSharedProjects(email) {
     return rows.map(row => {
       try {
         const proj = JSON.parse(row.value);
-        return { id: proj.id, name: proj.name, status: proj.status, updatedAt: proj.updatedAt, createdAt: proj.createdAt, _shared: true, _ownerId: row.ownerId };
+        return { id: proj.id, name: proj.name, status: proj.status, updatedAt: proj.updatedAt, createdAt: proj.createdAt, _shared: true, _ownerId: row.ownerId, _permission: row.permission || "edit" };
       } catch { return null; }
     }).filter(Boolean);
   } catch { return []; }
 }
-async function loadProject(id, ownerId) {
+async function loadProject(id, ownerId, permission) {
   try {
     let r;
     if (ownerId) {
-      // Load from another user's storage (shared project)
       r = await storage.getSharedProject(PROJECT_PREFIX + id, ownerId);
     } else {
       r = await storage.get(PROJECT_PREFIX + id);
     }
     if (!r) return null;
     const p = JSON.parse(r.value);
-    // Migrate: fill missing fields from defaults
     const def = defaultProject();
     const migrated = { ...def, ...p };
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
+    if (ownerId) migrated._permission = permission || "edit";
     // Deep merge incentives
     if (!migrated.incentives) migrated.incentives = def.incentives;
     else {
@@ -2147,7 +2146,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   })(); }, [user]);
 
   useEffect(() => {
-    if (!project || view !== "editor") return;
+    if (!project || view !== "editor" || project._permission === "view") return;
     setSaveStatus("unsaved");
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(async () => {
@@ -2165,7 +2164,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
   const createProject = async () => { const p = defaultProject(); await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); };
-  const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
+  const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
   const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); }};
   const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} };
 
@@ -2264,7 +2263,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           <div style={{flex:1}}>
             <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
-          {project?._shared && <span style={{fontSize:10,padding:"4px 12px",borderRadius:4,fontWeight:600,background:"#dbeafe",color:"#1d4ed8"}}>{lang==="ar"?"👤 مشارك":"👤 Shared"}</span>}
+          {project?._shared && <span style={{fontSize:10,padding:"4px 12px",borderRadius:4,fontWeight:600,background:project._permission==="view"?"#fef3c7":"#dbeafe",color:project._permission==="view"?"#92400e":"#1d4ed8"}}>{project._permission==="view"?(lang==="ar"?"🔒 للقراءة فقط":"🔒 View-only"):(lang==="ar"?"✏️ مشارك للتعديل":"✏️ Shared (Edit)")}</span>}
           <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
           <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 10px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩ Undo</button>
           <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
@@ -2273,7 +2272,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
             {SCENARIOS.map(s=><option key={s} value={s}>{s}</option>)}
           </select>
           <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"EN"}</button>
-          {!project?._shared && <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const emailLower=email.toLowerCase().trim();const shared=[...(project.sharedWith||[])];if(!shared.some(e=>e.toLowerCase()===emailLower)){shared.push(emailLower);up({sharedWith:shared});alert(lang==="ar"?"تمت المشاركة مع "+emailLower:"Shared with "+emailLower);}else{alert(lang==="ar"?"مشارك مسبقاً مع "+emailLower:"Already shared with "+emailLower);}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}{project?.sharedWith?.length>0?` (${project.sharedWith.length})`:""}</button>}
+          {!project?._shared && <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const emailLower=email.toLowerCase().trim();const shared=[...(project.sharedWith||[])];const existing=shared.find(e=>(typeof e==="string"?e:e?.email)?.toLowerCase()===emailLower);if(!existing){const perm=confirm(lang==="ar"?"اضغط OK للتعديل، أو Cancel للقراءة فقط":"Press OK for Edit access, or Cancel for View-only");shared.push({email:emailLower,permission:perm?"edit":"view"});up({sharedWith:shared});alert(lang==="ar"?("تمت المشاركة مع "+emailLower+" ("+(perm?"تعديل":"قراءة فقط")+")"):"Shared with "+emailLower+" ("+(perm?"edit":"view-only")+")");}else{alert(lang==="ar"?"مشارك مسبقاً مع "+emailLower:"Already shared with "+emailLower);}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}{project?.sharedWith?.length>0?` (${project.sharedWith.length})`:""}</button>}
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
           {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
@@ -2653,7 +2652,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                   <div style={{fontSize:14,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}{p._shared?<span style={{fontSize:10,color:"#60a5fa",marginInlineStart:8,fontWeight:500}}>{lang==="ar"?"(مشارك معك)":"(Shared)"}</span>:null}</div>
                   <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
                 </div>
-                <span style={{fontSize:10,padding:"3px 10px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p._shared?"#60a5fa":p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af"}}>{p._shared?(lang==="ar"?"مشارك":"Shared"):p.status||"Draft"}</span>
+                <span style={{fontSize:10,padding:"3px 10px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af"}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة فقط":"View-only"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
                 {!p._shared && <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>}
                 {!p._shared && (confirmDel===p.id ? (
                   <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
