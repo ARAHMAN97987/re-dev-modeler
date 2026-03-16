@@ -1488,6 +1488,7 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
   return result;
 }
 function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, t, lang }) {
+  const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhase, setSelectedPhase] = useState("all");
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
@@ -1720,6 +1721,7 @@ function FinancingView({ project, results, financing, t, up, lang }) {
   </div>;
 
   const h = results.horizon;
+  const ar = lang === "ar";
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
   const c = results.consolidated;
@@ -3322,7 +3324,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         {label:t.totalCapexLabel,value:fmtM(hasIncentives?(c.totalCapex-ir.capexGrantTotal):c.totalCapex),sub:cur+(hasIncentives?` (${ar?"بعد المنحة":"after grant"})`:""),color:"#ef4444",icon:"🏗",tip:"إجمالي البناء + غير مباشرة + احتياطي"+(hasIncentives?". مخصوم منها منحة CAPEX":"")+"\nAll construction + soft costs + contingency"+(hasIncentives?". Net of CAPEX grant":"")},
       ].filter(Boolean).map((h,i)=>(
         <div key={i} className="hero-kpi" style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",top:8,right:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
+          <div style={{position:"absolute",top:8,insetInlineEnd:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
           <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{h.tip?<Tip text={h.tip}>{h.label}</Tip>:h.label}</div>
           <div style={{fontSize:28,fontWeight:800,color:h.color,lineHeight:1,letterSpacing:-0.5}}>{h.value}</div>
           {h.sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{h.sub}</div>}
