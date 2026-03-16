@@ -68,9 +68,21 @@ class StorageAdapter {
       return data.filter(row => {
         try {
           const proj = JSON.parse(row.value)
-          return Array.isArray(proj.sharedWith) && proj.sharedWith.some(e => e.toLowerCase() === email.toLowerCase())
+          if (!Array.isArray(proj.sharedWith)) return false
+          return proj.sharedWith.some(e => {
+            if (typeof e === 'string') return e.toLowerCase() === email.toLowerCase()
+            return e?.email?.toLowerCase() === email.toLowerCase()
+          })
         } catch { return false }
-      }).map(row => ({ key: row.key, value: row.value, ownerId: row.user_id }))
+      }).map(row => {
+        const proj = JSON.parse(row.value)
+        const entry = proj.sharedWith.find(e => {
+          if (typeof e === 'string') return e.toLowerCase() === email.toLowerCase()
+          return e?.email?.toLowerCase() === email.toLowerCase()
+        })
+        const permission = (typeof entry === 'object' && entry?.permission) ? entry.permission : 'edit'
+        return { key: row.key, value: row.value, ownerId: row.user_id, permission }
+      })
     } catch { return [] }
   }
 
