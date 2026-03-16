@@ -1516,7 +1516,6 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   </div>;
 
   const h = results.horizon;
-  const ar = lang === "ar";
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
   const phaseNames = Object.keys(results.phaseResults || {});
@@ -1740,7 +1739,6 @@ function FinancingView({ project, results, financing, t, up, lang }) {
   </div>;
 
   const h = results.horizon;
-  const ar = lang === "ar";
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
   const c = results.consolidated;
@@ -2659,8 +2657,6 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                 ) : (
                   <button onClick={e=>{e.stopPropagation();setConfirmDel(p.id);}} style={{...btnSm,background:"#1e2230",color:"#6b7080"}} title="Delete">✕</button>
                 ))}
-              </div>
-            ))}
               </div>
             ))}
           </div>
