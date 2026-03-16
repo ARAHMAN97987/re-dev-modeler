@@ -1543,12 +1543,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
     {/* Returns KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))",gap:10,marginBottom:18}}>
-      <KPI label="LP Equity" value={fmtM(w.lpEquity)} sub={`${fmtPct(w.lpPct*100)}`} color="#8b5cf6" tip="حصة المستثمرين. مسؤولية محدودة، عوائد بأولوية\nInvestor capital. Limited liability, priority returns" />
-      <KPI label="GP Equity" value={fmtM(w.gpEquity)} sub={`${fmtPct(w.gpPct*100)}`} color="#3b82f6" tip="حصة المطور. يدير المشروع ويحصل حصة الأداء\nDeveloper capital. Manages project, earns carry" />
-      <KPI label="LP IRR" value={w.lpIRR!==null?fmtPct(w.lpIRR*100):"N/A"} color="#16a34a" tip="معدل عائد المستثمر السنوي بعد كل الرسوم والتوزيعات\nInvestor annual return after all fees and distributions" />
-      <KPI label="GP IRR" value={w.gpIRR!==null?fmtPct(w.gpIRR*100):"N/A"} color="#2563eb" tip="معدل عائد المطور السنوي شامل حصة الأداء\nDeveloper annual return including carry" />
-      <KPI label="LP MOIC" value={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"N/A"} color="#8b5cf6" tip="مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. Total distributions / Total invested. 2x = doubled money" />
-      <KPI label="GP MOIC" value={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"N/A"} color="#3b82f6" tip="مضاعف رأس مال المطور\nDeveloper multiple on invested capital" />
+      <KPI label={ar?"حصة الممول (LP)":"Investor Equity (LP)"} value={fmtM(w.lpEquity)} sub={`${fmtPct(w.lpPct*100)}`} color="#8b5cf6" tip="حصة المستثمرين. مسؤولية محدودة، عوائد بأولوية\nInvestor capital. Limited liability, priority returns" />
+      <KPI label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} value={fmtM(w.gpEquity)} sub={`${fmtPct(w.gpPct*100)}`} color="#3b82f6" tip="حصة المطور. يدير المشروع ويحصل حافز الأداء\nDeveloper capital. Manages project, earns carry" />
+      <KPI label={ar?"عائد الممول (LP)":"Investor IRR (LP)"} value={w.lpIRR!==null?fmtPct(w.lpIRR*100):"N/A"} color="#16a34a" tip="معدل عائد المستثمر السنوي بعد كل الرسوم والتوزيعات\nInvestor annual return after all fees and distributions" />
+      <KPI label={ar?"عائد المطور (GP)":"Developer IRR (GP)"} value={w.gpIRR!==null?fmtPct(w.gpIRR*100):"N/A"} color="#2563eb" tip="معدل عائد المطور السنوي شامل حافز الأداء\nDeveloper annual return including carry" />
+      <KPI label={ar?"مضاعف الممول (LP)":"Investor MOIC (LP)"} value={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"N/A"} color="#8b5cf6" tip="مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. Total distributions / Total invested. 2x = doubled money" />
+      <KPI label={ar?"مضاعف المطور (GP)":"Developer MOIC (GP)"} value={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"N/A"} color="#3b82f6" tip="مضاعف رأس مال المطور\nDeveloper multiple on invested capital" />
       <KPI label="Total Fees" value={fmtM(w.totalFees)} sub={cur} color="#f59e0b" tip="مجموع كل الرسوم: اكتتاب + إدارة + حفظ + تطوير + هيكلة\nAll fees: subscription + mgmt + custody + dev + structuring" />
       <KPI label="Exit Year" value={w.exitYear} color="#6b7080" tip="سنة بيع المشروع أو التخارج. عادة 5-10 سنوات بعد الاستقرار\nYear of asset sale/exit. Usually 5-10 years post-stabilization" />
     </div>
@@ -1566,7 +1566,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
         <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>{lang==="ar"?"عوائد المستثمرين":"Investor Returns"}</div>
         <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-          <span></span><span style={{fontWeight:600,color:"#8b5cf6",textAlign:"center"}}>LP</span><span style={{fontWeight:600,color:"#3b82f6",textAlign:"center"}}>GP</span>
+          <span></span><span style={{fontWeight:600,color:"#8b5cf6",textAlign:"center"}}>{ar?"الممول (LP)":"Investor (LP)"}</span><span style={{fontWeight:600,color:"#3b82f6",textAlign:"center"}}>{ar?"المطور (GP)":"Developer (GP)"}</span>
           <span style={{color:"#6b7080"}}>Invested</span><span style={{textAlign:"center"}}>{fmtM(w.lpTotalInvested)}</span><span style={{textAlign:"center"}}>{fmtM(w.gpTotalInvested)}</span>
           <span style={{color:"#6b7080"}}>Distributions</span><span style={{textAlign:"center",color:"#16a34a"}}>{fmtM(w.lpTotalDist)}</span><span style={{textAlign:"center",color:"#16a34a"}}>{fmtM(w.gpTotalDist)}</span>
           <span style={{color:"#6b7080"}}>Net IRR</span><span style={{textAlign:"center",fontWeight:700}}>{w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"}</span><span style={{textAlign:"center",fontWeight:700}}>{w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"}</span>
@@ -1585,9 +1585,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {[
           {label: lang==="ar"?"رد رأس المال":"Tier 1: Return of Capital", val: w.tier1.reduce((a,b)=>a+b,0), bg:"#dbeafe", fg:"#1e40af", tip:"الأولوية 1: إرجاع كامل رأس المال قبل أي أرباح\nFirst priority: return all invested equity before any profits"},
           {label: lang==="ar"?"العائد التفضيلي":"Tier 2: Preferred Return", val: w.tier2.reduce((a,b)=>a+b,0), bg:"#dcfce7", fg:"#166534", tip:"عائد سنوي بأولوية على رأس المال غير المسترد. يتراكم إذا ما دُفع\nPriority annual return on unreturned capital. Accrues if unpaid"},
-          {label: lang==="ar"?"تعويض المطور":"Tier 3: GP Catch-up", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e", tip:"المطور يحصل توزيعات حتى يوصل لنسبة حصة الأداء المستهدفة\nDeveloper receives until reaching target carry percentage"},
-          {label: lang==="ar"?"تقسيم الأرباح (LP)":"Tier 4: LP Profit Split", val: w.tier4LP.reduce((a,b)=>a+b,0), bg:"#ede9fe", fg:"#5b21b6", tip:"حصة المستثمر من باقي الأرباح بعد المراحل السابقة\nInvestor share of remaining profits after prior tiers"},
-          {label: lang==="ar"?"تقسيم الأرباح (GP)":"Tier 4: GP Profit Split", val: w.tier4GP.reduce((a,b)=>a+b,0), bg:"#e0f2fe", fg:"#075985", tip:"حصة المطور من باقي الأرباح\nDeveloper share of remaining profits"},
+          {label: lang==="ar"?"تعويض المطور (GP Catch-up)":"Tier 3: Developer Catch-up (GP)", val: w.tier3.reduce((a,b)=>a+b,0), bg:"#fef3c7", fg:"#92400e", tip:"المطور يحصل توزيعات حتى يوصل لنسبة حافز الأداء المستهدفة\nDeveloper receives until reaching target carry percentage"},
+          {label: lang==="ar"?"حصة الممول من الأرباح (LP)":"Tier 4: Investor Split (LP)", val: w.tier4LP.reduce((a,b)=>a+b,0), bg:"#ede9fe", fg:"#5b21b6", tip:"حصة المستثمر من باقي الأرباح بعد المراحل السابقة\nInvestor share of remaining profits after prior tiers"},
+          {label: lang==="ar"?"حصة المطور من الأرباح (GP)":"Tier 4: Developer Split (GP)", val: w.tier4GP.reduce((a,b)=>a+b,0), bg:"#e0f2fe", fg:"#075985", tip:"حصة المطور من باقي الأرباح\nDeveloper share of remaining profits"},
         ].map((t,i)=>(
           <div key={i} style={{background:t.bg,borderRadius:6,padding:"10px 14px",flex:"1 1 150px",minWidth:150}}>
             <div style={{fontSize:10,color:t.fg,fontWeight:600,marginBottom:4}}>{t.tip?<Tip text={t.tip}>{t.label}</Tip>:t.label}</div>
@@ -1670,15 +1670,15 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <CFRow label={lang==="ar"?"النقد المتاح":"Cash Available"} values={w.cashAvail} total={w.cashAvail.reduce((a,b)=>a+b,0)} color="#16a34a" />
         <CFRow label={lang==="ar"?"رد رأس المال":"T1: Return of Capital"} values={w.tier1} total={w.tier1.reduce((a,b)=>a+b,0)} color="#2563eb" />
         <CFRow label={lang==="ar"?"العائد التفضيلي":"T2: Preferred Return"} values={w.tier2} total={w.tier2.reduce((a,b)=>a+b,0)} color="#16a34a" />
-        <CFRow label={lang==="ar"?"تعويض المطور":"T3: GP Catch-up"} values={w.tier3} total={w.tier3.reduce((a,b)=>a+b,0)} color="#f59e0b" />
-        <CFRow label={lang==="ar"?"حصة LP من الأرباح":"T4: LP Profit Split"} values={w.tier4LP} total={w.tier4LP.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
-        <CFRow label={lang==="ar"?"حصة GP من الأرباح":"T4: GP Profit Split"} values={w.tier4GP} total={w.tier4GP.reduce((a,b)=>a+b,0)} color="#3b82f6" />
+        <CFRow label={lang==="ar"?"تعويض المطور (GP Catch-up)":"T3: Developer Catch-up (GP)"} values={w.tier3} total={w.tier3.reduce((a,b)=>a+b,0)} color="#f59e0b" />
+        <CFRow label={lang==="ar"?"حصة الممول من الأرباح (LP)":"T4: Investor Split (LP)"} values={w.tier4LP} total={w.tier4LP.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
+        <CFRow label={lang==="ar"?"حصة المطور من الأرباح (GP)":"T4: Developer Split (GP)"} values={w.tier4GP} total={w.tier4GP.reduce((a,b)=>a+b,0)} color="#3b82f6" />
         <tr style={{background:"#f0f4ff"}}><td colSpan={years.length+2} style={{padding:"4px 10px",fontSize:10,fontWeight:600,color:"#6b7080"}}>{lang==="ar"?"صافي التوزيعات":"NET DISTRIBUTIONS"}</td></tr>
-        <CFRow label={lang==="ar"?"توزيعات LP":"LP Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
-        <CFRow label={lang==="ar"?"توزيعات GP":"GP Distributions"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
+        <CFRow label={lang==="ar"?"توزيعات الممول (LP)":"Investor Distributions (LP)"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
+        <CFRow label={lang==="ar"?"توزيعات المطور (GP)":"Developer Distributions (GP)"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
         <tr style={{background:"#fefce8"}}><td colSpan={years.length+2} style={{padding:"4px 10px",fontSize:10,fontWeight:600,color:"#6b7080"}}>{lang==="ar"?"صافي التدفق النقدي":"NET CASH FLOW"}</td></tr>
-        <CFRow label={lang==="ar"?"صافي CF للمستثمر":"LP Net CF"} values={w.lpNetCF} total={w.lpNetCF.reduce((a,b)=>a+b,0)} bold />
-        <CFRow label={lang==="ar"?"صافي CF للمطور":"GP Net CF"} values={w.gpNetCF} total={w.gpNetCF.reduce((a,b)=>a+b,0)} bold />
+        <CFRow label={lang==="ar"?"صافي CF للممول (LP)":"Investor Net CF (LP)"} values={w.lpNetCF} total={w.lpNetCF.reduce((a,b)=>a+b,0)} bold />
+        <CFRow label={lang==="ar"?"صافي CF للمطور (GP)":"Developer Net CF (GP)"} values={w.gpNetCF} total={w.gpNetCF.reduce((a,b)=>a+b,0)} bold />
         <tr style={{background:"#f0fdf4"}}>
           <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontWeight:500,fontSize:11,color:"#6b7080"}}>{lang==="ar"?"رأس المال غير المسترد":"Unreturned Capital"}</td>
           <td style={tdN}></td>
@@ -1815,9 +1815,9 @@ Sale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp t
                 {project.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً
 Land value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${cur}`}><Inp type="number" value={project.landCapRate} onChange={v=>up({landCapRate:v})} /></FL>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <FL label={ar?"حصة المطور":"GP Equity"} hint="0=auto" tip="مساهمة المطور النقدية في الصندوق. عادة 5-30% من إجمالي Equity
+                  <FL label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} hint="0=auto" tip="مساهمة المطور النقدية في الصندوق. عادة 5-30% من إجمالي Equity
 Developer cash contribution to the fund. Usually 5-30% of total equity"><Inp type="number" value={project.gpEquityManual} onChange={v=>up({gpEquityManual:v})} /></FL>
-                  {project.finMode==="fund"&&<FL label={ar?"حصة المستثمرين":"LP Equity"} hint="0=auto" tip="رأس مال المستثمرين الخارجيين. عادة 70-95% من Equity مع أولوية عائد تفضيلي
+                  {project.finMode==="fund"&&<FL label={ar?"حصة الممول (LP)":"Investor Equity (LP)"} hint="0=auto" tip="رأس مال المستثمرين الخارجيين. عادة 70-95% من Equity مع أولوية عائد تفضيلي
 Outside investor capital. Usually 70-95% of equity with preferred return priority"><Inp type="number" value={project.lpEquityManual} onChange={v=>up({lpEquityManual:v})} /></FL>}
                 </div>
               </>}
@@ -1835,12 +1835,12 @@ Year capital raising begins. Often one year before construction for setup costs"
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="الحد الأدنى للعائد السنوي لـ LP قبل مشاركة GP. عادة 8-15%\nMinimum annual return for LP before GP shares profits. Usually 8-15%"><Inp type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></FL>
-                  <FL label={ar?"Carry % / حصة الأداء":"Carry %"} tip="نسبة أرباح GP بعد تجاوز العائد التفضيلي. عادة 20-30%\nGP profit share after pref return is met. Usually 20-30%"><Inp type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></FL>
+                  <FL label={ar?"حافز الأداء % (Carry)":"Performance Carry %"} tip="نسبة أرباح GP بعد تجاوز العائد التفضيلي. عادة 20-30%\nGP profit share after pref return is met. Usually 20-30%"><Inp type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></FL>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <FL label={ar?"نسبة توزيع LP":"LP Split %"} tip="نسبة الأرباح المتبقية للمستثمر بعد Pref و catch-up. عادة 70-80%
+                  <FL label={ar?"نسبة توزيع الممول (LP)":"Investor Split % (LP)"} tip="نسبة الأرباح المتبقية للمستثمر بعد Pref و catch-up. عادة 70-80%
 LP share of remaining profits after pref and catch-up. Usually 70-80%"><Inp type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></FL>
-                  <FL label={ar?"GP Catch-up":"Catch-up"} tip="بعد حصول LP على Pref، يأخذ GP حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها
+                  <FL label={ar?"تعويض المطور (GP Catch-up)":"Developer Catch-up (GP)"} tip="بعد حصول LP على Pref، يأخذ GP حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها
 After LP receives pref, GP takes a larger temporary share until agreed economics are reached"><Drp lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
                 </div>
                 {project.vehicleType==="fund"&&<>
@@ -1881,8 +1881,8 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
       {f.landCapValue > 0 && <KPI label={lang==="ar"?"رسملة الأرض":"Land Capitalization"} value={fmtM(f.landCapValue)} sub={cur} color="#f59e0b" tip="تحويل حق الانتفاع لقيمة رأسمالية = المساحة × سعر/م²\nConverting leasehold to capital value = Area × Rate/sqm" />}
       <KPI label={lang==="ar"?"تكلفة التطوير مع الأرض":"Dev Cost Incl Land"} value={fmtM(f.devCostInclLand)} sub={cur} color="#1a1d23" tip="إجمالي التكلفة شامل الأرض = أساس حساب الدين والحقوق\nTotal cost incl land = basis for debt and equity calculation" />
       <KPI label={lang==="ar"?"سقف الدين":"Max Debt (LTV)"} value={fmtM(f.maxDebt)} sub={`${project.maxLtvPct}%`} color="#ef4444" tip="أقصى قرض = LTV% × تكلفة التطوير. البنوك السعودية: 50-70%\nMax loan = LTV% × Dev Cost. Saudi banks: 50-70%" />
-      <KPI label="GP Equity" value={fmtM(f.gpEquity)} sub={fmtPct(f.gpPct*100)} color="#3b82f6" tip="حصة المطور من رأس المال. عادة تشمل قيمة الأرض\nDeveloper equity. Usually includes land value" />
-      <KPI label="LP Equity" value={fmtM(f.lpEquity)} sub={fmtPct(f.lpPct*100)} color="#8b5cf6" tip="حصة المستثمرين من رأس المال = الباقي بعد الدين وGP\nInvestor equity = remainder after Debt and GP" />
+      <KPI label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} value={fmtM(f.gpEquity)} sub={fmtPct(f.gpPct*100)} color="#3b82f6" tip="حصة المطور من رأس المال. عادة تشمل قيمة الأرض\nDeveloper equity. Usually includes land value" />
+      <KPI label={ar?"حصة الممول (LP)":"Investor Equity (LP)"} value={fmtM(f.lpEquity)} sub={fmtPct(f.lpPct*100)} color="#8b5cf6" tip="حصة المستثمرين من رأس المال = الباقي بعد الدين وGP\nInvestor equity = remainder after Debt and GP" />
       <KPI label={lang==="ar"?"إجمالي الفوائد":"Total Interest"} value={fmtM(f.totalInterest)} sub={cur} color="#ef4444" tip="مجموع الفوائد المدفوعة خلال كامل مدة القرض\nTotal interest paid over entire loan period" />
       <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color="#16a34a" tip="معدل العائد بعد خدمة الدين. أعلى من Unlevered عادة\nReturn after debt service. Usually higher than unlevered" />
     </div>
@@ -3748,7 +3748,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
   // Section 6: Waterfall
   if (w) {
     sections.push(["WATERFALL DISTRIBUTIONS"]);
-    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "T1:ROC", "T2:Pref", "T3:Catchup", "T4:LP Split", "T4:GP Split", "LP Dist", "GP Dist", "LP Net CF", "GP Net CF"]);
+    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "T1:ROC", "T2:Pref", "T3:Catchup", "T4:Investor Split (LP)", "T4:Developer Split (GPt", "LP Dist", "GP Dist", "LP Net CF", "GP Net CF"]);
     yrs.forEach(y => {
       sections.push([y + 1, sy + y, w.equityCalls[y], w.cashAvail[y], w.tier1[y], w.tier2[y], w.tier3[y], w.tier4LP[y], w.tier4GP[y], w.lpDist[y], w.gpDist[y], w.lpNetCF[y], w.gpNetCF[y]]);
     });
@@ -3929,7 +3929,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               {l:ar?"IRR (قبل التمويل)":"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",c:"#2563eb"},
               {l:"NPV @10%",v:fmtM(fc.npv10),c:"#06b6d4"},
               ...(f&&f.mode!=="self"&&!isFiltered?[{l:ar?"IRR (بعد التمويل)":"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",c:"#8b5cf6"},{l:ar?"إجمالي الدين":"Total Debt",v:fmtM(f.totalDebt),c:"#f59e0b"}]:[]),
-              ...(fw?[{l:"LP IRR",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",c:"#8b5cf6"},{l:"LP MOIC",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",c:"#8b5cf6"}]:[]),
+              ...(fw?[{l:ar?"عائد الممول (LP)":"Investor IRR (LP)",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",c:"#8b5cf6"},{l:ar?"مضاعف الممول (LP)":"Investor MOIC (LP)",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",c:"#8b5cf6"}]:[]),
             ].map((k,i) => (
               <div key={i} style={{border:"1px solid #e5e7ec",borderRadius:6,padding:"8px 10px"}}>
                 <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{k.l}</div>
@@ -4388,8 +4388,8 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
                 ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل العائد بعد التمويل\nReturn after debt service" }]:[]),
                 { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => getScenarioData(s).totalNetCF, fmt: v => fmtM(v), tip:"صافي التدفق = إيرادات - تكاليف - إيجار أرض\nNet CF = Income - CAPEX - Land Rent" },
                 ...(!isFiltered?[
-                  { label: "LP IRR", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
-                  { label: "LP MOIC", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
+                  { label: ar?"عائد الممول (LP)":"Investor IRR (LP)", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
+                  { label: ar?"مضاعف الممول (LP)":"Investor MOIC (LP)", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
                 ]:[]),
               ].map((metric, mi) => {
                 const baseVal = metric.fn(scenarioResults[0]);
