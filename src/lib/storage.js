@@ -89,6 +89,19 @@ class StorageAdapter {
     } catch { return null }
   }
 
+  // Save a shared project back to the owner's storage
+  async setSharedProject(key, value, ownerId) {
+    if (!this.useSupabase) return null
+    try {
+      const row = { key, value, user_id: ownerId, updated_at: new Date().toISOString() }
+      const { error } = await supabase
+        .from('kv_store')
+        .upsert(row, { onConflict: 'key,user_id' })
+      if (error) { console.error('Shared save error:', error); return null }
+      return { key, value }
+    } catch { return null }
+  }
+
   // ── localStorage methods ──
   _localGet(key) {
     try {
