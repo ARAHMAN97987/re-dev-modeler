@@ -2090,6 +2090,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
   const [aiOpen, setAiOpen] = useState(false);
   const t = L[lang];
+  const ar = lang === "ar";
   const autoSaveTimer = useRef(null);
   const sidebarRef = useRef(null);
 
@@ -4180,6 +4181,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
   if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
 
   const cur = project.currency || "SAR";
+  const ar = lang === "ar";
   const c = results.consolidated;
   const h = results.horizon;
   const phaseNames = Object.keys(results.phaseResults || {});
