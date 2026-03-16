@@ -516,12 +516,18 @@ async function loadProject(id, ownerId) {
 }
 async function saveProject(project) {
   project.updatedAt = new Date().toISOString();
-  await storage.set(PROJECT_PREFIX + project.id, JSON.stringify(project));
-  const index = await loadProjectIndex();
-  const meta = { id: project.id, name: project.name, status: project.status, updatedAt: project.updatedAt, createdAt: project.createdAt };
-  const idx = index.findIndex(p => p.id === project.id);
-  if (idx >= 0) index[idx] = meta; else index.push(meta);
-  await saveProjectIndex(index);
+  if (project._shared && project._ownerId) {
+    // Save back to the owner's storage
+    const clean = {...project}; delete clean._shared; delete clean._ownerId;
+    await storage.setSharedProject(PROJECT_PREFIX + project.id, JSON.stringify(clean), project._ownerId);
+  } else {
+    await storage.set(PROJECT_PREFIX + project.id, JSON.stringify(project));
+    const index = await loadProjectIndex();
+    const meta = { id: project.id, name: project.name, status: project.status, updatedAt: project.updatedAt, createdAt: project.createdAt };
+    const idx = index.findIndex(p => p.id === project.id);
+    if (idx >= 0) index[idx] = meta; else index.push(meta);
+    await saveProjectIndex(index);
+  }
 }
 async function deleteProjectStorage(id) { await storage.delete(PROJECT_PREFIX + id); const index = await loadProjectIndex(); await saveProjectIndex(index.filter(p => p.id !== id)); }
 
@@ -2141,7 +2147,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   })(); }, [user]);
 
   useEffect(() => {
-    if (!project || view !== "editor" || project._shared) return;
+    if (!project || view !== "editor") return;
     setSaveStatus("unsaved");
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(async () => {
@@ -2256,10 +2262,10 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         <div style={{height:50,minHeight:50,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 16px",gap:10}}>
           <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13}}>{sidebarOpen?(lang==="ar"?"▷":"◁"):(lang==="ar"?"◁":"▷")}</button>
           <div style={{flex:1}}>
-            <EditableCell value={project?.name||""} onChange={v=>{ if (!project?._shared) up({name:v}); }} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
+            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
-          {project?._shared && <span style={{fontSize:10,padding:"4px 12px",borderRadius:4,fontWeight:600,background:"#dbeafe",color:"#1d4ed8"}}>{lang==="ar"?"🔒 للقراءة فقط":"🔒 Read-only"}</span>}
-          <StatusBadge status={project?.status} onChange={s=>{ if (!project?._shared) up({status:s}); }} />
+          {project?._shared && <span style={{fontSize:10,padding:"4px 12px",borderRadius:4,fontWeight:600,background:"#dbeafe",color:"#1d4ed8"}}>{lang==="ar"?"👤 مشارك":"👤 Shared"}</span>}
+          <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
           <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 10px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩ Undo</button>
           <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
           <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
@@ -2647,7 +2653,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                   <div style={{fontSize:14,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}{p._shared?<span style={{fontSize:10,color:"#60a5fa",marginInlineStart:8,fontWeight:500}}>{lang==="ar"?"(مشارك معك)":"(Shared)"}</span>:null}</div>
                   <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
                 </div>
-                <span style={{fontSize:10,padding:"3px 10px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p._shared?"#60a5fa":p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af"}}>{p._shared?(lang==="ar"?"للقراءة":"Read-only"):p.status||"Draft"}</span>
+                <span style={{fontSize:10,padding:"3px 10px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p._shared?"#60a5fa":p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af"}}>{p._shared?(lang==="ar"?"مشارك":"Shared"):p.status||"Draft"}</span>
                 {!p._shared && <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>}
                 {!p._shared && (confirmDel===p.id ? (
                   <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
