@@ -1496,6 +1496,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   </div>;
 
   const h = results.horizon;
+  const ar = lang === "ar";
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
   const phaseNames = Object.keys(results.phaseResults || {});
