@@ -25,7 +25,7 @@ class AppErrorBoundary extends Component {
               <button onClick={()=>this.setState({hasError:false,error:null})} style={{padding:"10px 24px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"إعادة المحاولة":"Retry"}</button>
               <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"#1e2230",color:"#d0d4dc",border:"1px solid #282d3a",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"تحديث الصفحة":"Reload Page"}</button>
             </div>
-            <details style={{marginTop:24,textAlign:"left"}}>
+            <details style={{marginTop:24,textAlign:"start"}}>
               <summary style={{fontSize:10,color:"#4b5060",cursor:"pointer"}}>{isAr?"تفاصيل الخطأ":"Error details"}</summary>
               <pre style={{fontSize:10,color:"#6b7080",background:"#161a24",padding:12,borderRadius:6,marginTop:8,overflow:"auto",maxHeight:120,whiteSpace:"pre-wrap"}}>{this.state.error?.message || "Unknown error"}{"\n"}{this.state.error?.stack?.split("\n").slice(0,4).join("\n")}</pre>
             </details>
@@ -2087,6 +2087,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
+  useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
   const [aiOpen, setAiOpen] = useState(false);
   const t = L[lang];
   const autoSaveTimer = useRef(null);
@@ -2190,6 +2191,14 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         .asset-card { animation: fadeInUp 0.3s ease-out both; transition: box-shadow 0.15s, border-color 0.15s; }
         .kpi-secondary { animation: fadeIn 0.5s ease-out both; animation-delay: 0.3s; }
         table tbody tr { transition: background 0.1s; }
+        [dir="rtl"] { text-align: right; }
+        [dir="rtl"] th, [dir="rtl"] td { text-align: start; }
+        [dir="rtl"] td[style*="text-align: right"], [dir="rtl"] td[style*="text-align:right"] { text-align: right !important; }
+        [dir="rtl"] [style*="position: sticky"], [dir="rtl"] [style*="position:sticky"] { left: auto !important; right: 0 !important; }
+        [dir="rtl"] input, [dir="rtl"] select, [dir="rtl"] textarea { text-align: start; }
+        [dir="rtl"] label { text-align: start; }
+        [dir="rtl"] button { text-align: start; }
+        [dir="rtl"] .cm-editor { direction: ltr; }
       `}</style>
       {sidebarOpen && (
         <div style={{width:340,minWidth:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -2203,7 +2212,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{height:50,minHeight:50,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 16px",gap:10}}>
-          <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13}}>{sidebarOpen?"◁":"▷"}</button>
+          <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13}}>{sidebarOpen?(lang==="ar"?"▷":"◁"):(lang==="ar"?"◁":"▷")}</button>
           <div style={{flex:1}}>
             <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
@@ -2263,7 +2272,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         })()}
         <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
           {/* Progress steps */}
-          <div style={{display:"flex",alignItems:"center",gap:2,padding:"8px 12px 8px 0",borderRight:"1px solid #f0f1f5",marginRight:4}}>
+          <div style={{display:"flex",alignItems:"center",gap:2,padding:"8px 12px 8px 0",borderInlineEnd:"1px solid #f0f1f5",marginInlineEnd:4}}>
             {[
               {n:"1",done:(project.assets||[]).length>0},
               {n:"2",done:project.finMode!=="self"},
@@ -2344,7 +2353,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
       <span style={{fontSize:28}}>{icon}</span>
       <div><div style={{fontSize:14,fontWeight:600,color:selected?"#2563eb":"#1a1d23"}}>{label}</div>
       {desc&&<div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{desc}</div>}</div>
-      {selected&&<span style={{marginLeft:"auto",fontSize:18,color:"#2563eb"}}>✓</span>}
+      {selected&&<span style={{marginInlineStart:"auto",fontSize:18,color:"#2563eb"}}>✓</span>}
     </div>
   );
 
@@ -2486,7 +2495,7 @@ function LandingPage({ onSignIn, lang, setLang }) {
         </div>
       </div>
       {/* ── Right/Left: Auth ── */}
-      <div style={{width:420,minWidth:380,background:"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:"48px 36px",borderLeft:ar?"none":"1px solid #1e2230",borderRight:ar?"1px solid #1e2230":"none"}}>
+      <div style={{width:420,minWidth:380,background:"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:"48px 36px",borderInlineStart:ar?"none":"1px solid #1e2230",borderInlineEnd:ar?"1px solid #1e2230":"none"}}>
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2,marginBottom:6}}>ZAN</div>
           <div style={{fontSize:12,color:"#6b7080"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
@@ -2622,7 +2631,7 @@ function StatusBadge({status,onChange}) {
   return (<div style={{position:"relative"}}>
     <button onClick={()=>setOpen(!open)} style={{...btnS,background:c.bg,color:c.fg,padding:"4px 12px",fontSize:11,fontWeight:600}}>{status||"Draft"} ▾</button>
     {open&&<div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,0.1)",zIndex:100,overflow:"hidden"}}>
-      {sts.map(s=><button key={s} onClick={()=>{onChange(s);setOpen(false);}} style={{display:"block",width:"100%",padding:"8px 16px",border:"none",background:status===s?"#f0f1f5":"#fff",fontSize:12,cursor:"pointer",textAlign:"left",color:"#1a1d23"}}>{s}</button>)}
+      {sts.map(s=><button key={s} onClick={()=>{onChange(s);setOpen(false);}} style={{display:"block",width:"100%",padding:"8px 16px",border:"none",background:status===s?"#f0f1f5":"#fff",fontSize:12,cursor:"pointer",textAlign:"start",color:"#1a1d23"}}>{s}</button>)}
     </div>}
   </div>);
 }
@@ -2634,7 +2643,7 @@ function StatusBadge({status,onChange}) {
 function Sec({title,children,def=false,filled,summary}) {
   const [open,setOpen]=useState(def);
   return (<div style={{borderBottom:"1px solid #1e2230"}}>
-    <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:open?"#d0d4dc":"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"color 0.15s"}}>
+    <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:open?"#d0d4dc":"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"start",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"color 0.15s"}}>
       {filled!==undefined&&<span style={{width:7,height:7,borderRadius:4,background:filled?"#16a34a":"#3b4050",flexShrink:0}} />}
       <span style={{flex:1}}>{title}</span>
       {!open&&summary&&<span style={{fontSize:9,color:"#4b5060",fontWeight:400,letterSpacing:0,textTransform:"none",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{summary}</span>}
@@ -2651,7 +2660,7 @@ function Fld({label,children,hint,tip}) {
       {label}
       {tip && <span onMouseEnter={()=>setShowTip(true)} onMouseLeave={()=>setShowTip(false)} style={{cursor:"help",fontSize:10,color:"#4b5060",lineHeight:1}}>ⓘ</span>}
     </label>
-    {showTip && tip && <div style={{position:"absolute",top:-4,left:0,right:0,transform:"translateY(-100%)",background:"#1a1d23",color:"#d0d4dc",padding:"8px 10px",borderRadius:6,fontSize:10,lineHeight:1.4,zIndex:99,boxShadow:"0 4px 12px rgba(0,0,0,0.4)",maxWidth:260}}>{tip}</div>}
+    {showTip && tip && <div style={{position:"absolute",top:-4,insetInlineStart:0,insetInlineEnd:0,transform:"translateY(-100%)",background:"#1a1d23",color:"#d0d4dc",padding:"8px 10px",borderRadius:6,fontSize:10,lineHeight:1.4,zIndex:99,boxShadow:"0 4px 12px rgba(0,0,0,0.4)",maxWidth:260}}>{tip.split("\n").map((line,i)=><div key={i} dir={/[\u0600-\u06FF]/.test(line)?"rtl":"ltr"} style={{marginBottom:i===0?3:0}}>{line}</div>)}</div>}
     {children}
     {hint&&<div style={{fontSize:10,color:"#4b5060",marginTop:2}}>{hint}</div>}
   </div>);
@@ -3385,15 +3394,15 @@ function Tip({text,children}) {
   };
   return <span style={{display:"inline-flex",alignItems:"center"}}>
     {children}
-    <span ref={ref} onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)} onClick={()=>{if(!show)onEnter();else setShow(false);}} style={{cursor:"help",fontSize:10,color:"#9ca3af",marginLeft:3,lineHeight:1}}>ⓘ</span>
-    {show&&<div style={{position:"fixed",top:pos.top,left:Math.max(10,Math.min(pos.left-140,window.innerWidth-300)),width:280,background:"#1a1d23",color:"#d0d4dc",padding:"10px 13px",borderRadius:8,fontSize:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"left",pointerEvents:"none"}}>{text}</div>}
+    <span ref={ref} onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)} onClick={()=>{if(!show)onEnter();else setShow(false);}} style={{cursor:"help",fontSize:10,color:"#9ca3af",marginInlineStart:3,lineHeight:1}}>ⓘ</span>
+    {show&&<div style={{position:"fixed",top:pos.top,...(document.dir==="rtl"?{right:Math.max(10,Math.min(window.innerWidth-pos.left-140,window.innerWidth-300))}:{left:Math.max(10,Math.min(pos.left-140,window.innerWidth-300))}),width:280,background:"#1a1d23",color:"#d0d4dc",padding:"10px 13px",borderRadius:8,fontSize:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"start",pointerEvents:"none"}}>{text.split("\n").map((line,i)=><div key={i} dir={/[\u0600-\u06FF]/.test(line)?"rtl":"ltr"} style={{marginBottom:i===0?4:0}}>{line}</div>)}</div>}
   </span>;
 }
 
 function KPI({label,value,sub,color,tip}) {
   return <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"12px 14px"}}>
     <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{tip?<Tip text={tip}>{label}</Tip>:label}</div>
-    <div style={{fontSize:19,fontWeight:700,color:color||"#1a1d23",lineHeight:1.1}}>{value}{sub&&<span style={{fontSize:11,fontWeight:400,color:"#9ca3af",marginLeft:4}}>{sub}</span>}</div>
+    <div style={{fontSize:19,fontWeight:700,color:color||"#1a1d23",lineHeight:1.1}}>{value}{sub&&<span style={{fontSize:11,fontWeight:400,color:"#9ca3af",marginInlineStart:4}}>{sub}</span>}</div>
   </div>;
 }
 
@@ -3860,7 +3869,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {reports.map(r => (
         <button key={r.key} onClick={() => setActiveReport(r.key)}
           style={{background:activeReport===r.key?"#1e3a5f":"#fff",color:activeReport===r.key?"#fff":"#1a1d23",
-            border:"1px solid #e5e7ec",borderRadius:8,padding:"16px",cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>
+            border:"1px solid #e5e7ec",borderRadius:8,padding:"16px",cursor:"pointer",textAlign:"start",transition:"all 0.15s"}}>
           <div style={{fontSize:24,marginBottom:6}}>{r.icon}</div>
           <div style={{fontSize:13,fontWeight:600}}>{r.label}</div>
         </button>
@@ -3918,7 +3927,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>{lang==="ar"?"ملخص المراحل":"Phase Summary"}</h2>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead><tr style={{background:"#1e3a5f"}}>
-              {["Phase","Assets","CAPEX","Income","Net CF","IRR"].map(h=><th key={h} style={{color:"#fff",padding:"5px 6px",textAlign:"left",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
+              {["Phase","Assets","CAPEX","Income","Net CF","IRR"].map(h=><th key={h} style={{color:"#fff",padding:"5px 6px",textAlign:"start",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
             </tr></thead>
             <tbody>
               {Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name)).map(([name,pr])=>(
@@ -4023,7 +4032,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>{lang==="ar"?"4. التدفقات النقدية 10 سنوات وDSCR":"4. 10-Year Cash Flow & DSCR"}</h2>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:9}}>
             <thead><tr style={{background:"#1e3a5f"}}>
-              <th style={{color:"#fff",padding:"4px 5px",textAlign:"left",fontSize:8}}>{lang==="ar"?"البند":"Item"}</th>
+              <th style={{color:"#fff",padding:"4px 5px",textAlign:"start",fontSize:8}}>{lang==="ar"?"البند":"Item"}</th>
               {bankYears.map(y=><th key={y} style={{color:"#fff",padding:"4px 5px",textAlign:"right",fontSize:8}}>{sy+y}</th>)}
             </tr></thead>
             <tbody>
@@ -4642,7 +4651,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
     <div style={{ background: "#fff", borderRadius: 8, border: `1px solid ${enabled ? color : "#e5e7ec"}`, overflow: "hidden", transition: "border-color 0.2s" }}>
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: enabled ? `1px solid ${color}22` : "none", cursor: "pointer" }} onClick={onToggle}>
         <div style={{ width: 36, height: 20, borderRadius: 10, background: enabled ? color : "#d1d5db", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
-          <div style={{ width: 16, height: 16, borderRadius: 8, background: "#fff", position: "absolute", top: 2, left: enabled ? 18 : 2, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+          <div style={{ width: 16, height: 16, borderRadius: 8, background: "#fff", position: "absolute", top: 2, insetInlineStart: enabled ? 18 : 2, transition: "inset-inline-start 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: enabled ? "#1a1d23" : "#9ca3af" }}>{lang === "ar" ? titleAr : title}{tip && <Tip text={tip} />}</div>
@@ -4817,7 +4826,7 @@ const btnSm={...btnS,padding:"4px 8px",fontSize:11,fontWeight:500,borderRadius:4
 const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:5,border:"1px solid #282d3a",background:"#161a24",color:"#d0d4dc",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 const cellInputStyle={padding:"4px 6px",borderRadius:3,border:"1px solid transparent",background:"transparent",color:"#1a1d23",fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",width:"100%"};
 const tblStyle={width:"100%",borderCollapse:"collapse"};
-const thSt={padding:"7px 8px",textAlign:"left",fontSize:10,fontWeight:600,color:"#6b7080",background:"#f8f9fb",borderBottom:"1px solid #e5e7ec",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
+const thSt={padding:"7px 8px",textAlign:"start",fontSize:10,fontWeight:600,color:"#6b7080",background:"#f8f9fb",borderBottom:"1px solid #e5e7ec",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
 const tdSt={padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:12,whiteSpace:"nowrap"};
 const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
 
