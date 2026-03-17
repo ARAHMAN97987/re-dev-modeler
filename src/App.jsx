@@ -2590,15 +2590,14 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
 
   const results = useMemo(() => { try { return project ? computeProjectCashFlows(project) : null; } catch(e) { console.error("computeProjectCashFlows error:", e); return null; } }, [project]);
   const incentivesResult = useMemo(() => { try { return project && results ? computeIncentives(project, results) : null; } catch(e) { console.error("computeIncentives error:", e); return null; } }, [project, results]);
-  // Per-phase independent financing & waterfall (new architecture)
+  // Consolidated financing & waterfall (legacy - full field set for UI)
+  const financing = useMemo(() => { try { return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult]);
+  const waterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing, incentivesResult) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing, incentivesResult]);
+  // Per-phase independent financing & waterfall (new architecture - for phase tabs)
   const independentPhaseResults = useMemo(() => { try { return project && results ? computeIndependentPhaseResults(project, results, incentivesResult) : null; } catch(e) { console.error("independentPhaseResults error:", e); return null; } }, [project, results, incentivesResult]);
-  // Consolidated financing: use aggregated if per-phase available, else legacy
-  const financing = useMemo(() => { try { if (independentPhaseResults?.consolidatedFinancing) return independentPhaseResults.consolidatedFinancing; return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult, independentPhaseResults]);
-  // Consolidated waterfall: use aggregated if per-phase available, else legacy
-  const waterfall = useMemo(() => { try { if (independentPhaseResults?.consolidatedWaterfall) return independentPhaseResults.consolidatedWaterfall; return project && results && financing ? computeWaterfall(project, results, financing, incentivesResult) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing, incentivesResult, independentPhaseResults]);
-  // Phase waterfalls: use independent results directly
+  // Phase waterfalls: prefer independent results for phase tabs
   const phaseWaterfalls = useMemo(() => { try { if (independentPhaseResults?.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0) return independentPhaseResults.phaseWaterfalls; return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall, independentPhaseResults]);
-  // Phase financings: available from independent results
+  // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
