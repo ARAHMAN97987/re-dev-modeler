@@ -300,7 +300,7 @@ suite('F9-computeFinancing');
   t('devCostInclLand >= excl', f.devCostInclLand >= f.devCostExclLand);
   // C: Debt sizing
   t('maxDebt ≈ 60% of devCostInclLand', near(f.maxDebt, f.devCostInclLand * 0.6, TOL.MONEY_LARGE));
-  t('totalEquity = devCost - debt', near(f.totalEquity, f.devCostInclLand - f.maxDebt, TOL.MONEY_LARGE));
+  t('totalEquity = devCost + fee - debt', near(f.totalEquity, f.devCostInclLand + f.upfrontFee - f.maxDebt, TOL.MONEY_LARGE));
   // E: Drawdown
   t('Sum drawdown = totalDebt', near(sumArr(f.drawdown), f.totalDebt, TOL.MONEY_SMALL));
   t('No neg equity calls', f.equityCalls.every(v => v >= -TOL.MONEY_SMALL));

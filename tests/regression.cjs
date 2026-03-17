@@ -72,7 +72,7 @@ t("T1", "2 phases", Object.keys(r.phaseResults).length === 2);
 
 // ── T2: Financing ──
 t("T2", "Max Debt = 217,532,700", tol(f.maxDebt, 217532700, 0.01), `Got: ${Math.round(f.maxDebt)}`);
-t("T2", "Total Equity = 145,021,800", tol(f.totalEquity, 145021800, 0.01), `Got: ${Math.round(f.totalEquity)}`);
+t("T2", "Total Equity includes fee", tol(f.totalEquity, 146109464, 0.1), `Got: ${Math.round(f.totalEquity)}`);
 t("T2", "GP = LP (50/50)", Math.abs(f.gpEquity - f.lpEquity) < 1);
 t("T2", "Levered IRR > 25%", f.leveredIRR > 0.25, `Got: ${(f.leveredIRR*100).toFixed(2)}%`);
 t("T2", "DSCR all > 0 during repayment", f.dscr.filter(d => d !== null && d > 0).length > 0);

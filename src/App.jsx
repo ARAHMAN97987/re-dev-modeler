@@ -774,9 +774,10 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
   // T2: FINANCING ENGINE (12 checks)
   // ═══════════════════════════════════════════════
   if (f && f.mode !== "self") {
-    const capDiff = Math.abs((f.totalDebt+f.gpEquity+f.lpEquity)-f.devCostInclLand);
-    add("T2","Capital Structure Equation", capDiff<10000, "Debt + GP + LP = Dev Cost",
-      `${fmt(f.totalDebt+f.gpEquity+f.lpEquity)} vs ${fmt(f.devCostInclLand)} (diff: ${fmt(capDiff)})`);
+    const capTarget = f.totalProjectCost || f.devCostInclLand;
+    const capDiff = Math.abs((f.totalDebt+f.gpEquity+f.lpEquity)-capTarget);
+    add("T2","Capital Structure Equation", capDiff<10000, "Debt + GP + LP = Total Project Cost",
+      `${fmt(f.totalDebt+f.gpEquity+f.lpEquity)} vs ${fmt(capTarget)} (diff: ${fmt(capDiff)})`);
     add("T2","Debt Balance ≥ 0", (f.debtBalClose||[]).every(v=>v>=-0.01), "Debt balance never negative");
     const rpEnd = f.repayStart+f.repayYears-1;
     const balEnd = rpEnd>=0&&rpEnd<h?(f.debtBalClose[rpEnd]||0):0;
@@ -1189,7 +1190,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
     }
     const selfIRR = calcIRR(selfCF);
     return {
-      mode: "self", landCapValue, devCostExclLand, devCostInclLand, capexGrantTotal,
+      mode: "self", landCapValue, devCostExclLand, devCostInclLand, totalProjectCost: devCostInclLand, capexGrantTotal,
       gpEquity: devCostInclLand, lpEquity: 0, totalEquity: devCostInclLand, gpPct: 1, lpPct: 0,
       leveredCF: selfCF, debtBalOpen: new Array(h).fill(0), debtBalClose: new Array(h).fill(0),
       debtService: new Array(h).fill(0),
@@ -1212,7 +1213,9 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const upfrontFee = maxDebt * (project.upfrontFeePct || 0) / 100;
 
   // ── Equity Structure ──
-  const totalEquity = Math.max(0, devCostInclLand - maxDebt);
+  // Total project cost includes upfront fee (equity must cover it unless bank100)
+  const totalProjectCost = devCostInclLand + (isBank100 ? 0 : upfrontFee);
+  let totalEquity = Math.max(0, totalProjectCost - maxDebt);
   let gpEquity, lpEquity;
 
   // GP Equity: manual > land cap value > partner equity > 50% default
@@ -1256,8 +1259,8 @@ function computeFinancing(project, projectResults, incentivesResult) {
     }
   }
 
-  const gpPct = isBank100 ? 1 : (totalEquity > 0 ? gpEquity / totalEquity : 0);
-  const lpPct = isBank100 ? 0 : (totalEquity > 0 ? lpEquity / totalEquity : 0);
+  let gpPct = isBank100 ? 1 : (totalEquity > 0 ? gpEquity / totalEquity : 0);
+  let lpPct = isBank100 ? 0 : (totalEquity > 0 ? lpEquity / totalEquity : 0);
 
   // ── Construction period ──
   let constrEnd = 0;
@@ -1289,6 +1292,22 @@ function computeFinancing(project, projectResults, incentivesResult) {
   let firstDrawYear = -1;
   for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { firstDrawYear = y; break; } }
   if (firstDrawYear >= 0) equityCalls[firstDrawYear] += upfrontFee;
+
+  // ── Post-drawdown reconciliation ──
+  // When actualMaxDebt < maxDebt (e.g. landCap inflates devCost beyond cash needs),
+  // equity must absorb the difference to keep Sources = Uses balanced.
+  if (!isBank100 && totalDrawn < maxDebt && totalProjectCost > 0) {
+    const prevEquity = totalEquity;
+    totalEquity = Math.max(0, totalProjectCost - totalDrawn);
+    if (prevEquity > 0 && totalEquity !== prevEquity) {
+      // Scale GP/LP proportionally to preserve split ratio
+      const scale = totalEquity / prevEquity;
+      gpEquity *= scale;
+      lpEquity = totalEquity - gpEquity;
+      gpPct = totalEquity > 0 ? gpEquity / totalEquity : 0;
+      lpPct = totalEquity > 0 ? lpEquity / totalEquity : 0;
+    }
+  }
 
   // ── Debt balance + repayment ──
   const debtBalOpen = new Array(h).fill(0);
@@ -1411,7 +1430,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   return {
-    mode: project.finMode, landCapValue, devCostExclLand, devCostInclLand, capexGrantTotal,
+    mode: project.finMode, landCapValue, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
     gpEquity, lpEquity, totalEquity, gpPct, lpPct,
     drawdown, equityCalls, debtBalOpen, debtBalClose,
     repayment: repay, interest: adjustedInterest, originalInterest: interest,
