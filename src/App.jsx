@@ -540,7 +540,7 @@ function getScenarioMults(p) {
   else if (s==="Rent +10%") rm=1.1; else if (s==="Rent -10%") rm=0.9;
   else if (s==="Delay +6 months") dm=6;
   else if (s==="Escalation +0.5%") ea=0.5; else if (s==="Escalation -0.5%") ea=-0.5;
-  else if (s==="Custom") { cm=(p.customCapexMult||100)/100; rm=(p.customRentMult||100)/100; dm=p.customDelay||0; ea=p.customEscAdj||0; }
+  else if (s==="Custom") { cm=(p.customCapexMult??100)/100; rm=(p.customRentMult??100)/100; dm=p.customDelay??0; ea=p.customEscAdj??0; }
   return {cm,rm,dm,ea};
 }
 
@@ -799,8 +799,14 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T2","Grace Period Respected", graceOk, "No repayment during grace period");
     const adjLR=ir?.adjustedLandRent||c.landRent;
     let levOk=true;
+    // Determine if sold (post-exit CF should be zero)
+    const fExitStr=project.exitStrategy||"sale";
+    const fExitYrIdx=f.exitYear?(f.exitYear-(project.startYear||2026)):-1;
+    const fSold=fExitStr!=="hold"&&fExitYrIdx>=0&&fExitYrIdx<h;
     for(let y=0;y<h;y++){
-      const exp=c.income[y]-adjLR[y]-c.capex[y]+(ir?.capexGrantSchedule?.[y]||0)+(ir?.feeRebateSchedule?.[y]||0)-f.debtService[y]+f.drawdown[y]+(f.exitProceeds?.[y]||0);
+      let exp;
+      if(fSold&&y>fExitYrIdx){exp=0;}
+      else{exp=c.income[y]-adjLR[y]-c.capex[y]+(ir?.capexGrantSchedule?.[y]||0)+(ir?.feeRebateSchedule?.[y]||0)-f.debtService[y]+f.drawdown[y]+(f.exitProceeds?.[y]||0);}
       if(Math.abs(f.leveredCF[y]-exp)>tol){levOk=false;break;}
     }
     add("T2","Levered CF Equation", levOk, "LevCF = Income - Land - CAPEX + Grants - DS + Draw + Exit");
@@ -839,19 +845,21 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     let lpDOk=true;
     for(let y=0;y<h;y++){
       if(w.lpDist[y]>0&&w.lpPct>0){
-        const exp=(w.tier1[y]+w.tier2[y])*(w.lpPct||0)+(w.tier4LP[y]||0);
+        // FIX#3 Option A: T1 pro-rata, T2 100% to LP
+        const exp=w.tier1[y]*(w.lpPct||0)+w.tier2[y]+(w.tier4LP[y]||0);
         if(Math.abs(w.lpDist[y]-exp)>tol){lpDOk=false;break;}
       }
     }
-    add("T3","LP Dist = (T1+T2)*LP% + T4LP", lpDOk, "LP distribution formula correct");
+    add("T3","LP Dist = T1*LP% + T2 + T4LP", lpDOk, "LP distribution formula correct");
     let gpDOk=true;
     for(let y=0;y<h;y++){
       if(w.gpDist[y]>0&&w.gpPct>0){
-        const exp=(w.tier1[y]+w.tier2[y])*(w.gpPct||0)+(w.tier3[y]||0)+(w.tier4GP[y]||0);
+        // FIX#3 Option A: T1 pro-rata, T2 nothing to GP
+        const exp=w.tier1[y]*(w.gpPct||0)+(w.tier3[y]||0)+(w.tier4GP[y]||0);
         if(Math.abs(w.gpDist[y]-exp)>tol){gpDOk=false;break;}
       }
     }
-    add("T3","GP Dist = (T1+T2)*GP% + T3 + T4GP", gpDOk, "GP distribution formula correct");
+    add("T3","GP Dist = T1*GP% + T3 + T4GP", gpDOk, "GP distribution formula correct");
     if(w.lpTotalInvested>0&&w.lpMOIC){
       const expM=w.lpTotalDist/w.lpTotalInvested;
       add("T3","LP MOIC = Dist/Equity", Math.abs(w.lpMOIC-expM)<0.01, "LP MOIC correct", `${w.lpMOIC.toFixed(2)}x`);
@@ -967,12 +975,15 @@ function computeIncentives(project, projectResults) {
     const grantAmt = Math.min(rawGrant, g.maxCap || Infinity);
     result.capexGrantTotal = grantAmt;
     if (g.timing === "construction" && constrEnd >= 0) {
-      // H2: Count only years where CAPEX > 0, not constrEnd+1
-      const activeConstrYears = c.capex.filter(v => v > 0).length;
-      if (activeConstrYears > 0) {
-        const perYear = grantAmt / activeConstrYears;
+      // FIX#6: Spend-weighted grant distribution (proportional to actual CAPEX)
+      const totalEligibleCapex = c.capex.reduce((s, v) => s + (v > 0 ? v : 0), 0);
+      if (totalEligibleCapex > 0) {
         for (let y = 0; y < h; y++) {
-          if (c.capex[y] > 0) { result.capexGrantSchedule[y] = perYear; result.adjustedCapex[y] -= perYear; }
+          if (c.capex[y] > 0) {
+            const alloc = grantAmt * (c.capex[y] / totalEligibleCapex);
+            result.capexGrantSchedule[y] = alloc;
+            result.adjustedCapex[y] -= alloc;
+          }
         }
       }
     } else {
@@ -983,17 +994,21 @@ function computeIncentives(project, projectResults) {
   // ── 2. Land Rent Rebate ──
   if (inc.landRentRebate?.enabled && project.landType === "lease") {
     const lr = inc.landRentRebate;
-    const constrYrs = lr.constrRebateYears > 0 ? lr.constrRebateYears : constrEnd + 1;
+    // FIX#7: Find actual construction start from CAPEX schedule
+    let constrStart = 0;
+    for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = y; break; } }
+    const constrYrs = lr.constrRebateYears > 0 ? lr.constrRebateYears : constrEnd - constrStart + 1;
     const constrPct = (lr.constrRebatePct || 0) / 100;
     const operPct = (lr.operRebatePct || 0) / 100;
     const operYrs = lr.operRebateYears || 0;
+    const constrWindowEnd = constrStart + constrYrs;
     for (let y = 0; y < h; y++) {
       let rebatePct = 0;
-      if (y < constrYrs) rebatePct = constrPct;
-      else if (y < constrYrs + operYrs) rebatePct = operPct;
+      if (y >= constrStart && y < constrWindowEnd) rebatePct = constrPct;
+      else if (y >= constrWindowEnd && y < constrWindowEnd + operYrs) rebatePct = operPct;
       const saving = Math.abs(c.landRent[y] || 0) * rebatePct;
       result.landRentSavingSchedule[y] = saving;
-      result.adjustedLandRent[y] = Math.max(0, (c.landRent[y] || 0) - saving); // Rebate reduces land rent cost
+      result.adjustedLandRent[y] = Math.max(0, (c.landRent[y] || 0) - saving);
       result.landRentSavingTotal += saving;
     }
   }
@@ -1130,19 +1145,46 @@ function computeFinancing(project, projectResults, incentivesResult) {
     const exitStrategySelf = project.exitStrategy || "sale";
     const selfGrace = project.debtGrace ?? 3;
     const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEndSelf + selfGrace + 2);
-    if (exitStrategySelf !== "hold" && exitYrSelf >= 0 && exitYrSelf < h) {
-      const stabIncome = c.income[Math.min(exitYrSelf, h - 1)] || c.income[Math.min(constrEndSelf + 2, h - 1)] || 0;
-      const stabNOI = stabIncome - (c.landRent[Math.min(exitYrSelf, h-1)] || 0);
-      let exitVal;
-      if (exitStrategySelf === "caprate") {
-        const capRateSelf = (project.exitCapRate ?? 9) / 100;
-        exitVal = capRateSelf > 0 ? stabNOI / capRateSelf : 0;
+    const selfSold = exitStrategySelf !== "hold" && exitYrSelf >= 0 && exitYrSelf < h;
+    if (selfSold) {
+      // FIX#1: Per-asset exit valuation - skip Sale assets (already realized)
+      let exitVal = 0;
+      const exitIdx = Math.min(exitYrSelf, h - 1);
+      const fallbackIdx = Math.min(constrEndSelf + 2, h - 1);
+      const assetScheds = projectResults.assetSchedules || [];
+      if (assetScheds.length > 0) {
+        for (const as of assetScheds) {
+          if (as.revType === "Sale") continue; // Skip - already realized through sales
+          const assetIncome = as.revenueSchedule[exitIdx] ?? as.revenueSchedule[fallbackIdx] ?? 0;
+          if (as.revType === "Operating") {
+            exitVal += assetIncome * (project.exitMultiple ?? 10);
+          } else {
+            if (exitStrategySelf === "caprate") {
+              const capRate = (project.exitCapRate ?? 9) / 100;
+              const totalFP = assetScheds.reduce((s, a) => s + (a.footprint || 0), 0);
+              const landShare = (c.landRent[exitIdx] || 0) * ((as.footprint || 0) / Math.max(1, totalFP));
+              const assetNOI = assetIncome - landShare;
+              exitVal += capRate > 0 ? assetNOI / capRate : 0;
+            } else {
+              exitVal += assetIncome * (project.exitMultiple ?? 10);
+            }
+          }
+        }
       } else {
-        exitVal = stabIncome * (project.exitMultiple ?? 10);
+        const stabIncome = c.income[exitIdx] || c.income[fallbackIdx] || 0;
+        const stabNOI = stabIncome - (c.landRent[exitIdx] || 0);
+        if (exitStrategySelf === "caprate") {
+          const capRateSelf = (project.exitCapRate ?? 9) / 100;
+          exitVal = capRateSelf > 0 ? stabNOI / capRateSelf : 0;
+        } else {
+          exitVal = stabIncome * (project.exitMultiple ?? 10);
+        }
       }
       const exitCost = exitVal * (project.exitCostPct ?? 2) / 100;
       exitProceedsSelf[exitYrSelf] = Math.max(0, exitVal - exitCost);
       selfCF[exitYrSelf] += exitProceedsSelf[exitYrSelf];
+      // FIX#1: Zero out post-exit CF
+      for (let y = exitYrSelf + 1; y < h; y++) selfCF[y] = 0;
     }
     const selfIRR = calcIRR(selfCF);
     return {
@@ -1221,18 +1263,24 @@ function computeFinancing(project, projectResults, incentivesResult) {
   for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEnd = y; break; } }
 
   // ── Debt drawdown ──
+  // FIX#2: Include cash land purchase in Y0 scheduled uses
+  const scheduledUses = c.capex.map((v, i) => v + (i === 0 ? cashLandCost : 0));
+  const totalScheduledUses = scheduledUses.reduce((a, b) => a + b, 0);
   const drawdown = new Array(h).fill(0);
   const equityCalls = new Array(h).fill(0);
   let totalDrawn = 0;
-  const debtRatio = devCostExclLand > 0 ? Math.min(maxDebt / devCostExclLand, 1) : 0;
+  // Debt ratio based on financeable uses (scheduled uses + upfront fee, NOT non-cash land cap)
+  const financeableUses = totalScheduledUses + upfrontFee;
+  const actualMaxDebt = Math.min(maxDebt, financeableUses);
+  const debtRatio = totalScheduledUses > 0 ? Math.min(actualMaxDebt / totalScheduledUses, 1) : 0;
 
   for (let y = 0; y < h; y++) {
-    if (c.capex[y] > 0 && totalDrawn < maxDebt) {
-      const draw = Math.min(c.capex[y] * debtRatio, maxDebt - totalDrawn);
+    if (scheduledUses[y] > 0 && totalDrawn < actualMaxDebt) {
+      const draw = Math.min(scheduledUses[y] * debtRatio, actualMaxDebt - totalDrawn);
       drawdown[y] = draw;
       totalDrawn += draw;
     }
-    equityCalls[y] = Math.max(0, c.capex[y] - drawdown[y]);
+    equityCalls[y] = Math.max(0, scheduledUses[y] - drawdown[y]);
   }
   // Land capitalization value added as equity call in year 0 (non-cash but counts as equity)
   if (effectiveLandCap > 0) equityCalls[0] += effectiveLandCap;
@@ -1321,6 +1369,21 @@ function computeFinancing(project, projectResults, incentivesResult) {
     exitProceeds[exitYr] = Math.max(0, exitVal - exitCost - debtBalClose[exitYr]);
   }
 
+  // FIX#1: Determine if project was sold (not hold)
+  const sold = exitStrategy !== "hold" && exitYr >= 0 && exitYr < h;
+  // Zero out post-exit debt schedule after sale
+  if (sold) {
+    for (let y = exitYr + 1; y < h; y++) {
+      drawdown[y] = 0;
+      repay[y] = 0;
+      interest[y] = 0;
+      debtBalOpen[y] = 0;
+      debtBalClose[y] = 0;
+    }
+    // Also zero the closing balance at exit year since debt was netted in exit proceeds
+    debtBalClose[exitYr] = 0;
+  }
+
   // ── Apply interest subsidy ──
   const intSub = applyInterestSubsidy(project, interest, constrEnd, totalDrawn, rate);
   const adjustedInterest = intSub.adjusted;
@@ -1332,6 +1395,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const adjustedLandRent = ir?.adjustedLandRent || c.landRent;
   const leveredCF = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
+    if (sold && y > exitYr) { leveredCF[y] = 0; continue; }
     leveredCF[y] = c.income[y] - adjustedLandRent[y] - c.capex[y]
       + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0)
       - adjustedDebtService[y] + drawdown[y] + exitProceeds[y];
@@ -1534,12 +1598,16 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     }
 
     // Allocate distributions
-    // Tiers 1 & 2: distributed pro-rata to LP and GP based on equity %
-    const lpFromT1T2 = (tier1[y] + tier2[y]) * lpPct;
-    const gpFromT1T2 = (tier1[y] + tier2[y]) * gpPct;
+    // FIX#3 Option A: Tier 1 (ROC) pro-rata, Tier 2 (Pref) LP-only
+    // This makes the standard catch-up formula correct: GP got zero from pref,
+    // so catch-up = cumPrefPaid × carry / (1-carry) is the right target.
+    const lpFromT1 = tier1[y] * lpPct;
+    const gpFromT1 = tier1[y] * gpPct;
+    const lpFromT2 = tier2[y]; // 100% to LP
+    const gpFromT2 = 0;        // GP gets nothing from pref
     // Tier 4 profit split only if LP has equity
-    lpDist[y] = lpPct > 0 ? (lpFromT1T2 + tier4LP[y]) : 0;
-    gpDist[y] = gpFromT1T2 + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+    lpDist[y] = lpPct > 0 ? (lpFromT1 + lpFromT2 + tier4LP[y]) : 0;
+    gpDist[y] = gpFromT1 + gpFromT2 + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
 
     unreturnedClose[y] = cumEquityCalled - cumReturned;
   }
@@ -1555,16 +1623,17 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const lpIRR = calcIRR(lpNetCF);
   const gpIRR = calcIRR(gpNetCF);
   const projIRR = c.irr;
-  // MOIC = Total Distributions / Equity Invested (NOT equity calls which include fees)
+  // MOIC = Total Distributions / Equity Invested
+  // FIX#8: When fees are capitalized, invested base includes fee capital calls
   const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
-  const lpTotalInvested = lpEquity;
-  const gpTotalInvested = gpEquity;
+  const lpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
+  const gpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
+  const lpTotalInvested = feeTreatment === "capital" ? lpTotalCalled : lpEquity;
+  const gpTotalInvested = feeTreatment === "capital" ? gpTotalCalled : gpEquity;
   const lpMOIC = lpTotalInvested > 0 ? lpTotalDist / lpTotalInvested : 0;
   const gpMOIC = gpTotalInvested > 0 ? gpTotalDist / gpTotalInvested : 0;
   // H13: DPI = Total Distributions / Total Equity Called (paid-in, includes fees)
-  const lpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
-  const gpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
   const lpDPI = lpTotalCalled > 0 ? lpTotalDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpTotalDist / gpTotalCalled : 0;
 
@@ -1639,6 +1708,40 @@ function migrateToPerPhaseFinancing(project) {
   };
 }
 
+/** FIX#4: Allocate consolidated incentives to a single phase */
+function buildPhaseIncentives(projectResults, incentivesResult, phaseName) {
+  if (!incentivesResult) return null;
+  const pr = projectResults.phaseResults[phaseName];
+  const c = projectResults.consolidated;
+  if (!pr) return null;
+
+  const capexShare = c.totalCapex > 0 ? pr.totalCapex / c.totalCapex : 0;
+  const landShare = c.totalLandRent > 0 ? pr.totalLandRent / c.totalLandRent : pr.allocPct || 0;
+
+  const h = incentivesResult.capexGrantSchedule.length;
+  const pIr = {
+    ...incentivesResult,
+    capexGrantTotal: incentivesResult.capexGrantTotal * capexShare,
+    capexGrantSchedule: incentivesResult.capexGrantSchedule.map(v => v * capexShare),
+    feeRebateTotal: incentivesResult.feeRebateTotal * capexShare,
+    feeRebateSchedule: incentivesResult.feeRebateSchedule.map(v => v * capexShare),
+    landRentSavingTotal: incentivesResult.landRentSavingTotal * landShare,
+    landRentSavingSchedule: incentivesResult.landRentSavingSchedule.map(v => v * landShare),
+    adjustedLandRent: pr.landRent.map(
+      (lr, y) => Math.max(0, lr - (incentivesResult.landRentSavingSchedule[y] || 0) * landShare)
+    ),
+    adjustedCapex: pr.capex.map(
+      (cx, y) => Math.max(0, cx - (incentivesResult.capexGrantSchedule[y] || 0) * capexShare)
+    ),
+    adjustedNetCF: pr.netCF.map(
+      (cf, y) => cf + (incentivesResult.capexGrantSchedule[y] || 0) * capexShare
+        + (incentivesResult.landRentSavingSchedule[y] || 0) * landShare
+        + (incentivesResult.feeRebateSchedule[y] || 0) * capexShare
+    ),
+  };
+  return pIr;
+}
+
 /** Build a virtual project for a single phase (uses phase financing + phase land allocation) */
 function buildPhaseVirtualProject(project, phaseName, phaseResult) {
   const pf = getPhaseFinancing(project, phaseName);
@@ -1651,6 +1754,9 @@ function buildPhaseVirtualProject(project, phaseName, phaseResult) {
     _phaseName: phaseName,
     // Land: allocate proportionally by footprint
     landArea: (project.landArea || 0) * allocPct,
+    // FIX#5: Allocate one-time land economics by phase
+    landPurchasePrice: (project.landPurchasePrice || 0) * allocPct,
+    landValuation: (project.landValuation || 0) * allocPct,
     landCapRate: project.landCapRate || 1000,
     // Keep land type and other land settings from project
     landRentAnnual: project.landRentAnnual, // Not used directly - comes from phaseResults
@@ -1784,16 +1890,17 @@ function computeIndependentPhaseResults(project, projectResults, incentivesResul
     const vResults = buildPhaseProjectResults(projectResults, pName);
     if (!vResults) continue;
 
-    // Run financing for this phase (no incentives per-phase for now)
+    // Run financing for this phase (FIX#4: pass phase-allocated incentives)
     try {
-      const pFinancing = computeFinancing(vProject, vResults, null);
+      const pIr = buildPhaseIncentives(projectResults, incentivesResult, pName);
+      const pFinancing = computeFinancing(vProject, vResults, pIr);
       if (pFinancing) {
         phaseFinancings[pName] = pFinancing;
         // Run waterfall (only if fund mode for this phase)
         const pFinMode = vProject.finMode || project.finMode;
         if (pFinMode === "fund" || pFinMode === "jv") {
           try {
-            const pWaterfall = computeWaterfall(vProject, vResults, pFinancing, null);
+            const pWaterfall = computeWaterfall(vProject, vResults, pFinancing, pIr);
             if (pWaterfall) phaseWaterfalls[pName] = pWaterfall;
           } catch (e) { console.error(`Phase waterfall error (${pName}):`, e); }
         }
@@ -1882,8 +1989,8 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
       if(prefOwed>0&&rem>0){const t2=Math.min(rem,prefOwed);tier2[y]=t2;rem-=t2;cumPrefPaid+=t2;}
       if(project.gpCatchup&&rem>0&&carryPct>0){const targetGP=cumPrefPaid*carryPct/(1-carryPct);const needed=Math.max(0,targetGP-cumGPCatchup);const catchup=Math.min(rem,needed);tier3[y]=catchup;rem-=catchup;cumGPCatchup+=catchup;}
       if(rem>0){tier4LP[y]=rem*lpSplitPct;tier4GP[y]=rem*(1-lpSplitPct);}
-      lpDist[y]=(tier1[y]+tier2[y])*lpPct+tier4LP[y];
-      gpDist[y]=(tier1[y]+tier2[y])*gpPct+tier3[y]+tier4GP[y];
+      lpDist[y]=tier1[y]*lpPct+tier2[y]+tier4LP[y];
+      gpDist[y]=tier1[y]*gpPct+tier3[y]+tier4GP[y];
     }
 
     const lpNetCF=new Array(h).fill(0),gpNetCF=new Array(h).fill(0);
