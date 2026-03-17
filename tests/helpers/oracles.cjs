@@ -93,6 +93,7 @@ function oracleDebtRollForward(drawdown, repayStart, repayYears, totalDrawn, rat
 
 // ── Waterfall Tier Oracle ──
 function oracleWaterfall(cashAvail, equityCalls, prefRate, carryPct, lpSplitPct, gpPct, lpPct, gpCatchup, t2LpOnly) {
+  // t2LpOnly=false means Option B (pro-rata T2, adjusted catch-up)
   const h = cashAvail.length;
   const tier1=new Array(h).fill(0), tier2=new Array(h).fill(0), tier3=new Array(h).fill(0);
   const tier4LP=new Array(h).fill(0), tier4GP=new Array(h).fill(0);
@@ -111,7 +112,15 @@ function oracleWaterfall(cashAvail, equityCalls, prefRate, carryPct, lpSplitPct,
     if (prefOwed > 0 && rem > 0) { const t2 = Math.min(rem, prefOwed); tier2[y]=t2; rem-=t2; cumPrefPaid+=t2; }
     // T3: Catch-up
     if (gpCatchup && rem > 0 && carryPct > 0) {
-      const target = cumPrefPaid * carryPct / (1-carryPct);
+      let target;
+      if (t2LpOnly) {
+        // Option A: GP got zero from pref, classic formula
+        target = cumPrefPaid * carryPct / (1-carryPct);
+      } else {
+        // Option B: GP already got gpPct of pref, adjusted formula
+        const gpFromPref = cumPrefPaid * gpPct;
+        target = Math.max(0, (carryPct * cumPrefPaid - gpFromPref) / (1 - carryPct));
+      }
       const needed = Math.max(0, target - cumGPCatchup);
       const cu = Math.min(rem, needed); tier3[y]=cu; rem-=cu; cumGPCatchup+=cu;
     }
