@@ -444,6 +444,8 @@ const defaultProject = () => ({
   annualMgmtFeePct: 0.9,
   custodyFeeAnnual: 130000,
   mgmtFeeBase: "devCost", // devCost | equity | custom
+  feeTreatment: "capital", // H14: capital | expense
+  graceBasis: "cod", // H10: cod | firstDraw
   developerFeePct: 10,
   structuringFeePct: 0.1,
   // Exit
@@ -575,13 +577,16 @@ function computeProjectCashFlows(project) {
     }
 
     const revStart = cStart + durYears;
+    // H15: BOT limits revenue to operation period
+    const botYrs = project.landType === "bot" ? (project.botOperationYears || horizon) : horizon;
+    const revEnd = Math.min(revStart + botYrs, horizon);
     if (asset.revType === "Lease" && leasableArea > 0 && leaseRate > 0) {
-      for (let y = revStart; y < horizon; y++) {
+      for (let y = revStart; y < revEnd; y++) {
         const yrs = y - revStart;
         revSch[y] = leasableArea * leaseRate * occ * Math.min(1, (yrs+1)/ramp) * Math.pow(1+effEsc, yrs);
       }
     } else if (asset.revType === "Operating" && opEbitda > 0) {
-      for (let y = revStart; y < horizon; y++) {
+      for (let y = revStart; y < revEnd; y++) {
         const yrs = y - revStart;
         revSch[y] = opEbitda * Math.min(1, (yrs+1)/ramp) * Math.pow(1+effEsc, yrs);
       }
@@ -601,7 +606,7 @@ function computeProjectCashFlows(project) {
       // Post-construction absorption
       const remainingValue = totalSaleValue * (1 - preSalePct);
       const annualSales = absorptionYears > 0 ? remainingValue / absorptionYears : remainingValue;
-      for (let y = revStart; y < Math.min(revStart + absorptionYears, horizon); y++) {
+      for (let y = revStart; y < Math.min(revStart + absorptionYears, revEnd); y++) {
         const yrs = y - revStart;
         revSch[y] += annualSales * (1 - commissionPct) * Math.pow(1 + effEsc, yrs);
       }
@@ -711,6 +716,17 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
   if (f && project.debtAllowed && (project.loanTenor??7) <= (project.debtGrace??3))
     add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${project.loanTenor??7}, Grace: ${project.debtGrace??3}`);
+  // H11: Exit during ramp-up warning
+  if (f && project.exitStrategy !== "hold") {
+    const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2025) : 0;
+    const maxRamp = Math.max(...(project.assets||[]).map(a => {
+      const cStart = (a.constrStart||1)-1;
+      const dur = Math.ceil((a.constrDuration||12)/12);
+      return cStart + dur + (a.rampUpYears??3);
+    }));
+    if (exitYrIdx > 0 && exitYrIdx < maxRamp)
+      add("T0","Exit Before Stabilization", false, "Exit year is during ramp-up. Valuation may use unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
+  }
 
   // ═══════════════════════════════════════════════
   // T1: PROJECT ENGINE (15 checks)
@@ -1083,10 +1099,13 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const ir = incentivesResult;
   // ── Land Capitalization ──
   const landCapValue = project.landCapitalize ? (project.landArea || 0) * (project.landCapRate || 1000) : 0;
+  // H15: Partner land uses landValuation as equity contribution
+  const partnerLandValue = project.landType === "partner" ? (project.landValuation || 0) : 0;
+  const effectiveLandCap = landCapValue + partnerLandValue;
   const devCostExclLand = ir ? ir.adjustedCapex.reduce((a,b) => a+b, 0) : c.totalCapex;
   const capexGrantTotal = ir?.capexGrantTotal || 0;
   const cashLandCost = (project.landType === "purchase" && !project.landCapitalize) ? (project.landPurchasePrice ?? 0) : 0;
-  const devCostInclLand = devCostExclLand + landCapValue + cashLandCost;
+  const devCostInclLand = devCostExclLand + effectiveLandCap + cashLandCost;
 
   if (project.finMode === "self") {
     // For self-funded: use incentive-adjusted CF if available
@@ -1140,11 +1159,17 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const totalEquity = Math.max(0, devCostInclLand - maxDebt);
   let gpEquity, lpEquity;
 
-  // GP Equity: manual > land cap value > 50% default
+  // GP Equity: manual > land cap value > partner equity > 50% default
+  // H15: landCapTo controls who gets land cap credit (gp/lp/split)
+  const landCapTarget = project.landCapTo || "gp";
   if ((project.gpEquityManual ?? 0) > 0) {
     gpEquity = Math.min(project.gpEquityManual, totalEquity);
-  } else if (landCapValue > 0) {
-    gpEquity = Math.min(landCapValue, totalEquity);
+  } else if (effectiveLandCap > 0) {
+    if (landCapTarget === "gp") gpEquity = Math.min(effectiveLandCap, totalEquity);
+    else if (landCapTarget === "lp") gpEquity = Math.max(0, totalEquity - effectiveLandCap);
+    else gpEquity = totalEquity * 0.5; // split
+  } else if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
+    gpEquity = totalEquity * ((project.partnerEquityPct || 50) / 100);
   } else {
     gpEquity = totalEquity * 0.5;
   }
@@ -1157,7 +1182,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   // Safety: if fund mode and LP = 0 and no explicit manual override, force 50/50
-  if (project.finMode === "fund" && lpEquity === 0 && !(project.gpEquityManual > 0) && !(landCapValue >= totalEquity)) {
+  if (project.finMode === "fund" && lpEquity === 0 && !(project.gpEquityManual > 0) && !(effectiveLandCap >= totalEquity)) {
     gpEquity = totalEquity * 0.5;
     lpEquity = totalEquity * 0.5;
   }
@@ -1197,7 +1222,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
     equityCalls[y] = Math.max(0, c.capex[y] - drawdown[y]);
   }
   // Land capitalization value added as equity call in year 0 (non-cash but counts as equity)
-  if (landCapValue > 0) equityCalls[0] += landCapValue;
+  if (effectiveLandCap > 0) equityCalls[0] += effectiveLandCap;
   // Upfront fee added to equity calls in first drawdown year
   let firstDrawYear = -1;
   for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { firstDrawYear = y; break; } }
@@ -1210,9 +1235,15 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const interest = new Array(h).fill(0);
   const debtService = new Array(h).fill(0);
 
-  // Grace period starts from first drawdown year
-  let graceStartIdx = constrEnd;
-  for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { graceStartIdx = y; break; } }
+  // H10: Grace basis - "firstDraw" (first drawdown year) or "cod" (completion of development)
+  const graceBasis = project.graceBasis || "cod";
+  let graceStartIdx = constrEnd; // default: COD
+  if (graceBasis === "firstDraw") {
+    for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { graceStartIdx = y; break; } }
+  } else if (project.debtGraceStartYear > 0) {
+    graceStartIdx = Math.max(0, project.debtGraceStartYear - startYear);
+  }
+  // else: graceStartIdx = constrEnd (COD default)
   const repayStart = graceStartIdx + grace;
   const annualRepay = repayYears > 0 ? totalDrawn / repayYears : 0;
 
@@ -1378,10 +1409,13 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 
   const totalFees = fees.reduce((a, b) => a + b, 0);
 
-  // Equity calls = CAPEX portion (equity share) + fees funded by equity
+  // H14: Fee treatment policy
+  // "capital" = fees count as invested capital (earn ROC + Pref) - default, current behavior
+  // "expense" = fees are expenses (outside capital base - don't earn Pref, smaller unreturned capital)
+  const feeTreatment = project.feeTreatment || "capital";
   const equityCalls = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
-    equityCalls[y] = f.equityCalls[y] + fees[y];
+    equityCalls[y] = feeTreatment === "capital" ? f.equityCalls[y] + fees[y] : f.equityCalls[y];
   }
 
   // Exit proceeds - use from financing engine (already net of debt)
@@ -1945,6 +1979,7 @@ Toggles whether bank debt is allowed. If off, the project becomes fully equity-f
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years"><Inp type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></FL>
                     <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years"><Inp type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></FL>
+                    <FL label={ar?"بداية السماح":"Grace Basis"} tip="متى تبدأ فترة السماح: من أول سحب أو من اكتمال البناء\nWhen grace starts: first drawdown or completion of development (COD)"><select value={project.graceBasis||"cod"} onChange={e=>up({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (COD)":"COD (Completion)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option></select></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم %":"Fee %"} tip="رسوم القرض المقدمة كنسبة من مبلغ التمويل. تُدفع مرة واحدة عند السحب
@@ -2011,6 +2046,7 @@ Year capital raising begins. Often one year before construction for setup costs"
 LP share of remaining profits after pref and catch-up. Usually 70-80%"><Inp type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></FL>
                   <FL label={ar?"تعويض المطور (GP Catch-up)":"Developer Catch-up (GP)"} tip="بعد حصول LP على Pref، يأخذ GP حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها
 After LP receives pref, GP takes a larger temporary share until agreed economics are reached"><Drp lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
+                  <FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip="الرسوم كرأسمال: تدخل في الحساب وتحصل على عائد مفضل\nالرسوم كمصروف: لا تدخل في رأس المال ولا تحصل على Pref\nCapital: fees earn ROC+Pref. Expense: fees outside capital base"><select value={project.feeTreatment||"capital"} onChange={e=>up({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال (تحصل Pref)":"Capital (earns Pref)"}</option><option value="expense">{ar?"مصروف (خارج رأس المال)":"Expense (outside capital)"}</option></select></FL>
                 </div>
                 {project.vehicleType==="fund"&&<>
                   <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
