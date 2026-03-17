@@ -2195,7 +2195,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             {label:ar?"حفظ":"Custody", val:(w.feeCustody||[]).reduce((a,b)=>a+b,0)},
             {label:ar?"تطوير":"Developer", val:(w.feeDev||[]).reduce((a,b)=>a+b,0)},
             {label:ar?"هيكلة":"Structuring", val:(w.feeStruct||[]).reduce((a,b)=>a+b,0)},
-          ].map((f,i) => f.val > 0 ? <React.Fragment key={i}><span style={{color:"#6b7080"}}>{f.label}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.val)}</span></React.Fragment> : null)}
+          ].map((f,i) => f.val > 0 ? [<span key={i+'l'} style={{color:"#6b7080"}}>{f.label}</span>,<span key={i+'v'} style={{textAlign:"right",fontWeight:500}}>{fmt(f.val)}</span>] : null)}
           <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700,color:"#ef4444"}}>{ar?"الإجمالي":"Total"}</span>
           <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700,color:"#ef4444"}}>{fmt(w.totalFees)} {cur}</span>
         </div>
@@ -2346,7 +2346,7 @@ function Drp({value,onChange,options,lang:dl}) {
 
 function FinancingView({ project, results, financing, phaseFinancings, t, up, lang }) {
   const [showYrs, setShowYrs] = useState(15);
-  const [showConfig, setShowConfig] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState("all");
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
@@ -3976,17 +3976,13 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const hasAssets = (project.assets||[]).length > 0;
   const ir = incentivesResult;
 
-  // Use incentive-adjusted values if incentives are active
   const hasIncentives = (ir && ir.totalIncentiveValue > 0) || (ir && ir.finSupportEstimate) || (f && f.interestSubsidyTotal > 0);
   const displayIRR = (ir && ir.totalIncentiveValue > 0 && ir.adjustedIRR !== null) ? ir.adjustedIRR : c.irr;
   const displayNPV10 = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedNPV10 : c.npv10;
   const displayTotalNetCF = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedTotalNetCF : c.totalNetCF;
 
-  // Payback period
   let cumCF = 0, paybackYr = null;
   for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYr === null) paybackYr = y + 1; }
-
-  // Cash Yield (stabilized year income / total equity)
   const stabYear = Math.min(10, h - 1);
   const cashYield = f && f.totalEquity > 0 ? (c.income[stabYear] / f.totalEquity * 100) : null;
 
@@ -4022,50 +4018,228 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     </div>);
   }
 
+  // ── Health score ──
+  const irrVal = displayIRR || 0;
+  const health = irrVal > 0.15 ? 'strong' : irrVal > 0.10 ? 'good' : irrVal > 0.05 ? 'moderate' : 'weak';
+  const healthColor = {strong:'#16a34a',good:'#22c55e',moderate:'#f59e0b',weak:'#ef4444'}[health];
+  const healthLabel = {strong:ar?'قوي':'Strong',good:ar?'جيد':'Good',moderate:ar?'متوسط':'Moderate',weak:ar?'ضعيف':'Weak'}[health];
+
+  // ── Sources & Uses ──
+  const totalCapex = c.totalCapex;
+  const landCost = project.landType === 'purchase' ? (project.landPurchasePrice || 0) : 0;
+  const landCap = f ? f.landCapValue || 0 : 0;
+  const grantTotal = ir ? ir.capexGrantTotal || 0 : 0;
+  const upfrontFee = f ? f.upfrontFee || 0 : 0;
+  const totalUses = totalCapex + landCost + landCap + upfrontFee;
+  const totalDebt = f ? f.totalDebt || 0 : 0;
+  const totalEquity = f ? f.totalEquity || 0 : 0;
+
+  // ── Cash flow chart data (SVG bars) ──
+  const chartYears = Math.min(20, h);
+  const maxVal = Math.max(...c.income.slice(0, chartYears), ...c.capex.slice(0, chartYears), 1);
+  const minCF = Math.min(...c.netCF.slice(0, chartYears), 0);
+  const maxCF = Math.max(...c.netCF.slice(0, chartYears), 1);
+  const cfRange = Math.max(maxCF, Math.abs(minCF), 1);
+
   return (<div>
-    {/* Hero KPIs */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:14,marginBottom:22}}>
-      {[
-        {label:t.consolidatedIRR+" (Unlevered)"+(hasIncentives?` ${ar?"+ حوافز":"+ Incentives"}`:""),value:displayIRR!==null?(displayIRR*100).toFixed(2)+"%":"N/A",color:displayIRR>0.12?"#16a34a":displayIRR>0.08?"#eab308":"#ef4444",icon:"📈",tip:"معدل العائد السنوي بدون تمويل"+(hasIncentives?" (شامل الحوافز الحكومية)":"")+"\nAnnual return ignoring debt"+(hasIncentives?" (incl. gov incentives)":"")},
-        f&&f.mode!=="self"&&{label:ar?"IRR بعد التمويل":"Levered IRR",value:f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A",color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6",icon:"🏦",tip:"معدل العائد بعد التمويل. أعلى من Unlevered بسبب الرافعة\nReturn after debt. Higher due to leverage effect"},
-        {label:t.npv10,value:fmtM(displayNPV10),sub:cur,color:displayNPV10>0?"#2563eb":"#ef4444",icon:displayNPV10>0?"✓":"✗",tip:"قيمة المشروع اليوم بخصم 10%"+(hasIncentives?" (شامل الحوافز)":"")+"\nProject value at 10% discount"+(hasIncentives?" (incl. incentives)":"")},
-        {label:t.totalCapexLabel,value:fmtM(hasIncentives?(c.totalCapex-ir.capexGrantTotal):c.totalCapex),sub:cur+(hasIncentives?` (${ar?"بعد المنحة":"after grant"})`:""),color:"#ef4444",icon:"🏗",tip:"إجمالي البناء + غير مباشرة + احتياطي"+(hasIncentives?". مخصوم منها منحة CAPEX":"")+"\nAll construction + soft costs + contingency"+(hasIncentives?". Net of CAPEX grant":"")},
-      ].filter(Boolean).map((h,i)=>(
-        <div key={i} className="hero-kpi" style={{background:`linear-gradient(135deg, ${h.color}08, ${h.color}15)`,borderRadius:12,border:`1px solid ${h.color}25`,padding:"18px 20px",position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",top:8,insetInlineEnd:12,fontSize:28,opacity:0.12}}>{h.icon}</div>
-          <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.8,marginBottom:8,fontWeight:600}}>{h.tip?<Tip text={h.tip}>{h.label}</Tip>:h.label}</div>
-          <div style={{fontSize:28,fontWeight:800,color:h.color,lineHeight:1,letterSpacing:-0.5}}>{h.value}</div>
-          {h.sub&&<div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>{h.sub}</div>}
+    {/* ═══ SECTION 1: Decision Summary ═══ */}
+    <div style={{background:`linear-gradient(135deg, ${healthColor}08, ${healthColor}18)`,borderRadius:14,border:`2px solid ${healthColor}30`,padding:"22px 26px",marginBottom:20,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+      {/* Health badge */}
+      <div style={{textAlign:"center",minWidth:90}}>
+        <div style={{width:72,height:72,borderRadius:"50%",background:`${healthColor}18`,border:`3px solid ${healthColor}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 6px"}}>
+          <span style={{fontSize:26,fontWeight:800,color:healthColor}}>{irrVal > 0 ? (irrVal*100).toFixed(0)+"%" : "—"}</span>
         </div>
-      ))}
-    </div>
-    {/* Secondary KPIs */}
-    <div className="kpi-secondary" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,marginBottom:22}}>
-      <KPI label={t.totalIncomeLabel+` (${project.horizon}yr)`} value={fmtM(c.totalIncome)} sub={cur} color="#22c55e" tip="مجموع كل الإيرادات خلال فترة النموذج\nTotal revenue over the full projection horizon" />
-      <KPI label={t.totalNetCF} value={fmtM(displayTotalNetCF)} sub={cur+(hasIncentives?` (${ar?"شامل الحوافز":"incl. incentives"})`:"")} color="#8b5cf6" tip="صافي التدفق = الإيرادات - التكاليف - إيجار الأرض\nNet CF = Income - CAPEX - Land Rent" />
-      {f && f.mode !== "self" && <KPI label={ar?"إجمالي الدين":"Total Debt"} value={fmtM(f.totalDebt)} sub={cur} color="#f59e0b" tip="إجمالي القرض المسحوب من البنك\nTotal loan drawn from bank" />}
-      <KPI label={ar?"فترة الاسترداد":"Payback"} value={paybackYr ? (ar?`سنة ${paybackYr}`:`Year ${paybackYr}`) : "N/A"} sub={paybackYr ? `${results.startYear + paybackYr - 1}` : ""} color="#f59e0b" tip="عدد السنوات حتى يصبح التدفق التراكمي موجب\nYears until cumulative cash flow turns positive" />
-      {cashYield !== null && <KPI label={ar?"العائد النقدي":"Cash Yield"} value={fmtPct(cashYield)} sub={ar?"على حقوق الملكية":"on equity"} color="#16a34a" tip="التوزيعات السنوية / رأس المال المستثمر\nAnnual distributions / Equity invested" />}
-      <KPI label={t.assetsLabel} value={project.assets.length} color="#6b7080" />
-      <KPI label={t.checksLabel} value={fc===0?t.allPass:`${fc} FAIL`} color={fc===0?"#22c55e":"#ef4444"} />
+        <div style={{fontSize:11,fontWeight:700,color:healthColor,textTransform:"uppercase",letterSpacing:0.6}}>{healthLabel}</div>
+        <div style={{fontSize:9,color:"#6b7080"}}>IRR (Unlevered)</div>
+      </div>
+      {/* Key numbers */}
+      <div style={{flex:1,display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))",gap:12}}>
+        <div>
+          <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"صافي القيمة الحالية":"NPV @10%"}</div>
+          <div style={{fontSize:20,fontWeight:800,color:displayNPV10>0?"#16a34a":"#ef4444"}}>{fmtM(displayNPV10)}</div>
+          <div style={{fontSize:10,color:"#9ca3af"}}>{cur}</div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"إجمالي التكاليف":"Total CAPEX"}</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#1a1d23"}}>{fmtM(hasIncentives?(totalCapex-grantTotal):totalCapex)}</div>
+          <div style={{fontSize:10,color:"#9ca3af"}}>{cur}{hasIncentives?` (${ar?"بعد المنحة":"net of grant"})`:""}</div>
+        </div>
+        {f && f.mode !== "self" && <div>
+          <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"IRR بعد التمويل":"Levered IRR"}</div>
+          <div style={{fontSize:20,fontWeight:800,color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6"}}>{f.leveredIRR!==null?(f.leveredIRR*100).toFixed(1)+"%":"N/A"}</div>
+        </div>}
+        <div>
+          <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"فترة الاسترداد":"Payback"}</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#f59e0b"}}>{paybackYr ? (ar?`${paybackYr} سنة`:`Yr ${paybackYr}`) : "N/A"}</div>
+          {paybackYr && <div style={{fontSize:10,color:"#9ca3af"}}>{results.startYear + paybackYr - 1}</div>}
+        </div>
+        <div>
+          <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"الفحوصات":"Checks"}</div>
+          <div style={{fontSize:20,fontWeight:800,color:fc===0?"#16a34a":"#ef4444"}}>{fc===0?(ar?"✓ سليم":"✓ Pass"):`${fc} ✗`}</div>
+        </div>
+      </div>
     </div>
 
-    {phases.length>0&&<div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:20}}>
-      <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600}}>{t.phaseSummary}</div>
+    {/* ═══ SECTION 2: Sources & Uses + Key Metrics ═══ */}
+    <div style={{display:"grid",gridTemplateColumns:f&&f.mode!=="self"?"1fr 1fr":"1fr",gap:14,marginBottom:20}}>
+      {/* Sources & Uses */}
+      {f && f.mode !== "self" && (
+        <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 20px"}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:15}}>💰</span> {ar?"مصادر واستخدامات التمويل":"Sources & Uses"}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+            {/* Sources */}
+            <div>
+              <div style={{fontSize:10,fontWeight:600,color:"#16a34a",textTransform:"uppercase",letterSpacing:0.6,marginBottom:8,paddingBottom:4,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
+              <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:3,rowGap:5}}>
+                {totalDebt > 0 && [<span key="dl" style={{color:"#6b7080"}}>{ar?"قرض بنكي":"Bank Debt"}</span>,<span key="dv" style={{textAlign:"right",fontWeight:500}}>{fmtM(totalDebt)}</span>]}
+                <span style={{color:"#6b7080"}}>{ar?"حقوق ملكية":"Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(totalEquity)}</span>
+                {grantTotal > 0 && [<span key="gl" style={{color:"#6b7080"}}>{ar?"منحة حكومية":"CAPEX Grant"}</span>,<span key="gv" style={{textAlign:"right",fontWeight:500,color:"#16a34a"}}>{fmtM(grantTotal)}</span>]}
+                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
+                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(totalDebt + totalEquity + grantTotal)}</span>
+              </div>
+              {/* LTV bar */}
+              {totalDebt > 0 && (() => {
+                const ltv = (totalDebt / (totalDebt + totalEquity) * 100);
+                return <div style={{marginTop:10}}>
+                  <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>LTV: {ltv.toFixed(0)}%</div>
+                  <div style={{height:6,borderRadius:3,background:"#f0f1f5",overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${ltv}%`,background:ltv>75?"#ef4444":ltv>60?"#f59e0b":"#16a34a",borderRadius:3}} />
+                  </div>
+                </div>;
+              })()}
+            </div>
+            {/* Uses */}
+            <div>
+              <div style={{fontSize:10,fontWeight:600,color:"#ef4444",textTransform:"uppercase",letterSpacing:0.6,marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fee2e2"}}>{ar?"الاستخدامات":"USES"}</div>
+              <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:3,rowGap:5}}>
+                <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(totalCapex)}</span>
+                {landCost > 0 && [<span key="ll" style={{color:"#6b7080"}}>{ar?"شراء الأرض":"Land Purchase"}</span>,<span key="lv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCost)}</span>]}
+                {landCap > 0 && [<span key="cl" style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Cap."}</span>,<span key="cv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCap)}</span>]}
+                {upfrontFee > 0 && [<span key="fl" style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Loan Fee"}</span>,<span key="fv" style={{textAlign:"right",fontWeight:500}}>{fmtM(upfrontFee)}</span>]}
+                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
+                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(totalUses)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Key Metrics Grid */}
+      <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 20px"}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:15}}>📊</span> {ar?"المؤشرات الرئيسية":"Key Metrics"}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))",gap:10}}>
+          <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 12px",border:"1px solid #dcfce7"}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"إجمالي الإيرادات":"Total Income"} ({h}{ar?" سنة":"yr"})</div>
+            <div style={{fontSize:16,fontWeight:700,color:"#16a34a"}}>{fmtM(c.totalIncome)}</div>
+          </div>
+          <div style={{background:displayTotalNetCF>=0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"10px 12px",border:`1px solid ${displayTotalNetCF>=0?"#dcfce7":"#fee2e2"}`}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"صافي التدفق":"Net CF"}{hasIncentives?` (${ar?"+حوافز":"+inc."})`:""}</div>
+            <div style={{fontSize:16,fontWeight:700,color:displayTotalNetCF>=0?"#16a34a":"#ef4444"}}>{fmtM(displayTotalNetCF)}</div>
+          </div>
+          {f && f.mode !== "self" && <>
+            <div style={{background:"#fffbeb",borderRadius:8,padding:"10px 12px",border:"1px solid #fef3c7"}}>
+              <div style={{fontSize:10,color:"#6b7080"}}>{ar?"إجمالي الدين":"Total Debt"}</div>
+              <div style={{fontSize:16,fontWeight:700,color:"#f59e0b"}}>{fmtM(totalDebt)}</div>
+            </div>
+            <div style={{background:"#f5f3ff",borderRadius:8,padding:"10px 12px",border:"1px solid #ede9fe"}}>
+              <div style={{fontSize:10,color:"#6b7080"}}>{ar?"إجمالي الفوائد":"Total Interest"}</div>
+              <div style={{fontSize:16,fontWeight:700,color:"#8b5cf6"}}>{fmtM(f.totalInterest)}</div>
+            </div>
+          </>}
+          {cashYield !== null && <div style={{background:"#eff6ff",borderRadius:8,padding:"10px 12px",border:"1px solid #dbeafe"}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"العائد النقدي":"Cash Yield"}</div>
+            <div style={{fontSize:16,fontWeight:700,color:"#2563eb"}}>{fmtPct(cashYield)}</div>
+          </div>}
+          {hasIncentives && ir && <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 12px",border:"1px solid #bbf7d0"}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"قيمة الحوافز":"Incentive Value"}</div>
+            <div style={{fontSize:16,fontWeight:700,color:"#16a34a"}}>{fmtM(ir.totalIncentiveValue + (f?.interestSubsidyTotal||0))}</div>
+          </div>}
+        </div>
+        {/* Land info compact */}
+        <div style={{marginTop:12,paddingTop:10,borderTop:"1px solid #f0f1f5",display:"flex",gap:16,fontSize:11,color:"#6b7080",flexWrap:"wrap"}}>
+          <span>{ar?"الأرض":"Land"}: <strong>{({lease:ar?"إيجار":"Lease",purchase:ar?"شراء":"Purchase",partner:ar?"شراكة":"Partner",bot:"BOT"})[project.landType]||project.landType}</strong></span>
+          <span>{ar?"المساحة":"Area"}: <strong>{fmt(project.landArea)} m²</strong></span>
+          {project.landType==="lease"&&<span>{ar?"إيجار سنوي":"Annual"}: <strong>{fmt(project.landRentAnnual)} {cur}</strong></span>}
+          {project.landType==="purchase"&&<span>{ar?"السعر":"Price"}: <strong>{fmt(project.landPurchasePrice)} {cur}</strong></span>}
+          {project.landType==="lease"&&<span>{ar?"إجمالي الإيجار":"Total Rent"}: <strong style={{color:"#ef4444"}}>{fmt(c.totalLandRent)} {cur}</strong></span>}
+          <span>{ar?"الأصول":"Assets"}: <strong>{project.assets.length}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    {/* ═══ SECTION 3: Cash Flow Chart (SVG) ═══ */}
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 20px",marginBottom:20}}>
+      <div style={{fontSize:13,fontWeight:700,marginBottom:14,display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:15}}>📈</span> {ar?"التدفق النقدي السنوي":"Annual Cash Flow"}
+        <span style={{fontSize:10,color:"#9ca3af",marginInlineStart:"auto"}}>{ar?`أول ${chartYears} سنة`:`First ${chartYears} years`}</span>
+      </div>
+      {/* Legend */}
+      <div style={{display:"flex",gap:16,marginBottom:10,fontSize:11}}>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#ef4444",display:"inline-block"}} />{ar?"التكاليف":"CAPEX"}</span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#22c55e",display:"inline-block"}} />{ar?"الإيرادات":"Income"}</span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:3,borderRadius:2,background:"#3b82f6",display:"inline-block"}} />{ar?"صافي التدفق":"Net CF"}</span>
+      </div>
+      <svg viewBox={`0 0 ${chartYears * 42 + 20} 180`} style={{width:"100%",height:180}}>
+        {/* Grid lines */}
+        <line x1="20" y1="90" x2={chartYears*42+20} y2="90" stroke="#e5e7ec" strokeWidth="1" strokeDasharray="4,4" />
+        <line x1="20" y1="10" x2={chartYears*42+20} y2="10" stroke="#f0f1f5" strokeWidth="0.5" />
+        <line x1="20" y1="170" x2={chartYears*42+20} y2="170" stroke="#f0f1f5" strokeWidth="0.5" />
+        {Array.from({length:chartYears}).map((_,y) => {
+          const x = 20 + y * 42;
+          const capH = maxVal > 0 ? (c.capex[y] / maxVal) * 75 : 0;
+          const incH = maxVal > 0 ? (c.income[y] / maxVal) * 75 : 0;
+          const cfY = cfRange > 0 ? 90 - (c.netCF[y] / cfRange) * 75 : 90;
+          return <g key={y}>
+            {/* CAPEX bar (red, going down from center) */}
+            {c.capex[y] > 0 && <rect x={x} y={90} width={16} height={capH} fill="#ef444440" rx="2" stroke="#ef4444" strokeWidth="0.5" />}
+            {/* Income bar (green, going up from center) */}
+            {c.income[y] > 0 && <rect x={x+18} y={90-incH} width={16} height={incH} fill="#22c55e40" rx="2" stroke="#22c55e" strokeWidth="0.5" />}
+            {/* Year label */}
+            {y % (chartYears > 15 ? 3 : 2) === 0 && <text x={x+17} y={178} fontSize="8" fill="#9ca3af" textAnchor="middle">{y+1}</text>}
+          </g>;
+        })}
+        {/* Net CF line */}
+        <polyline
+          fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round"
+          points={Array.from({length:chartYears}).map((_,y) => {
+            const x = 20 + y * 42 + 17;
+            const cfY = cfRange > 0 ? 90 - (c.netCF[y] / cfRange) * 75 : 90;
+            return `${x},${cfY}`;
+          }).join(' ')}
+        />
+        {/* Net CF dots */}
+        {Array.from({length:chartYears}).map((_,y) => {
+          const x = 20 + y * 42 + 17;
+          const cfY = cfRange > 0 ? 90 - (c.netCF[y] / cfRange) * 75 : 90;
+          return <circle key={y} cx={x} cy={cfY} r="2.5" fill="#3b82f6" />;
+        })}
+      </svg>
+    </div>
+
+    {/* ═══ SECTION 4: Phase Summary ═══ */}
+    {phases.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:20}}>
+      <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:15}}>🏗</span> {t.phaseSummary}
+      </div>
       <div style={{overflowX:"auto"}}><table style={tblStyle}><thead><tr>
-        {(ar?["المرحلة","الأصول","إجمالي التكاليف","إجمالي الإيرادات","إيجار الأرض","صافي التدفق","IRR","المسطح","نسبة الأرض"]:["Phase","Assets","Total CAPEX","Total Income","Land Rent","Net CF","IRR","Footprint","Land %"]).map(h=><th key={h} style={thSt}>{h}</th>)}
+        {(ar?["المرحلة","الأصول","إجمالي التكاليف","إجمالي الإيرادات","إيجار الأرض","صافي التدفق","IRR","نسبة الأرض"]:["Phase","Assets","Total CAPEX","Total Income","Land Rent","Net CF","IRR","Land %"]).map(h=><th key={h} style={thSt}>{h}</th>)}
       </tr></thead><tbody>
-        {phases.map(([n,pr])=><tr key={n}>
+        {phases.map(([n,pr])=>{
+          const capexPct = c.totalCapex > 0 ? pr.totalCapex / c.totalCapex * 100 : 0;
+          return <tr key={n}>
           <td style={tdSt}><strong>{n}</strong></td>
           <td style={{...tdSt,textAlign:"center"}}>{pr.assetCount}</td>
-          <td style={tdN}>{fmt(pr.totalCapex)}</td>
+          <td style={tdN}><div>{fmt(pr.totalCapex)}</div><div style={{height:3,borderRadius:2,background:"#f0f1f5",marginTop:3}}><div style={{height:"100%",borderRadius:2,background:"#ef4444",width:`${capexPct}%`}} /></div></td>
           <td style={tdN}>{fmt(pr.totalIncome)}</td>
           <td style={{...tdN,color:"#ef4444"}}>{fmt(pr.totalLandRent)}</td>
           <td style={{...tdN,color:pr.totalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(pr.totalNetCF)}</td>
           <td style={{...tdN,fontWeight:600}}>{pr.irr!==null?fmtPct(pr.irr*100):"—"}</td>
-          <td style={tdN}>{fmt(pr.footprint)}</td>
           <td style={tdN}>{fmtPct(pr.allocPct*100)}</td>
-        </tr>)}
+        </tr>;})}
         <tr style={{background:"#f8f9fb",fontWeight:700}}>
           <td style={tdSt}>{t.consolidated}</td>
           <td style={{...tdSt,textAlign:"center"}}>{project.assets.length}</td>
@@ -4073,35 +4247,25 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
           <td style={{...tdN,color:"#ef4444"}}>{fmt(c.totalLandRent)}</td>
           <td style={{...tdN,color:displayTotalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(displayTotalNetCF)}</td>
           <td style={{...tdN,fontWeight:700}}>{displayIRR!==null?fmtPct(displayIRR*100):"—"}{hasIncentives?" *":""}</td>
-          <td style={tdN}></td><td style={tdN}></td>
+          <td style={tdN}></td>
         </tr>
       </tbody></table></div>
     </div>}
 
-    <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"12px 16px",marginBottom:20}}>
-      <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>{t.landConfig}</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,fontSize:12}}>
-        <div><span style={{color:"#6b7080"}}>Type:</span> <strong>{LAND_TYPES.find(l=>l.value===project.landType)?.en}</strong></div>
-        <div><span style={{color:"#6b7080"}}>Area:</span> <strong>{fmt(project.landArea)} sqm</strong></div>
-        {project.landType==="lease"&&<>
-          <div><span style={{color:"#6b7080"}}>Annual Rent:</span> <strong>{fmt(project.landRentAnnual)} {cur}</strong></div>
-          <div><span style={{color:"#6b7080"}}>Grace:</span> <strong>{project.landRentGrace} yrs</strong></div>
-          <div><span style={{color:"#6b7080"}}>Land Rent Total:</span> <strong style={{color:"#ef4444"}}>{fmt(c.totalLandRent)} {cur}</strong></div>
-        </>}
-        {project.landType==="purchase"&&<div><span style={{color:"#6b7080"}}>Price:</span> <strong>{fmt(project.landPurchasePrice)} {cur}</strong></div>}
+    {/* ═══ SECTION 5: Asset Overview (compact) ═══ */}
+    {results.assetSchedules.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
+      <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:15}}>🏢</span> {t.assetOverview} ({results.assetSchedules.length})
       </div>
-    </div>
-
-    {results.assetSchedules.length>0&&<div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
-      <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600}}>{t.assetOverview} ({results.assetSchedules.length})</div>
       <div style={{overflowX:"auto"}}><table style={tblStyle}><thead><tr>
-        {(ar?["#","الأصل","التصنيف","المرحلة","المساحة","التكاليف",`الإيرادات (${project.horizon} سنة)`,"نوع الإيراد"]:["#","Asset","Category","Phase","GFA","CAPEX",`Income (${project.horizon}yr)`,"Rev Type"]).map(h=><th key={h} style={thSt}>{h}</th>)}
+        {(ar?["#","الأصل","المرحلة","المساحة","التكاليف",`الإيرادات (${project.horizon}ع)`,"النوع"]:["#","Asset","Phase","GFA","CAPEX",`Income (${project.horizon}yr)`,"Type"]).map(h=><th key={h} style={thSt}>{h}</th>)}
       </tr></thead><tbody>
         {results.assetSchedules.map((a,i)=><tr key={a.id||i}>
           <td style={{...tdSt,color:"#9ca3af",width:30}}>{i+1}</td>
-          <td style={tdSt}>{a.name||"—"}</td><td style={tdSt}>{a.category}</td><td style={tdSt}>{a.phase}</td>
+          <td style={tdSt}>{a.name||"—"} <span style={{color:"#9ca3af",fontSize:10}}>({a.category})</span></td>
+          <td style={tdSt}>{a.phase}</td>
           <td style={tdN}>{fmt(a.gfa)}</td><td style={tdN}>{fmt(a.totalCapex)}</td>
-          <td style={{...tdN,color:"#16a34a"}}>{fmt(a.totalRevenue)}</td><td style={tdSt}>{a.revType}</td>
+          <td style={{...tdN,color:"#16a34a"}}>{fmt(a.totalRevenue)}</td><td style={{...tdSt,fontSize:11}}>{a.revType}</td>
         </tr>)}
       </tbody></table></div>
     </div>}
