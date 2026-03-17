@@ -557,7 +557,8 @@ function computeProjectCashFlows(project) {
     const assetEsc = (asset.escalation ?? projectEsc);
     const effEsc = (assetEsc + ea) / 100;
     const totalCapex = computeAssetCapex(asset, project);
-    const durYears = Math.ceil(((asset.constrDuration||12) + dm) / 12);
+    const durYears = Math.ceil((asset.constrDuration||12) / 12); // H12: Duration unchanged by delay
+    const delayYears = Math.ceil(dm / 12); // H12: Delay shifts start
     const ramp = asset.rampUpYears ?? 3;
     const occ = (asset.stabilizedOcc != null ? asset.stabilizedOcc : 100) / 100;
     const eff = (asset.efficiency || 0) / 100;
@@ -566,7 +567,7 @@ function computeProjectCashFlows(project) {
     const opEbitda = (asset.opEbitda || 0) * rm;
     const capexSch = new Array(horizon).fill(0);
     const revSch = new Array(horizon).fill(0);
-    const cStart = (asset.constrStart || 1) - 1;
+    const cStart = (asset.constrStart || 1) - 1 + delayYears; // H12: Delay shifts start forward
 
     if (durYears > 0 && totalCapex > 0) {
       const ann = totalCapex / durYears;
@@ -672,6 +673,24 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
   const add = (cat, name, pass, desc, detail) => checks.push({ cat, name, pass, desc, detail: detail || "" });
   const fmt = n => n != null ? Math.round(n).toLocaleString() : "N/A";
   const fp = n => n != null ? (n*100).toFixed(2)+"%" : "N/A";
+
+  // ═══════════════════════════════════════════════
+  // T0: BUSINESS VALIDATION (H16)
+  // ═══════════════════════════════════════════════
+  if (w && project.finMode === "fund") {
+    const gpP = w.gpPct || 0, lpP = w.lpPct || 0;
+    add("T0","GP+LP = 100%", Math.abs((gpP+lpP)-1) < 0.001, "Equity split must total 100%", `GP: ${fp(gpP)} + LP: ${fp(lpP)} = ${fp(gpP+lpP)}`);
+  }
+  (project.assets||[]).forEach((a,i) => {
+    if (a.revType === "Lease" && (a.efficiency||0) === 0 && (a.gfa||0) > 0)
+      add("T0",`Asset "${a.name||i}": Efficiency=0`, false, "Lease asset with 0% efficiency generates no revenue");
+    if ((a.gfa||0) > 0 && (a.costPerSqm||0) === 0)
+      add("T0",`Asset "${a.name||i}": Cost/sqm=0`, false, "Asset has GFA but zero construction cost");
+  });
+  if (project.exitStrategy === "caprate" && (project.exitCapRate??9) === 0)
+    add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
+  if (f && project.debtAllowed && (project.loanTenor??7) <= (project.debtGrace??3))
+    add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${project.loanTenor??7}, Grace: ${project.debtGrace??3}`);
 
   // ═══════════════════════════════════════════════
   // T1: PROJECT ENGINE (15 checks)
@@ -899,10 +918,13 @@ function computeIncentives(project, projectResults) {
     const grantAmt = Math.min(rawGrant, g.maxCap || Infinity);
     result.capexGrantTotal = grantAmt;
     if (g.timing === "construction" && constrEnd >= 0) {
-      const constrYears = constrEnd + 1;
-      const perYear = grantAmt / constrYears;
-      for (let y = 0; y <= constrEnd && y < h; y++) {
-        if (c.capex[y] > 0) { result.capexGrantSchedule[y] = perYear; result.adjustedCapex[y] -= perYear; }
+      // H2: Count only years where CAPEX > 0, not constrEnd+1
+      const activeConstrYears = c.capex.filter(v => v > 0).length;
+      if (activeConstrYears > 0) {
+        const perYear = grantAmt / activeConstrYears;
+        for (let y = 0; y < h; y++) {
+          if (c.capex[y] > 0) { result.capexGrantSchedule[y] = perYear; result.adjustedCapex[y] -= perYear; }
+        }
       }
     } else {
       result.capexGrantSchedule[Math.min(constrEnd + 1, h - 1)] = grantAmt;
@@ -938,9 +960,11 @@ function computeIncentives(project, projectResults) {
       } else if (item.type === "deferral") {
         const deferYrs = Math.ceil((item.deferralMonths || 12) / 12);
         const newYr = Math.min(yr + deferYrs, h - 1);
-        // NPV benefit of deferral
+        // H5: Actually move cash flow - save at original year, pay at deferred year
+        result.feeRebateSchedule[yr] += amt;        // Save the fee at original year
+        result.feeRebateSchedule[newYr] -= amt;      // Pay it at deferred year
+        // Net benefit = NPV of deferral
         const benefit = amt - amt / Math.pow(1.1, deferYrs);
-        result.feeRebateSchedule[yr] += benefit;
         result.feeRebateTotal += benefit;
       }
     }
@@ -990,7 +1014,10 @@ function applyInterestSubsidy(project, interest, constrEnd, totalDebt, rate) {
   let total = 0;
 
   if (inc.subType === "interestSubsidy") {
-    const startYr = inc.subsidyStart === "operation" ? constrEnd + 1 : 0;
+    // H3: Start from first year with interest (first drawdown), not year 0
+    let firstInterestYr = 0;
+    for (let y = 0; y < h; y++) { if (interest[y] > 0) { firstInterestYr = y; break; } }
+    const startYr = inc.subsidyStart === "operation" ? constrEnd + 1 : firstInterestYr;
     const endYr = startYr + (inc.subsidyYears ?? 5);
     const pct = (inc.subsidyPct || 0) / 100;
     for (let y = startYr; y < endYr && y < h; y++) {
@@ -1113,6 +1140,19 @@ function computeFinancing(project, projectResults, incentivesResult) {
   if (project.finMode === "fund" && lpEquity === 0 && !(project.gpEquityManual > 0) && !(landCapValue >= totalEquity)) {
     gpEquity = totalEquity * 0.5;
     lpEquity = totalEquity * 0.5;
+  }
+
+  // H6: Reconcile - GP + LP must equal totalEquity
+  if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
+    // If both manual, scale proportionally; otherwise adjust the non-manual one
+    if ((project.gpEquityManual ?? 0) > 0 && (project.lpEquityManual ?? 0) > 0) {
+      const sum = gpEquity + lpEquity;
+      if (sum > 0) { gpEquity = totalEquity * (gpEquity / sum); lpEquity = totalEquity - gpEquity; }
+    } else if ((project.gpEquityManual ?? 0) > 0) {
+      lpEquity = Math.max(0, totalEquity - gpEquity);
+    } else {
+      gpEquity = Math.max(0, totalEquity - lpEquity);
+    }
   }
 
   const gpPct = isBank100 ? 1 : (totalEquity > 0 ? gpEquity / totalEquity : 0);
