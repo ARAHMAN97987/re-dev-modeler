@@ -3605,7 +3605,7 @@ function MarinaPLModal({ data, onSave, onClose, t }) {
 function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject }) {
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
-  const [viewMode, setViewMode] = useState("cards");
+  const [viewMode, setViewMode] = useState("table");
   const [editIdx, setEditIdx] = useState(null);
   const fileRef = useRef(null);
   if (!project) return null;
@@ -4328,6 +4328,20 @@ function CashFlowView({ project, results, t, incentivesResult }) {
   };
 
   return (<div>
+    {/* NPV/IRR Summary */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))",gap:10,marginBottom:16}}>
+      {[
+        {label:"Unlevered IRR",value:c.irr!==null?fmtPct(c.irr*100):"N/A",color:c.irr>0.12?"#16a34a":"#f59e0b"},
+        {label:"NPV @10%",value:fmtM(c.npv10),color:c.npv10>0?"#2563eb":"#ef4444"},
+        {label:"NPV @12%",value:fmtM(c.npv12),color:c.npv12>0?"#2563eb":"#ef4444"},
+        {label:"NPV @14%",value:fmtM(c.npv14),color:c.npv14>0?"#2563eb":"#ef4444"},
+        {label:t.dashboard==="لوحة التحكم"?"إجمالي التكاليف":"Total CAPEX",value:fmtM(c.totalCapex),color:"#ef4444"},
+        {label:t.dashboard==="لوحة التحكم"?"إجمالي الإيرادات":"Total Income",value:fmtM(c.totalIncome),color:"#16a34a"},
+      ].map((k,i) => <div key={i} style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"8px 12px"}}>
+        <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{k.label}</div>
+        <div style={{fontSize:16,fontWeight:700,color:k.color}}>{k.value}</div>
+      </div>)}
+    </div>
     <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12,flexWrap:"wrap"}}>
       <div style={{fontSize:15,fontWeight:600}}>{t.unleveredCF}</div>
       <div style={{flex:1}} />
@@ -5671,7 +5685,7 @@ function ChecksView({ checks, t, lang }) {
   const ap = checks.every(c=>c.pass);
   const fc = checks.filter(c=>!c.pass).length;
   const cats = [...new Set(checks.map(c=>c.cat||"General"))];
-  const catLabels = {T1:"T1: Project Engine",T2:"T2: Financing",T3:"T3: Waterfall",T4:"T4: Incentives",T5:"T5: Integration",General:"General"};
+  const catLabels = {T0:ar?"T0: فحص المدخلات":"T0: Input Validation",T1:ar?"T1: محرك المشروع":"T1: Project Engine",T2:ar?"T2: التمويل":"T2: Financing",T3:ar?"T3: الشلال":"T3: Waterfall",T4:ar?"T4: الحوافز":"T4: Incentives",T5:ar?"T5: التكامل":"T5: Integration",General:"General"};
   const ar = lang === "ar";
   return (<div>
     <div style={{display:"flex",alignItems:"center",marginBottom:14,gap:12}}>
@@ -5681,6 +5695,15 @@ function ChecksView({ checks, t, lang }) {
       </span>
       <span style={{fontSize:11,color:"#6b7080"}}>{checks.length} {ar?"اختبار":"tests"} · {checks.filter(c=>c.pass).length} {ar?"ناجح":"passed"}</span>
     </div>
+    {/* Failed checks summary at top */}
+    {fc > 0 && <div style={{background:"#fef2f2",borderRadius:8,border:"1px solid #fecaca",padding:"12px 16px",marginBottom:14}}>
+      <div style={{fontSize:12,fontWeight:600,color:"#991b1b",marginBottom:8}}>{ar?`${fc} فحوصات فاشلة تحتاج مراجعة`:`${fc} Failed Checks Require Attention`}</div>
+      {checks.filter(c=>!c.pass).map((c,i) => <div key={i} style={{fontSize:11,color:"#b91c1c",padding:"3px 0",display:"flex",gap:6}}>
+        <span style={{fontWeight:600}}>✗</span>
+        <span><strong>[{c.cat}]</strong> {c.name}</span>
+        {c.detail && <span style={{color:"#9ca3af"}}> - {c.detail}</span>}
+      </div>)}
+    </div>}
     {cats.map(cat => {
       const catChecks = checks.filter(c=>(c.cat||"General")===cat);
       const catPass = catChecks.every(c=>c.pass);
