@@ -136,6 +136,123 @@ const rInc = computeProjectCashFlows(pInc), iInc = computeIncentives(pInc, rInc)
 const wInc = computeWaterfall(pInc, rInc, fInc, iInc);
 t("T5", "C8: incentives improve LP", wInc.lpTotalDist > w.lpTotalDist);
 
+// ═══════════════════════════════════════════════
+// T6: FIX VALIDATION - NEW SCENARIOS
+// ═══════════════════════════════════════════════
+
+// FIX#1: Post-exit CF truncation (debt mode)
+const exitYrIdx = f.exitYear ? (f.exitYear - JAZAN.startYear) : -1;
+if (exitYrIdx >= 0 && exitYrIdx < JAZAN.horizon - 1) {
+  t("T6", "FIX1: Post-exit levered CF = 0", f.leveredCF.slice(exitYrIdx + 1).every(v => v === 0), `PostExit CF[${exitYrIdx+1}]=${f.leveredCF[exitYrIdx+1]}`);
+  t("T6", "FIX1: Post-exit debt balance = 0", f.debtBalClose.slice(exitYrIdx + 1).every(v => v === 0));
+  t("T6", "FIX1: Post-exit interest = 0", f.interest.slice(exitYrIdx + 1).every(v => v === 0));
+} else {
+  t("T6", "FIX1: Post-exit CF truncation", true, "Exit at horizon edge - skipped");
+  t("T6", "FIX1: Post-exit debt balance", true, "Skipped");
+  t("T6", "FIX1: Post-exit interest", true, "Skipped");
+}
+
+// FIX#1b: Self-funded sale-only project exit
+const pSaleOnly = {...JAZAN, finMode:"self", assets:[{...JAZAN.assets[0], revType:"Sale", salePricePerSqm:8000, efficiency:85, absorptionYears:3, preSalePct:10, commissionPct:3}]};
+const rSaleOnly = computeProjectCashFlows(pSaleOnly);
+const fSaleOnly = computeFinancing(pSaleOnly, rSaleOnly, null);
+// Self-funded sale project: exit valuation should skip Sale assets
+t("T6", "FIX1b: Self-funded sale-only no crash", fSaleOnly !== null && typeof fSaleOnly.leveredIRR !== 'undefined');
+
+// FIX#1c: Early exit before debt maturity
+const pEarlyExit = {...JAZAN, exitYear: JAZAN.startYear + 4}; // Exit yr 4, debt tenor 8
+const rEE = computeProjectCashFlows(pEarlyExit);
+const fEE = computeFinancing(pEarlyExit, rEE, computeIncentives(pEarlyExit, rEE));
+const eeIdx = 4;
+t("T6", "FIX1c: Early exit - post-exit CF = 0", fEE.leveredCF.slice(eeIdx + 1).every(v => v === 0));
+t("T6", "FIX1c: Early exit - post-exit debt = 0", fEE.debtBalClose.slice(eeIdx + 1).every(v => v === 0));
+
+// FIX#2: Cash land purchase in drawdown schedule
+const pLand = {...JAZAN, landType:"purchase", landPurchasePrice:80000000, landCapitalize:false};
+const rLand = computeProjectCashFlows(pLand);
+const fLand = computeFinancing(pLand, rLand, null);
+t("T6", "FIX2: Land in devCostInclLand", fLand.devCostInclLand > fLand.devCostExclLand);
+// Year 0 should have equity call or drawdown for land
+const y0Uses = fLand.drawdown[0] + fLand.equityCalls[0];
+t("T6", "FIX2: Y0 uses include land cost", y0Uses >= 80000000 - 1, `Y0 uses: ${Math.round(y0Uses)}`);
+// Source/use reconciliation
+const totalSources = fLand.drawdown.reduce((s,v)=>s+v,0) + fLand.equityCalls.reduce((s,v)=>s+v,0);
+t("T6", "FIX2: Sources ≈ Uses", Math.abs(totalSources - (rLand.consolidated.totalCapex + 80000000 + fLand.upfrontFee)) < 10000,
+  `Sources: ${Math.round(totalSources)}, Uses: ${Math.round(rLand.consolidated.totalCapex + 80000000 + fLand.upfrontFee)}`);
+
+// FIX#3: GP catch-up - T2 LP-only
+t("T6", "FIX3: T2 100% to LP", (() => {
+  for (let y = 0; y < JAZAN.horizon; y++) {
+    if (w.tier2[y] > 0) {
+      // LP should get T1*lpPct + T2, GP should get T1*gpPct (no T2 share)
+      const expLP = w.tier1[y] * w.lpPct + w.tier2[y] + (w.tier4LP[y] || 0);
+      if (Math.abs(w.lpDist[y] - expLP) > 1) return false;
+    }
+  }
+  return true;
+})());
+
+// FIX#5: Phase land allocation
+const pPurchPhase = {...JAZAN, landType:"purchase", landPurchasePrice:100000000};
+const rPP = computeProjectCashFlows(pPurchPhase);
+const vp1 = buildPhaseVirtualProject(pPurchPhase, "Phase 1", rPP.phaseResults["Phase 1"]);
+const vp2 = buildPhaseVirtualProject(pPurchPhase, "Phase 2", rPP.phaseResults["Phase 2"]);
+t("T6", "FIX5: Phase land allocated", Math.abs(vp1.landPurchasePrice + vp2.landPurchasePrice - 100000000) < 1,
+  `P1: ${Math.round(vp1.landPurchasePrice)}, P2: ${Math.round(vp2.landPurchasePrice)}`);
+
+// FIX#4: Phase incentives pass-through
+const pIncPhase = {...JAZAN, incentives:{capexGrant:{enabled:true, grantPct:10, timing:"construction", maxCap:999999999}, financeSupport:{enabled:false}, landRentRebate:{enabled:true, constrRebatePct:50, operRebatePct:30, operRebateYears:5}, feeRebates:{enabled:false}}};
+const rIP = computeProjectCashFlows(pIncPhase);
+const iIP = computeIncentives(pIncPhase, rIP);
+const pIr1 = buildPhaseIncentives(rIP, iIP, "Phase 1");
+const pIr2 = buildPhaseIncentives(rIP, iIP, "Phase 2");
+t("T6", "FIX4: Phase incentives allocated", pIr1 !== null && pIr2 !== null);
+t("T6", "FIX4: Phase grant ≈ total", Math.abs((pIr1.capexGrantTotal + pIr2.capexGrantTotal) - iIP.capexGrantTotal) < 1,
+  `Sum: ${Math.round(pIr1.capexGrantTotal + pIr2.capexGrantTotal)} vs Total: ${Math.round(iIP.capexGrantTotal)}`);
+
+// FIX#6: CAPEX grant spend-weighted
+const pGrant = {...JAZAN, incentives:{capexGrant:{enabled:true, grantPct:20, timing:"construction", maxCap:999999999}, financeSupport:{enabled:false}, landRentRebate:{enabled:false}, feeRebates:{enabled:false}}};
+const rG = computeProjectCashFlows(pGrant);
+const iG = computeIncentives(pGrant, rG);
+// Grant in year with most CAPEX should be larger than year with least
+const capexYears = rG.consolidated.capex.map((v, i) => ({y: i, capex: v, grant: iG.capexGrantSchedule[i]})).filter(x => x.capex > 0);
+if (capexYears.length > 1) {
+  const maxCY = capexYears.reduce((a, b) => a.capex > b.capex ? a : b);
+  const minCY = capexYears.reduce((a, b) => a.capex < b.capex ? a : b);
+  t("T6", "FIX6: Grant spend-weighted", maxCY.capex !== minCY.capex ? maxCY.grant > minCY.grant : true,
+    `Max: ${Math.round(maxCY.grant)} at CAPEX ${Math.round(maxCY.capex)}, Min: ${Math.round(minCY.grant)} at CAPEX ${Math.round(minCY.capex)}`);
+} else {
+  t("T6", "FIX6: Grant spend-weighted", true, "Single construction year");
+}
+
+// FIX#8: MOIC with capitalized fees
+const wCap = computeWaterfall({...JAZAN, feeTreatment:"capital"}, r, f, i);
+const wExp2 = computeWaterfall({...JAZAN, feeTreatment:"expense"}, r, f, i);
+t("T6", "FIX8: Capital MOIC < Expense MOIC", wCap.lpMOIC < wExp2.lpMOIC,
+  `Cap: ${wCap.lpMOIC.toFixed(2)}x, Exp: ${wExp2.lpMOIC.toFixed(2)}x`);
+
+// FIX#7: Land rebate starts at construction start
+const pLR = {...JAZAN, landRentGrace: 0, assets: JAZAN.assets.map(a => ({...a, constrStart: 3})),
+  incentives:{capexGrant:{enabled:false}, financeSupport:{enabled:false}, landRentRebate:{enabled:true, constrRebatePct:100, constrRebateYears:2, operRebatePct:0, operRebateYears:0}, feeRebates:{enabled:false}}};
+const rLR = computeProjectCashFlows(pLR);
+const iLR = computeIncentives(pLR, rLR);
+const constrStartLR = rLR.consolidated.capex.findIndex(v => v > 0);
+// Rebate should NOT apply at Y0 if construction starts later
+if (constrStartLR > 0) {
+  t("T6", "FIX7: No rebate before construction", iLR.landRentSavingSchedule[0] === 0, `Y0 saving: ${iLR.landRentSavingSchedule[0]}`);
+  t("T6", "FIX7: Rebate at construction start", iLR.landRentSavingSchedule[constrStartLR] > 0, `Y${constrStartLR} saving: ${iLR.landRentSavingSchedule[constrStartLR]}`);
+} else {
+  t("T6", "FIX7: No rebate before construction", true, "Construction starts Y0");
+  t("T6", "FIX7: Rebate at construction start", true, "Construction starts Y0");
+}
+
+// Land-heavy LTV with capitalized land
+const pLandHeavy = {...JAZAN, landType:"purchase", landPurchasePrice:500000000, maxLtvPct:80, landCapitalize:true};
+const rLH = computeProjectCashFlows(pLandHeavy);
+const fLH = computeFinancing(pLandHeavy, rLH, null);
+t("T6", "FIX2b: Land-heavy LTV no crash", fLH !== null && fLH.totalDebt >= 0);
+t("T6", "FIX2b: Debt ≤ financeable uses", fLH.totalDebt <= rLH.consolidated.totalCapex + fLH.upfrontFee + 1);
+
 // ═══ RESULTS ═══
 console.log(`\n${"═".repeat(50)}`);
 console.log(`  ZAN REGRESSION TEST: ${pass} PASSED | ${fail} FAILED`);
