@@ -425,7 +425,7 @@ const defaultProject = () => ({
   landCapitalize: false,
   landCapRate: 1000, // SAR/sqm
   landCapTo: "gp", // gp | lp | split
-  landRentPaidBy: "project", // project | developer — who pays ongoing land rent after capitalization
+  landRentPaidBy: "auto", // auto | project | gp | lp — who pays ongoing land rent after capitalization
   landCapGpBearRent: false, // GP bears land rent alone if capitalized
   // Debt
   debtAllowed: true,
@@ -1502,16 +1502,35 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   // Cash available for distribution (C8: uses incentive-adjusted values)
   const ir = incentivesResult;
   const adjLandRent = ir?.adjustedLandRent || c.landRent;
-  // Land rent paid by GP: when land is capitalized and GP bears the rent
-  const lrPaidBy = project.landRentPaidBy || "project";
-  const gpPaysLandRent = project.landCapitalize && lrPaidBy === "developer";
-  const gpLandRentObligation = new Array(h).fill(0); // track for GP net CF
+  // Land rent paid by whom: resolve "auto" based on landCapTo
+  const lrPaidByRaw = project.landRentPaidBy || "auto";
+  let resolvedLandRentPayer = lrPaidByRaw;
+  if (lrPaidByRaw === "auto" && project.landCapitalize) {
+    resolvedLandRentPayer = project.landCapTo || "gp"; // follows whoever capitalized the land
+  } else if (lrPaidByRaw === "auto" || lrPaidByRaw === "developer") {
+    resolvedLandRentPayer = "project"; // no capitalization = project bears cost
+  }
+  // resolvedLandRentPayer: "project" | "gp" | "lp" | "split"
+  const gpPaysLandRent = resolvedLandRentPayer === "gp" || resolvedLandRentPayer === "split";
+  const lpPaysLandRent = resolvedLandRentPayer === "lp" || resolvedLandRentPayer === "split";
+  const gpLandRentObligation = new Array(h).fill(0);
+  const lpLandRentObligation = new Array(h).fill(0);
   const cashAvail = new Array(h).fill(0);
   let cumDeficit = 0; // C6: Track operating deficits
   for (let y = 0; y < h; y++) {
-    // When GP pays land rent: exclude from NOI (project doesn't bear it), track as GP obligation
-    const effectiveLandRent = gpPaysLandRent ? 0 : adjLandRent[y];
-    if (gpPaysLandRent) gpLandRentObligation[y] = adjLandRent[y];
+    // When GP/LP pays land rent: exclude from NOI, track as obligation
+    let effectiveLandRent = adjLandRent[y];
+    if (gpPaysLandRent && resolvedLandRentPayer === "gp") {
+      gpLandRentObligation[y] = adjLandRent[y];
+      effectiveLandRent = 0;
+    } else if (lpPaysLandRent && resolvedLandRentPayer === "lp") {
+      lpLandRentObligation[y] = adjLandRent[y];
+      effectiveLandRent = 0;
+    } else if (resolvedLandRentPayer === "split") {
+      gpLandRentObligation[y] = adjLandRent[y] * gpPct;
+      lpLandRentObligation[y] = adjLandRent[y] * lpPct;
+      effectiveLandRent = 0;
+    }
     const noi = c.income[y] - effectiveLandRent + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0);
     const debtSvc = f.debtService[y] || 0;
     const netOp = noi - debtSvc - fees[y];
@@ -1615,13 +1634,13 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     unreturnedClose[y] = cumEquityCalled - cumReturned;
   }
 
-  // LP Net Cash Flow: -equity calls (LP share) + distributions
+  // LP Net Cash Flow: -equity calls (LP share) + distributions - land rent obligation
   const lpNetCF = new Array(h).fill(0);
   const gpNetCF = new Array(h).fill(0);
   const gpLandRentTotal = gpLandRentObligation.reduce((a,b) => a+b, 0);
+  const lpLandRentTotal = lpLandRentObligation.reduce((a,b) => a+b, 0);
   for (let y = 0; y < h; y++) {
-    lpNetCF[y] = -equityCalls[y] * lpPct + lpDist[y];
-    // GP pays land rent from his pocket when landRentPaidBy = "developer"
+    lpNetCF[y] = -equityCalls[y] * lpPct + lpDist[y] - lpLandRentObligation[y];
     gpNetCF[y] = -equityCalls[y] * gpPct + gpDist[y] - gpLandRentObligation[y];
   }
 
@@ -1631,17 +1650,17 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   // MOIC = Total Distributions / Equity Invested
   // FIX#8: When fees are capitalized, invested base includes fee capital calls
   const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
-  // GP total dist = waterfall dist minus land rent obligation (net to GP)
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
-  const gpNetDist = gpTotalDist - gpLandRentTotal; // actual cash to GP after land rent
+  const lpNetDist = lpTotalDist - lpLandRentTotal;
+  const gpNetDist = gpTotalDist - gpLandRentTotal;
   const lpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
   const gpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
   const lpTotalInvested = feeTreatment === "capital" ? lpTotalCalled : lpEquity;
   const gpTotalInvested = feeTreatment === "capital" ? gpTotalCalled : gpEquity;
-  const lpMOIC = lpTotalInvested > 0 ? lpTotalDist / lpTotalInvested : 0;
+  const lpMOIC = lpTotalInvested > 0 ? lpNetDist / lpTotalInvested : 0;
   const gpMOIC = gpTotalInvested > 0 ? gpNetDist / gpTotalInvested : 0;
   // H13: DPI = Total Distributions / Total Equity Called (paid-in, includes fees)
-  const lpDPI = lpTotalCalled > 0 ? lpTotalDist / lpTotalCalled : 0;
+  const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
 
   // NPV - Full 3x3 matrix
@@ -1663,8 +1682,9 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
     lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, lpDPI, gpDPI,
-    lpTotalInvested, gpTotalInvested, lpTotalDist, gpTotalDist, gpNetDist, lpTotalCalled, gpTotalCalled,
-    gpLandRentObligation, gpLandRentTotal, gpPaysLandRent,
+    lpTotalInvested, gpTotalInvested, lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,
+    gpLandRentObligation, gpLandRentTotal, lpLandRentObligation, lpLandRentTotal,
+    gpPaysLandRent, lpPaysLandRent, resolvedLandRentPayer,
     lpNPV10, lpNPV12, lpNPV14, gpNPV10, gpNPV12, gpNPV14,
     projNPV10, projNPV12, projNPV14, isFund,
     exitYear: exitYr + sy,
@@ -2540,7 +2560,7 @@ Sale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp t
                 {cfg.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً
 Land value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>}
                 {cfg.landCapitalize&&<FL label={ar?"رسملة الأرض لصالح":"Land Cap Credit To"} tip="من يحصل على حصة الأرض المرسملة كـ Equity: المطور (GP) أو المستثمر (LP) أو مقسمة بالتساوي\nWho gets land capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>}
-                {cfg.landCapitalize&&project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip="بعد رسملة الأرض: هل المشروع يتحمل الإيجار (يقلل العوائد للجميع) أو المطور يدفعه من حصته؟\nAfter capitalizing land: does the project bear rent (reduces returns for all) or developer pays from their share?"><Drp lang={lang} value={cfg.landRentPaidBy||"project"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"developer",en:"Developer (GP pays)",ar:"المطور (GP يدفع)"}]} /></FL>}
+                {cfg.landCapitalize&&project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip="بعد رسملة الأرض: صاحب الأرض = اللي رسمل الأرض يدفع الإيجار تلقائياً. المشروع = الكل يتحمل. أو اختر يدوياً\nAfter capitalizing: Auto = whoever capitalized pays. Project = all bear cost. Or choose manually"><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (land cap owner)",ar:"تلقائي (صاحب الأرض)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"}]} /></FL>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} hint="0=auto" tip="مساهمة المطور النقدية في الصندوق. عادة 5-30% من إجمالي Equity
 Developer cash contribution to the fund. Usually 5-30% of total equity"><Inp type="number" value={cfg.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
