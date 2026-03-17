@@ -1674,11 +1674,12 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 const FINANCING_FIELDS = [
   'finMode','vehicleType','debtAllowed','maxLtvPct','financeRate',
   'loanTenor','debtGrace','graceBasis','upfrontFeePct','repaymentType',
-  'islamicFinance','gpEquityManual','lpEquityManual',
+  'islamicMode','gpEquityManual','lpEquityManual',
   'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
   'feeTreatment','subscriptionFeePct','annualMgmtFeePct','custodyFeeAnnual',
   'developerFeePct','structuringFeePct','mgmtFeeBase',
+  'fundStartYear','fundName','landCapitalize','landCapRate','landCapTo',
 ];
 
 /** Get financing settings for a specific phase. Falls back to project-level. */
@@ -2255,7 +2256,11 @@ function FinancingView({ project, results, financing, phaseFinancings, t, up, la
   const isPhaseView = selectedPhase !== "all";
   const cfg = isPhaseView ? getPhaseFinancing(project, selectedPhase) : project;
   const upCfg = isPhaseView
-    ? (fields) => up({ phases: (project.phases||[]).map(p => p.name === selectedPhase ? { ...p, financing: { ...getPhaseFinancing(project, selectedPhase), ...fields } } : p) })
+    ? (fields) => up(prev => ({
+        phases: (prev.phases||[]).map(p => p.name === selectedPhase
+          ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
+          : p)
+      }))
     : up;
   const copyFromPhase = (sourceName) => {
     const source = getPhaseFinancing(project, sourceName);
@@ -2368,7 +2373,7 @@ Upfront loan fee as percentage of debt amount. Paid once at drawdown"><Inp type=
                     </FL>
                   </div>
                   <FL label={ar?"هيكل":"Structure"} tip="مرابحة = تكلفة + ربح (الأشيع). إجارة = تأجير منتهي بالتملك\nMurabaha = cost-plus (common). Ijara = lease-to-own">
-                    <Drp lang={lang} value={project.islamicMode} onChange={v=>upCfg({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
+                    <Drp lang={lang} value={cfg.islamicMode} onChange={v=>upCfg({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
                   </FL>
                 </>}
               </>}
@@ -2393,15 +2398,16 @@ Sale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp t
               {cfg.finMode !== "self" && cfg.finMode !== "bank100" && <>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض إلى حصة Equity في الحسابات التمويلية\nConvert leasehold land value to equity in financing calculations">
-                  <Drp lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
+                  <Drp lang={lang} value={cfg.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
                 </FL>
-                {project.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً
-Land value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${cur}`}><Inp type="number" value={project.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>}
+                {cfg.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً
+Land value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>}
+                {cfg.landCapitalize&&<FL label={ar?"رسملة الأرض لصالح":"Land Cap Credit To"} tip="من يحصل على حصة الأرض المرسملة كـ Equity: المطور (GP) أو المستثمر (LP) أو مقسمة بالتساوي\nWho gets land capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} hint="0=auto" tip="مساهمة المطور النقدية في الصندوق. عادة 5-30% من إجمالي Equity
-Developer cash contribution to the fund. Usually 5-30% of total equity"><Inp type="number" value={project.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
+Developer cash contribution to the fund. Usually 5-30% of total equity"><Inp type="number" value={cfg.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
                   {cfg.finMode==="fund"&&<FL label={ar?"حصة الممول (LP)":"Investor Equity (LP)"} hint="0=auto" tip="رأس مال المستثمرين الخارجيين. عادة 70-95% من Equity مع أولوية عائد تفضيلي
-Outside investor capital. Usually 70-95% of equity with preferred return priority"><Inp type="number" value={project.lpEquityManual} onChange={v=>upCfg({lpEquityManual:v})} /></FL>}
+Outside investor capital. Usually 70-95% of equity with preferred return priority"><Inp type="number" value={cfg.lpEquityManual} onChange={v=>upCfg({lpEquityManual:v})} /></FL>}
                 </div>
               </>}
             </div>
@@ -2412,9 +2418,9 @@ Outside investor capital. Usually 70-95% of equity with preferred return priorit
                 <FL label={ar?"الهيكل القانوني":"Vehicle"} tip="نوع الوعاء مثل صندوق خاص أو SPV أو مشروع مشترك. يؤثر على الحوكمة والمتطلبات النظامية
 Vehicle type such as private fund, SPV, or JV. Affects governance and regulatory requirements"><Drp lang={lang} value={cfg.vehicleType} onChange={v=>upCfg({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
                 {cfg.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"} tip="الاسم القانوني أو التشغيلي للصندوق. للعرض والتقارير فقط
-Legal or operating fund name. For display and reports only"><Inp value={project.fundName} onChange={v=>upCfg({fundName:v})} /></FL>}
+Legal or operating fund name. For display and reports only"><Inp value={cfg.fundName} onChange={v=>upCfg({fundName:v})} /></FL>}
                 <FL label={ar?"سنة بداية الصندوق":"Fund Start"} hint="0=auto" tip="سنة بدء جمع رأس المال. غالباً قبل البناء بسنة لتغطية التأسيس
-Year capital raising begins. Often one year before construction for setup costs"><Inp type="number" value={project.fundStartYear} onChange={v=>upCfg({fundStartYear:v})} /></FL>
+Year capital raising begins. Often one year before construction for setup costs"><Inp type="number" value={cfg.fundStartYear} onChange={v=>upCfg({fundStartYear:v})} /></FL>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="الحد الأدنى للعائد السنوي لـ LP قبل مشاركة GP. عادة 8-15%\nMinimum annual return for LP before GP shares profits. Usually 8-15%"><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:v})} /></FL>
@@ -2436,6 +2442,7 @@ One-time entry fee at subscription. Usually 1-2% of invested capital"><Inp type=
                     <FL label={ar?"إدارة %":"Mgmt %"} tip="رسوم إدارة سنوية مقابل متابعة الاستثمار والتقارير. عادة 1.5-2.5% سنوياً
 Annual management fee for oversight and reporting. Usually 1.5-2.5% per year"><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
                   </div>
+                  <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="هل تحسب رسوم الإدارة على أساس رأس المال (Equity) أم تكلفة التطوير الكاملة؟\nCalculate mgmt fee on equity base or total development cost?"><Drp lang={lang} value={cfg.mgmtFeeBase||"devCost"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور لإدارة التنفيذ خلال البناء. عادة 3-7% من CAPEX
 Developer fee for managing construction execution. Usually 3-7% of CAPEX"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
@@ -2763,7 +2770,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
 
   const up = useCallback((u) => {
     const scrollTop = sidebarRef.current?.scrollTop;
-    setProject(prev => { pushUndo(prev); return {...prev,...u}; });
+    setProject(prev => { pushUndo(prev); return {...prev,...(typeof u === 'function' ? u(prev) : u)}; });
     if (scrollTop != null) {
       requestAnimationFrame(() => {
         if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop;
