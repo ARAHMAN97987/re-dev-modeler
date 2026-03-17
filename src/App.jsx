@@ -1615,11 +1615,11 @@ const FINANCING_FIELDS = [
 /** Get financing settings for a specific phase. Falls back to project-level. */
 function getPhaseFinancing(project, phaseName) {
   const phase = (project.phases || []).find(p => p.name === phaseName);
-  if (phase?.financing) return { ...phase.financing };
-  // Fallback: project-level
-  const settings = {};
-  FINANCING_FIELDS.forEach(f => { if (project[f] !== undefined) settings[f] = project[f]; });
-  return settings;
+  // Always start with project-level defaults as base
+  const base = {};
+  FINANCING_FIELDS.forEach(f => { if (project[f] !== undefined) base[f] = project[f]; });
+  // Overlay phase-specific settings (if any)
+  return { ...base, ...(phase?.financing || {}) };
 }
 
 /** Check if project has per-phase financing enabled */
