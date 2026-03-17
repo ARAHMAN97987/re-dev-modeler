@@ -593,7 +593,7 @@ function computeProjectCashFlows(project) {
     } else if (asset.revType === "Sale") {
       // H1: Unit sale revenue - absorption over N years after construction
       const salePriceSqm = (asset.salePricePerSqm || 0) * rm;
-      const sellableArea = (asset.gfa || 0) * ((asset.efficiency || 100) / 100);
+      const sellableArea = (asset.gfa || 0) * ((asset.efficiency ?? 100) / 100);
       const totalSaleValue = sellableArea * salePriceSqm;
       const absorptionYears = Math.max(1, asset.absorptionYears || 3);
       const commissionPct = Math.min(1, Math.max(0, (asset.commissionPct || 0) / 100));
@@ -678,7 +678,7 @@ function calcIRR(cf, guess=0.1, maxIter=200, tol=1e-7) {
   for (let i = 0; i < 100; i++) {
     const mid = (lo + hi) / 2;
     const nmid = npvAt(mid);
-    if (Math.abs(nmid) < 1) return mid;
+    if (Math.abs(nmid) < Math.max(1, cf.reduce((s,v)=>s+Math.abs(v),0) * 1e-8)) return mid;
     if (npvAt(lo) * nmid < 0) hi = mid; else lo = mid;
   }
   return null; // still no convergence
@@ -1710,7 +1710,7 @@ function aggregatePhaseFinancings(phaseFinancings, h) {
     repayment: sumArr('repayment'), interest: sumArr('interest'),
     originalInterest: sumArr('originalInterest'),
     debtService: sumArr('debtService'), leveredCF: levCF,
-    dscr: (() => { const ds = sumArr('debtService'); const inc = sumArr('leveredCF'); return ds.map((d, y) => d > 0 ? (inc[y] + d) / d : null); })(),
+    dscr: (() => { const ds = sumArr('debtService'); const noi = new Array(h).fill(0); names.forEach(n => { const pf = phaseFinancings[n]; if (!pf) return; for (let y = 0; y < h; y++) { if (pf.dscr && pf.dscr[y] !== null && pf.debtService[y] > 0) noi[y] += pf.dscr[y] * pf.debtService[y]; } }); return ds.map((d, y) => d > 0 ? noi[y] / d : null); })(),
     exitProceeds: sumArr('exitProceeds'),
     upfrontFee: sum('upfrontFee'),
     totalInterest: sum('totalInterest'),
