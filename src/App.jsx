@@ -2180,12 +2180,42 @@ function FinancingView({ project, results, financing, phaseFinancings, t, up, la
   };
 
   return (<div>
+    {/* ═══ PHASE SELECTOR (above settings) ═══ */}
+    {hasPhases && (
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"7px 16px",fontSize:12,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:8}}>
+          {ar?"الإجمالي":"Consolidated"}
+        </button>
+        {phaseNames.map(p=>{
+          const pf = phaseFinancings?.[p];
+          const irr = pf?.leveredIRR;
+          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"7px 16px",fontSize:12,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:8}}>
+            {p}{irr !== null && irr !== undefined ? ` (${(irr*100).toFixed(1)}%)` : ""}
+          </button>;
+        })}
+        {isPhaseView && (
+          <select onChange={e => { if (e.target.value) { copyFromPhase(e.target.value); e.target.value = ""; } }} style={{padding:"6px 12px",fontSize:11,borderRadius:6,border:"1px solid #93c5fd",background:"#eff6ff",color:"#1e40af",cursor:"pointer",marginInlineStart:"auto"}}>
+            <option value="">{ar?"📋 نسخ الإعدادات من...":"📋 Copy settings from..."}</option>
+            {(project.phases||[]).filter(p=>p.name!==selectedPhase).map(p=>
+              <option key={p.name} value={p.name}>{p.name}</option>
+            )}
+          </select>
+        )}
+      </div>
+    )}
+    {isPhaseView && (
+      <div style={{background:"#eff6ff",borderRadius:8,border:"1px solid #bfdbfe",padding:"10px 16px",marginBottom:12,fontSize:12,color:"#1e40af"}}>
+        <strong>{selectedPhase}</strong> — {ar?"إعدادات تمويل مستقلة":"Independent Financing Settings"}
+        {f && f.devCostInclLand > 0 && <span style={{marginInlineStart:12,color:"#6b7080"}}>DevCost: {fmtM(f.devCostInclLand)} · Debt: {fmtM(f.maxDebt)} · Equity: {fmtM(f.totalEquity)}</span>}
+      </div>
+    )}
+
     {/* ═══ FINANCING CONFIGURATION PANEL ═══ */}
     <div style={{background:showConfig?"#fff":"#f8f9fb",borderRadius:12,border:showConfig?"2px solid #2563eb":"1px solid #e5e7ec",marginBottom:18,overflow:"hidden",boxShadow:showConfig?"0 2px 12px rgba(37,99,235,0.08)":"none",transition:"all 0.2s"}}>
       <div onClick={()=>setShowConfig(!showConfig)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:showConfig?"linear-gradient(135deg, #eff6ff, #f0f4ff)":"#f8f9fb",borderBottom:showConfig?"1px solid #dbeafe":"none"}}>
         <div style={{width:32,height:32,borderRadius:8,background:showConfig?"#2563eb":"#e5e7ec",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:showConfig?"#fff":"#6b7080",transition:"all 0.2s"}}>⚙</div>
         <div style={{flex:1}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{ar?"إعدادات التمويل والتخارج":"Financing & Exit Settings"}</div>
+          <div style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{isPhaseView ? (ar?`إعدادات ${selectedPhase}`:`${selectedPhase} Settings`) : (ar?"إعدادات التمويل والتخارج":"Financing & Exit Settings")}</div>
           {!showConfig && <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{({self:ar?"ذاتي":"Self-Funded",bank100:ar?"بنكي 100%":"Bank 100%",debt:ar?"دين + ملكية":"Debt + Equity",fund:ar?"صندوق":"Fund"})[cfg.finMode]||""}{cfg.finMode!=="self"?` · ${cfg.maxLtvPct||70}% LTV · ${cfg.financeRate||6.5}%`:""}</div>}
         </div>
         <button onClick={e=>{e.stopPropagation();setShowConfig(!showConfig);}} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:showConfig?"#fff":"#2563eb",color:showConfig?"#6b7080":"#fff",border:showConfig?"1px solid #e5e7ec":"none",borderRadius:6}}>
@@ -2194,21 +2224,6 @@ function FinancingView({ project, results, financing, phaseFinancings, t, up, la
       </div>
       {showConfig && (
         <div style={{padding:"4px 18px 18px"}}>
-          {/* Phase financing indicator + copy button */}
-          {isPhaseView && (
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:"#eff6ff",borderRadius:8,border:"1px solid #bfdbfe"}}>
-              <div style={{flex:1,fontSize:12,color:"#1e40af",fontWeight:600}}>
-                {ar?`إعدادات تمويل ${selectedPhase}`:`${selectedPhase} Financing Settings`}
-                {" "}<span style={{fontWeight:400,color:"#6b7080"}}>{ar?"(مستقلة عن باقي المراحل)":"(independent from other phases)"}</span>
-              </div>
-              <select onChange={e => { if (e.target.value) { copyFromPhase(e.target.value); e.target.value = ""; } }} style={{padding:"5px 10px",fontSize:11,borderRadius:6,border:"1px solid #93c5fd",background:"#fff",color:"#1e40af",cursor:"pointer"}}>
-                <option value="">{ar?"📋 نسخ من...":"📋 Copy from..."}</option>
-                {(project.phases||[]).filter(p=>p.name!==selectedPhase).map(p=>
-                  <option key={p.name} value={p.name}>{p.name}</option>
-                )}
-              </select>
-            </div>
-          )}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
             {/* Column 1: Financing Mode + Debt */}
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
@@ -2334,27 +2349,6 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
     </div>
 
     {/* ═══ FINANCING RESULTS (KPIs + tables) ═══ */}
-    {/* Phase selector tabs */}
-    {hasPhases && (
-      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-          {ar?"الإجمالي":"Consolidated"}
-        </button>
-        {phaseNames.map(p=>{
-          const pf = phaseFinancings?.[p];
-          const irr = pf?.leveredIRR;
-          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-            {p}{irr !== null && irr !== undefined ? ` (${(irr*100).toFixed(1)}%)` : ""}
-          </button>;
-        })}
-      </div>
-    )}
-    {selectedPhase !== "all" && f && (
-      <div style={{background:"#eff6ff",borderRadius:8,border:"1px solid #bfdbfe",padding:"10px 16px",marginBottom:14,fontSize:12,color:"#1e40af"}}>
-        <strong>{selectedPhase}</strong> — {ar?"عرض تمويل المرحلة المستقلة":"Independent Phase Financing View"}
-        {f.devCostInclLand > 0 && <span style={{marginInlineStart:8}}>DevCost: {fmtM(f.devCostInclLand)} · Debt: {fmtM(f.maxDebt)} · Equity: {fmtM(f.totalEquity)}</span>}
-      </div>
-    )}
     {!f ? (
       <div style={{textAlign:"center",padding:32,color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل أعلاه":"Configure financing settings above"}</div>
     ) : (<>
