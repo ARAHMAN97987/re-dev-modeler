@@ -1230,7 +1230,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
 // ═══════════════════════════════════════════════════════════════
 // PHASE 3: WATERFALL ENGINE
 // ═══════════════════════════════════════════════════════════════
-function computeWaterfall(project, projectResults, financing) {
+function computeWaterfall(project, projectResults, financing, incentivesResult) {
   if (!project || !projectResults || !financing) return null;
   if (project.finMode === "self" || project.finMode === "bank100") return null;
   const h = project.horizon || 50;
@@ -1300,11 +1300,13 @@ function computeWaterfall(project, projectResults, financing) {
   // Exit proceeds - use from financing engine (already net of debt)
   const exitProceeds = [...(f.exitProceeds || new Array(h).fill(0))];
 
-  // Cash available for distribution
+  // Cash available for distribution (C8: uses incentive-adjusted values)
+  const ir = incentivesResult;
+  const adjLandRent = ir?.adjustedLandRent || c.landRent;
   const cashAvail = new Array(h).fill(0);
   let cumDeficit = 0; // C6: Track operating deficits
   for (let y = 0; y < h; y++) {
-    const noi = c.income[y] - c.landRent[y];
+    const noi = c.income[y] - adjLandRent[y] + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0);
     const debtSvc = f.debtService[y] || 0;
     const netOp = noi - debtSvc - fees[y];
     let raw = (y <= exitYr ? netOp : 0) + exitProceeds[y];
@@ -2206,7 +2208,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const results = useMemo(() => { try { return project ? computeProjectCashFlows(project) : null; } catch(e) { console.error("computeProjectCashFlows error:", e); return null; } }, [project]);
   const incentivesResult = useMemo(() => { try { return project && results ? computeIncentives(project, results) : null; } catch(e) { console.error("computeIncentives error:", e); return null; } }, [project, results]);
   const financing = useMemo(() => { try { return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult]);
-  const waterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing]);
+  const waterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing, incentivesResult) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing, incentivesResult]);
   const phaseWaterfalls = useMemo(() => { try { return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
@@ -4258,7 +4260,7 @@ function runScenario(project, overrides) {
     const r = computeProjectCashFlows(p);
     const ir = computeIncentives(p, r);
     const f = computeFinancing(p, r, ir);
-    const w = computeWaterfall(p, r, f);
+    const w = computeWaterfall(p, r, f, null);
     return { project: p, results: r, financing: f, waterfall: w };
   } catch (e) {
     console.error("runScenario error:", e);
