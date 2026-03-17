@@ -706,17 +706,20 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     const gpP = w.gpPct || 0, lpP = w.lpPct || 0;
     add("T0","GP+LP = 100%", Math.abs((gpP+lpP)-1) < 0.001, "Equity split must total 100%", `GP: ${fp(gpP)} + LP: ${fp(lpP)} = ${fp(gpP+lpP)}`);
   }
+  // Infrastructure/parking categories are cost-only (no revenue) - skip efficiency check for them
+  const infraCats = ["parking","landscaping","infrastructure","roads","utilities","common"];
+  const isInfra = (a) => infraCats.some(ic => (a.category||"").toLowerCase().includes(ic) || (a.name||"").toLowerCase().includes(ic));
   (project.assets||[]).forEach((a,i) => {
-    if (a.revType === "Lease" && (a.efficiency||0) === 0 && (a.gfa||0) > 0)
+    if (a.revType === "Lease" && (a.efficiency||0) === 0 && (a.gfa||0) > 0 && !isInfra(a))
       add("T0",`Asset "${a.name||i}": Efficiency=0`, false, "Lease asset with 0% efficiency generates no revenue");
-    if ((a.gfa||0) > 0 && (a.costPerSqm||0) === 0)
+    if ((a.gfa||0) > 0 && (a.costPerSqm||0) === 0 && !isInfra(a))
       add("T0",`Asset "${a.name||i}": Cost/sqm=0`, false, "Asset has GFA but zero construction cost");
   });
   if (project.exitStrategy === "caprate" && (project.exitCapRate??9) === 0)
     add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
   if (f && project.debtAllowed && (project.loanTenor??7) <= (project.debtGrace??3))
     add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${project.loanTenor??7}, Grace: ${project.debtGrace??3}`);
-  // H11: Exit during ramp-up warning
+  // H11: Exit during ramp-up - WARNING (pass=true) not error
   if (f && project.exitStrategy !== "hold") {
     const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2025) : 0;
     const maxRamp = Math.max(...(project.assets||[]).map(a => {
@@ -725,7 +728,7 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
       return cStart + dur + (a.rampUpYears??3);
     }));
     if (exitYrIdx > 0 && exitYrIdx < maxRamp)
-      add("T0","Exit Before Stabilization", false, "Exit year is during ramp-up. Valuation may use unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
+      add("T0","Exit Before Stabilization ⚠", true, "Warning: exit during ramp-up. Valuation uses unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
   }
 
   // ═══════════════════════════════════════════════
@@ -1348,42 +1351,6 @@ function computeFinancing(project, projectResults, incentivesResult) {
 // ═══════════════════════════════════════════════════════════════
 // PHASE 3: WATERFALL ENGINE
 // ═══════════════════════════════════════════════════════════════
-// H9: Shared waterfall distribution core - used by both consolidated and phase waterfalls
-function runWaterfallCore(h, equityCalls, cashAvail, prefRate, carryPct, lpSplitPct, gpPct, lpPct, doGPCatchup) {
-  const gpSplitPct = 1 - lpSplitPct;
-  const tier1=new Array(h).fill(0), tier2=new Array(h).fill(0), tier3=new Array(h).fill(0);
-  const tier4LP=new Array(h).fill(0), tier4GP=new Array(h).fill(0);
-  const lpDist=new Array(h).fill(0), gpDist=new Array(h).fill(0);
-  const unreturnedOpen=new Array(h).fill(0), unreturnedClose=new Array(h).fill(0);
-  const prefAccrual=new Array(h).fill(0), prefAccumulated=new Array(h).fill(0);
-  let cumEq=0, cumRet=0, cumPrefPaid=0, cumPrefAccrued=0, cumGP=0;
-  for (let y=0;y<h;y++) {
-    cumEq += equityCalls[y];
-    const unret = cumEq - cumRet;
-    unreturnedOpen[y] = unret;
-    const yPref = unret * prefRate;
-    cumPrefAccrued += yPref;
-    prefAccrual[y] = yPref;
-    prefAccumulated[y] = cumPrefAccrued - cumPrefPaid;
-    let rem = cashAvail[y];
-    if (rem <= 0) { unreturnedClose[y] = unret; continue; }
-    if (unret > 0 && rem > 0) { const t1=Math.min(rem, unret); tier1[y]=t1; rem-=t1; cumRet+=t1; }
-    const pOwed = cumPrefAccrued - cumPrefPaid;
-    if (pOwed > 0 && rem > 0) { const t2=Math.min(rem, pOwed); tier2[y]=t2; rem-=t2; cumPrefPaid+=t2; }
-    if (doGPCatchup && rem > 0 && carryPct > 0) {
-      const tgt = cumPrefPaid * carryPct / (1 - carryPct);
-      const need = Math.max(0, tgt - cumGP);
-      const cu = Math.min(rem, need); tier3[y]=cu; rem-=cu; cumGP+=cu;
-    }
-    if (rem > 0) { tier4LP[y]=rem*lpSplitPct; tier4GP[y]=rem*gpSplitPct; }
-    const lpT12 = (tier1[y]+tier2[y])*lpPct, gpT12 = (tier1[y]+tier2[y])*gpPct;
-    lpDist[y] = lpPct > 0 ? (lpT12 + tier4LP[y]) : 0;
-    gpDist[y] = gpT12 + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
-    unreturnedClose[y] = cumEq - cumRet;
-  }
-  return { tier1,tier2,tier3,tier4LP,tier4GP,lpDist,gpDist,unreturnedOpen,unreturnedClose,prefAccrual,prefAccumulated };
-}
-
 function computeWaterfall(project, projectResults, financing, incentivesResult) {
   if (!project || !projectResults || !financing) return null;
   if (project.finMode === "self" || project.finMode === "bank100") return null;
@@ -1678,9 +1645,25 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
     const gpPct = wc.gpPct;
     const lpPct = wc.lpPct;
 
-    // H9: Use shared waterfall core
-    const wCore = runWaterfallCore(h, pEquityCalls, pCashAvail, prefRate, carryPct, lpSplitPct, gpPct, lpPct, project.gpCatchup);
-    const {tier1,tier2,tier3,tier4LP,tier4GP,lpDist,gpDist} = wCore;
+    const tier1=[],tier2=[],tier3=[],tier4LP=[],tier4GP=[],lpDist=[],gpDist=[];
+    for(let i=0;i<h;i++){tier1.push(0);tier2.push(0);tier3.push(0);tier4LP.push(0);tier4GP.push(0);lpDist.push(0);gpDist.push(0);}
+
+    let cumEqCalled=0,cumReturned=0,cumPrefPaid=0,cumPrefAccrued=0,cumGPCatchup=0;
+    for(let y=0;y<h;y++){
+      cumEqCalled+=pEquityCalls[y];
+      const unreturned=cumEqCalled-cumReturned;
+      const yearPref=unreturned*prefRate;
+      cumPrefAccrued+=yearPref;
+      let rem=pCashAvail[y];
+      if(rem<=0)continue;
+      if(unreturned>0&&rem>0){const t1=Math.min(rem,unreturned);tier1[y]=t1;rem-=t1;cumReturned+=t1;}
+      const prefOwed=cumPrefAccrued-cumPrefPaid;
+      if(prefOwed>0&&rem>0){const t2=Math.min(rem,prefOwed);tier2[y]=t2;rem-=t2;cumPrefPaid+=t2;}
+      if(project.gpCatchup&&rem>0&&carryPct>0){const targetGP=cumPrefPaid*carryPct/(1-carryPct);const needed=Math.max(0,targetGP-cumGPCatchup);const catchup=Math.min(rem,needed);tier3[y]=catchup;rem-=catchup;cumGPCatchup+=catchup;}
+      if(rem>0){tier4LP[y]=rem*lpSplitPct;tier4GP[y]=rem*(1-lpSplitPct);}
+      lpDist[y]=(tier1[y]+tier2[y])*lpPct+tier4LP[y];
+      gpDist[y]=(tier1[y]+tier2[y])*gpPct+tier3[y]+tier4GP[y];
+    }
 
     const lpNetCF=new Array(h).fill(0),gpNetCF=new Array(h).fill(0);
     for(let y=0;y<h;y++){lpNetCF[y]=-pEquityCalls[y]*lpPct+lpDist[y];gpNetCF[y]=-pEquityCalls[y]*gpPct+gpDist[y];}
