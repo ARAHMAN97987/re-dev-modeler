@@ -2144,6 +2144,17 @@ function FinancingView({ project, results, financing, phaseFinancings, t, up, la
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
 
+  // Per-phase financing config proxy
+  const isPhaseView = selectedPhase !== "all";
+  const cfg = isPhaseView ? getPhaseFinancing(project, selectedPhase) : project;
+  const upCfg = isPhaseView
+    ? (fields) => up({ phases: (project.phases||[]).map(p => p.name === selectedPhase ? { ...p, financing: { ...getPhaseFinancing(project, selectedPhase), ...fields } } : p) })
+    : up;
+  const copyFromPhase = (sourceName) => {
+    const source = getPhaseFinancing(project, sourceName);
+    upCfg({ ...source });
+  };
+
   if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:32,marginBottom:12}}>📊</div>
     <div style={{fontSize:14,fontWeight:500,color:"#6b7080",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
@@ -2175,7 +2186,7 @@ function FinancingView({ project, results, financing, phaseFinancings, t, up, la
         <div style={{width:32,height:32,borderRadius:8,background:showConfig?"#2563eb":"#e5e7ec",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:showConfig?"#fff":"#6b7080",transition:"all 0.2s"}}>⚙</div>
         <div style={{flex:1}}>
           <div style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{ar?"إعدادات التمويل والتخارج":"Financing & Exit Settings"}</div>
-          {!showConfig && <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{({self:ar?"ذاتي":"Self-Funded",bank100:ar?"بنكي 100%":"Bank 100%",debt:ar?"دين + ملكية":"Debt + Equity",fund:ar?"صندوق":"Fund"})[project.finMode]||""}{project.finMode!=="self"?` · ${project.maxLtvPct||70}% LTV · ${project.financeRate||6.5}%`:""}</div>}
+          {!showConfig && <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{({self:ar?"ذاتي":"Self-Funded",bank100:ar?"بنكي 100%":"Bank 100%",debt:ar?"دين + ملكية":"Debt + Equity",fund:ar?"صندوق":"Fund"})[cfg.finMode]||""}{cfg.finMode!=="self"?` · ${cfg.maxLtvPct||70}% LTV · ${cfg.financeRate||6.5}%`:""}</div>}
         </div>
         <button onClick={e=>{e.stopPropagation();setShowConfig(!showConfig);}} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:showConfig?"#fff":"#2563eb",color:showConfig?"#6b7080":"#fff",border:showConfig?"1px solid #e5e7ec":"none",borderRadius:6}}>
           {showConfig?(ar?"▲ إغلاق":"▲ Close"):(ar?"✎ تعديل":"✎ Edit")}
@@ -2183,44 +2194,59 @@ function FinancingView({ project, results, financing, phaseFinancings, t, up, la
       </div>
       {showConfig && (
         <div style={{padding:"4px 18px 18px"}}>
+          {/* Phase financing indicator + copy button */}
+          {isPhaseView && (
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:"#eff6ff",borderRadius:8,border:"1px solid #bfdbfe"}}>
+              <div style={{flex:1,fontSize:12,color:"#1e40af",fontWeight:600}}>
+                {ar?`إعدادات تمويل ${selectedPhase}`:`${selectedPhase} Financing Settings`}
+                {" "}<span style={{fontWeight:400,color:"#6b7080"}}>{ar?"(مستقلة عن باقي المراحل)":"(independent from other phases)"}</span>
+              </div>
+              <select onChange={e => { if (e.target.value) { copyFromPhase(e.target.value); e.target.value = ""; } }} style={{padding:"5px 10px",fontSize:11,borderRadius:6,border:"1px solid #93c5fd",background:"#fff",color:"#1e40af",cursor:"pointer"}}>
+                <option value="">{ar?"📋 نسخ من...":"📋 Copy from..."}</option>
+                {(project.phases||[]).filter(p=>p.name!==selectedPhase).map(p=>
+                  <option key={p.name} value={p.name}>{p.name}</option>
+                )}
+              </select>
+            </div>
+          )}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
             {/* Column 1: Financing Mode + Debt */}
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               <div style={{fontSize:10,fontWeight:700,color:"#2563eb",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dbeafe"}}>{ar?"التمويل":"Financing"}</div>
               <FL label={ar?"آلية التمويل":"Mode"} tip="يحدد طريقة تمويل المشروع: ذاتي، بنكي، أو عبر صندوق استثماري\nChoose how the project will be funded: self, bank, or fund structure">
-                <Drp lang={lang} value={project.finMode} onChange={v=>up({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
+                <Drp lang={lang} value={cfg.finMode} onChange={v=>upCfg({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
                   {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
                   {value:"bank100",en:"100% Bank Debt",ar:"بنكي 100%"},
                   {value:"debt",en:"Debt + Equity",ar:"دين + ملكية"},
                   {value:"fund",en:"Fund (GP/LP)",ar:"صندوق (GP/LP)"},
                 ]} />
               </FL>
-              {project.finMode !== "self" && <>
-                {project.finMode !== "bank100" && (
+              {cfg.finMode !== "self" && <>
+                {cfg.finMode !== "bank100" && (
                   <FL label={ar?"هل الدين مسموح؟":"Debt Allowed"} tip="هذا المفتاح يحدد هل النموذج يسمح بتمويل بنكي. عند إيقافه يصبح المشروع ممولاً بالكامل من Equity
 Toggles whether bank debt is allowed. If off, the project becomes fully equity-funded">
-                    <Drp lang={lang} value={project.debtAllowed?"Y":"N"} onChange={v=>up({debtAllowed:v==="Y"})} options={["Y","N"]} />
+                    <Drp lang={lang} value={cfg.debtAllowed?"Y":"N"} onChange={v=>upCfg({debtAllowed:v==="Y"})} options={["Y","N"]} />
                   </FL>
                 )}
-                {(project.debtAllowed || project.finMode === "bank100") && <>
+                {(cfg.debtAllowed || cfg.finMode === "bank100") && <>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    {project.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى قيمة المشروع. في السعودية 50-70%\nLoan-to-Value ratio. Saudi: 50-70%"><Inp type="number" value={project.maxLtvPct} onChange={v=>up({maxLtvPct:v})} /></FL>}
-                    <FL label={ar?"معدل %":"Rate %"} tip="معدل تكلفة التمويل السنوي. في السعودية 5-8%\nAnnual financing cost rate. Saudi: 5-8%"><Inp type="number" value={project.financeRate} onChange={v=>up({financeRate:v})} /></FL>
+                    {cfg.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى قيمة المشروع. في السعودية 50-70%\nLoan-to-Value ratio. Saudi: 50-70%"><Inp type="number" value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} /></FL>}
+                    <FL label={ar?"معدل %":"Rate %"} tip="معدل تكلفة التمويل السنوي. في السعودية 5-8%\nAnnual financing cost rate. Saudi: 5-8%"><Inp type="number" value={cfg.financeRate} onChange={v=>upCfg({financeRate:v})} /></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years"><Inp type="number" value={project.loanTenor} onChange={v=>up({loanTenor:v})} /></FL>
-                    <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years"><Inp type="number" value={project.debtGrace} onChange={v=>up({debtGrace:v})} /></FL>
-                    <FL label={ar?"بداية السماح":"Grace Basis"} tip="متى تبدأ فترة السماح: من أول سحب أو من اكتمال البناء\nWhen grace starts: first drawdown or completion of development (COD)"><select value={project.graceBasis||"cod"} onChange={e=>up({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (COD)":"COD (Completion)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option></select></FL>
+                    <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years"><Inp type="number" value={cfg.loanTenor} onChange={v=>upCfg({loanTenor:v})} /></FL>
+                    <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years"><Inp type="number" value={cfg.debtGrace} onChange={v=>upCfg({debtGrace:v})} /></FL>
+                    <FL label={ar?"بداية السماح":"Grace Basis"} tip="متى تبدأ فترة السماح: من أول سحب أو من اكتمال البناء\nWhen grace starts: first drawdown or completion of development (COD)"><select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (COD)":"COD (Completion)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option></select></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم %":"Fee %"} tip="رسوم القرض المقدمة كنسبة من مبلغ التمويل. تُدفع مرة واحدة عند السحب
-Upfront loan fee as percentage of debt amount. Paid once at drawdown"><Inp type="number" value={project.upfrontFeePct} onChange={v=>up({upfrontFeePct:v})} /></FL>
+Upfront loan fee as percentage of debt amount. Paid once at drawdown"><Inp type="number" value={cfg.upfrontFeePct} onChange={v=>upCfg({upfrontFeePct:v})} /></FL>
                     <FL label={ar?"سداد":"Repay"} tip="Amortizing = أقساط دورية تقلل الرصيد. Bullet = سداد الأصل دفعة واحدة بالنهاية\nAmortizing = regular installments. Bullet = principal at end">
-                      <Drp lang={lang} value={project.repaymentType} onChange={v=>up({repaymentType:v})} options={[{value:"amortizing",en:"Amortizing",ar:"أقساط"},{value:"bullet",en:"Bullet",ar:"دفعة واحدة"}]} />
+                      <Drp lang={lang} value={cfg.repaymentType} onChange={v=>upCfg({repaymentType:v})} options={[{value:"amortizing",en:"Amortizing",ar:"أقساط"},{value:"bullet",en:"Bullet",ar:"دفعة واحدة"}]} />
                     </FL>
                   </div>
                   <FL label={ar?"هيكل":"Structure"} tip="مرابحة = تكلفة + ربح (الأشيع). إجارة = تأجير منتهي بالتملك\nMurabaha = cost-plus (common). Ijara = lease-to-own">
-                    <Drp lang={lang} value={project.islamicMode} onChange={v=>up({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
+                    <Drp lang={lang} value={project.islamicMode} onChange={v=>upCfg({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
                   </FL>
                 </>}
               </>}
@@ -2228,79 +2254,79 @@ Upfront loan fee as percentage of debt amount. Paid once at drawdown"><Inp type=
             {/* Column 2: Exit + Capital Structure */}
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
               <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #ede9fe"}}>{ar?"التخارج وهيكل رأس المال":"Exit & Capital"}</div>
-              {project.finMode !== "self" && <>
+              {cfg.finMode !== "self" && <>
                 <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع
 Asset Sale = exit at a set year. Hold for Income = no sale event">
-                  <Drp lang={lang} value={project.exitStrategy||"sale"} onChange={v=>up({exitStrategy:v})} options={[{value:"sale",en:"Sale (Multiple)",ar:"بيع (مضاعف)"},{value:"caprate",en:"Sale (Cap Rate)",ar:"بيع (رسملة)"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
+                  <Drp lang={lang} value={cfg.exitStrategy||"sale"} onChange={v=>upCfg({exitStrategy:v})} options={[{value:"sale",en:"Sale (Multiple)",ar:"بيع (مضاعف)"},{value:"caprate",en:"Sale (Cap Rate)",ar:"بيع (رسملة)"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
                 </FL>
-                {(project.exitStrategy||"sale")!=="hold"&&<>
+                {(cfg.exitStrategy||"sale")!=="hold"&&<>
                   <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto" tip="سنة بيع الأصل. عادة 5-10 سنوات بعد الاستقرار التشغيلي. 0 = تلقائي
-Year of asset sale. Usually 5-10 years after stabilization. 0 = auto"><Inp type="number" value={project.exitYear} onChange={v=>up({exitYear:v})} /></FL>
-                  {(project.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="قيمة البيع = الإيجار × المضاعف. عادة 8x-15x\nSale price = Rent × Multiple. Usually 8x-15x"><Inp type="number" value={project.exitMultiple} onChange={v=>up({exitMultiple:v})} /></FL>}
-                  {project.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="قيمة التخارج = NOI / Cap Rate. في السعودية 7-10% للأصول المستقرة\nExit = NOI / Cap Rate. Saudi stabilized: 7-10%"><Inp type="number" value={project.exitCapRate} onChange={v=>up({exitCapRate:v})} /></FL>}
+Year of asset sale. Usually 5-10 years after stabilization. 0 = auto"><Inp type="number" value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} /></FL>
+                  {(cfg.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="قيمة البيع = الإيجار × المضاعف. عادة 8x-15x\nSale price = Rent × Multiple. Usually 8x-15x"><Inp type="number" value={cfg.exitMultiple} onChange={v=>upCfg({exitMultiple:v})} /></FL>}
+                  {cfg.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="قيمة التخارج = NOI / Cap Rate. في السعودية 7-10% للأصول المستقرة\nExit = NOI / Cap Rate. Saudi stabilized: 7-10%"><Inp type="number" value={cfg.exitCapRate} onChange={v=>upCfg({exitCapRate:v})} /></FL>}
                   <FL label={ar?"تكاليف التخارج %":"Exit Cost %"} tip="تكاليف البيع مثل السمسرة والاستشارات القانونية. عادة 1.5-3% من سعر البيع
-Sale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp type="number" value={project.exitCostPct} onChange={v=>up({exitCostPct:v})} /></FL>
+Sale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp type="number" value={cfg.exitCostPct} onChange={v=>upCfg({exitCostPct:v})} /></FL>
                 </>}
               </>}
-              {project.finMode !== "self" && project.finMode !== "bank100" && <>
+              {cfg.finMode !== "self" && cfg.finMode !== "bank100" && <>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض إلى حصة Equity في الحسابات التمويلية\nConvert leasehold land value to equity in financing calculations">
-                  <Drp lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>up({landCapitalize:v==="Y"})} options={["Y","N"]} />
+                  <Drp lang={lang} value={project.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
                 </FL>
                 {project.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً
-Land value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${cur}`}><Inp type="number" value={project.landCapRate} onChange={v=>up({landCapRate:v})} /></FL>}
+Land value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(project.landCapRate||1000))} ${cur}`}><Inp type="number" value={project.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} hint="0=auto" tip="مساهمة المطور النقدية في الصندوق. عادة 5-30% من إجمالي Equity
-Developer cash contribution to the fund. Usually 5-30% of total equity"><Inp type="number" value={project.gpEquityManual} onChange={v=>up({gpEquityManual:v})} /></FL>
-                  {project.finMode==="fund"&&<FL label={ar?"حصة الممول (LP)":"Investor Equity (LP)"} hint="0=auto" tip="رأس مال المستثمرين الخارجيين. عادة 70-95% من Equity مع أولوية عائد تفضيلي
-Outside investor capital. Usually 70-95% of equity with preferred return priority"><Inp type="number" value={project.lpEquityManual} onChange={v=>up({lpEquityManual:v})} /></FL>}
+Developer cash contribution to the fund. Usually 5-30% of total equity"><Inp type="number" value={project.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
+                  {cfg.finMode==="fund"&&<FL label={ar?"حصة الممول (LP)":"Investor Equity (LP)"} hint="0=auto" tip="رأس مال المستثمرين الخارجيين. عادة 70-95% من Equity مع أولوية عائد تفضيلي
+Outside investor capital. Usually 70-95% of equity with preferred return priority"><Inp type="number" value={project.lpEquityManual} onChange={v=>upCfg({lpEquityManual:v})} /></FL>}
                 </div>
               </>}
             </div>
             {/* Column 3: Fund details (only if fund mode) */}
             <div style={{background:"#fff",borderRadius:8,border:"1px solid #eef0f4",padding:"14px 16px"}}>
-              {project.finMode === "fund" ? <>
+              {cfg.finMode === "fund" ? <>
                 <div style={{fontSize:10,fontWeight:700,color:"#16a34a",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #dcfce7"}}>{ar?"الصندوق والشلال":"Fund & Waterfall"}</div>
                 <FL label={ar?"الهيكل القانوني":"Vehicle"} tip="نوع الوعاء مثل صندوق خاص أو SPV أو مشروع مشترك. يؤثر على الحوكمة والمتطلبات النظامية
-Vehicle type such as private fund, SPV, or JV. Affects governance and regulatory requirements"><Drp lang={lang} value={project.vehicleType} onChange={v=>up({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
-                {project.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"} tip="الاسم القانوني أو التشغيلي للصندوق. للعرض والتقارير فقط
-Legal or operating fund name. For display and reports only"><Inp value={project.fundName} onChange={v=>up({fundName:v})} /></FL>}
+Vehicle type such as private fund, SPV, or JV. Affects governance and regulatory requirements"><Drp lang={lang} value={cfg.vehicleType} onChange={v=>upCfg({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
+                {cfg.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"} tip="الاسم القانوني أو التشغيلي للصندوق. للعرض والتقارير فقط
+Legal or operating fund name. For display and reports only"><Inp value={project.fundName} onChange={v=>upCfg({fundName:v})} /></FL>}
                 <FL label={ar?"سنة بداية الصندوق":"Fund Start"} hint="0=auto" tip="سنة بدء جمع رأس المال. غالباً قبل البناء بسنة لتغطية التأسيس
-Year capital raising begins. Often one year before construction for setup costs"><Inp type="number" value={project.fundStartYear} onChange={v=>up({fundStartYear:v})} /></FL>
+Year capital raising begins. Often one year before construction for setup costs"><Inp type="number" value={project.fundStartYear} onChange={v=>upCfg({fundStartYear:v})} /></FL>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                  <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="الحد الأدنى للعائد السنوي لـ LP قبل مشاركة GP. عادة 8-15%\nMinimum annual return for LP before GP shares profits. Usually 8-15%"><Inp type="number" value={project.prefReturnPct} onChange={v=>up({prefReturnPct:v})} /></FL>
-                  <FL label={ar?"حافز الأداء % (Carry)":"Performance Carry %"} tip="نسبة أرباح GP بعد تجاوز العائد التفضيلي. عادة 20-30%\nGP profit share after pref return is met. Usually 20-30%"><Inp type="number" value={project.carryPct} onChange={v=>up({carryPct:v})} /></FL>
+                  <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="الحد الأدنى للعائد السنوي لـ LP قبل مشاركة GP. عادة 8-15%\nMinimum annual return for LP before GP shares profits. Usually 8-15%"><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:v})} /></FL>
+                  <FL label={ar?"حافز الأداء % (Carry)":"Performance Carry %"} tip="نسبة أرباح GP بعد تجاوز العائد التفضيلي. عادة 20-30%\nGP profit share after pref return is met. Usually 20-30%"><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:v})} /></FL>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"نسبة توزيع الممول (LP)":"Investor Split % (LP)"} tip="نسبة الأرباح المتبقية للمستثمر بعد Pref و catch-up. عادة 70-80%
-LP share of remaining profits after pref and catch-up. Usually 70-80%"><Inp type="number" value={project.lpProfitSplitPct} onChange={v=>up({lpProfitSplitPct:v})} /></FL>
+LP share of remaining profits after pref and catch-up. Usually 70-80%"><Inp type="number" value={cfg.lpProfitSplitPct} onChange={v=>upCfg({lpProfitSplitPct:v})} /></FL>
                   <FL label={ar?"تعويض المطور (GP Catch-up)":"Developer Catch-up (GP)"} tip="بعد حصول LP على Pref، يأخذ GP حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها
-After LP receives pref, GP takes a larger temporary share until agreed economics are reached"><Drp lang={lang} value={project.gpCatchup?"Y":"N"} onChange={v=>up({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
-                  <FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip="الرسوم كرأسمال: تدخل في الحساب وتحصل على عائد مفضل\nالرسوم كمصروف: لا تدخل في رأس المال ولا تحصل على Pref\nCapital: fees earn ROC+Pref. Expense: fees outside capital base"><select value={project.feeTreatment||"capital"} onChange={e=>up({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال (تحصل Pref)":"Capital (earns Pref)"}</option><option value="expense">{ar?"مصروف (خارج رأس المال)":"Expense (outside capital)"}</option></select></FL>
+After LP receives pref, GP takes a larger temporary share until agreed economics are reached"><Drp lang={lang} value={cfg.gpCatchup?"Y":"N"} onChange={v=>upCfg({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
+                  <FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip="الرسوم كرأسمال: تدخل في الحساب وتحصل على عائد مفضل\nالرسوم كمصروف: لا تدخل في رأس المال ولا تحصل على Pref\nCapital: fees earn ROC+Pref. Expense: fees outside capital base"><select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال (تحصل Pref)":"Capital (earns Pref)"}</option><option value="expense">{ar?"مصروف (خارج رأس المال)":"Expense (outside capital)"}</option></select></FL>
                 </div>
-                {project.vehicleType==="fund"&&<>
+                {cfg.vehicleType==="fund"&&<>
                   <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                   <div style={{fontSize:10,fontWeight:700,color:"#6b7080",marginBottom:8}}>{ar?"الرسوم":"Fees"}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"اكتتاب %":"Sub %"} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر
-One-time entry fee at subscription. Usually 1-2% of invested capital"><Inp type="number" value={project.subscriptionFeePct} onChange={v=>up({subscriptionFeePct:v})} /></FL>
+One-time entry fee at subscription. Usually 1-2% of invested capital"><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
                     <FL label={ar?"إدارة %":"Mgmt %"} tip="رسوم إدارة سنوية مقابل متابعة الاستثمار والتقارير. عادة 1.5-2.5% سنوياً
-Annual management fee for oversight and reporting. Usually 1.5-2.5% per year"><Inp type="number" value={project.annualMgmtFeePct} onChange={v=>up({annualMgmtFeePct:v})} /></FL>
+Annual management fee for oversight and reporting. Usually 1.5-2.5% per year"><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور لإدارة التنفيذ خلال البناء. عادة 3-7% من CAPEX
-Developer fee for managing construction execution. Usually 3-7% of CAPEX"><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
+Developer fee for managing construction execution. Usually 3-7% of CAPEX"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
                     <FL label={ar?"هيكلة %":"Struct %"} tip="رسوم لمرة واحدة لتأسيس الصندوق قانونياً ومالياً. عادة 0.5-2%
-One-time fee for legal and financial fund setup. Usually 0.5-2%"><Inp type="number" value={project.structuringFeePct} onChange={v=>up({structuringFeePct:v})} /></FL>
+One-time fee for legal and financial fund setup. Usually 0.5-2%"><Inp type="number" value={cfg.structuringFeePct} onChange={v=>upCfg({structuringFeePct:v})} /></FL>
                   </div>
                   <FL label={ar?"رسوم الحفظ السنوية":"Custody/yr"} tip="رسوم سنوية لأمين الحفظ والإدارة النظامية. مبلغ ثابت يتغير حسب حجم الصندوق
-Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="number" value={project.custodyFeeAnnual} onChange={v=>up({custodyFeeAnnual:v})} /></FL>
+Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="number" value={cfg.custodyFeeAnnual} onChange={v=>upCfg({custodyFeeAnnual:v})} /></FL>
                 </>}
-              </> : project.finMode !== "self" && project.finMode !== "bank100" ? <>
+              </> : cfg.finMode !== "self" && cfg.finMode !== "bank100" ? <>
                 <div style={{fontSize:10,fontWeight:700,color:"#6b7080",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #e5e7ec"}}>{ar?"الرسوم":"Fees"}</div>
-                <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={project.developerFeePct} onChange={v=>up({developerFeePct:v})} /></FL>
-              </> : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#9ca3af",fontSize:12}}>{project.finMode==="self"?ar?"لا يوجد تمويل خارجي":"No external financing":""}</div>}
+                <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
+              </> : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#9ca3af",fontSize:12}}>{cfg.finMode==="self"?ar?"لا يوجد تمويل خارجي":"No external financing":""}</div>}
             </div>
           </div>
         </div>
