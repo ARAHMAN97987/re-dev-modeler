@@ -180,13 +180,15 @@ const totalSources = fLand.drawdown.reduce((s,v)=>s+v,0) + fLand.equityCalls.red
 t("T6", "FIX2: Sources ≈ Uses", Math.abs(totalSources - (rLand.consolidated.totalCapex + 80000000 + fLand.upfrontFee)) < 10000,
   `Sources: ${Math.round(totalSources)}, Uses: ${Math.round(rLand.consolidated.totalCapex + 80000000 + fLand.upfrontFee)}`);
 
-// FIX#3: GP catch-up - T2 LP-only
-t("T6", "FIX3: T2 100% to LP", (() => {
+// FIX#3 Option B: GP gets pro-rata T2, catch-up adjusted
+t("T6", "FIX3B: T2 pro-rata (GP gets gpPct)", (() => {
   for (let y = 0; y < JAZAN.horizon; y++) {
     if (w.tier2[y] > 0) {
-      // LP should get T1*lpPct + T2, GP should get T1*gpPct (no T2 share)
-      const expLP = w.tier1[y] * w.lpPct + w.tier2[y] + (w.tier4LP[y] || 0);
+      // LP gets (T1+T2)*lpPct + T4LP, GP gets (T1+T2)*gpPct + T3 + T4GP
+      const expLP = (w.tier1[y]+w.tier2[y]) * w.lpPct + (w.tier4LP[y] || 0);
       if (Math.abs(w.lpDist[y] - expLP) > 1) return false;
+      const expGP = (w.tier1[y]+w.tier2[y]) * w.gpPct + (w.tier3[y]||0) + (w.tier4GP[y] || 0);
+      if (Math.abs(w.gpDist[y] - expGP) > 1) return false;
     }
   }
   return true;

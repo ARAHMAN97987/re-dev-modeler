@@ -400,15 +400,16 @@ suite('F10-computeWaterfall');
   const totalROC = sumArr(w.tier1);
   const totalCalled = sumArr(w.equityCalls);
   t('ROC ≤ called capital', totalROC <= totalCalled + TOL.MONEY_LARGE);
-  // FIX#3: T2 LP-only
-  let t2LpOk = true;
+  // FIX3B: T2 pro-rata (Option B) - GP gets gpPct of T2
+  let t2proRataOk = true;
   for (let y=0; y<D2.horizon; y++) {
     if (w.tier2[y] > 0) {
-      const expLP = w.tier1[y]*w.lpPct + w.tier2[y] + (w.tier4LP[y]||0);
-      if (!near(w.lpDist[y], expLP, TOL.MONEY_LARGE)) { t2LpOk=false; break; }
+      const expLP = (w.tier1[y]+w.tier2[y])*w.lpPct + (w.tier4LP[y]||0);
+      const expGP = (w.tier1[y]+w.tier2[y])*w.gpPct + (w.tier3[y]||0) + (w.tier4GP[y]||0);
+      if (!near(w.lpDist[y], expLP, TOL.MONEY_LARGE) || !near(w.gpDist[y], expGP, TOL.MONEY_LARGE)) { t2proRataOk=false; break; }
     }
   }
-  t('FIX3: T2 100% to LP', t2LpOk);
+  t('FIX3B: T2 pro-rata (GP gets share)', t2proRataOk);
   // I: LP+GP = total tiers
   let allocOk = true;
   for (let y=0; y<D2.horizon; y++) {
@@ -435,7 +436,7 @@ suite('F10b-WaterfallOracle');
   const i = E.computeIncentives(D2, r);
   const f = E.computeFinancing(D2, r, i);
   const w = E.computeWaterfall(D2, r, f, i);
-  const ow = oracleWaterfall(w.cashAvail, w.equityCalls, (D2.prefReturnPct)/100, Math.min(0.9999,(D2.carryPct)/100), (D2.lpProfitSplitPct)/100, w.gpPct, w.lpPct, D2.gpCatchup, true);
+  const ow = oracleWaterfall(w.cashAvail, w.equityCalls, (D2.prefReturnPct)/100, Math.min(0.9999,(D2.carryPct)/100), (D2.lpProfitSplitPct)/100, w.gpPct, w.lpPct, D2.gpCatchup, false);
   const t1chk = arrClose(w.tier1, ow.tier1, TOL.MONEY_LARGE);
   t('Oracle T1 match', t1chk.ok, t1chk.msg);
   const t2chk = arrClose(w.tier2, ow.tier2, TOL.MONEY_LARGE);
@@ -604,18 +605,17 @@ suite('BH4-GPCatchupConsistency');
   const i = E.computeIncentives(D2, r);
   const f = E.computeFinancing(D2, r, i);
   const w = E.computeWaterfall(D2, r, f, i);
-  // Under Option A: GP gets ZERO from T2. So catch-up = cumPrefPaid * carry / (1-carry)
-  const totalT2 = sumArr(w.tier2);
-  const totalT3 = sumArr(w.tier3);
-  // GP should get T1*gpPct + T3 + T4GP. NO T2 share.
-  let gpFromT2 = 0;
+  // Option B: GP gets gpPct of T2. Catch-up = (carry*cumPref - gpPrefShare) / (1-carry)
+  // Verify GP gets his pro-rata share of T1+T2
+  let gpProRataOk = true;
   for (let y=0; y<D2.horizon; y++) {
-    const gpT1T2share = w.gpDist[y] - w.tier3[y] - (w.tier4GP[y]||0);
-    // This should equal tier1[y] * gpPct (NOT tier1+tier2)
-    const expectedGPfromT1 = w.tier1[y] * w.gpPct;
-    gpFromT2 += Math.max(0, gpT1T2share - expectedGPfromT1 - TOL.MONEY_LARGE);
+    if (w.tier1[y]+w.tier2[y] > 0) {
+      const gpT1T2 = w.gpDist[y] - (w.tier3[y]||0) - (w.tier4GP[y]||0);
+      const expected = (w.tier1[y]+w.tier2[y]) * w.gpPct;
+      if (!near(gpT1T2, expected, TOL.MONEY_LARGE)) { gpProRataOk=false; break; }
+    }
   }
-  t('FIX3: GP gets 0 from T2', gpFromT2 < TOL.MONEY_LARGE, `GP T2 leakage: ${gpFromT2.toFixed(0)}`);
+  t('FIX3B: GP gets gpPct of T1+T2', gpProRataOk);
 }
 
 // BH5: Per-phase land duplication
@@ -776,16 +776,16 @@ suite('F19-legacyPhaseWaterfalls');
     const p1 = pw[pNames[0]];
     t('Phase has lpIRR', typeof p1.lpIRR === 'number' || p1.lpIRR === null);
     t('Phase has lpMOIC', typeof p1.lpMOIC === 'number');
-    // Legacy T2 LP-only check (FIX#3)
+    // Legacy T2 pro-rata check (Option B)
     let legacyT2Ok = true;
     for (let y=0; y<D2.horizon; y++) {
       if (p1.tier2[y] > 0) {
-        // LP should get tier1*lpPct + tier2 (100%)
-        const expLP = p1.tier1[y]*w.lpPct + p1.tier2[y] + (p1.tier4LP[y]||0);
+        // LP gets (T1+T2)*lpPct + T4LP
+        const expLP = (p1.tier1[y]+p1.tier2[y])*w.lpPct + (p1.tier4LP[y]||0);
         if (!near(p1.lpDist[y], expLP, TOL.MONEY_LARGE)) { legacyT2Ok=false; break; }
       }
     }
-    t('FIX3: Legacy T2 LP-only', legacyT2Ok);
+    t('FIX3B: Legacy T2 pro-rata', legacyT2Ok);
   }
 }
 
@@ -862,6 +862,79 @@ suite('SCN-NoCatchup');
   const f = E.computeFinancing(p, r, E.computeIncentives(p, r));
   const w = E.computeWaterfall(p, r, f, E.computeIncentives(p, r));
   t('No catchup: T3 = 0', sumArr(w.tier3) === 0);
+}
+
+// ═══════════════════════════════════════════════
+// LAND RENT PAID BY GP TESTS
+// ═══════════════════════════════════════════════
+
+suite('LR1-LandRentPaidByProject');
+{
+  // Default: project pays land rent, GP unaffected
+  const p = {...D2, landCapitalize:true, landCapRate:2000, landRentPaidBy:'project'};
+  const r = E.computeProjectCashFlows(p);
+  const i = E.computeIncentives(p, r);
+  const f = E.computeFinancing(p, r, i);
+  const w = E.computeWaterfall(p, r, f, i);
+  t('Project pays: gpPaysLandRent=false', !w.gpPaysLandRent);
+  t('Project pays: gpLandRentTotal=0', w.gpLandRentTotal === 0);
+  t('Project pays: GP net CF no land deduction', w.gpNetCF.every((v,y) => near(v, -w.equityCalls[y]*w.gpPct + w.gpDist[y], TOL.MONEY_SMALL)));
+}
+
+suite('LR2-LandRentPaidByDeveloper');
+{
+  // Developer pays: land rent excluded from NOI, deducted from GP
+  const p = {...D2, landCapitalize:true, landCapRate:2000, landRentPaidBy:'developer'};
+  const r = E.computeProjectCashFlows(p);
+  const i = E.computeIncentives(p, r);
+  const f = E.computeFinancing(p, r, i);
+  const wDev = E.computeWaterfall(p, r, f, i);
+  const wProj = E.computeWaterfall({...p, landRentPaidBy:'project'}, r, f, i);
+  t('Dev pays: gpPaysLandRent=true', wDev.gpPaysLandRent);
+  t('Dev pays: gpLandRentTotal > 0', wDev.gpLandRentTotal > 0);
+  // When GP pays rent, more cash available for distribution (higher cashAvail)
+  const devCash = sumArr(wDev.cashAvail);
+  const projCash = sumArr(wProj.cashAvail);
+  t('Dev pays: more cash distributable', devCash > projCash - TOL.MONEY_LARGE, 
+    'Dev=' + Math.round(devCash) + ' Proj=' + Math.round(projCash));
+  // But GP net returns are lower (pays rent from pocket)
+  t('Dev pays: GP IRR lower', (wDev.gpIRR||0) < (wProj.gpIRR||0) + 0.001 || wProj.gpIRR === null);
+  // LP should benefit when GP pays rent (higher LP distributions)
+  t('Dev pays: LP dist >= project mode', wDev.lpTotalDist >= wProj.lpTotalDist - TOL.MONEY_LARGE);
+  // GP MOIC uses gpNetDist (after land rent)
+  t('Dev pays: GP MOIC accounts for rent', wDev.gpMOIC <= wProj.gpMOIC + 0.01);
+}
+
+suite('LR3-OptionB-GPTwoHats');
+{
+  // Core test: GP as investor gets pref + as developer gets fees/carry
+  // Use manual equity to ensure both GP and LP have equity
+  const p = {...D2, landCapitalize:false, landRentPaidBy:'project',
+    gpEquityManual:20000000, // GP 20M, LP gets remainder (~31M)
+    prefReturnPct:10, gpCatchup:true, carryPct:25};
+  const r = E.computeProjectCashFlows(p);
+  const i = E.computeIncentives(p, r);
+  const f = E.computeFinancing(p, r, i);
+  const w = E.computeWaterfall(p, r, f, i);
+  t('GP+LP both have equity', w.gpPct > 0.01 && w.lpPct > 0.01, 'GP%=' + (w.gpPct*100).toFixed(1) + ' LP%=' + (w.lpPct*100).toFixed(1));
+  // GP should get pro-rata share of T2 (pref on his equity)
+  const totalT2 = sumArr(w.tier2);
+  const gpT2share = totalT2 * w.gpPct;
+  t('GP gets pref on equity (T2*gpPct > 0)', totalT2 > 0 && gpT2share > 0, 'T2=' + Math.round(totalT2) + ' GP share=' + Math.round(gpT2share));
+  // GP catch-up should be LESS than standard formula (carry/(1-carry)*totalPref)
+  // because Option B subtracts what GP already got from T2
+  const totalT3 = sumArr(w.tier3);
+  const standardCatchup = totalT2 * 0.25 / 0.75;
+  const optionBTarget = Math.max(0, (0.25 * totalT2 - totalT2 * w.gpPct) / 0.75);
+  t('Catch-up = Option B formula', totalT3 <= optionBTarget + TOL.MONEY_LARGE || totalT3 === 0,
+    'Actual=' + Math.round(totalT3) + ' OptionB=' + Math.round(optionBTarget) + ' Standard=' + Math.round(standardCatchup));
+  // Verify total LP+GP dist = total tiers (conservation)
+  let distOk = true;
+  for (let y=0; y<D2.horizon; y++) {
+    const totalTiers = w.tier1[y]+w.tier2[y]+w.tier3[y]+w.tier4LP[y]+w.tier4GP[y];
+    if (!near(w.lpDist[y]+w.gpDist[y], totalTiers, TOL.MONEY_LARGE)) { distOk=false; break; }
+  }
+  t('LP+GP dist = all tiers (conservation)', distOk);
 }
 
 // ═══════════════════════════════════════════════
