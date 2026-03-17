@@ -337,6 +337,7 @@ function buildDashboard(wb, project, results, financing, waterfall, cur, h, sy) 
       ["Total Distributions", fm(w.lpTotalDist), fm(w.gpTotalDist), null, "#,##0"],
       ["Net IRR", fp(w.lpIRR), fp(w.gpIRR), fp(w.projIRR), "0.00%"],
       ["MOIC", w.lpMOIC, w.gpMOIC, null, "0.00x"],
+      ["DPI", w.lpDPI, w.gpDPI, null, "0.00x"],
       ["NPV @10%", fm(w.lpNPV10), fm(w.gpNPV10), fm(w.projNPV10), "#,##0"],
       ["NPV @12%", fm(w.lpNPV12), fm(w.gpNPV12), fm(w.projNPV12), "#,##0"],
       ["NPV @14%", fm(w.lpNPV14), fm(w.gpNPV14), fm(w.projNPV14), "#,##0"],
@@ -391,7 +392,8 @@ function buildInputs(wb, project, cur) {
   row++;
 
   section("LAND PARAMETERS  بيانات الأرض");
-  inp("Land Type", project.landType === "lease" ? "Leasehold (إيجار)" : project.landType === "purchase" ? "Freehold (تملك)" : (project.landType || "-"), "نوع الأرض");
+  const landLabels = { lease: "Leasehold (إيجار)", purchase: "Freehold (تملك)", partner: "Partner (شريك)", bot: "BOT (بناء-تشغيل-تحويل)" };
+  inp("Land Type", landLabels[project.landType] || project.landType || "-", "نوع الأرض");
   inp("Land Area (m²)", project.landArea || 0, "مساحة الأرض", "#,##0");
   if (project.landType === "lease") {
     inp("Annual Land Rent (" + cur + ")", project.landRentAnnual || 0, "الإيجار السنوي", "#,##0");
@@ -401,9 +403,15 @@ function buildInputs(wb, project, cur) {
     inp("Lease Term (years)", project.landRentTerm || 50, "مدة الإيجار");
   } else if (project.landType === "purchase") {
     inp("Purchase Price (" + cur + ")", project.landPurchasePrice || 0, "سعر الشراء", "#,##0");
+  } else if (project.landType === "partner") {
+    inp("Land Valuation (" + cur + ")", project.landValuation || 0, "تقييم الأرض", "#,##0");
+    inp("Partner Equity %", (project.partnerEquityPct || 0) / 100, "حصة الشريك", "0%");
+  } else if (project.landType === "bot") {
+    inp("Operation Period (years)", project.botOperationYears || 0, "فترة التشغيل");
   }
   if (project.landCapitalize) {
     inp("Land Capitalization Rate (" + cur + "/m²)", project.landCapRate || 1000, "معدل رسملة الأرض", "#,##0");
+    inp("Land Cap Assigned To", project.landCapTo === "lp" ? "LP (المستثمر)" : project.landCapTo === "split" ? "Split (مقسم)" : "GP (المطور)", "الرسملة تُسند لـ");
   }
   row++;
 
@@ -417,9 +425,10 @@ function buildInputs(wb, project, cur) {
     inp("Financing Mode", project.finMode === "fund" ? "Fund (GP/LP)" : project.finMode === "bank" ? "Bank Debt" : project.finMode, "نوع التمويل");
     inp("Debt Allowed", project.debtAllowed ? "Yes" : "No", "الدين مسموح");
     inp("Max LTV %", (project.maxLtvPct || 70) / 100, "نسبة القرض للقيمة", "0%");
-    inp("Finance Rate (annual)", (project.financeRate || 6.5) / 100, "معدل الربح السنوي", "0.0%");
+    inp("Finance Rate (annual)", (project.financeRate ?? 6.5) / 100, "معدل الربح السنوي", "0.0%");
     inp("Loan Tenor (years)", project.loanTenor || 7, "مدة القرض");
-    inp("Grace Period (years)", project.debtGrace || 3, "فترة السماح");
+    inp("Grace Period (years)", project.debtGrace ?? 3, "فترة السماح");
+    inp("Grace Basis", project.graceBasis === "firstDraw" ? "First Drawdown (أول سحب)" : "COD - Completion (اكتمال البناء)", "بداية السماح");
     inp("Upfront Fee %", (project.upfrontFeePct || 0) / 100, "رسوم التأسيس", "0.0%");
     inp("Repayment Type", project.repaymentType || "amortizing", "نوع السداد");
     inp("Islamic Finance", project.islamicFinance || "conventional", "نوع التمويل الإسلامي");
@@ -428,23 +437,29 @@ function buildInputs(wb, project, cur) {
     section("EXIT PARAMETERS  بيانات التخارج");
     inp("Exit Strategy", project.exitStrategy || "sale", "استراتيجية التخارج");
     inp("Exit Year", project.exitYear || "-", "سنة التخارج");
-    inp("Exit Multiple (x rent)", project.exitMultiple || 10, "مضاعف الإيجار", "0.0x");
-    inp("Exit Cost %", (project.exitCostPct || 2) / 100, "تكاليف التخارج", "0.0%");
+    if (project.exitStrategy === "caprate") {
+      inp("Exit Cap Rate %", (project.exitCapRate ?? 9) / 100, "معدل الرسملة", "0.0%");
+    } else {
+      inp("Exit Multiple (x rent)", project.exitMultiple || 10, "مضاعف الإيجار", "0.0x");
+    }
+    inp("Exit Cost %", (project.exitCostPct ?? 2) / 100, "تكاليف التخارج", "0.0%");
     row++;
 
     section("WATERFALL PARAMETERS  شلال التوزيع");
-    inp("Preferred Return %", (project.prefReturn || 15) / 100, "العائد التفضيلي", "0.0%");
+    inp("Preferred Return %", (project.prefReturnPct ?? 15) / 100, "العائد التفضيلي", "0.0%");
     inp("GP Catch-up", project.gpCatchup ? "Yes" : "No", "حق اللحاق");
-    inp("Carry %", (project.carryPct || 30) / 100, "حصة الأداء", "0.0%");
-    inp("LP Profit Split %", (project.lpSplitPct || 70) / 100, "حصة المستثمرين من الأرباح", "0%");
+    inp("Carry %", (project.carryPct ?? 30) / 100, "حصة الأداء", "0.0%");
+    inp("LP Profit Split %", (project.lpProfitSplitPct ?? 70) / 100, "حصة المستثمرين من الأرباح", "0%");
+    inp("Fee Treatment", project.feeTreatment === "expense" ? "Expense (مصروف)" : "Capital (رأسمال)", "معاملة الرسوم");
     row++;
 
     section("FEES  الرسوم");
-    inp("Subscription Fee %", (project.subscriptionFee || 0) / 100, "رسوم الاكتتاب", "0.0%");
-    inp("Management Fee %", (project.mgmtFee || 0) / 100, "رسوم الإدارة السنوية", "0.0%");
-    inp("Custody Fee (annual, fixed)", project.custodyFee || 0, "رسوم الحفظ", "#,##0");
-    inp("Developer Fee % (CAPEX)", (project.devFee || 0) / 100, "رسوم التطوير", "0.0%");
-    inp("Structuring Fee %", (project.structFee || 0) / 100, "رسوم الهيكلة", "0.0%");
+    inp("Subscription Fee %", (project.subscriptionFeePct || 0) / 100, "رسوم الاكتتاب", "0.0%");
+    inp("Management Fee %", (project.annualMgmtFeePct || 0) / 100, "رسوم الإدارة السنوية", "0.0%");
+    inp("Management Fee Base", project.mgmtFeeBase === "equity" ? "Equity" : "Development Cost", "أساس رسوم الإدارة");
+    inp("Custody Fee (annual, fixed)", project.custodyFeeAnnual || 0, "رسوم الحفظ", "#,##0");
+    inp("Developer Fee % (CAPEX)", (project.developerFeePct || 0) / 100, "رسوم التطوير", "0.0%");
+    inp("Structuring Fee %", (project.structuringFeePct || 0) / 100, "رسوم الهيكلة", "0.0%");
   }
 }
 
@@ -456,16 +471,19 @@ function buildAssetProgram(wb, project, results, cur, h) {
     "Phase\nالمرحلة", "Category\nالفئة", "Asset Name\nاسم الأصل", "Code", "Notes",
     "Plot Area\nمساحة القطعة", "Building FP\nبصمة المبنى", "GFA\nالمساحة المبنية",
     "Rev Type\nنوع الإيراد", "Lease Rate\nمعدل الإيجار", "Efficiency\nالكفاءة", "Occupancy\nالإشغال",
+    "Sale Price/sqm\nسعر البيع/م²", "Absorption Yrs\nسنوات الاستيعاب",
     "Cost/sqm\nتكلفة/م²", "Constr. Duration\nمدة البناء", "Constr. Start\nبداية البناء",
     "Total CAPEX\nإجمالي التكلفة", `Total Income (${h}yr)\nإجمالي الإيراد`,
   ];
 
   ws.columns = cols.map((_, i) => ({
-    width: [12, 14, 24, 6, 16, 12, 12, 12, 10, 12, 10, 10, 10, 10, 10, 16, 18][i] || 12,
+    width: [12, 14, 24, 6, 16, 12, 12, 12, 10, 12, 10, 10, 10, 10, 10, 10, 10, 16, 18][i] || 12,
   }));
 
+  const NCOLS = cols.length;
+
   // Header
-  ws.mergeCells(1, 1, 1, 17);
+  ws.mergeCells(1, 1, 1, NCOLS);
   const title = ws.getCell(1, 1);
   title.value = "Asset Program Table  جدول برنامج الأصول";
   title.font = { name: FONT_MAIN, size: 14, bold: true, color: { argb: C.dark } };
@@ -481,18 +499,18 @@ function buildAssetProgram(wb, project, results, cur, h) {
   ws.getCell(2, 6).value = "Land & Area Metrics";
   ws.getCell(2, 6).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
   ws.getCell(2, 6).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0EA5E9" } };
-  ws.mergeCells(2, 9, 2, 12);
-  ws.getCell(2, 9).value = "Revenue Structure";
+  ws.mergeCells(2, 9, 2, 14);
+  ws.getCell(2, 9).value = "Revenue Structure (Lease / Sale)";
   ws.getCell(2, 9).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
   ws.getCell(2, 9).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF10B981" } };
-  ws.mergeCells(2, 13, 2, 15);
-  ws.getCell(2, 13).value = "Development Cost & Timeline";
-  ws.getCell(2, 13).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
-  ws.getCell(2, 13).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF59E0B" } };
-  ws.mergeCells(2, 16, 2, 17);
-  ws.getCell(2, 16).value = "Outputs";
-  ws.getCell(2, 16).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
-  ws.getCell(2, 16).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.dark } };
+  ws.mergeCells(2, 15, 2, 17);
+  ws.getCell(2, 15).value = "Development Cost & Timeline";
+  ws.getCell(2, 15).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
+  ws.getCell(2, 15).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF59E0B" } };
+  ws.mergeCells(2, 18, 2, NCOLS);
+  ws.getCell(2, 18).value = "Outputs";
+  ws.getCell(2, 18).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
+  ws.getCell(2, 18).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.dark } };
 
   tableHeader(ws, 3, cols);
 
@@ -504,20 +522,22 @@ function buildAssetProgram(wb, project, results, cur, h) {
     // Phase group row
     if (a.phase !== currentPhase) {
       currentPhase = a.phase;
-      groupRow(ws, row, 1, 17, a.phase, C.greenBg);
+      groupRow(ws, row, 1, NCOLS, a.phase || "Unphased", C.greenBg);
       row++;
     }
 
+    const isSale = a.revType === "Sale";
     dataRow(ws, row, [
-      a.phase, a.category, a.name, a.code || "", a.notes || "",
+      a.phase || "Unphased", a.category, a.name, a.code || "", a.notes || "",
       a.plotArea || 0, a.footprint || 0, a.gfa || 0,
-      a.revType, a.leaseRate || 0, (a.efficiency || 0) / 100, (a.stabilizedOcc || 0) / 100,
+      a.revType, isSale ? null : (a.leaseRate || 0), (a.efficiency || 0) / 100, (a.stabilizedOcc || 0) / 100,
+      isSale ? (a.salePricePerSqm || 0) : null, isSale ? (a.absorptionYears || 3) : null,
       a.costPerSqm || 0, a.constrDuration || 0, a.constrStart || 0,
       fm(a.totalCapex), fm(a.totalRevenue),
     ], {
       numFmt: {
         5: "#,##0", 6: "#,##0", 7: "#,##0", 9: "#,##0",
-        10: "0%", 11: "0%", 12: "#,##0", 15: "#,##0", 16: "#,##0",
+        10: "0%", 11: "0%", 12: "#,##0", 14: "#,##0", 17: "#,##0", 18: "#,##0",
       },
     });
     row++;
@@ -530,10 +550,10 @@ function buildAssetProgram(wb, project, results, cur, h) {
     assets.reduce((s, a) => s + (a.plotArea || 0), 0),
     assets.reduce((s, a) => s + (a.footprint || 0), 0),
     assets.reduce((s, a) => s + (a.gfa || 0), 0),
-    null, null, null, null, null, null, null,
+    null, null, null, null, null, null, null, null, null,
     fm(results?.consolidated?.totalCapex || 0),
     fm(results?.consolidated?.totalIncome || 0),
-  ], { 5: "#,##0", 6: "#,##0", 7: "#,##0", 15: "#,##0", 16: "#,##0" });
+  ], { 5: "#,##0", 6: "#,##0", 7: "#,##0", 17: "#,##0", 18: "#,##0" });
 }
 
 // ═══ PROJECT CASH FLOW SHEET ═══
@@ -1020,6 +1040,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
     const sumRows = [
       ["Net IRR", fp(w.lpIRR), fp(w.gpIRR), fp(w.projIRR), "0.00%"],
       ["MOIC", w.lpMOIC, w.gpMOIC, null, "0.00x"],
+      ["DPI", w.lpDPI, w.gpDPI, null, "0.00x"],
       ["NPV @10%", fm(w.lpNPV10), fm(w.gpNPV10), fm(w.projNPV10), "#,##0"],
       ["NPV @12%", fm(w.lpNPV12), fm(w.gpNPV12), fm(w.projNPV12), "#,##0"],
       ["NPV @14%", fm(w.lpNPV14), fm(w.gpNPV14), fm(w.projNPV14), "#,##0"],
@@ -1073,6 +1094,7 @@ function buildBankSummary(wb, project, results, financing, cur, h, sy) {
     ["Profit Rate (All-in)  معدل الربح", fp(f.rate)],
     ["Tenor  المدة", f.tenor + " years"],
     ["Grace Period  فترة السماح", f.grace + " years"],
+    ["Grace Basis  بداية السماح", project.graceBasis === "firstDraw" ? "From First Drawdown" : "From Completion (COD)"],
     ["Amortization  نوع السداد", project.repaymentType === "bullet" ? "Bullet" : "Equal principal + profit"],
     ["Upfront Fee  رسوم التأسيس", fp((project.upfrontFeePct || 0) / 100)],
     ["Repayment Source  مصدر السداد", "Project operating cash flows"],
@@ -1275,8 +1297,10 @@ function buildDocumentation(wb, project, cur, h, sy) {
     ["CAPEX", "Total cost = GFA × cost/sqm × (1 + soft%) × (1 + contingency%)"],
     ["Revenue (Lease)", "Leasable area × rate × occupancy × ramp-up × escalation"],
     ["Revenue (Operating)", "EBITDA × ramp-up × escalation"],
+    ["Revenue (Sale)", "Sellable area × price/sqm × (1-commission) over absorption period"],
     ["DSCR", "NOI / Total Debt Service (principal + interest)"],
     ["MOIC", "Total Distributions / Equity Invested"],
+    ["DPI", "Total Distributions / Total Equity Called (paid-in capital, incl. fees if capital treatment)"],
     ["Land Rent", "Base rent with N-year step escalation, grace period applied"],
     ["Waterfall", "4-tier: ROC → Preferred Return → GP Catch-up → Profit Split"],
     ["Interest Calc", "Rate × Average of (Opening Balance + Drawdown + Closing Balance) / 2"],

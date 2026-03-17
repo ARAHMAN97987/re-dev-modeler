@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo, Component } from "react";
 import { storage } from "./lib/storage";
-
+import { generateProfessionalExcel } from "./excelExport";
 import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
@@ -706,20 +706,17 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     const gpP = w.gpPct || 0, lpP = w.lpPct || 0;
     add("T0","GP+LP = 100%", Math.abs((gpP+lpP)-1) < 0.001, "Equity split must total 100%", `GP: ${fp(gpP)} + LP: ${fp(lpP)} = ${fp(gpP+lpP)}`);
   }
-  // Infrastructure/parking categories are cost-only (no revenue) - skip efficiency check for them
-  const infraCats = ["parking","landscaping","infrastructure","roads","utilities","common"];
-  const isInfra = (a) => infraCats.some(ic => (a.category||"").toLowerCase().includes(ic) || (a.name||"").toLowerCase().includes(ic));
   (project.assets||[]).forEach((a,i) => {
-    if (a.revType === "Lease" && (a.efficiency||0) === 0 && (a.gfa||0) > 0 && !isInfra(a))
+    if (a.revType === "Lease" && (a.efficiency||0) === 0 && (a.gfa||0) > 0)
       add("T0",`Asset "${a.name||i}": Efficiency=0`, false, "Lease asset with 0% efficiency generates no revenue");
-    if ((a.gfa||0) > 0 && (a.costPerSqm||0) === 0 && !isInfra(a))
+    if ((a.gfa||0) > 0 && (a.costPerSqm||0) === 0)
       add("T0",`Asset "${a.name||i}": Cost/sqm=0`, false, "Asset has GFA but zero construction cost");
   });
   if (project.exitStrategy === "caprate" && (project.exitCapRate??9) === 0)
     add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
   if (f && project.debtAllowed && (project.loanTenor??7) <= (project.debtGrace??3))
     add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${project.loanTenor??7}, Grace: ${project.debtGrace??3}`);
-  // H11: Exit during ramp-up - WARNING (pass=true) not error
+  // H11: Exit during ramp-up warning
   if (f && project.exitStrategy !== "hold") {
     const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2025) : 0;
     const maxRamp = Math.max(...(project.assets||[]).map(a => {
@@ -728,7 +725,7 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
       return cStart + dur + (a.rampUpYears??3);
     }));
     if (exitYrIdx > 0 && exitYrIdx < maxRamp)
-      add("T0","Exit Before Stabilization ⚠", true, "Warning: exit during ramp-up. Valuation uses unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
+      add("T0","Exit Before Stabilization", false, "Exit year is during ramp-up. Valuation may use unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
   }
 
   // ═══════════════════════════════════════════════
@@ -4133,7 +4130,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18}}>
       {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
-      <button onClick={()=>generateFullModelXLSX(project, results, financing, waterfall)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 18px",fontSize:12,border:"1px solid #bbf7d0",fontWeight:500}}>
+      <button onClick={()=>generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 18px",fontSize:12,border:"1px solid #bbf7d0",fontWeight:500}}>
         {lang==="ar"?"⬇ تصدير النموذج الكامل (Excel)":"⬇ Export Full Model (Excel)"}
       </button>
     </div>
