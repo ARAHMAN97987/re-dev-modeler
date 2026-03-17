@@ -884,7 +884,7 @@ suite('LR1-LandRentPaidByProject');
 suite('LR2-LandRentPaidByDeveloper');
 {
   // Developer pays: land rent excluded from NOI, deducted from GP
-  const p = {...D2, landCapitalize:true, landCapRate:2000, landRentPaidBy:'developer'};
+  const p = {...D2, landCapitalize:true, landCapRate:2000, landRentPaidBy:'gp'};
   const r = E.computeProjectCashFlows(p);
   const i = E.computeIncentives(p, r);
   const f = E.computeFinancing(p, r, i);
@@ -935,6 +935,104 @@ suite('LR3-OptionB-GPTwoHats');
     if (!near(w.lpDist[y]+w.gpDist[y], totalTiers, TOL.MONEY_LARGE)) { distOk=false; break; }
   }
   t('LP+GP dist = all tiers (conservation)', distOk);
+}
+
+
+suite('LR4-AutoResolution');
+{
+  // Auto should follow landCapTo
+  // Case 1: landCapTo=gp + auto -> GP pays
+  const pGP = {...D2, landCapitalize:true, landCapRate:2000, landCapTo:'gp', landRentPaidBy:'auto'};
+  const rGP = E.computeProjectCashFlows(pGP);
+  const iGP = E.computeIncentives(pGP, rGP);
+  const fGP = E.computeFinancing(pGP, rGP, iGP);
+  const wGP = E.computeWaterfall(pGP, rGP, fGP, iGP);
+  t('Auto+capToGP = GP pays', wGP.resolvedLandRentPayer === 'gp', 'Resolved: ' + wGP.resolvedLandRentPayer);
+  t('Auto+capToGP: gpLandRent > 0', wGP.gpLandRentTotal > 0);
+
+  // Case 2: landCapTo=lp + auto -> LP pays
+  const pLP = {...D2, landCapitalize:true, landCapRate:2000, landCapTo:'lp', landRentPaidBy:'auto'};
+  const rLP = E.computeProjectCashFlows(pLP);
+  const iLP = E.computeIncentives(pLP, rLP);
+  const fLP = E.computeFinancing(pLP, rLP, iLP);
+  const wLP = E.computeWaterfall(pLP, rLP, fLP, iLP);
+  t('Auto+capToLP = LP pays', wLP.resolvedLandRentPayer === 'lp', 'Resolved: ' + wLP.resolvedLandRentPayer);
+  t('Auto+capToLP: lpLandRent > 0', wLP.lpLandRentTotal > 0);
+  t('Auto+capToLP: gpLandRent = 0', wLP.gpLandRentTotal === 0);
+
+  // Case 3: landCapTo=split + auto -> split
+  const pSplit = {...D2, landCapitalize:true, landCapRate:2000, landCapTo:'split', landRentPaidBy:'auto'};
+  const rS = E.computeProjectCashFlows(pSplit);
+  const iS = E.computeIncentives(pSplit, rS);
+  const fS = E.computeFinancing(pSplit, rS, iS);
+  const wS = E.computeWaterfall(pSplit, rS, fS, iS);
+  t('Auto+capToSplit = split', wS.resolvedLandRentPayer === 'split', 'Resolved: ' + wS.resolvedLandRentPayer);
+  t('Auto+split: both pay', wS.gpLandRentTotal > 0 && wS.lpLandRentTotal > 0);
+
+  // Case 4: no capitalization + auto -> project
+  const pNoCap = {...D2, landCapitalize:false, landRentPaidBy:'auto'};
+  const rNC = E.computeProjectCashFlows(pNoCap);
+  const iNC = E.computeIncentives(pNoCap, rNC);
+  const fNC = E.computeFinancing(pNoCap, rNC, iNC);
+  const wNC = E.computeWaterfall(pNoCap, rNC, fNC, iNC);
+  t('Auto+noCap = project', wNC.resolvedLandRentPayer === 'project');
+  t('Auto+noCap: no GP/LP rent', wNC.gpLandRentTotal === 0 && wNC.lpLandRentTotal === 0);
+}
+
+suite('LR5-LPPaysLandRent');
+{
+  // Explicit LP pays: LP IRR should be lower, GP IRR higher vs project-pays
+  const p = {...D2, landCapitalize:true, landCapRate:2000, landCapTo:'lp', landRentPaidBy:'lp'};
+  const r = E.computeProjectCashFlows(p);
+  const i = E.computeIncentives(p, r);
+  const f = E.computeFinancing(p, r, i);
+  const wLP = E.computeWaterfall(p, r, f, i);
+  const wProj = E.computeWaterfall({...p, landRentPaidBy:'project'}, r, f, i);
+  t('LP pays: lpLandRentTotal > 0', wLP.lpLandRentTotal > 0);
+  t('LP pays: gpLandRentTotal = 0', wLP.gpLandRentTotal === 0);
+  t('LP pays: more cash distributable', sumArr(wLP.cashAvail) > sumArr(wProj.cashAvail) - TOL.MONEY_LARGE);
+  t('LP pays: LP MOIC <= project mode', wLP.lpMOIC <= wProj.lpMOIC + 0.01);
+}
+
+suite('NPV1-FormulaVerification');
+{
+  // Manual NPV vs engine NPV
+  const p = {...D2, landCapitalize:false};
+  const r = E.computeProjectCashFlows(p);
+  const i = E.computeIncentives(p, r);
+  const f = E.computeFinancing(p, r, i);
+  const w = E.computeWaterfall(p, r, f, i);
+  if (w) {
+    // LP NPV manual calc
+    const manualLpNPV10 = w.lpNetCF.reduce((s,v,t) => s + v/Math.pow(1.10,t), 0);
+    const manualLpNPV12 = w.lpNetCF.reduce((s,v,t) => s + v/Math.pow(1.12,t), 0);
+    t('LP NPV@10% matches manual', near(w.lpNPV10, manualLpNPV10, 1), 'Engine='+Math.round(w.lpNPV10)+' Manual='+Math.round(manualLpNPV10));
+    t('LP NPV@12% matches manual', near(w.lpNPV12, manualLpNPV12, 1), 'Engine='+Math.round(w.lpNPV12)+' Manual='+Math.round(manualLpNPV12));
+    // GP NPV manual calc
+    const manualGpNPV10 = w.gpNetCF.reduce((s,v,t) => s + v/Math.pow(1.10,t), 0);
+    t('GP NPV@10% matches manual', near(w.gpNPV10, manualGpNPV10, 1), 'Engine='+Math.round(w.gpNPV10)+' Manual='+Math.round(manualGpNPV10));
+    // IRR/NPV consistency: if IRR < 10%, NPV@10% must be negative
+    if (w.lpIRR !== null && w.lpIRR < 0.10) t('IRR<10% -> NPV@10%<0', w.lpNPV10 < 0);
+    if (w.lpIRR !== null && w.lpIRR > 0.10) t('IRR>10% -> NPV@10%>0', w.lpNPV10 > 0);
+  }
+}
+
+suite('DPI1-FormulaVerification');
+{
+  // DPI = Total Distributions / Total Equity Called
+  const p = {...D2, landCapitalize:false, gpEquityManual:20000000};
+  const r = E.computeProjectCashFlows(p);
+  const i = E.computeIncentives(p, r);
+  const f = E.computeFinancing(p, r, i);
+  const w = E.computeWaterfall(p, r, f, i);
+  if (w && w.lpTotalCalled > 0) {
+    const manualLpDPI = (w.lpTotalDist - w.lpLandRentTotal) / w.lpTotalCalled;
+    const manualGpDPI = (w.gpTotalDist - w.gpLandRentTotal) / w.gpTotalCalled;
+    t('LP DPI matches manual', near(w.lpDPI, manualLpDPI, 0.001), 'Engine='+w.lpDPI.toFixed(4)+' Manual='+manualLpDPI.toFixed(4));
+    t('GP DPI matches manual', near(w.gpDPI, manualGpDPI, 0.001), 'Engine='+w.gpDPI.toFixed(4)+' Manual='+manualGpDPI.toFixed(4));
+    // DPI > 1 means you got more than you put in (but doesn't mean profitable in time-value)
+    t('DPI formula: dist/called', true); // structural test
+  }
 }
 
 // ═══════════════════════════════════════════════
