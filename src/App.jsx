@@ -425,6 +425,7 @@ const defaultProject = () => ({
   landCapitalize: false,
   landCapRate: 1000, // SAR/sqm
   landCapTo: "gp", // gp | lp | split
+  landRentPaidBy: "project", // project | developer — who pays ongoing land rent after capitalization
   landCapGpBearRent: false, // GP bears land rent alone if capitalized
   // Debt
   debtAllowed: true,
@@ -845,21 +846,21 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     let lpDOk=true;
     for(let y=0;y<h;y++){
       if(w.lpDist[y]>0&&w.lpPct>0){
-        // FIX#3 Option A: T1 pro-rata, T2 100% to LP
-        const exp=w.tier1[y]*(w.lpPct||0)+w.tier2[y]+(w.tier4LP[y]||0);
+        // Option B: T1+T2 both pro-rata
+        const exp=(w.tier1[y]+w.tier2[y])*(w.lpPct||0)+(w.tier4LP[y]||0);
         if(Math.abs(w.lpDist[y]-exp)>tol){lpDOk=false;break;}
       }
     }
-    add("T3","LP Dist = T1*LP% + T2 + T4LP", lpDOk, "LP distribution formula correct");
+    add("T3","LP Dist = (T1+T2)*LP% + T4LP", lpDOk, "LP distribution formula correct");
     let gpDOk=true;
     for(let y=0;y<h;y++){
       if(w.gpDist[y]>0&&w.gpPct>0){
-        // FIX#3 Option A: T1 pro-rata, T2 nothing to GP
-        const exp=w.tier1[y]*(w.gpPct||0)+(w.tier3[y]||0)+(w.tier4GP[y]||0);
+        // Option B: T1+T2 pro-rata + T3 + T4GP
+        const exp=(w.tier1[y]+w.tier2[y])*(w.gpPct||0)+(w.tier3[y]||0)+(w.tier4GP[y]||0);
         if(Math.abs(w.gpDist[y]-exp)>tol){gpDOk=false;break;}
       }
     }
-    add("T3","GP Dist = T1*GP% + T3 + T4GP", gpDOk, "GP distribution formula correct");
+    add("T3","GP Dist = (T1+T2)*GP% + T3 + T4GP", gpDOk, "GP distribution formula correct");
     if(w.lpTotalInvested>0&&w.lpMOIC){
       const expM=w.lpTotalDist/w.lpTotalInvested;
       add("T3","LP MOIC = Dist/Equity", Math.abs(w.lpMOIC-expM)<0.01, "LP MOIC correct", `${w.lpMOIC.toFixed(2)}x`);
@@ -1501,10 +1502,17 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   // Cash available for distribution (C8: uses incentive-adjusted values)
   const ir = incentivesResult;
   const adjLandRent = ir?.adjustedLandRent || c.landRent;
+  // Land rent paid by GP: when land is capitalized and GP bears the rent
+  const lrPaidBy = project.landRentPaidBy || "project";
+  const gpPaysLandRent = project.landCapitalize && lrPaidBy === "developer";
+  const gpLandRentObligation = new Array(h).fill(0); // track for GP net CF
   const cashAvail = new Array(h).fill(0);
   let cumDeficit = 0; // C6: Track operating deficits
   for (let y = 0; y < h; y++) {
-    const noi = c.income[y] - adjLandRent[y] + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0);
+    // When GP pays land rent: exclude from NOI (project doesn't bear it), track as GP obligation
+    const effectiveLandRent = gpPaysLandRent ? 0 : adjLandRent[y];
+    if (gpPaysLandRent) gpLandRentObligation[y] = adjLandRent[y];
+    const noi = c.income[y] - effectiveLandRent + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0);
     const debtSvc = f.debtService[y] || 0;
     const netOp = noi - debtSvc - fees[y];
     let raw = (y <= exitYr ? netOp : 0) + exitProceeds[y];
@@ -1578,12 +1586,13 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
       cumPrefPaid += t2;
     }
 
-    // C5: Tier 3: GP Catch-up (rewritten - standard formula)
-    // GP catches up until GP profit = carry% of total profit above ROC
-    // Standard: catch_up = totalPrefPaid × carry / (1-carry) - cumGPCatchup
+    // C5: Tier 3: GP Catch-up (Option B - adjusted for pro-rata T2)
+    // GP already received gpPct of T2 pref. Catch-up must account for that.
+    // targetCatchup = max(0, (carry × cumPrefPaid - gpProfitFromPref) / (1 - carry))
     if (project.gpCatchup && remaining > 0 && carryPct > 0) {
-      const targetGPProfit = cumPrefPaid * carryPct / (1 - carryPct);
-      const catchupNeeded = Math.max(0, targetGPProfit - cumGPCatchup);
+      const gpProfitFromPref = cumPrefPaid * gpPct; // GP already got this from T2
+      const targetCatchupOnly = Math.max(0, (carryPct * cumPrefPaid - gpProfitFromPref) / (1 - carryPct));
+      const catchupNeeded = Math.max(0, targetCatchupOnly - cumGPCatchup);
       const catchup = Math.min(remaining, catchupNeeded);
       tier3[y] = catchup;
       remaining -= catchup;
@@ -1598,16 +1607,10 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     }
 
     // Allocate distributions
-    // FIX#3 Option A: Tier 1 (ROC) pro-rata, Tier 2 (Pref) LP-only
-    // This makes the standard catch-up formula correct: GP got zero from pref,
-    // so catch-up = cumPrefPaid × carry / (1-carry) is the right target.
-    const lpFromT1 = tier1[y] * lpPct;
-    const gpFromT1 = tier1[y] * gpPct;
-    const lpFromT2 = tier2[y]; // 100% to LP
-    const gpFromT2 = 0;        // GP gets nothing from pref
-    // Tier 4 profit split only if LP has equity
-    lpDist[y] = lpPct > 0 ? (lpFromT1 + lpFromT2 + tier4LP[y]) : 0;
-    gpDist[y] = gpFromT1 + gpFromT2 + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+    // Option B: T1 + T2 both pro-rata. GP gets his share of pref as investor.
+    // GP wears two hats: as investor (ROC + Pref pro-rata) and as developer (catch-up + carry)
+    lpDist[y] = (tier1[y] + tier2[y]) * lpPct + tier4LP[y];
+    gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
 
     unreturnedClose[y] = cumEquityCalled - cumReturned;
   }
@@ -1615,9 +1618,11 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   // LP Net Cash Flow: -equity calls (LP share) + distributions
   const lpNetCF = new Array(h).fill(0);
   const gpNetCF = new Array(h).fill(0);
+  const gpLandRentTotal = gpLandRentObligation.reduce((a,b) => a+b, 0);
   for (let y = 0; y < h; y++) {
     lpNetCF[y] = -equityCalls[y] * lpPct + lpDist[y];
-    gpNetCF[y] = -equityCalls[y] * gpPct + gpDist[y];
+    // GP pays land rent from his pocket when landRentPaidBy = "developer"
+    gpNetCF[y] = -equityCalls[y] * gpPct + gpDist[y] - gpLandRentObligation[y];
   }
 
   const lpIRR = calcIRR(lpNetCF);
@@ -1626,16 +1631,18 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   // MOIC = Total Distributions / Equity Invested
   // FIX#8: When fees are capitalized, invested base includes fee capital calls
   const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
+  // GP total dist = waterfall dist minus land rent obligation (net to GP)
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
+  const gpNetDist = gpTotalDist - gpLandRentTotal; // actual cash to GP after land rent
   const lpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
   const gpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
   const lpTotalInvested = feeTreatment === "capital" ? lpTotalCalled : lpEquity;
   const gpTotalInvested = feeTreatment === "capital" ? gpTotalCalled : gpEquity;
   const lpMOIC = lpTotalInvested > 0 ? lpTotalDist / lpTotalInvested : 0;
-  const gpMOIC = gpTotalInvested > 0 ? gpTotalDist / gpTotalInvested : 0;
+  const gpMOIC = gpTotalInvested > 0 ? gpNetDist / gpTotalInvested : 0;
   // H13: DPI = Total Distributions / Total Equity Called (paid-in, includes fees)
   const lpDPI = lpTotalCalled > 0 ? lpTotalDist / lpTotalCalled : 0;
-  const gpDPI = gpTotalCalled > 0 ? gpTotalDist / gpTotalCalled : 0;
+  const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
 
   // NPV - Full 3x3 matrix
   const lpNPV10 = calcNPV(lpNetCF, 0.10);
@@ -1656,7 +1663,8 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
     lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, lpDPI, gpDPI,
-    lpTotalInvested, gpTotalInvested, lpTotalDist, gpTotalDist, lpTotalCalled, gpTotalCalled,
+    lpTotalInvested, gpTotalInvested, lpTotalDist, gpTotalDist, gpNetDist, lpTotalCalled, gpTotalCalled,
+    gpLandRentObligation, gpLandRentTotal, gpPaysLandRent,
     lpNPV10, lpNPV12, lpNPV14, gpNPV10, gpNPV12, gpNPV14,
     projNPV10, projNPV12, projNPV14, isFund,
     exitYear: exitYr + sy,
@@ -1679,7 +1687,7 @@ const FINANCING_FIELDS = [
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
   'feeTreatment','subscriptionFeePct','annualMgmtFeePct','custodyFeeAnnual',
   'developerFeePct','structuringFeePct','mgmtFeeBase',
-  'fundStartYear','fundName','landCapitalize','landCapRate','landCapTo',
+  'fundStartYear','fundName','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
 ];
 
 /** Get financing settings for a specific phase. Falls back to project-level. */
@@ -1988,10 +1996,10 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
       if(unreturned>0&&rem>0){const t1=Math.min(rem,unreturned);tier1[y]=t1;rem-=t1;cumReturned+=t1;}
       const prefOwed=cumPrefAccrued-cumPrefPaid;
       if(prefOwed>0&&rem>0){const t2=Math.min(rem,prefOwed);tier2[y]=t2;rem-=t2;cumPrefPaid+=t2;}
-      if(project.gpCatchup&&rem>0&&carryPct>0){const targetGP=cumPrefPaid*carryPct/(1-carryPct);const needed=Math.max(0,targetGP-cumGPCatchup);const catchup=Math.min(rem,needed);tier3[y]=catchup;rem-=catchup;cumGPCatchup+=catchup;}
+      if(project.gpCatchup&&rem>0&&carryPct>0){const gpFromPref=cumPrefPaid*gpPct;const targetCU=Math.max(0,(carryPct*cumPrefPaid-gpFromPref)/(1-carryPct));const needed=Math.max(0,targetCU-cumGPCatchup);const catchup=Math.min(rem,needed);tier3[y]=catchup;rem-=catchup;cumGPCatchup+=catchup;}
       if(rem>0){tier4LP[y]=rem*lpSplitPct;tier4GP[y]=rem*(1-lpSplitPct);}
-      lpDist[y]=tier1[y]*lpPct+tier2[y]+tier4LP[y];
-      gpDist[y]=tier1[y]*gpPct+tier3[y]+tier4GP[y];
+      lpDist[y]=(tier1[y]+tier2[y])*lpPct+tier4LP[y];
+      gpDist[y]=(tier1[y]+tier2[y])*gpPct+tier3[y]+tier4GP[y];
     }
 
     const lpNetCF=new Array(h).fill(0),gpNetCF=new Array(h).fill(0);
@@ -2132,16 +2140,29 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             }
           </div>
         )}
-        {/* GP fees income */}
+        {/* GP fees income + pref + land rent */}
         {(() => {
           const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
           const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
           const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
           const totalFeeToGP = devFee + mgmtFee + structFee;
-          if (totalFeeToGP <= 0) return null;
-          return <div style={{marginTop:10,fontSize:11,color:"#1e40af",display:"grid",gridTemplateColumns:"1fr auto",gap:3}}>
-            <span style={{fontWeight:600}}>{ar?"+ رسوم المطور":"+ GP Fee Income"}</span><span style={{fontWeight:700,textAlign:"right"}}>{fmtM(totalFeeToGP)}</span>
-            <span style={{color:"#6b7080",fontSize:10,gridColumn:"span 2"}}>{ar?"(تطوير + إدارة + هيكلة)":"(Dev + Mgmt + Structuring)"}</span>
+          const gpPrefIncome = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
+          const landRentPaid = w.gpLandRentTotal || 0;
+          const hasExtra = totalFeeToGP > 0 || gpPrefIncome > 0 || landRentPaid > 0;
+          if (!hasExtra) return null;
+          return <div style={{marginTop:10,fontSize:11,display:"grid",gridTemplateColumns:"1fr auto",gap:3}}>
+            {gpPrefIncome > 0 && [
+              <span key="pl" style={{color:"#8b5cf6",fontWeight:600}}>{ar?"+ عائد تفضيلي (كمستثمر)":"+ Pref Return (as investor)"}</span>,
+              <span key="pv" style={{fontWeight:700,textAlign:"right",color:"#8b5cf6"}}>{fmtM(gpPrefIncome)}</span>
+            ]}
+            {totalFeeToGP > 0 && [
+              <span key="fl" style={{color:"#1e40af",fontWeight:600}}>{ar?"+ رسوم المطور":"+ GP Fee Income"}</span>,
+              <span key="fv" style={{fontWeight:700,textAlign:"right",color:"#1e40af"}}>{fmtM(totalFeeToGP)}</span>
+            ]}
+            {landRentPaid > 0 && [
+              <span key="ll" style={{color:"#ef4444",fontWeight:600}}>{ar?"- إيجار الأرض (يدفعه GP)":"- Land Rent (GP pays)"}</span>,
+              <span key="lv" style={{fontWeight:700,textAlign:"right",color:"#ef4444"}}>({fmtM(landRentPaid)})</span>
+            ]}
           </div>;
         })()}
       </div>
@@ -2154,7 +2175,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         const totalCash = w.cashAvail.reduce((a,b)=>a+b,0);
         const tiers = [
           {label: ar?"1. رد رأس المال":"1. Return of Capital", val: w.tier1.reduce((a,b)=>a+b,0), color:"#3b82f6", bg:"#dbeafe", who:ar?"GP + LP (حسب الحصة)":"GP + LP (pro-rata)"},
-          {label: ar?"2. العائد التفضيلي":"2. Preferred Return", val: w.tier2.reduce((a,b)=>a+b,0), color:"#8b5cf6", bg:"#ede9fe", who:ar?"LP فقط (100%)":"LP only (100%)"},
+          {label: ar?"2. العائد التفضيلي":"2. Preferred Return", val: w.tier2.reduce((a,b)=>a+b,0), color:"#8b5cf6", bg:"#ede9fe", who:ar?"GP + LP (حسب الحصة)":"GP + LP (pro-rata)"},
           {label: ar?"3. تعويض المطور":"3. GP Catch-up", val: w.tier3.reduce((a,b)=>a+b,0), color:"#f59e0b", bg:"#fef3c7", who:ar?"GP فقط":"GP only"},
           {label: ar?"4. توزيع الأرباح":"4. Profit Split", val: (w.tier4LP.reduce((a,b)=>a+b,0))+(w.tier4GP.reduce((a,b)=>a+b,0)), color:"#16a34a", bg:"#dcfce7", who:`LP ${project.lpProfitSplitPct||75}% / GP ${100-(project.lpProfitSplitPct||75)}%`},
         ];
@@ -2222,25 +2243,42 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
         const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
         const totalFeeToGP = devFee + mgmtFee + structFee;
-        const totalGPCash = gpDist + totalFeeToGP;
+        const landRentPaid = w.gpLandRentTotal || 0;
+        const totalGPCash = gpDist + totalFeeToGP - landRentPaid;
         const gpInvested = w.gpEquity || 0;
         const netProfit = totalGPCash - gpInvested;
         const totalMult = gpInvested > 0 ? totalGPCash / gpInvested : 0;
+        // GP's share from each tier
+        const gpFromROC = (w.tier1||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
+        const gpFromPref = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
+        const gpFromCatchup = (w.tier3||[]).reduce((a,b)=>a+b,0);
+        const gpFromSplit = (w.tier4GP||[]).reduce((a,b)=>a+b,0);
         return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6,fontSize:12}}>
-            <span style={{color:"#6b7080"}}>{ar?"رد رأس المال (T1 × GP%)":"Capital Return (T1 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM((w.tier1||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0))}</span>
-            <span style={{color:"#6b7080"}}>{ar?"تعويض المطور (T3)":"GP Catch-up (T3)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM((w.tier3||[]).reduce((a,b)=>a+b,0))}</span>
-            <span style={{color:"#6b7080"}}>{ar?"حصة الأرباح (T4 GP)":"Profit Split (T4 GP)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM((w.tier4GP||[]).reduce((a,b)=>a+b,0))}</span>
-            <span style={{color:"#6b7080"}}>{ar?"رسوم التطوير":"Developer Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(devFee)}</span>
-            <span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(mgmtFee)}</span>
-            {structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الهيكلة":"Structuring Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(structFee)}</span></>}
+          <div>
+            {/* Investor hat */}
+            <div style={{fontSize:10,fontWeight:600,color:"#8b5cf6",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{ar?"قبعة المستثمر":"AS INVESTOR"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:5,fontSize:12,marginBottom:12}}>
+              <span style={{color:"#6b7080"}}>{ar?"رد رأس المال (T1 × GP%)":"Capital Return (T1 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromROC)}</span>
+              <span style={{color:"#6b7080"}}>{ar?"عائد تفضيلي (T2 × GP%)":"Pref Return (T2 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM(gpFromPref)}</span>
+            </div>
+            {/* Developer hat */}
+            <div style={{fontSize:10,fontWeight:600,color:"#3b82f6",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{ar?"قبعة المطور":"AS DEVELOPER"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:5,fontSize:12}}>
+              <span style={{color:"#6b7080"}}>{ar?"تعويض المطور (T3)":"GP Catch-up (T3)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromCatchup)}</span>
+              <span style={{color:"#6b7080"}}>{ar?"حصة الأرباح (T4)":"Profit Split (T4)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromSplit)}</span>
+              <span style={{color:"#6b7080"}}>{ar?"رسوم التطوير":"Developer Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(devFee)}</span>
+              <span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(mgmtFee)}</span>
+              {structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الهيكلة":"Structuring Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(structFee)}</span></>}
+              {landRentPaid > 0 && <><span style={{color:"#ef4444",fontWeight:500}}>{ar?"إيجار الأرض (يدفعه GP)":"Land Rent (paid by GP)"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
+            </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:6,fontSize:12,alignContent:"start"}}>
-            <span style={{color:"#6b7080"}}>{ar?"رأس مال المطور":"GP Equity Invested"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>({fmtM(gpInvested)})</span>
+            <span style={{color:"#6b7080"}}>{ar?"رأس مال المطور":"GP Equity"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>({fmtM(gpInvested)})</span>
             <span style={{color:"#6b7080"}}>{ar?"توزيعات الشلال":"Waterfall Dist."}</span><span style={{textAlign:"right",fontWeight:500,color:"#16a34a"}}>{fmtM(gpDist)}</span>
             <span style={{color:"#6b7080"}}>{ar?"رسوم مستلمة":"Fees Received"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(totalFeeToGP)}</span>
-            <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,fontWeight:700,fontSize:13}}>{ar?"إجمالي النقد":"Total Cash"}</span>
-            <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,textAlign:"right",fontWeight:800,fontSize:16,color:"#16a34a"}}>{fmtM(totalGPCash)}</span>
+            {landRentPaid > 0 && <><span style={{color:"#6b7080"}}>{ar?"إيجار الأرض":"Land Rent Paid"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
+            <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,fontWeight:700,fontSize:13}}>{ar?"صافي النقد":"Net Cash"}</span>
+            <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,textAlign:"right",fontWeight:800,fontSize:16,color:totalGPCash>=0?"#16a34a":"#ef4444"}}>{fmtM(totalGPCash)}</span>
             <span style={{fontWeight:600}}>{ar?"صافي الربح":"Net Profit"}</span><span style={{textAlign:"right",fontWeight:700,color:netProfit>=0?"#16a34a":"#ef4444"}}>{fmtM(netProfit)}</span>
             <span style={{fontWeight:600}}>{ar?"المضاعف الإجمالي":"Total Multiple"}</span><span style={{textAlign:"right",fontWeight:800,fontSize:14,color:totalMult>=1.5?"#16a34a":totalMult>=1?"#ca8a04":"#ef4444"}}>{totalMult.toFixed(2)}x</span>
           </div>
@@ -2307,7 +2345,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <CFRow label={ar?"سحب رأس المال":"Equity Calls"} values={w.equityCalls} total={w.equityCalls.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
         <CFRow label={ar?"النقد المتاح":"Cash Available"} values={w.cashAvail} total={w.cashAvail.reduce((a,b)=>a+b,0)} color="#16a34a" />
         <CFRow label={ar?"رد رأس المال":"T1: Return of Capital"} values={w.tier1} total={w.tier1.reduce((a,b)=>a+b,0)} color="#2563eb" />
-        <CFRow label={ar?"العائد التفضيلي (LP فقط)":"T2: Preferred Return (LP only)"} values={w.tier2} total={w.tier2.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
+        <CFRow label={ar?"العائد التفضيلي":"T2: Preferred Return"} values={w.tier2} total={w.tier2.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
         <CFRow label={ar?"تعويض المطور (GP)":"T3: GP Catch-up"} values={w.tier3} total={w.tier3.reduce((a,b)=>a+b,0)} color="#f59e0b" />
         <CFRow label={ar?"حصة الممول (LP)":"T4: LP Split"} values={w.tier4LP} total={w.tier4LP.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
         <CFRow label={ar?"حصة المطور (GP)":"T4: GP Split"} values={w.tier4GP} total={w.tier4GP.reduce((a,b)=>a+b,0)} color="#3b82f6" />
@@ -2502,6 +2540,7 @@ Sale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp t
                 {cfg.landCapitalize&&<FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً
 Land value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>}
                 {cfg.landCapitalize&&<FL label={ar?"رسملة الأرض لصالح":"Land Cap Credit To"} tip="من يحصل على حصة الأرض المرسملة كـ Equity: المطور (GP) أو المستثمر (LP) أو مقسمة بالتساوي\nWho gets land capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>}
+                {cfg.landCapitalize&&project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip="بعد رسملة الأرض: هل المشروع يتحمل الإيجار (يقلل العوائد للجميع) أو المطور يدفعه من حصته؟\nAfter capitalizing land: does the project bear rent (reduces returns for all) or developer pays from their share?"><Drp lang={lang} value={cfg.landRentPaidBy||"project"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"developer",en:"Developer (GP pays)",ar:"المطور (GP يدفع)"}]} /></FL>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} hint="0=auto" tip="مساهمة المطور النقدية في الصندوق. عادة 5-30% من إجمالي Equity
 Developer cash contribution to the fund. Usually 5-30% of total equity"><Inp type="number" value={cfg.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
