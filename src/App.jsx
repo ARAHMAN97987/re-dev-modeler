@@ -585,6 +585,26 @@ function computeProjectCashFlows(project) {
         const yrs = y - revStart;
         revSch[y] = opEbitda * Math.min(1, (yrs+1)/ramp) * Math.pow(1+effEsc, yrs);
       }
+    } else if (asset.revType === "Sale") {
+      // H1: Unit sale revenue - absorption over N years after construction
+      const salePriceSqm = (asset.salePricePerSqm || 0) * rm;
+      const sellableArea = (asset.gfa || 0) * ((asset.efficiency || 100) / 100);
+      const totalSaleValue = sellableArea * salePriceSqm;
+      const absorptionYears = asset.absorptionYears || 3;
+      const commissionPct = (asset.commissionPct || 0) / 100;
+      const preSalePct = (asset.preSalePct || 0) / 100;
+      // Pre-sales during construction (last year of construction)
+      if (preSalePct > 0 && cStart + durYears - 1 >= 0 && cStart + durYears - 1 < horizon) {
+        const preSaleAmt = totalSaleValue * preSalePct * (1 - commissionPct);
+        revSch[cStart + durYears - 1] = preSaleAmt;
+      }
+      // Post-construction absorption
+      const remainingValue = totalSaleValue * (1 - preSalePct);
+      const annualSales = absorptionYears > 0 ? remainingValue / absorptionYears : remainingValue;
+      for (let y = revStart; y < Math.min(revStart + absorptionYears, horizon); y++) {
+        const yrs = y - revStart;
+        revSch[y] += annualSales * (1 - commissionPct) * Math.pow(1 + effEsc, yrs);
+      }
     }
 
     return { ...asset, totalCapex, leasableArea, capexSchedule: capexSch, revenueSchedule: revSch, totalRevenue: revSch.reduce((a,b)=>a+b,0) };
@@ -600,10 +620,10 @@ function computeProjectCashFlows(project) {
     for (let y = 0; y < term; y++) { if (y < gr) continue; landSch[y] = base * Math.pow(1 + eP, Math.floor((y-gr)/eN)); }
   } else if (project.landType === "purchase") { landSch[0] = project.landPurchasePrice || 0; }
 
-  const phaseNames = [...new Set((project.assets || []).map(a => a.phase).filter(Boolean))];
+  const phaseNames = [...new Set((project.assets || []).map(a => a.phase || "Unphased"))];
   const phaseResults = {};
   phaseNames.forEach(pName => {
-    const pa = assetSchedules.filter(a => a.phase === pName);
+    const pa = assetSchedules.filter(a => (a.phase || "Unphased") === pName);
     const inc = new Array(horizon).fill(0), cap = new Array(horizon).fill(0);
     pa.forEach(a => { for (let y=0;y<horizon;y++) { inc[y]+=a.revenueSchedule[y]; cap[y]+=a.capexSchedule[y]; }});
     const totalFP = assetSchedules.reduce((s,a)=>s+(a.footprint||0),0);
@@ -1217,14 +1237,41 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEnd + grace + 2);
 
   if (exitStrategy !== "hold" && exitYr >= 0 && exitYr < h) {
-    const stabIncome = c.income[Math.min(exitYr, h - 1)] || c.income[Math.min(constrEnd + 2, h - 1)] || 0;
-    const stabNOI = stabIncome - (c.landRent[Math.min(exitYr, h-1)] || 0);
-    let exitVal;
-    if (exitStrategy === "caprate") {
-      const capRate = (project.exitCapRate ?? 9) / 100;
-      exitVal = capRate > 0 ? stabNOI / capRate : 0;
+    // H8: Per-component exit valuation
+    let exitVal = 0;
+    const exitIdx = Math.min(exitYr, h - 1);
+    const fallbackIdx = Math.min(constrEnd + 2, h - 1);
+    const assetScheds = projectResults.assetSchedules || [];
+    if (assetScheds.length > 0) {
+      for (const as of assetScheds) {
+        const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0;
+        if (as.revType === "Operating") {
+          // Operating: EBITDA × multiple
+          exitVal += assetIncome * (project.exitMultiple ?? 10);
+        } else if (as.revType === "Sale") {
+          // Sale: remaining unsold value (skip - already realized through sales)
+        } else {
+          // Lease: income contributes to NOI-based valuation
+          if (exitStrategy === "caprate") {
+            const capRate = (project.exitCapRate ?? 9) / 100;
+            const landShare = (c.landRent[exitIdx] || 0) * ((as.footprint || 0) / Math.max(1, assetScheds.reduce((s,a)=>s+(a.footprint||0),0)));
+            const assetNOI = assetIncome - landShare;
+            exitVal += capRate > 0 ? assetNOI / capRate : 0;
+          } else {
+            exitVal += assetIncome * (project.exitMultiple ?? 10);
+          }
+        }
+      }
     } else {
-      exitVal = stabIncome * (project.exitMultiple ?? 10);
+      // Fallback: old method if no asset schedules
+      const stabIncome = c.income[exitIdx] || c.income[fallbackIdx] || 0;
+      const stabNOI = stabIncome - (c.landRent[exitIdx] || 0);
+      if (exitStrategy === "caprate") {
+        const capRate = (project.exitCapRate ?? 9) / 100;
+        exitVal = capRate > 0 ? stabNOI / capRate : 0;
+      } else {
+        exitVal = stabIncome * (project.exitMultiple ?? 10);
+      }
     }
     const exitCost = exitVal * (project.exitCostPct ?? 2) / 100;
     exitProceeds[exitYr] = Math.max(0, exitVal - exitCost - debtBalClose[exitYr]);
@@ -1468,6 +1515,11 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const gpTotalInvested = gpEquity;
   const lpMOIC = lpTotalInvested > 0 ? lpTotalDist / lpTotalInvested : 0;
   const gpMOIC = gpTotalInvested > 0 ? gpTotalDist / gpTotalInvested : 0;
+  // H13: DPI = Total Distributions / Total Equity Called (paid-in, includes fees)
+  const lpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
+  const gpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
+  const lpDPI = lpTotalCalled > 0 ? lpTotalDist / lpTotalCalled : 0;
+  const gpDPI = gpTotalCalled > 0 ? gpTotalDist / gpTotalCalled : 0;
 
   // NPV - Full 3x3 matrix
   const lpNPV10 = calcNPV(lpNetCF, 0.10);
@@ -1487,8 +1539,8 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
-    lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC,
-    lpTotalInvested, gpTotalInvested, lpTotalDist, gpTotalDist,
+    lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, lpDPI, gpDPI,
+    lpTotalInvested, gpTotalInvested, lpTotalDist, gpTotalDist, lpTotalCalled, gpTotalCalled,
     lpNPV10, lpNPV12, lpNPV14, gpNPV10, gpNPV12, gpNPV14,
     projNPV10, projNPV12, projNPV14, isFund,
     exitYear: exitYr + sy,
@@ -1663,6 +1715,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       <KPI label={ar?"عائد المطور (GP)":"Developer IRR (GP)"} value={w.gpIRR!==null?fmtPct(w.gpIRR*100):"N/A"} color="#2563eb" tip="معدل عائد المطور السنوي شامل حافز الأداء\nDeveloper annual return including carry" />
       <KPI label={ar?"مضاعف الممول (LP)":"Investor MOIC (LP)"} value={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"N/A"} color="#8b5cf6" tip="مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. Total distributions / Total invested. 2x = doubled money" />
       <KPI label={ar?"مضاعف المطور (GP)":"Developer MOIC (GP)"} value={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"N/A"} color="#3b82f6" tip="مضاعف رأس مال المطور\nDeveloper multiple on invested capital" />
+      <KPI label={ar?"DPI الممول":"LP DPI"} value={w.lpDPI?w.lpDPI.toFixed(2)+"x":"N/A"} color="#a855f7" tip="التوزيعات / رأس المال المدفوع (يشمل الرسوم)\nDistributions to Paid-In capital (includes fees)" />
+      <KPI label={ar?"DPI المطور":"GP DPI"} value={w.gpDPI?w.gpDPI.toFixed(2)+"x":"N/A"} color="#6366f1" tip="التوزيعات / رأس المال المدفوع\nGP Distributions to Paid-In" />
       <KPI label="Total Fees" value={fmtM(w.totalFees)} sub={cur} color="#f59e0b" tip="مجموع كل الرسوم: اكتتاب + إدارة + حفظ + تطوير + هيكلة\nAll fees: subscription + mgmt + custody + dev + structuring" />
       <KPI label="Exit Year" value={w.exitYear} color="#6b7080" tip="سنة بيع المشروع أو التخارج. عادة 5-10 سنوات بعد الاستقرار\nYear of asset sale/exit. Usually 5-10 years post-stabilization" />
     </div>
@@ -1685,6 +1739,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           <span style={{color:"#6b7080"}}>Distributions</span><span style={{textAlign:"center",color:"#16a34a"}}>{fmtM(w.lpTotalDist)}</span><span style={{textAlign:"center",color:"#16a34a"}}>{fmtM(w.gpTotalDist)}</span>
           <span style={{color:"#6b7080"}}>Net IRR</span><span style={{textAlign:"center",fontWeight:700}}>{w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"}</span><span style={{textAlign:"center",fontWeight:700}}>{w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"}</span>
           <span style={{color:"#6b7080"}}>MOIC</span><span style={{textAlign:"center",fontWeight:700}}>{w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}</span><span style={{textAlign:"center",fontWeight:700}}>{w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—"}</span>
+          <span style={{color:"#6b7080"}}>DPI</span><span style={{textAlign:"center"}}>{w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"}</span><span style={{textAlign:"center"}}>{w.gpDPI?w.gpDPI.toFixed(2)+"x":"—"}</span>
           <span style={{color:"#6b7080"}}>NPV @10%</span><span style={{textAlign:"center"}}>{fmtM(w.lpNPV10)}</span><span style={{textAlign:"center"}}>{fmtM(w.gpNPV10)}</span>
               <span style={{color:"#6b7080"}}>NPV @12%</span><span style={{textAlign:"center"}}>{fmtM(w.lpNPV12)}</span><span style={{textAlign:"center"}}>{fmtM(w.gpNPV12)}</span>
               <span style={{color:"#6b7080"}}>NPV @14%</span><span style={{textAlign:"center"}}>{fmtM(w.lpNPV14)}</span><span style={{textAlign:"center"}}>{fmtM(w.gpNPV14)}</span>
@@ -3232,14 +3287,14 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
               </div>
               <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
                 <div><span style={{color:"#9ca3af"}}>{ar?"GFA":"GFA"}</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
-                <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?(ar?"الإيجار":"Rate"):(ar?"أرباح تشغيلية":"EBITDA")}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":fmtM(a.opEbitda)}</div></div>
+                <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?(ar?"الإيجار":"Rate"):a.revType==="Sale"?(ar?"سعر البيع":"Sale Price"):(ar?"أرباح تشغيلية":"EBITDA")}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":a.revType==="Sale"?fmt(a.salePricePerSqm||0)+" /m²":fmtM(a.opEbitda)}</div></div>
                 <div><span style={{color:"#9ca3af"}}>{ar?"CAPEX":"CAPEX"}</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
                 <div><span style={{color:"#9ca3af"}}>{ar?"الدخل":"Income"}</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
               </div>
             </div>;})}
           </div>
         )}
-        {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
+        {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isSale=a.revType==="Sale",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
         const F2=({label,children})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>;
         return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
         <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -3269,6 +3324,12 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
               <F2 label={ar?"نسبة الكفاءة Eff %":"Efficiency %"}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"معدل الإيجار Lease Rate /م²":"Lease Rate"}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"EBITDA التشغيلية":"Op EBITDA"}><EditableCell type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              {isSale && <>
+                <F2 label={ar?"سعر البيع/م²":"Sale Price/sqm"}><EditableCell type="number" value={a.salePricePerSqm||0} onChange={v=>upAsset(i,{salePricePerSqm:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+                <F2 label={ar?"سنوات الاستيعاب":"Absorption Yrs"}><EditableCell type="number" value={a.absorptionYears||3} onChange={v=>upAsset(i,{absorptionYears:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+                <F2 label={ar?"ما قبل البيع %":"Pre-Sale %"}><EditableCell type="number" value={a.preSalePct||0} onChange={v=>upAsset(i,{preSalePct:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+                <F2 label={ar?"عمولة البيع %":"Commission %"}><EditableCell type="number" value={a.commissionPct||0} onChange={v=>upAsset(i,{commissionPct:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              </>}
               <F2 label={ar?"نسبة الزيادة Esc %":"Escalation %"}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"سنوات النمو Ramp":"Ramp Years"}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"نسبة الإشغال Occ %":"Occupancy %"}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
