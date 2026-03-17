@@ -706,8 +706,10 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     const gpP = w.gpPct || 0, lpP = w.lpPct || 0;
     add("T0","GP+LP = 100%", Math.abs((gpP+lpP)-1) < 0.001, "Equity split must total 100%", `GP: ${fp(gpP)} + LP: ${fp(lpP)} = ${fp(gpP+lpP)}`);
   }
+  const infraCats = ["utilities","parking","landscaping","roads","common","infrastructure"];
+  const isInfra = (a) => infraCats.some(ic => (a.category||"").toLowerCase().includes(ic) || (a.name||"").toLowerCase().includes(ic));
   (project.assets||[]).forEach((a,i) => {
-    if (a.revType === "Lease" && (a.efficiency||0) === 0 && (a.gfa||0) > 0)
+    if (a.revType === "Lease" && (a.efficiency||0) === 0 && (a.gfa||0) > 0 && !isInfra(a))
       add("T0",`Asset "${a.name||i}": Efficiency=0`, false, "Lease asset with 0% efficiency generates no revenue");
     if ((a.gfa||0) > 0 && (a.costPerSqm||0) === 0)
       add("T0",`Asset "${a.name||i}": Cost/sqm=0`, false, "Asset has GFA but zero construction cost");
@@ -736,7 +738,7 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
       return cStart + dur + (a.rampUpYears??3);
     }));
     if (exitYrIdx > 0 && exitYrIdx < maxRamp)
-      add("T0","Exit Before Stabilization", false, "Exit year is during ramp-up. Valuation may use unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
+      add("T0","Exit Before Stabilization", true, "Exit year is during ramp-up. Valuation may use unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
   }
 
   // ═══════════════════════════════════════════════
@@ -1595,6 +1597,217 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 // ═══════════════════════════════════════════════════════════════
 // PER-PHASE WATERFALL (runs waterfall for each phase independently)
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// PHASE 3.5: PER-PHASE INDEPENDENT FINANCING & WATERFALL
+// ═══════════════════════════════════════════════════════════════
+
+// All financing fields that can be set per-phase
+const FINANCING_FIELDS = [
+  'finMode','vehicleType','debtAllowed','maxLtvPct','financeRate',
+  'loanTenor','debtGrace','graceBasis','upfrontFeePct','repaymentType',
+  'islamicFinance','gpEquityManual','lpEquityManual',
+  'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',
+  'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
+  'feeTreatment','subscriptionFeePct','annualMgmtFeePct','custodyFeeAnnual',
+  'developerFeePct','structuringFeePct','mgmtFeeBase',
+];
+
+/** Get financing settings for a specific phase. Falls back to project-level. */
+function getPhaseFinancing(project, phaseName) {
+  const phase = (project.phases || []).find(p => p.name === phaseName);
+  if (phase?.financing) return { ...phase.financing };
+  // Fallback: project-level
+  const settings = {};
+  FINANCING_FIELDS.forEach(f => { if (project[f] !== undefined) settings[f] = project[f]; });
+  return settings;
+}
+
+/** Check if project has per-phase financing enabled */
+function hasPerPhaseFinancing(project) {
+  return (project.phases || []).some(p => p.financing);
+}
+
+/** Migrate project: copy project-level settings to each phase */
+function migrateToPerPhaseFinancing(project) {
+  if (!project.phases || project.phases.length === 0) return project;
+  if (hasPerPhaseFinancing(project)) return project; // Already migrated
+  const settings = {};
+  FINANCING_FIELDS.forEach(f => { if (project[f] !== undefined) settings[f] = project[f]; });
+  return {
+    ...project,
+    phases: project.phases.map(p => ({ ...p, financing: { ...settings } })),
+  };
+}
+
+/** Build a virtual project for a single phase (uses phase financing + phase land allocation) */
+function buildPhaseVirtualProject(project, phaseName, phaseResult) {
+  const pf = getPhaseFinancing(project, phaseName);
+  const allocPct = phaseResult.allocPct || 0;
+
+  return {
+    ...project,
+    ...pf, // Phase financing settings override project-level
+    _isPhaseVirtual: true,
+    _phaseName: phaseName,
+    // Land: allocate proportionally by footprint
+    landArea: (project.landArea || 0) * allocPct,
+    landCapRate: project.landCapRate || 1000,
+    // Keep land type and other land settings from project
+    landRentAnnual: project.landRentAnnual, // Not used directly - comes from phaseResults
+    // Override phases to prevent recursion
+    phases: project.phases,
+  };
+}
+
+/** Build synthetic projectResults where "consolidated" = phase data */
+function buildPhaseProjectResults(projectResults, phaseName) {
+  const pr = projectResults.phaseResults[phaseName];
+  if (!pr) return null;
+  return {
+    ...projectResults,
+    consolidated: {
+      income: pr.income,
+      capex: pr.capex,
+      landRent: pr.landRent,
+      netCF: pr.netCF,
+      totalCapex: pr.totalCapex,
+      totalIncome: pr.totalIncome,
+      totalLandRent: pr.totalLandRent,
+      totalNetCF: pr.totalNetCF,
+      irr: pr.irr,
+      npv10: calcNPV(pr.netCF, 0.10),
+      npv12: calcNPV(pr.netCF, 0.12),
+      npv14: calcNPV(pr.netCF, 0.14),
+    },
+    assetSchedules: projectResults.assetSchedules.filter(a => (a.phase || "Unphased") === phaseName),
+  };
+}
+
+/** Aggregate per-phase financing results into consolidated view */
+function aggregatePhaseFinancings(phaseFinancings, h) {
+  const names = Object.keys(phaseFinancings);
+  if (names.length === 0) return null;
+  const sum = (field) => names.reduce((s, n) => {
+    const v = phaseFinancings[n]?.[field];
+    return s + (typeof v === 'number' ? v : 0);
+  }, 0);
+  const sumArr = (field) => {
+    const arr = new Array(h).fill(0);
+    names.forEach(n => { const a = phaseFinancings[n]?.[field]; if (a) for (let y = 0; y < h; y++) arr[y] += (a[y] || 0); });
+    return arr;
+  };
+  const levCF = sumArr('leveredCF');
+  return {
+    mode: 'independent',
+    totalEquity: sum('totalEquity'), gpEquity: sum('gpEquity'), lpEquity: sum('lpEquity'),
+    gpPct: sum('totalEquity') > 0 ? sum('gpEquity') / sum('totalEquity') : 0,
+    lpPct: sum('totalEquity') > 0 ? sum('lpEquity') / sum('totalEquity') : 0,
+    devCostExclLand: sum('devCostExclLand'), devCostInclLand: sum('devCostInclLand'),
+    maxDebt: sum('maxDebt'), totalDebt: sum('totalDebt'),
+    landCapValue: sum('landCapValue'), capexGrantTotal: sum('capexGrantTotal'),
+    drawdown: sumArr('drawdown'), equityCalls: sumArr('equityCalls'),
+    debtBalOpen: sumArr('debtBalOpen'), debtBalClose: sumArr('debtBalClose'),
+    repayment: sumArr('repayment'), interest: sumArr('interest'),
+    originalInterest: sumArr('originalInterest'),
+    debtService: sumArr('debtService'), leveredCF: levCF,
+    dscr: (() => { const ds = sumArr('debtService'); const inc = sumArr('leveredCF'); return ds.map((d, y) => d > 0 ? (inc[y] + d) / d : null); })(),
+    exitProceeds: sumArr('exitProceeds'),
+    upfrontFee: sum('upfrontFee'),
+    totalInterest: sum('totalInterest'),
+    interestSubsidyTotal: sum('interestSubsidyTotal'),
+    interestSubsidySchedule: sumArr('interestSubsidySchedule'),
+    leveredIRR: calcIRR(levCF),
+    constrEnd: Math.max(...names.map(n => phaseFinancings[n]?.constrEnd || 0)),
+    rate: 0, tenor: 0, grace: 0, repayYears: 0, repayStart: 0,
+    exitYear: Math.max(...names.map(n => phaseFinancings[n]?.exitYear || 0)),
+  };
+}
+
+/** Aggregate per-phase waterfall results into consolidated view */
+function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
+  const names = Object.keys(phaseWaterfalls);
+  if (names.length === 0) return null;
+  const sumArr = (field) => {
+    const arr = new Array(h).fill(0);
+    names.forEach(n => { const a = phaseWaterfalls[n]?.[field]; if (a) for (let y = 0; y < h; y++) arr[y] += (a[y] || 0); });
+    return arr;
+  };
+  const sum = (field) => names.reduce((s, n) => s + (phaseWaterfalls[n]?.[field] || 0), 0);
+
+  const lpNetCF = sumArr('lpNetCF');
+  const gpNetCF = sumArr('gpNetCF');
+  const totalEquity = Object.keys(phaseFinancings).reduce((s, n) => s + (phaseFinancings[n]?.totalEquity || 0), 0);
+  const gpEquity = Object.keys(phaseFinancings).reduce((s, n) => s + (phaseFinancings[n]?.gpEquity || 0), 0);
+  const lpEquity = Object.keys(phaseFinancings).reduce((s, n) => s + (phaseFinancings[n]?.lpEquity || 0), 0);
+
+  return {
+    mode: 'independent',
+    totalEquity, gpEquity, lpEquity,
+    gpPct: totalEquity > 0 ? gpEquity / totalEquity : 0,
+    lpPct: totalEquity > 0 ? lpEquity / totalEquity : 0,
+    equityCalls: sumArr('equityCalls'), fees: sumArr('fees'),
+    totalFees: sum('totalFees'),
+    exitProceeds: sumArr('exitProceeds'), exitYear: Math.max(...names.map(n => phaseWaterfalls[n]?.exitYear || 0)),
+    cashAvail: sumArr('cashAvail'),
+    tier1: sumArr('tier1'), tier2: sumArr('tier2'),
+    tier3: sumArr('tier3'), tier4LP: sumArr('tier4LP'), tier4GP: sumArr('tier4GP'),
+    lpDist: sumArr('lpDist'), gpDist: sumArr('gpDist'),
+    lpNetCF, gpNetCF,
+    lpIRR: calcIRR(lpNetCF), gpIRR: calcIRR(gpNetCF),
+    lpTotalDist: sum('lpTotalDist'), gpTotalDist: sum('gpTotalDist'),
+    lpMOIC: lpEquity > 0 ? sum('lpTotalDist') / lpEquity : 0,
+    gpMOIC: gpEquity > 0 ? sum('gpTotalDist') / gpEquity : 0,
+    lpDPI: sum('lpTotalDist') / Math.max(1, sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity))),
+    gpDPI: sum('gpTotalDist') / Math.max(1, sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity))),
+    lpNPV10: calcNPV(lpNetCF, 0.10), lpNPV12: calcNPV(lpNetCF, 0.12), lpNPV14: calcNPV(lpNetCF, 0.14),
+    gpNPV10: calcNPV(gpNetCF, 0.10), gpNPV12: calcNPV(gpNetCF, 0.12), gpNPV14: calcNPV(gpNetCF, 0.14),
+  };
+}
+
+/** Main orchestrator: runs independent financing + waterfall per phase, then aggregates */
+function computeIndependentPhaseResults(project, projectResults, incentivesResult) {
+  if (!project || !projectResults) return { phaseFinancings: {}, phaseWaterfalls: {}, consolidatedFinancing: null, consolidatedWaterfall: null };
+
+  const phases = projectResults.phaseResults;
+  const phaseNames = Object.keys(phases);
+  if (phaseNames.length === 0) return { phaseFinancings: {}, phaseWaterfalls: {}, consolidatedFinancing: null, consolidatedWaterfall: null };
+
+  const h = project.horizon || 50;
+  const phaseFinancings = {};
+  const phaseWaterfalls = {};
+
+  for (const pName of phaseNames) {
+    const pr = phases[pName];
+    if (!pr || pr.totalCapex === 0) continue;
+
+    const vProject = buildPhaseVirtualProject(project, pName, pr);
+    const vResults = buildPhaseProjectResults(projectResults, pName);
+    if (!vResults) continue;
+
+    // Run financing for this phase (no incentives per-phase for now)
+    try {
+      const pFinancing = computeFinancing(vProject, vResults, null);
+      if (pFinancing) {
+        phaseFinancings[pName] = pFinancing;
+        // Run waterfall (only if fund mode for this phase)
+        const pFinMode = vProject.finMode || project.finMode;
+        if (pFinMode === "fund" || pFinMode === "jv") {
+          try {
+            const pWaterfall = computeWaterfall(vProject, vResults, pFinancing, null);
+            if (pWaterfall) phaseWaterfalls[pName] = pWaterfall;
+          } catch (e) { console.error(`Phase waterfall error (${pName}):`, e); }
+        }
+      }
+    } catch (e) { console.error(`Phase financing error (${pName}):`, e); }
+  }
+
+  const consolidatedFinancing = aggregatePhaseFinancings(phaseFinancings, h);
+  const consolidatedWaterfall = aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h);
+
+  return { phaseFinancings, phaseWaterfalls, consolidatedFinancing, consolidatedWaterfall };
+}
+
+// ═══ Legacy computePhaseWaterfalls (kept for backward compat) ═══
 function computePhaseWaterfalls(project, projectResults, financing, waterfallConsolidated) {
   if (!project || !projectResults || !financing || !waterfallConsolidated) return {};
   if (project.finMode === "self" || project.finMode === "bank100") return {};
@@ -1697,7 +1910,7 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
 
   return result;
 }
-function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, t, lang }) {
+function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, t, lang }) {
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhase, setSelectedPhase] = useState("all");
@@ -1713,17 +1926,19 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const hasPhases = phaseNames.length > 1 && phaseWaterfalls && Object.keys(phaseWaterfalls).length > 0;
   const _pw = (selectedPhase !== "all" && phaseWaterfalls?.[selectedPhase]) ? phaseWaterfalls[selectedPhase] : null;
   const h0 = new Array(results.horizon || 50).fill(0);
+  // New independent phase waterfalls are full waterfall objects - use directly
   const w = _pw ? {
     ..._pw,
     feeSub: _pw.feeSub || h0, feeMgmt: _pw.feeMgmt || h0, feeCustody: _pw.feeCustody || h0,
     feeDev: _pw.feeDev || h0, feeStruct: _pw.feeStruct || h0, fees: _pw.fees || h0,
-    totalFees: _pw.totalFees ?? (_pw.fees ? _pw.fees : 0),
-    totalEquity: _pw.equity || 0, exitYear: waterfall.exitYear || 0,
+    totalFees: _pw.totalFees ?? 0,
+    totalEquity: _pw.totalEquity || _pw.equity || 0,
+    exitYear: _pw.exitYear || waterfall.exitYear || 0,
     lpNPV12: _pw.lpNPV12 ?? null, lpNPV14: _pw.lpNPV14 ?? null,
     gpNPV12: _pw.gpNPV12 ?? null, gpNPV14: _pw.gpNPV14 ?? null,
     unreturnedClose: _pw.unreturnedClose || h0, unreturnedOpen: _pw.unreturnedOpen || h0,
     prefAccrual: _pw.prefAccrual || h0, prefAccumulated: _pw.prefAccumulated || h0,
-    exitProceeds: _pw.exitProceeds || (waterfall.exitProceeds ? waterfall.exitProceeds.map(v => v * (_pw.exitPct || 0)) : h0),
+    exitProceeds: _pw.exitProceeds || h0,
   } : waterfall;
   const cur = project.currency || "SAR";
 
@@ -1741,14 +1956,16 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     {/* Phase selector */}
     {hasPhases && (
       <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:500,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec")}}>
+        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
           {lang==="ar"?"الإجمالي":"Consolidated"}
         </button>
-        {phaseNames.map(p=>(
-          <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:500,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec")}}>
-            {p}
-          </button>
-        ))}
+        {phaseNames.map(p=>{
+          const pw = phaseWaterfalls?.[p];
+          const irr = pw?.lpIRR;
+          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {p}{irr !== null && irr !== undefined ? ` (LP ${(irr*100).toFixed(1)}%)` : ""}
+          </button>;
+        })}
       </div>
     )}
 
@@ -1920,9 +2137,10 @@ function Drp({value,onChange,options,lang:dl}) {
   return <select value={value} onChange={e=>onChange(e.target.value)} style={_finSelSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[dl]||o.en||o.label}</option>)}</select>;
 }
 
-function FinancingView({ project, results, financing, t, up, lang }) {
+function FinancingView({ project, results, financing, phaseFinancings, t, up, lang }) {
   const [showYrs, setShowYrs] = useState(15);
   const [showConfig, setShowConfig] = useState(true);
+  const [selectedPhase, setSelectedPhase] = useState("all");
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
 
@@ -1935,8 +2153,10 @@ function FinancingView({ project, results, financing, t, up, lang }) {
   const h = results.horizon;
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
+  const phaseNames = Object.keys(results.phaseResults || {});
+  const hasPhases = phaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
+  const f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing;
   const c = results.consolidated;
-  const f = financing;
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
@@ -2088,6 +2308,27 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
     </div>
 
     {/* ═══ FINANCING RESULTS (KPIs + tables) ═══ */}
+    {/* Phase selector tabs */}
+    {hasPhases && (
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          {ar?"الإجمالي":"Consolidated"}
+        </button>
+        {phaseNames.map(p=>{
+          const pf = phaseFinancings?.[p];
+          const irr = pf?.leveredIRR;
+          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {p}{irr !== null && irr !== undefined ? ` (${(irr*100).toFixed(1)}%)` : ""}
+          </button>;
+        })}
+      </div>
+    )}
+    {selectedPhase !== "all" && f && (
+      <div style={{background:"#eff6ff",borderRadius:8,border:"1px solid #bfdbfe",padding:"10px 16px",marginBottom:14,fontSize:12,color:"#1e40af"}}>
+        <strong>{selectedPhase}</strong> — {ar?"عرض تمويل المرحلة المستقلة":"Independent Phase Financing View"}
+        {f.devCostInclLand > 0 && <span style={{marginInlineStart:8}}>DevCost: {fmtM(f.devCostInclLand)} · Debt: {fmtM(f.maxDebt)} · Equity: {fmtM(f.totalEquity)}</span>}
+      </div>
+    )}
     {!f ? (
       <div style={{textAlign:"center",padding:32,color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل أعلاه":"Configure financing settings above"}</div>
     ) : (<>
@@ -2349,9 +2590,16 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
 
   const results = useMemo(() => { try { return project ? computeProjectCashFlows(project) : null; } catch(e) { console.error("computeProjectCashFlows error:", e); return null; } }, [project]);
   const incentivesResult = useMemo(() => { try { return project && results ? computeIncentives(project, results) : null; } catch(e) { console.error("computeIncentives error:", e); return null; } }, [project, results]);
-  const financing = useMemo(() => { try { return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult]);
-  const waterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing, incentivesResult) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing, incentivesResult]);
-  const phaseWaterfalls = useMemo(() => { try { return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall]);
+  // Per-phase independent financing & waterfall (new architecture)
+  const independentPhaseResults = useMemo(() => { try { return project && results ? computeIndependentPhaseResults(project, results, incentivesResult) : null; } catch(e) { console.error("independentPhaseResults error:", e); return null; } }, [project, results, incentivesResult]);
+  // Consolidated financing: use aggregated if per-phase available, else legacy
+  const financing = useMemo(() => { try { if (independentPhaseResults?.consolidatedFinancing) return independentPhaseResults.consolidatedFinancing; return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult, independentPhaseResults]);
+  // Consolidated waterfall: use aggregated if per-phase available, else legacy
+  const waterfall = useMemo(() => { try { if (independentPhaseResults?.consolidatedWaterfall) return independentPhaseResults.consolidatedWaterfall; return project && results && financing ? computeWaterfall(project, results, financing, incentivesResult) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing, incentivesResult, independentPhaseResults]);
+  // Phase waterfalls: use independent results directly
+  const phaseWaterfalls = useMemo(() => { try { if (independentPhaseResults?.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0) return independentPhaseResults.phaseWaterfalls; return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall, independentPhaseResults]);
+  // Phase financings: available from independent results
+  const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
   const createProject = async () => { const p = defaultProject(); await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); };
@@ -2553,8 +2801,8 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         <div style={{flex:1,overflow:"auto",padding:18}}>
           {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} />}
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
-          {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} t={t} up={up} lang={lang} />}
-          {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} lang={lang} />}
+          {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} t={t} up={up} lang={lang} />}
+          {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} />}
           {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} checks={checks} lang={lang} />}
           {activeTab==="scenarios"&&<ScenariosView project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />}
           {activeTab==="incentives"&&<IncentivesView project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />}
