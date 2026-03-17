@@ -557,11 +557,11 @@ function computeProjectCashFlows(project) {
 
   const assetSchedules = (project.assets || []).map(asset => {
     const assetEsc = (asset.escalation ?? projectEsc);
-    const effEsc = (assetEsc + ea) / 100;
+    const effEsc = Math.max(-0.99, (assetEsc + ea) / 100);
     const totalCapex = computeAssetCapex(asset, project);
     const durYears = Math.ceil((asset.constrDuration||12) / 12); // H12: Duration unchanged by delay
     const delayYears = Math.ceil(dm / 12); // H12: Delay shifts start
-    const ramp = asset.rampUpYears ?? 3;
+    const ramp = Math.max(1, asset.rampUpYears ?? 3);
     const occ = (asset.stabilizedOcc != null ? asset.stabilizedOcc : 100) / 100;
     const eff = (asset.efficiency || 0) / 100;
     const leasableArea = (asset.gfa || 0) * eff;
@@ -595,9 +595,9 @@ function computeProjectCashFlows(project) {
       const salePriceSqm = (asset.salePricePerSqm || 0) * rm;
       const sellableArea = (asset.gfa || 0) * ((asset.efficiency || 100) / 100);
       const totalSaleValue = sellableArea * salePriceSqm;
-      const absorptionYears = asset.absorptionYears || 3;
-      const commissionPct = (asset.commissionPct || 0) / 100;
-      const preSalePct = (asset.preSalePct || 0) / 100;
+      const absorptionYears = Math.max(1, asset.absorptionYears || 3);
+      const commissionPct = Math.min(1, Math.max(0, (asset.commissionPct || 0) / 100));
+      const preSalePct = Math.min(1, Math.max(0, (asset.preSalePct || 0) / 100));
       // Pre-sales during construction (last year of construction)
       if (preSalePct > 0 && cStart + durYears - 1 >= 0 && cStart + durYears - 1 < horizon) {
         const preSaleAmt = totalSaleValue * preSalePct * (1 - commissionPct);
@@ -619,7 +619,7 @@ function computeProjectCashFlows(project) {
   if (project.landType === "lease") {
     const base = project.landRentAnnual || 0;
     const gr = project.landRentGrace || 0;
-    const eN = project.landRentEscalationEveryN ?? 5;
+    const eN = Math.max(1, project.landRentEscalationEveryN ?? 5);
     const eP = (project.landRentEscalation || 0) / 100;
     const term = Math.min(project.landRentTerm || 50, horizon);
     for (let y = 0; y < term; y++) { if (y < gr) continue; landSch[y] = base * Math.pow(1 + eP, Math.floor((y-gr)/eN)); }
@@ -716,6 +716,17 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
   if (f && project.debtAllowed && (project.loanTenor??7) <= (project.debtGrace??3))
     add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${project.loanTenor??7}, Grace: ${project.debtGrace??3}`);
+  // K1-K7: Additional validation checks from code audit
+  if ((project.landRentEscalationEveryN ?? 5) <= 0 && project.landType === "lease")
+    add("T0","Land Esc Interval = 0", false, "Step escalation interval must be > 0");
+  if ((project.carryPct ?? 30) >= 100 && project.gpCatchup)
+    add("T0","Carry ≥ 100%", false, "Carry percentage must be < 100% when catch-up enabled");
+  if ((project.maxLtvPct ?? 70) >= 100 && project.finMode === "fund")
+    add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
+  const maxConstrEnd = Math.max(0, ...(project.assets||[]).map(a => ((a.constrStart||1)-1) + Math.ceil((a.constrDuration||12)/12)));
+  if (maxConstrEnd > (project.horizon||50))
+    add("T0","Horizon < Construction", false, "Horizon doesn't cover full construction period", `Constr ends Y${maxConstrEnd}, Horizon Y${project.horizon||50}`);
+
   // H11: Exit during ramp-up warning
   if (f && project.exitStrategy !== "hold") {
     const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2025) : 0;
@@ -1275,7 +1286,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
     const assetScheds = projectResults.assetSchedules || [];
     if (assetScheds.length > 0) {
       for (const as of assetScheds) {
-        const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0;
+        const assetIncome = as.revenueSchedule[exitIdx] ?? as.revenueSchedule[fallbackIdx] ?? 0;
         if (as.revType === "Operating") {
           // Operating: EBITDA × multiple
           exitVal += assetIncome * (project.exitMultiple ?? 10);
@@ -1362,7 +1373,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const totalEquity = f.totalEquity;
   const gpPct = f.gpPct;
   const lpPct = f.lpPct;
-  const isFund = project.vehicleType === "fund";
+  const isFund = project.finMode === "fund" || project.vehicleType === "fund";
 
   // Fee calculations (only Fund type gets full fees)
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
@@ -1445,7 +1456,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 
   // 4-tier waterfall
   const prefRate = (project.prefReturnPct ?? 15) / 100;
-  const carryPct = (project.carryPct ?? 30) / 100;
+  const carryPct = Math.min(0.9999, Math.max(0, (project.carryPct ?? 30) / 100));
   const lpSplitPct = (project.lpProfitSplitPct ?? 70) / 100;
   const gpSplitPct = 1 - lpSplitPct;
 
@@ -1637,7 +1648,7 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
 
     // Run 4-tier waterfall for this phase
     const prefRate = (project.prefReturnPct ?? 15) / 100;
-    const carryPct = (project.carryPct ?? 30) / 100;
+    const carryPct = Math.min(0.9999, Math.max(0, (project.carryPct ?? 30) / 100));
     const lpSplitPct = (project.lpProfitSplitPct ?? 70) / 100;
     const gpPct = wc.gpPct;
     const lpPct = wc.lpPct;
