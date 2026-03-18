@@ -1,9 +1,12 @@
 /**
- * ZAN Engine — Layer C: Unlevered Cash Flow
- * Land rent schedule, phase aggregation, consolidated CF, IRR, NPV.
- *
- * Source: App.jsx computeProjectCashFlows lines 774-807
- * EXACT COPY — no modifications to formulas.
+ * ZAN Engine — Layer C: Unlevered Cash Flow (v2)
+ * 
+ * CHANGES from v1:
+ * 1. Land rent starts at MAX(grace end, Phase 1 completion) — not year 0
+ * 2. Dynamic allocation: as each phase opens, its footprint joins the pool
+ * 3. Payback period + Peak Negative CF added to consolidated output
+ * 4. Returns landRentMeta for debug/settings display
+ * 5. Validation: warns if asset duration > phase completionMonth
  *
  * Dependencies: Layer B (computeAssetSchedules), Layer 0 (calcIRR, calcNPV)
  */
@@ -11,29 +14,174 @@
 const { calcIRR, calcNPV } = require('./calcUtils.cjs');
 const { computeAssetSchedules } = require('./assets.cjs');
 
-// ── Land Rent Schedule ──
+// ── Compute phase completion year (0-indexed) from project phases + asset schedules ──
 
-function computeLandSchedule(project, horizon) {
-  const landSch = new Array(horizon).fill(0);
-  if (project.landType === "lease") {
-    const base = project.landRentAnnual || 0;
-    const gr = project.landRentGrace || 0;
-    const eN = Math.max(1, project.landRentEscalationEveryN ?? 5);
-    const eP = (project.landRentEscalation || 0) / 100;
-    const term = Math.min(project.landRentTerm || 50, horizon);
-    for (let y = 0; y < term; y++) {
-      if (y < gr) continue;
-      landSch[y] = base * Math.pow(1 + eP, Math.floor((y - gr) / eN));
+function getPhaseCompletionYears(project, assetSchedules) {
+  const phases = project.phases || [];
+  const result = {};
+
+  phases.forEach(ph => {
+    if (ph.completionMonth && ph.completionMonth > 0) {
+      result[ph.name] = Math.ceil(ph.completionMonth / 12);
+    } else {
+      // Legacy: find max construction end for this phase's assets
+      const phaseAssets = assetSchedules.filter(a => (a.phase || 'Phase 1') === ph.name);
+      let maxEnd = 0;
+      phaseAssets.forEach(a => {
+        const lastCapex = a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0);
+        maxEnd = Math.max(maxEnd, lastCapex);
+      });
+      result[ph.name] = maxEnd;
     }
-  } else if (project.landType === "purchase") {
-    landSch[0] = project.landPurchasePrice || 0;
+  });
+
+  // Handle "Unphased" assets
+  const unphasedAssets = assetSchedules.filter(a => {
+    const pName = a.phase || 'Unphased';
+    return !phases.some(ph => ph.name === pName);
+  });
+  if (unphasedAssets.length > 0) {
+    let maxEnd = 0;
+    unphasedAssets.forEach(a => {
+      const lastCapex = a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0);
+      maxEnd = Math.max(maxEnd, lastCapex);
+    });
+    result['Unphased'] = maxEnd;
   }
-  return landSch;
+
+  return result;
 }
 
-// ── Phase Aggregation ──
+// ── Compute footprint per phase ──
 
-function computePhaseResults(assetSchedules, landSchedule, horizon) {
+function getPhaseFootprints(project, assetSchedules) {
+  const result = {};
+  const phaseNames = [...new Set(assetSchedules.map(a => a.phase || 'Unphased'))];
+  phaseNames.forEach(pName => {
+    result[pName] = assetSchedules
+      .filter(a => (a.phase || 'Unphased') === pName)
+      .reduce((s, a) => s + (a.footprint || 0), 0);
+  });
+  return result;
+}
+
+// ── Land Rent Schedule (v2: dynamic allocation) ──
+
+function computeLandSchedule(project, horizon, assetSchedules) {
+  const totalSch = new Array(horizon).fill(0);
+  const phaseAllocations = {};
+  const phaseNames = [...new Set(assetSchedules.map(a => a.phase || 'Unphased'))];
+  phaseNames.forEach(pn => { phaseAllocations[pn] = new Array(horizon).fill(0); });
+
+  // Purchase: lump sum in year 0
+  if (project.landType === 'purchase') {
+    totalSch[0] = project.landPurchasePrice || 0;
+    if (phaseNames.length > 0) {
+      phaseAllocations[phaseNames[0]][0] = totalSch[0];
+    }
+    return {
+      schedule: totalSch,
+      phaseAllocations,
+      meta: { rentStartYear: 0, graceEnd: 0, phaseCompletionYears: {}, phaseShares: {} }
+    };
+  }
+
+  // Non-lease types: no land rent
+  if (project.landType !== 'lease') {
+    return {
+      schedule: totalSch,
+      phaseAllocations,
+      meta: { rentStartYear: 0, graceEnd: 0, phaseCompletionYears: {}, phaseShares: {} }
+    };
+  }
+
+  // ── Lease land rent with dynamic phase allocation ──
+  const base = project.landRentAnnual || 0;
+  if (base <= 0) {
+    return {
+      schedule: totalSch,
+      phaseAllocations,
+      meta: { rentStartYear: 0, graceEnd: 0, phaseCompletionYears: {}, phaseShares: {} }
+    };
+  }
+
+  const grace = project.landRentGrace || 0;
+  const eN = Math.max(1, project.landRentEscalationEveryN ?? 5);
+  const eP = (project.landRentEscalation || 0) / 100;
+  const term = Math.min(project.landRentTerm || 50, horizon);
+
+  const phaseCompletionYears = getPhaseCompletionYears(project, assetSchedules);
+  const phaseFootprints = getPhaseFootprints(project, assetSchedules);
+
+  // Sort phases by completion year
+  const sortedPhases = Object.entries(phaseCompletionYears)
+    .sort((a, b) => a[1] - b[1]);
+
+  const phase1CompletionYear = sortedPhases.length > 0 ? sortedPhases[0][1] : 0;
+
+  // Land rent starts at MAX(grace end, Phase 1 completion)
+  const graceEnd = grace;
+  const rentStartYear = Math.max(graceEnd, phase1CompletionYear);
+
+  const phaseSharesLog = {};
+
+  for (let y = 0; y < term; y++) {
+    if (y < rentStartYear) continue;
+
+    // Which phases are open at year y?
+    let activeFootprint = 0;
+    const activePhases = [];
+    sortedPhases.forEach(([pName, completionYr]) => {
+      if (y >= completionYr) {
+        activePhases.push(pName);
+        activeFootprint += phaseFootprints[pName] || 0;
+      }
+    });
+
+    if (activePhases.length === 0 || activeFootprint === 0) continue;
+
+    // Escalation from rent start (not from year 0)
+    const yearsFromRentStart = y - rentStartYear;
+    const rentThisYear = base * Math.pow(1 + eP, Math.floor(yearsFromRentStart / eN));
+
+    totalSch[y] = rentThisYear;
+
+    // Allocate to active phases by footprint
+    activePhases.forEach(pName => {
+      const share = (phaseFootprints[pName] || 0) / activeFootprint;
+      phaseAllocations[pName][y] = rentThisYear * share;
+      if (!phaseSharesLog[pName]) {
+        phaseSharesLog[pName] = {
+          footprint: phaseFootprints[pName] || 0,
+          completionYear: phaseCompletionYears[pName],
+          firstRentYear: y,
+          shareAtOpen: share,
+        };
+      }
+    });
+  }
+
+  return {
+    schedule: totalSch,
+    phaseAllocations,
+    meta: {
+      rentStartYear,
+      graceEnd,
+      phase1CompletionYear,
+      phaseCompletionYears,
+      phaseFootprints,
+      phaseShares: phaseSharesLog,
+      escalationEveryN: eN,
+      escalationPct: eP * 100,
+      annualBase: base,
+      term,
+    }
+  };
+}
+
+// ── Phase Aggregation (v2: uses pre-computed land allocations) ──
+
+function computePhaseResults(assetSchedules, landResult, horizon) {
   const phaseNames = [...new Set(assetSchedules.map(a => (a.phase || "Unphased")))];
   const phaseResults = {};
 
@@ -48,11 +196,10 @@ function computePhaseResults(assetSchedules, landSchedule, horizon) {
       }
     });
 
-    // Land allocation by footprint
+    const pLand = landResult.phaseAllocations[pName] || new Array(horizon).fill(0);
     const totalFP = assetSchedules.reduce((s, a) => s + (a.footprint || 0), 0);
     const pFP = pa.reduce((s, a) => s + (a.footprint || 0), 0);
     const alloc = totalFP > 0 ? pFP / totalFP : phaseNames.length > 0 ? 1 / phaseNames.length : 0;
-    const pLand = landSchedule.map(l => l * alloc);
 
     const net = new Array(horizon).fill(0);
     for (let y = 0; y < horizon; y++) net[y] = inc[y] - pLand[y] - cap[y];
@@ -73,7 +220,7 @@ function computePhaseResults(assetSchedules, landSchedule, horizon) {
   return phaseResults;
 }
 
-// ── Consolidated ──
+// ── Consolidated (v2: adds payback + peak negative) ──
 
 function computeConsolidated(phaseResults, horizon) {
   const ci = new Array(horizon).fill(0);
@@ -88,6 +235,14 @@ function computeConsolidated(phaseResults, horizon) {
       cn[y] += pr.netCF[y];
     }
   });
+
+  let cumCF = 0, paybackYear = null, peakNegative = 0, peakNegativeYear = 0;
+  for (let y = 0; y < horizon; y++) {
+    cumCF += cn[y];
+    if (cumCF < peakNegative) { peakNegative = cumCF; peakNegativeYear = y; }
+    if (paybackYear === null && cumCF >= 0 && y > 0) { paybackYear = y; }
+  }
+
   return {
     income: ci, capex: cc, landRent: cl, netCF: cn,
     totalCapex: cc.reduce((a, b) => a + b, 0),
@@ -95,44 +250,55 @@ function computeConsolidated(phaseResults, horizon) {
     totalLandRent: cl.reduce((a, b) => a + b, 0),
     totalNetCF: cn.reduce((a, b) => a + b, 0),
     irr: calcIRR(cn),
-    npv10: calcNPV(cn, 0.10),
-    npv12: calcNPV(cn, 0.12),
-    npv14: calcNPV(cn, 0.14),
+    npv10: calcNPV(cn, 0.10), npv12: calcNPV(cn, 0.12), npv14: calcNPV(cn, 0.14),
+    paybackYear, peakNegative, peakNegativeYear,
   };
 }
 
-// ── Full Unlevered Cash Flow (combines everything) ──
-// This is the modular equivalent of computeProjectCashFlows in App.jsx
+// ── Validation ──
+
+function validateCashFlow(project, assetSchedules) {
+  const warnings = [];
+  const phases = project.phases || [];
+  (project.assets || []).forEach((asset, i) => {
+    const assetPhase = phases.find(ph => ph.name === (asset.phase || 'Phase 1'));
+    if (assetPhase?.completionMonth && (asset.constrDuration || 12) > assetPhase.completionMonth) {
+      warnings.push({
+        type: 'duration_exceeds_phase',
+        severity: 'error',
+        asset: asset.name || `Asset ${i + 1}`,
+        phase: assetPhase.name,
+        assetDuration: asset.constrDuration,
+        phaseCompletion: assetPhase.completionMonth,
+        message: `"${asset.name || 'Asset ' + (i+1)}" build (${asset.constrDuration}mo) > ${assetPhase.name} opens (${assetPhase.completionMonth}mo)`,
+      });
+    }
+  });
+  return warnings;
+}
+
+// ── Full Unlevered Cash Flow (v2) ──
 
 function computeUnleveredCashFlows(project) {
   const horizon = project.horizon || 50;
   const startYear = project.startYear || 2026;
 
-  // Layer B: Asset schedules
   const assetSchedules = computeAssetSchedules(project);
-
-  // Layer C: Land rent
-  const landSchedule = computeLandSchedule(project, horizon);
-
-  // Layer C: Phase aggregation
-  const phaseResults = computePhaseResults(assetSchedules, landSchedule, horizon);
-
-  // Layer C: Consolidated
+  const warnings = validateCashFlow(project, assetSchedules);
+  const landResult = computeLandSchedule(project, horizon, assetSchedules);
+  const phaseResults = computePhaseResults(assetSchedules, landResult, horizon);
   const consolidated = computeConsolidated(phaseResults, horizon);
 
   return {
-    assetSchedules,
-    phaseResults,
-    landSchedule: landSchedule,
-    startYear,
-    horizon,
-    consolidated,
+    assetSchedules, phaseResults,
+    landSchedule: landResult.schedule,
+    landRentMeta: landResult.meta,
+    startYear, horizon, consolidated, warnings,
   };
 }
 
 module.exports = {
-  computeLandSchedule,
-  computePhaseResults,
-  computeConsolidated,
-  computeUnleveredCashFlows,
+  computeLandSchedule, getPhaseCompletionYears, getPhaseFootprints,
+  computePhaseResults, computeConsolidated,
+  computeUnleveredCashFlows, validateCashFlow,
 };

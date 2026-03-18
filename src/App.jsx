@@ -769,17 +769,67 @@ function computeProjectCashFlows(project) {
     return { ...asset, totalCapex, leasableArea, capexSchedule: capexSch, revenueSchedule: revSch, totalRevenue: revSch.reduce((a,b)=>a+b,0) };
   });
 
+  // ── Land Rent (v2: dynamic phase allocation) ──
   const landSch = new Array(horizon).fill(0);
-  if (project.landType === "lease") {
-    const base = project.landRentAnnual || 0;
+  const phaseAllocLand = {};
+  const phaseNames = [...new Set([
+    ...(project.assets || []).map(a => a.phase || "Unphased"),
+    ...(project.phases || []).map(p => p.name),
+  ])];
+  phaseNames.forEach(pn => { phaseAllocLand[pn] = new Array(horizon).fill(0); });
+  let landRentMeta = { rentStartYear: 0, graceEnd: 0, phaseCompletionYears: {}, phaseShares: {} };
+
+  if (project.landType === "lease" && (project.landRentAnnual || 0) > 0) {
+    const base = project.landRentAnnual;
     const gr = project.landRentGrace || 0;
     const eN = Math.max(1, project.landRentEscalationEveryN ?? 5);
     const eP = (project.landRentEscalation || 0) / 100;
     const term = Math.min(project.landRentTerm || 50, horizon);
-    for (let y = 0; y < term; y++) { if (y < gr) continue; landSch[y] = base * Math.pow(1 + eP, Math.floor((y-gr)/eN)); }
-  } else if (project.landType === "purchase") { landSch[0] = project.landPurchasePrice || 0; }
 
-  const phaseNames = [...new Set((project.assets || []).map(a => a.phase || "Unphased"))];
+    // Phase completion years
+    const phaseCompYrs = {};
+    (project.phases || []).forEach(ph => {
+      if (ph.completionMonth && ph.completionMonth > 0) {
+        phaseCompYrs[ph.name] = Math.ceil(ph.completionMonth / 12);
+      } else {
+        const pa = assetSchedules.filter(a => (a.phase || 'Phase 1') === ph.name);
+        let mx = 0;
+        pa.forEach(a => { const lc = a.capexSchedule.reduce((l,v,i) => v > 0 ? i+1 : l, 0); mx = Math.max(mx, lc); });
+        phaseCompYrs[ph.name] = mx;
+      }
+    });
+
+    // Phase footprints
+    const phaseFP = {};
+    phaseNames.forEach(pn => { phaseFP[pn] = assetSchedules.filter(a=>(a.phase||"Unphased")===pn).reduce((s,a)=>s+(a.footprint||0),0); });
+
+    const sortedPh = Object.entries(phaseCompYrs).sort((a,b) => a[1]-b[1]);
+    const phase1Year = sortedPh.length > 0 ? sortedPh[0][1] : 0;
+    const rentStartYear = Math.max(gr, phase1Year);
+
+    const phaseSharesLog = {};
+    for (let y = 0; y < term; y++) {
+      if (y < rentStartYear) continue;
+      let activeFP = 0;
+      const activeP = [];
+      sortedPh.forEach(([pn, cy]) => { if (y >= cy) { activeP.push(pn); activeFP += phaseFP[pn] || 0; } });
+      if (activeP.length === 0 || activeFP === 0) continue;
+      const yrsFromStart = y - rentStartYear;
+      const rent = base * Math.pow(1 + eP, Math.floor(yrsFromStart / eN));
+      landSch[y] = rent;
+      activeP.forEach(pn => {
+        const share = (phaseFP[pn] || 0) / activeFP;
+        phaseAllocLand[pn][y] = rent * share;
+        if (!phaseSharesLog[pn]) phaseSharesLog[pn] = { footprint: phaseFP[pn]||0, completionYear: phaseCompYrs[pn], firstRentYear: y, shareAtOpen: share };
+      });
+    }
+    landRentMeta = { rentStartYear, graceEnd: gr, phase1CompletionYear: phase1Year, phaseCompletionYears: phaseCompYrs, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
+  } else if (project.landType === "purchase") {
+    landSch[0] = project.landPurchasePrice || 0;
+    if (phaseNames.length > 0) phaseAllocLand[phaseNames[0]][0] = landSch[0];
+  }
+
+  // ── Phase Results (using pre-computed land allocations) ──
   const phaseResults = {};
   phaseNames.forEach(pName => {
     const pa = assetSchedules.filter(a => (a.phase || "Unphased") === pName);
@@ -788,7 +838,7 @@ function computeProjectCashFlows(project) {
     const totalFP = assetSchedules.reduce((s,a)=>s+(a.footprint||0),0);
     const pFP = pa.reduce((s,a)=>s+(a.footprint||0),0);
     const alloc = totalFP > 0 ? pFP/totalFP : phaseNames.length > 0 ? 1/phaseNames.length : 0;
-    const pLand = landSch.map(l => l * alloc);
+    const pLand = phaseAllocLand[pName] || new Array(horizon).fill(0);
     const net = new Array(horizon).fill(0);
     for (let y=0;y<horizon;y++) net[y] = inc[y] - pLand[y] - cap[y];
     phaseResults[pName] = {
@@ -802,13 +852,22 @@ function computeProjectCashFlows(project) {
   const ci = new Array(horizon).fill(0), cc = new Array(horizon).fill(0), cl = new Array(horizon).fill(0), cn = new Array(horizon).fill(0);
   Object.values(phaseResults).forEach(pr => { for (let y=0;y<horizon;y++) { ci[y]+=pr.income[y]; cc[y]+=pr.capex[y]; cl[y]+=pr.landRent[y]; cn[y]+=pr.netCF[y]; }});
 
+  // Payback + Peak Negative
+  let cumCF = 0, paybackYear = null, peakNegative = 0, peakNegativeYear = 0;
+  for (let y = 0; y < horizon; y++) {
+    cumCF += cn[y];
+    if (cumCF < peakNegative) { peakNegative = cumCF; peakNegativeYear = y; }
+    if (paybackYear === null && cumCF >= 0 && y > 0) { paybackYear = y; }
+  }
+
   return {
-    assetSchedules, phaseResults, landSchedule: landSch, startYear, horizon,
+    assetSchedules, phaseResults, landSchedule: landSch, landRentMeta, startYear, horizon,
     consolidated: {
       income:ci, capex:cc, landRent:cl, netCF:cn,
       totalCapex:cc.reduce((a,b)=>a+b,0), totalIncome:ci.reduce((a,b)=>a+b,0),
       totalLandRent:cl.reduce((a,b)=>a+b,0), totalNetCF:cn.reduce((a,b)=>a+b,0),
       irr:calcIRR(cn), npv10:calcNPV(cn,0.10), npv12:calcNPV(cn,0.12), npv14:calcNPV(cn,0.14),
+      paybackYear, peakNegative, peakNegativeYear,
     },
   };
 }
@@ -901,6 +960,18 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
   add("T1","GFA Total Match", Math.abs((project.assets||[]).reduce((s,a)=>s+(a.gfa||0),0) - as.reduce((s,a)=>s+(a.gfa||0),0)) < tol, "Program GFA = Computed GFA");
   add("T1","No Negative GFA", (project.assets||[]).every(a=>(a.gfa||0)>=0), "All GFA values ≥ 0");
   add("T1","Active Assets Have Duration", (project.assets||[]).every(a=>((a.gfa||0)===0&&(a.costPerSqm||0)===0)||(a.constrDuration||0)>0), "Assets with GFA have construction duration");
+  // Check: no asset's build duration exceeds its phase completionMonth
+  const durationOK = (project.assets||[]).every(a => {
+    const ph = (project.phases||[]).find(p => p.name === (a.phase || 'Phase 1'));
+    if (!ph?.completionMonth) return true; // legacy project, skip
+    return (a.constrDuration || 12) <= ph.completionMonth;
+  });
+  const badAssets = (project.assets||[]).filter(a => {
+    const ph = (project.phases||[]).find(p => p.name === (a.phase || 'Phase 1'));
+    return ph?.completionMonth && (a.constrDuration || 12) > ph.completionMonth;
+  }).map(a => `${a.name||'?'}(${a.constrDuration}mo>${(project.phases||[]).find(p=>p.name===(a.phase||'Phase 1'))?.completionMonth}mo)`);
+  add("T1","Build Duration ≤ Phase Opening", durationOK, "No asset takes longer than its phase to build",
+    badAssets.length > 0 ? badAssets.join(', ') : undefined);
   add("T1","No Negative Leasable", as.every(a=>(a.leasableArea||0)>=0), "All leasable areas ≥ 0");
   add("T1","CAPEX Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - c.totalCapex) < tol, "Sum asset CAPEX = consolidated",
     `Assets: ${fmt(as.reduce((s,a)=>s+a.totalCapex,0))} vs Cons: ${fmt(c.totalCapex)}`);
@@ -3189,7 +3260,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#0a2a1a":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
           </div>
           <div ref={sidebarRef} style={{flex:1,overflowY:"auto"}}>
-            <ControlPanel project={project} up={up} t={t} lang={lang} />
+            <ControlPanel project={project} up={up} t={t} lang={lang} results={results} />
           </div>
           <SidebarAdvisor project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} setActiveTab={setActiveTab} />
         </div>
@@ -3963,8 +4034,9 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
   );
 }
 
-function ControlPanel({ project, up, t, lang }) {
+function ControlPanel({ project, up, t, lang, results }) {
   if (!project) return null;
+  const [showLandRentDetail, setShowLandRentDetail] = useState(false);
 
   const cur = project.currency || "SAR";
   const ar = lang==="ar";
@@ -4005,6 +4077,51 @@ Land rent grace years during construction"><SidebarInput type="number" value={pr
           <Fld label={t.leaseTerm} tip="مدة عقد حق الانتفاع بالسنوات. عادة 25-50 سنة
 Leasehold contract term in years. Typically 25-50 years"><SidebarInput type="number" value={project.landRentTerm} onChange={v=>up({landRentTerm:v})} /></Fld>
         </div>
+        {/* Land Rent Allocation Details */}
+        {results?.landRentMeta?.rentStartYear != null && (() => {
+          const m = results.landRentMeta;
+          return <>
+            <button onClick={()=>setShowLandRentDetail(!showLandRentDetail)} style={{fontSize:10,color:"#2563eb",background:"#eef2ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"4px 10px",cursor:"pointer",width:"100%",textAlign:"start",fontFamily:"inherit",marginTop:4}}>
+              {showLandRentDetail?"▼":"▶"} {ar?"تفاصيل توزيع الإيجار":"Land Rent Allocation Details"}
+            </button>
+            {showLandRentDetail && <div style={{background:"#f8faff",border:"1px solid #e0e7ff",borderRadius:8,padding:10,marginTop:4,fontSize:10}}>
+              <div style={{marginBottom:6}}>
+                <span style={{fontWeight:600}}>{ar?"يبدأ الإيجار: السنة":"Rent starts: Year"} {m.rentStartYear + (results?.startYear||2026)}</span>
+                <span style={{color:"#6b7080",marginInlineStart:8}}>({ar?"بعد":"after"} {m.rentStartYear} {ar?"سنة":"yr"})</span>
+              </div>
+              <div style={{marginBottom:4,color:"#6b7080"}}>
+                {ar?"فترة السماح:":"Grace:"} {m.graceEnd} {ar?"سنة":"yr"} | {ar?"افتتاح المرحلة 1:":"Phase 1 opens:"} {ar?"السنة":"Yr"} {m.phase1CompletionYear}
+              </div>
+              <div style={{marginBottom:4,color:"#6b7080"}}>
+                {ar?"القاعدة:":"Rule:"} {ar?"يبدأ الإيجار عند MAX(انتهاء السماح, افتتاح المرحلة 1)":"Rent starts at MAX(grace end, Phase 1 opens)"}
+              </div>
+              {m.phaseShares && Object.keys(m.phaseShares).length > 0 && <>
+                <div style={{fontWeight:600,marginTop:8,marginBottom:4}}>{ar?"التوزيع بين المراحل:":"Phase allocation:"}</div>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+                  <thead><tr style={{borderBottom:"1px solid #e0e7ff"}}>
+                    <th style={{textAlign:"start",padding:"2px 4px"}}>{ar?"المرحلة":"Phase"}</th>
+                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"المساحة":"Area"}</th>
+                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"الافتتاح":"Opens"}</th>
+                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"بداية الإيجار":"Rent from"}</th>
+                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"الحصة":"Share"}</th>
+                  </tr></thead>
+                  <tbody>
+                    {Object.entries(m.phaseShares).map(([pn, ps]) => <tr key={pn} style={{borderBottom:"1px solid #f0f1f5"}}>
+                      <td style={{padding:"2px 4px",fontWeight:500}}>{pn}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right"}}>{(ps.footprint||0).toLocaleString()}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right"}}>{ar?"السنة":"Yr"} {ps.completionYear}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right"}}>{ar?"السنة":"Yr"} {ps.firstRentYear}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600}}>{(ps.shareAtOpen*100).toFixed(0)}%</td>
+                    </tr>)}
+                  </tbody>
+                </table>
+                <div style={{marginTop:6,color:"#6b7080",fontStyle:"italic"}}>
+                  {ar?"الحصة تتغير عند افتتاح كل مرحلة جديدة حسب نسبة المساحة":"Share changes as each new phase opens, based on footprint ratio"}
+                </div>
+              </>}
+            </div>}
+          </>;
+        })()}
       </>}
       {project.landType==="purchase"&&<Fld label={t.purchasePrice} tip="سعر شراء الأرض بالريال. يُضاف كـ CAPEX أرض في السنة الأولى
 Land purchase price in SAR. Added as land CAPEX in year one"><SidebarInput type="number" value={project.landPurchasePrice} onChange={v=>up({landPurchasePrice:v})} /></Fld>}
@@ -5053,16 +5170,25 @@ function CashFlowView({ project, results, t, incentivesResult }) {
     </tr>;
   };
 
+  const ar = t.dashboard === "لوحة التحكم";
+
   return (<div>
+    {/* Disclaimer */}
+    <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"6px 12px",marginBottom:12,fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:6}}>
+      <span style={{fontSize:14}}>⚠</span>
+      {ar ? "هذه المؤشرات قبل احتساب طريقة التمويل وآلية التخارج - ستتغير بعد تحديد التمويل" : "Pre-financing & pre-exit metrics — will change after financing mode and exit strategy are set"}
+    </div>
     {/* NPV/IRR Summary */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))",gap:10,marginBottom:16}}>
       {[
-        {label:"Unlevered IRR",value:c.irr!==null?fmtPct(c.irr*100):"N/A",color:c.irr>0.12?"#16a34a":"#f59e0b"},
+        {label:ar?"IRR المشروع (قبل التمويل)":"Unlevered IRR",value:c.irr!==null?fmtPct(c.irr*100):"N/A",color:c.irr>0.12?"#16a34a":"#f59e0b"},
         {label:"NPV @10%",value:fmtM(c.npv10),color:c.npv10>0?"#2563eb":"#ef4444"},
         {label:"NPV @12%",value:fmtM(c.npv12),color:c.npv12>0?"#2563eb":"#ef4444"},
         {label:"NPV @14%",value:fmtM(c.npv14),color:c.npv14>0?"#2563eb":"#ef4444"},
-        {label:t.dashboard==="لوحة التحكم"?"إجمالي التكاليف":"Total CAPEX",value:fmtM(c.totalCapex),color:"#ef4444"},
-        {label:t.dashboard==="لوحة التحكم"?"إجمالي الإيرادات":"Total Income",value:fmtM(c.totalIncome),color:"#16a34a"},
+        {label:ar?"إجمالي التكاليف":"Total CAPEX",value:fmtM(c.totalCapex),color:"#ef4444"},
+        {label:ar?"إجمالي الإيرادات":"Total Income",value:fmtM(c.totalIncome),color:"#16a34a"},
+        {label:ar?"فترة الاسترداد":"Payback Period",value:c.paybackYear!=null?(c.paybackYear+(ar?" سنة":" yr")):"—",color:c.paybackYear&&c.paybackYear<=10?"#16a34a":c.paybackYear?"#f59e0b":"#9ca3af"},
+        {label:ar?"أقصى سحب سلبي":"Peak Negative CF",value:fmtM(c.peakNegative||0),color:"#ef4444"},
       ].map((k,i) => <div key={i} style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"8px 12px"}}>
         <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{k.label}</div>
         <div style={{fontSize:16,fontWeight:700,color:k.color}}>{k.value}</div>

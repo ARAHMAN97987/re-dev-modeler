@@ -14,7 +14,7 @@
 
 const { defaultProject, getScenarioMults, validateInputs } = require('../src/engine/inputs.cjs');
 const { computeAssetCapex, computeAssetSchedules, calcHotelEBITDA, calcMarinaEBITDA, defaultHotelPL, defaultMarinaPL } = require('../src/engine/assets.cjs');
-const { computeLandSchedule, computePhaseResults, computeConsolidated, computeUnleveredCashFlows } = require('../src/engine/cashflow.cjs');
+const { computeLandSchedule, getPhaseCompletionYears, getPhaseFootprints, computePhaseResults, computeConsolidated, computeUnleveredCashFlows, validateCashFlow } = require('../src/engine/cashflow.cjs');
 const { calcIRR, calcNPV } = require('../src/engine/calcUtils.cjs');
 const { oracleNPV, oracleIRR, oracleCapex, oracleCapexSchedule, oracleLeaseRevenue, oracleLandRent, arrClose, near, TOL } = require('./helpers/oracles.cjs');
 
@@ -51,6 +51,10 @@ function zanProject() {
   p.contingencyPct = 5;
   p.rentEscalation = 0.75;
   p.activeScenario = "Base Case";
+  p.phases = [
+    { name: 'Phase 1', completionMonth: 36 },
+    { name: 'Phase 2', completionMonth: 108 },
+  ];
   p.assets = [
     { id: 'a1', name: 'Retail Mall', category: 'Retail', phase: 'Phase 1', gfa: 45000, footprint: 15000, costPerSqm: 4500, efficiency: 80, leaseRate: 800, revType: 'Lease', stabilizedOcc: 85, rampUpYears: 3, constrDuration: 24, constrStart: 1 },
     { id: 'a2', name: 'Office Tower', category: 'Office', phase: 'Phase 1', gfa: 30000, footprint: 7500, costPerSqm: 5000, efficiency: 85, leaseRate: 900, revType: 'Lease', stabilizedOcc: 80, rampUpYears: 4, constrDuration: 30, constrStart: 1 },
@@ -76,6 +80,7 @@ function simpleProject() {
   p.contingencyPct = 5;
   p.rentEscalation = 1;
   p.activeScenario = "Base Case";
+  p.phases = [{ name: 'Phase 1', completionMonth: 12 }];
   p.assets = [
     { id: 's1', name: 'Shop', phase: 'Phase 1', gfa: 10000, footprint: 5000, costPerSqm: 3000, efficiency: 80, leaseRate: 500, revType: 'Lease', stabilizedOcc: 85, rampUpYears: 3, constrDuration: 12, constrStart: 1 },
   ];
@@ -230,16 +235,18 @@ test('T2.8 Lease revenue matches oracle', () => {
 
 test('T2.9 Sale revenue: pre-sale + absorption', () => {
   const p = zanProject();
-  // Asset a5 is Sale type
+  // Asset a5 is Sale type, Phase 1 completionMonth=36 (3yr), dur=18mo (2yr)
+  // cStart = ceil(36/12) - ceil(18/12) = 3 - 2 = 1
+  // CAPEX years 1-2, pre-sale at year 2, absorption years 3-6
   const scheds = computeAssetSchedules(p);
   const villa = scheds.find(s => s.name === 'Residential Villas');
   assert(villa, 'Villa asset found');
-  // Pre-sale in last construction year (constrStart=1, dur=18mo=2yr → year 1)
-  assert(villa.revenueSchedule[1] > 0, 'Pre-sale revenue in last constr year');
-  // Post-constr absorption over 4 years (years 2-5)
-  assert(villa.revenueSchedule[2] > 0, 'Absorption year 1');
-  assert(villa.revenueSchedule[5] > 0, 'Absorption year 4');
-  assert(villa.revenueSchedule[6] === 0, 'No revenue after absorption');
+  const lastConstrYr = villa.capexSchedule.reduce((last, v, i) => v > 0 ? i : last, -1);
+  assert(villa.revenueSchedule[lastConstrYr] > 0, `Pre-sale revenue in last constr year (yr ${lastConstrYr})`);
+  const revStart = lastConstrYr + 1;
+  assert(villa.revenueSchedule[revStart] > 0, `Absorption starts yr ${revStart}`);
+  assert(villa.revenueSchedule[revStart + 3] > 0, 'Absorption year 4');
+  assert(villa.revenueSchedule[revStart + 4] === 0, 'No revenue after absorption');
 });
 
 test('T2.10 Operating revenue (hotel) with ramp-up', () => {
@@ -322,7 +329,9 @@ console.log('\n═══ T3: Layer C — Unlevered Cash Flow ═══');
 
 test('T3.1 Land rent schedule (lease) matches oracle', () => {
   const p = simpleProject();
-  const landSch = computeLandSchedule(p, p.horizon);
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
   const oracle = oracleLandRent(p.landRentAnnual, p.landRentGrace, p.landRentEscalationEveryN, p.landRentEscalation, p.landRentTerm, p.horizon);
   const check = arrClose(landSch, oracle, 0.01);
   assert(check.ok, check.msg);
@@ -330,7 +339,9 @@ test('T3.1 Land rent schedule (lease) matches oracle', () => {
 
 test('T3.2 Land rent grace period respected', () => {
   const p = simpleProject();
-  const landSch = computeLandSchedule(p, p.horizon);
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
   assert(landSch[0] === 0, 'Year 0 grace');
   assert(landSch[1] === 0, 'Year 1 grace');
   assert(landSch[2] > 0, 'Year 2 starts rent');
@@ -339,7 +350,9 @@ test('T3.2 Land rent grace period respected', () => {
 
 test('T3.3 Land rent escalation every N years', () => {
   const p = simpleProject();
-  const landSch = computeLandSchedule(p, p.horizon);
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
   // Grace=2, EveryN=5: escalation at year 7 (5 years after grace ends)
   assert(near(landSch[2], 1000000, 0.01), 'Base rent at grace end');
   assert(near(landSch[6], 1000000, 0.01), 'Still base at year 6');
@@ -352,7 +365,9 @@ test('T3.4 Land purchase: lump sum in year 0', () => {
   p.landType = 'purchase';
   p.landPurchasePrice = 50000000;
   p.horizon = 10;
-  const landSch = computeLandSchedule(p, p.horizon);
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
   assert(landSch[0] === 50000000, 'Year 0 = purchase price');
   assert(landSch[1] === 0, 'Year 1 = 0');
 });
@@ -360,8 +375,10 @@ test('T3.4 Land purchase: lump sum in year 0', () => {
 test('T3.5 Phase results: single phase', () => {
   const p = simpleProject();
   const scheds = computeAssetSchedules(p);
-  const landSch = computeLandSchedule(p, p.horizon);
-  const phases = computePhaseResults(scheds, landSch, p.horizon);
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
+  const phases = computePhaseResults(scheds, landResult, p.horizon);
   const phaseNames = Object.keys(phases);
   assert(phaseNames.length === 1, `Expected 1 phase, got ${phaseNames.length}`);
   assert(phaseNames[0] === 'Phase 1', 'Phase name');
@@ -371,8 +388,10 @@ test('T3.5 Phase results: single phase', () => {
 test('T3.6 Phase results: multi-phase land allocation by footprint', () => {
   const p = zanProject();
   const scheds = computeAssetSchedules(p);
-  const landSch = computeLandSchedule(p, p.horizon);
-  const phases = computePhaseResults(scheds, landSch, p.horizon);
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
+  const phases = computePhaseResults(scheds, landResult, p.horizon);
   const p1 = phases['Phase 1'];
   const p2 = phases['Phase 2'];
   assert(p1 && p2, 'Both phases exist');
@@ -386,8 +405,10 @@ test('T3.6 Phase results: multi-phase land allocation by footprint', () => {
 test('T3.7 Consolidated = sum of phases', () => {
   const p = zanProject();
   const scheds = computeAssetSchedules(p);
-  const landSch = computeLandSchedule(p, p.horizon);
-  const phases = computePhaseResults(scheds, landSch, p.horizon);
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
+  const phases = computePhaseResults(scheds, landResult, p.horizon);
   const consolidated = computeConsolidated(phases, p.horizon);
   const phaseTotalCapex = Object.values(phases).reduce((s, ph) => s + ph.totalCapex, 0);
   assert(near(consolidated.totalCapex, phaseTotalCapex, 1), `Consolidated CAPEX: ${consolidated.totalCapex} vs sum ${phaseTotalCapex}`);

@@ -233,19 +233,22 @@ const wExp2 = computeWaterfall({...JAZAN, feeTreatment:"expense"}, r, f, i);
 t("T6", "FIX8: Capital MOIC < Expense MOIC", wCap.lpMOIC < wExp2.lpMOIC,
   `Cap: ${wCap.lpMOIC.toFixed(2)}x, Exp: ${wExp2.lpMOIC.toFixed(2)}x`);
 
-// FIX#7: Land rebate starts at construction start
+// FIX#7: Land rent v2 — rent starts at MAX(grace, phase1 completion), not during construction
 const pLR = {...JAZAN, landRentGrace: 0, assets: JAZAN.assets.map(a => ({...a, constrStart: 3})),
   incentives:{capexGrant:{enabled:false}, financeSupport:{enabled:false}, landRentRebate:{enabled:true, constrRebatePct:100, constrRebateYears:2, operRebatePct:0, operRebateYears:0}, feeRebates:{enabled:false}}};
 const rLR = computeProjectCashFlows(pLR);
 const iLR = computeIncentives(pLR, rLR);
 const constrStartLR = rLR.consolidated.capex.findIndex(v => v > 0);
-// Rebate should NOT apply at Y0 if construction starts later
-if (constrStartLR > 0) {
+// v2: rent starts at phase1 completion (post-construction), so no rent during construction = no rebate
+const firstRentYr = rLR.landSchedule.findIndex(v => v > 0);
+if (constrStartLR > 0 && firstRentYr > constrStartLR) {
+  // New behavior: no rent during construction → no rebate during construction
   t("T6", "FIX7: No rebate before construction", iLR.landRentSavingSchedule[0] === 0, `Y0 saving: ${iLR.landRentSavingSchedule[0]}`);
-  t("T6", "FIX7: Rebate at construction start", iLR.landRentSavingSchedule[constrStartLR] > 0, `Y${constrStartLR} saving: ${iLR.landRentSavingSchedule[constrStartLR]}`);
+  t("T6", "FIX7: No rebate during constr (v2: no rent yet)", iLR.landRentSavingSchedule[constrStartLR] === 0,
+    `Y${constrStartLR} saving: ${iLR.landRentSavingSchedule[constrStartLR]} (rent starts Y${firstRentYr})`);
 } else {
   t("T6", "FIX7: No rebate before construction", true, "Construction starts Y0");
-  t("T6", "FIX7: Rebate at construction start", true, "Construction starts Y0");
+  t("T6", "FIX7: No rebate during constr (v2: no rent yet)", true, "Construction starts Y0");
 }
 
 // Land-heavy LTV with capitalized land
