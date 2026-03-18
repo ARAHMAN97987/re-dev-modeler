@@ -3311,7 +3311,6 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:90}} />}
         <div style={{width:isMobile?"85vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?360:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.3)"}:{})}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
-            <button onClick={goBack} style={{...btnS,background:"#1e2230",color:"#8b90a0",padding:"5px 10px",fontSize:11}}>{t.back}</button>
             <div style={{flex:1}}><div style={{fontSize:10,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>ZAN Financial Modeler</div></div>
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#0a2a1a":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
           </div>
@@ -3324,6 +3323,8 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{height:48,minHeight:48,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 12px",gap:8}}>
+          {/* Back to projects */}
+          <button onClick={goBack} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,flexShrink:0,border:"1px solid #e5e7ec"}}>{t.back}</button>
           {(() => {
             // Compute sidebar warning badge
             let _advWarn = 0;
@@ -3357,6 +3358,8 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           </div>
           {project?._shared && <span style={{fontSize:9,padding:"3px 10px",borderRadius:4,fontWeight:600,background:project._permission==="view"?"#fef3c7":"#dbeafe",color:project._permission==="view"?"#92400e":"#1d4ed8",flexShrink:0}}>{project._permission==="view"?(lang==="ar"?"🔒 قراءة":"🔒 View"):(lang==="ar"?"✏️ مشارك":"✏️ Edit")}</span>}
           {!isMobile && <StatusBadge status={project?.status} onChange={s=>up({status:s})} />}
+          {/* Undo */}
+          <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" style={{...btnS,background:"transparent",color:undoStack.current.length>0?"#6b7080":"#d0d4dc",padding:"5px 8px",fontSize:14,flexShrink:0,border:"none",cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>
           {/* Primary: Present */}
           <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"#16a34a":"#f0f4ff",color:presentMode?"#fff":"#2563eb",padding:"5px 10px",fontSize:10,fontWeight:600,border:presentMode?"none":"1px solid #bfdbfe",flexShrink:0}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>
           {/* Dropdown menu */}
@@ -3368,10 +3371,6 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
                 {menuOpen && <>
                   <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:998}} />
                   <div style={{position:"absolute",top:"100%",marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:200,padding:"6px 0",...(lang==="ar"?{left:0}:{right:0})}}>
-                    {/* Undo */}
-                    <button onClick={()=>{undo();setMenuOpen(false);}} disabled={undoStack.current.length===0} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",cursor:undoStack.current.length>0?"pointer":"default",fontFamily:"inherit",textAlign:"start"}}>
-                      <span style={{fontSize:14}}>↩</span> {lang==="ar"?"تراجع":"Undo"} <span style={{marginLeft:"auto",fontSize:10,color:"#9ca3af"}}>Ctrl+Z</span>
-                    </button>
                     {/* AI */}
                     <button onClick={()=>{setAiOpen(true);setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>🤖</span> {lang==="ar"?"مساعد AI":"AI Assistant"}
