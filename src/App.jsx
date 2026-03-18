@@ -369,6 +369,120 @@ const HOTEL_PRESETS = {
 
 const MARINA_PRESET = { berths: 80, avgLength: 14, unitPrice: 2063, stabOcc: 90, fuelPct: 25, otherRevPct: 10, berthingOpexPct: 58, fuelOpexPct: 96, otherOpexPct: 30 };
 
+// ── Saudi Market Benchmarks (Sprint 1A) ──
+const BENCHMARKS = {
+  Retail:       { costPerSqm:[3000,5000], leaseRate:[1500,3000], efficiency:[75,85], rampUpYears:4, stabilizedOcc:90, constrDuration:24 },
+  "Hospitality":{ costPerSqm:[8000,16000], leaseRate:[0,0], efficiency:[0,0], rampUpYears:4, stabilizedOcc:70, constrDuration:36 },
+  "Hotel 4★":  { costPerSqm:[8000,12000], leaseRate:[0,0], efficiency:[0,0], rampUpYears:4, stabilizedOcc:70, constrDuration:36 },
+  "Hotel 5★":  { costPerSqm:[10000,16000], leaseRate:[0,0], efficiency:[0,0], rampUpYears:4, stabilizedOcc:65, constrDuration:42 },
+  Office:       { costPerSqm:[2500,4500], leaseRate:[800,1500], efficiency:[85,92], rampUpYears:2, stabilizedOcc:85, constrDuration:30 },
+  Residential:  { costPerSqm:[2000,3500], leaseRate:[500,1200], efficiency:[82,90], rampUpYears:2, stabilizedOcc:90, constrDuration:24 },
+  Marina:       { costPerSqm:[12000,20000], leaseRate:[0,0], efficiency:[0,0], rampUpYears:4, stabilizedOcc:90, constrDuration:12 },
+  Industrial:   { costPerSqm:[1500,2500], leaseRate:[200,500], efficiency:[90,95], rampUpYears:1, stabilizedOcc:85, constrDuration:18 },
+  Infrastructure:{ costPerSqm:[1000,3000], leaseRate:[0,0], efficiency:[0,0], rampUpYears:0, stabilizedOcc:100, constrDuration:18 },
+};
+function getBenchmark(category) {
+  if (!category) return null;
+  const cat = category.toLowerCase();
+  if (cat.includes("hotel") && cat.includes("5")) return BENCHMARKS["Hotel 5★"];
+  if (cat.includes("hotel") || cat.includes("hospitality") || cat.includes("resort")) return BENCHMARKS["Hotel 4★"];
+  if (cat.includes("retail") || cat.includes("mall") || cat.includes("commercial")) return BENCHMARKS.Retail;
+  if (cat.includes("office")) return BENCHMARKS.Office;
+  if (cat.includes("residential") || cat.includes("apartment") || cat.includes("villa")) return BENCHMARKS.Residential;
+  if (cat.includes("marina")) return BENCHMARKS.Marina;
+  if (cat.includes("industrial") || cat.includes("warehouse") || cat.includes("logistics")) return BENCHMARKS.Industrial;
+  if (cat.includes("infrastructure") || cat.includes("parking") || cat.includes("utilities")) return BENCHMARKS.Infrastructure;
+  return BENCHMARKS.Retail; // fallback
+}
+// Returns "green" | "yellow" | "red" and a tooltip string
+function benchmarkColor(field, value, category) {
+  const bm = getBenchmark(category);
+  if (!bm) return { color: null, tip: null };
+  const range = bm[field];
+  if (!range || !Array.isArray(range)) return { color: null, tip: null };
+  const [lo, hi] = range;
+  if (lo === 0 && hi === 0) return { color: null, tip: null }; // N/A for this category
+  if (value <= 0) return { color: null, tip: null };
+  const tip = `${lo.toLocaleString()} – ${hi.toLocaleString()}`;
+  if (value >= lo && value <= hi) return { color: "#16a34a", tip };
+  if (value > hi * 2 || value < lo * 0.5) return { color: "#ef4444", tip };
+  return { color: "#eab308", tip };
+}
+
+// ── Auto-Fill defaults per category (Sprint 1B) ──
+function getAutoFillDefaults(category) {
+  const bm = getBenchmark(category);
+  if (!bm) return {};
+  const mid = (arr) => Array.isArray(arr) ? Math.round((arr[0]+arr[1])/2) : 0;
+  const base = {
+    costPerSqm: mid(bm.costPerSqm),
+    efficiency: Array.isArray(bm.efficiency) ? Math.round((bm.efficiency[0]+bm.efficiency[1])/2) : 85,
+    rampUpYears: bm.rampUpYears || 3,
+    stabilizedOcc: bm.stabilizedOcc || 90,
+    constrDuration: bm.constrDuration || 24,
+  };
+  if (bm.leaseRate && bm.leaseRate[1] > 0) base.leaseRate = mid(bm.leaseRate);
+  const cat = (category||"").toLowerCase();
+  if (cat.includes("hotel") || cat.includes("hospitality") || cat.includes("resort")) {
+    base.revType = "Operating";
+    base.efficiency = 0;
+    base.leaseRate = 0;
+  } else if (cat.includes("marina")) {
+    base.revType = "Operating";
+    base.efficiency = 0;
+    base.leaseRate = 0;
+  } else {
+    base.revType = "Lease";
+  }
+  return base;
+}
+
+// ── Project Templates (Sprint 1C) ──
+const PROJECT_TEMPLATES = [
+  { id:"waterfront", icon:"🌊", en:"Waterfront Mixed-Use", ar:"واجهة بحرية متعددة الاستخدامات",
+    desc_en:"Mall, hotel, office, residential, marina, fuel station", desc_ar:"مول، فندق، مكاتب، سكني، مارينا، محطة وقود",
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0},{name:"Phase 2",startYearOffset:3,footprint:0}],
+    finMode:"fund", exitStrategy:"sale",
+    assets:[
+      {phase:"Phase 1",category:"Retail",name:"Marina Mall",code:"C1",gfa:31260,footprint:20840,plotArea:28947,revType:"Lease",efficiency:80,leaseRate:2100,escalation:0.75,rampUpYears:4,stabilizedOcc:100,costPerSqm:3900,constrStart:2,constrDuration:36,opEbitda:0},
+      {phase:"Phase 1",category:"Hospitality",name:"Hotel (4-Star)",code:"H1",gfa:16577,footprint:2072,plotArea:5133,revType:"Operating",efficiency:0,leaseRate:0,escalation:0.75,rampUpYears:4,stabilizedOcc:100,costPerSqm:8000,constrStart:2,constrDuration:36,opEbitda:13901057},
+      {phase:"Phase 2",category:"Office",name:"Office Block",code:"O1",gfa:16429,footprint:2710,plotArea:5497,revType:"Lease",efficiency:90,leaseRate:900,escalation:0.75,rampUpYears:2,stabilizedOcc:100,costPerSqm:2600,constrStart:3,constrDuration:36,opEbitda:0},
+      {phase:"Phase 2",category:"Residential",name:"Residential Tower",code:"R1",gfa:14000,footprint:2000,plotArea:4000,revType:"Lease",efficiency:85,leaseRate:800,escalation:0.75,rampUpYears:2,stabilizedOcc:92,costPerSqm:2800,constrStart:3,constrDuration:30,opEbitda:0},
+      {phase:"Phase 2",category:"Marina",name:"Marina Berths",code:"MAR",gfa:2400,footprint:0,plotArea:3000,revType:"Operating",efficiency:0,leaseRate:0,escalation:0.75,rampUpYears:4,stabilizedOcc:90,costPerSqm:16000,constrStart:4,constrDuration:12,opEbitda:1129331},
+      {phase:"Phase 1",category:"Retail",name:"Fuel Station",code:"F",gfa:3586,footprint:3586,plotArea:6920,revType:"Lease",efficiency:30,leaseRate:900,escalation:0.75,rampUpYears:4,stabilizedOcc:100,costPerSqm:1500,constrStart:2,constrDuration:12,opEbitda:0},
+    ]},
+  { id:"residential", icon:"🏘", en:"Residential Compound", ar:"مجمع سكني",
+    desc_en:"Tower, villas, amenities, parking", desc_ar:"برج، فلل، مرافق خدمية، مواقف",
+    landType:"purchase", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    finMode:"debt", exitStrategy:"hold",
+    assets:[
+      {phase:"Phase 1",category:"Residential",name:"Residential Tower",code:"T1",gfa:24000,footprint:3000,plotArea:5000,revType:"Lease",efficiency:85,leaseRate:900,escalation:1.0,rampUpYears:2,stabilizedOcc:92,costPerSqm:3000,constrStart:1,constrDuration:30,opEbitda:0},
+      {phase:"Phase 1",category:"Residential",name:"Villa Cluster",code:"V1",gfa:8000,footprint:4000,plotArea:10000,revType:"Lease",efficiency:90,leaseRate:700,escalation:1.0,rampUpYears:2,stabilizedOcc:88,costPerSqm:2500,constrStart:1,constrDuration:24,opEbitda:0},
+      {phase:"Phase 1",category:"Amenity",name:"Amenity Center",code:"AM",gfa:2000,footprint:1500,plotArea:3000,revType:"Lease",efficiency:50,leaseRate:400,escalation:0.5,rampUpYears:1,stabilizedOcc:80,costPerSqm:2200,constrStart:1,constrDuration:18,opEbitda:0},
+      {phase:"Phase 1",category:"Infrastructure",name:"Parking Structure",code:"PK",gfa:6000,footprint:3000,plotArea:3000,revType:"Lease",efficiency:0,leaseRate:0,escalation:0,rampUpYears:0,stabilizedOcc:100,costPerSqm:1800,constrStart:1,constrDuration:18,opEbitda:0},
+    ]},
+  { id:"commercial", icon:"🏢", en:"Commercial Center", ar:"مركز تجاري",
+    desc_en:"Retail, offices, parking", desc_ar:"محلات، مكاتب، مواقف",
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    finMode:"debt", exitStrategy:"sale",
+    assets:[
+      {phase:"Phase 1",category:"Retail",name:"Retail Mall",code:"RM",gfa:20000,footprint:10000,plotArea:15000,revType:"Lease",efficiency:80,leaseRate:2200,escalation:1.0,rampUpYears:3,stabilizedOcc:90,costPerSqm:4000,constrStart:1,constrDuration:30,opEbitda:0},
+      {phase:"Phase 1",category:"Office",name:"Office Tower",code:"OF",gfa:15000,footprint:2500,plotArea:4000,revType:"Lease",efficiency:88,leaseRate:1100,escalation:1.0,rampUpYears:2,stabilizedOcc:85,costPerSqm:3200,constrStart:1,constrDuration:30,opEbitda:0},
+      {phase:"Phase 1",category:"Infrastructure",name:"Parking Podium",code:"PK",gfa:8000,footprint:4000,plotArea:4000,revType:"Lease",efficiency:0,leaseRate:0,escalation:0,rampUpYears:0,stabilizedOcc:100,costPerSqm:1500,constrStart:1,constrDuration:18,opEbitda:0},
+    ]},
+  { id:"hotel", icon:"🏨", en:"Single Hotel", ar:"فندق منفرد",
+    desc_en:"Full hotel with operating P&L", desc_ar:"فندق واحد مع قائمة أرباح وخسائر تشغيلية كاملة",
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    finMode:"fund", exitStrategy:"sale",
+    assets:[
+      {phase:"Phase 1",category:"Hospitality",name:"5-Star Hotel",code:"H5",gfa:22000,footprint:5000,plotArea:12000,revType:"Operating",efficiency:0,leaseRate:0,escalation:0.75,rampUpYears:4,stabilizedOcc:100,costPerSqm:12000,constrStart:1,constrDuration:42,opEbitda:47630685},
+    ]},
+  { id:"blank", icon:"📄", en:"Blank Project", ar:"مشروع فارغ",
+    desc_en:"Start from scratch", desc_ar:"ابدأ من الصفر",
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    finMode:"self", exitStrategy:"hold", assets:[] },
+];
+
 const defaultHotelPL = () => ({ keys: 0, adr: 0, stabOcc: 70, daysYear: 365, roomsPct: 72, fbPct: 22, micePct: 4, otherPct: 2, roomExpPct: 20, fbExpPct: 60, miceExpPct: 58, otherExpPct: 50, undistPct: 29, fixedPct: 9 });
 const defaultMarinaPL = () => ({ berths: 0, avgLength: 14, unitPrice: 2063, stabOcc: 90, fuelPct: 25, otherRevPct: 10, berthingOpexPct: 58, fuelOpexPct: 96, otherOpexPct: 30 });
 
@@ -2870,6 +2984,10 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
   const [aiOpen, setAiOpen] = useState(false);
+  // ── Presentation Mode (Sprint 2) ──
+  const [presentMode, setPresentMode] = useState(false);
+  const [audienceView, setAudienceView] = useState("bank"); // bank | investor
+  const [liveSliders, setLiveSliders] = useState({ capex: 100, rent: 100, exitMult: 10 });
   const t = L[lang];
   const ar = lang === "ar";
   const autoSaveTimer = useRef(null);
@@ -2912,7 +3030,18 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
-  const createProject = async () => { const p = defaultProject(); await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); };
+  const createProject = async (templateId) => {
+    const p = defaultProject();
+    const tmpl = templateId ? PROJECT_TEMPLATES.find(t=>t.id===templateId) : null;
+    if (tmpl && tmpl.id !== "blank") {
+      p.landType = tmpl.landType;
+      p.finMode = tmpl.finMode;
+      p.exitStrategy = tmpl.exitStrategy;
+      p.phases = tmpl.phases.map(ph=>({...ph}));
+      p.assets = tmpl.assets.map(a=>({...a, id:crypto.randomUUID(), hotelPL:null, marinaPL:null}));
+    }
+    await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard");
+  };
   const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
   const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); }};
   const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} };
@@ -2996,7 +3125,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         [dir="rtl"] button { text-align: start; }
         [dir="rtl"] .cm-editor { direction: ltr; }
       `}</style>
-      {sidebarOpen && (
+      {sidebarOpen && !presentMode && (
         <div style={{width:340,minWidth:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
             <button onClick={goBack} style={{...btnS,background:"#1e2230",color:"#8b90a0",padding:"5px 10px",fontSize:11}}>{t.back}</button>
@@ -3015,6 +3144,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {project?._shared && <span style={{fontSize:10,padding:"4px 12px",borderRadius:4,fontWeight:600,background:project._permission==="view"?"#fef3c7":"#dbeafe",color:project._permission==="view"?"#92400e":"#1d4ed8"}}>{project._permission==="view"?(lang==="ar"?"🔒 للقراءة فقط":"🔒 View-only"):(lang==="ar"?"✏️ مشارك للتعديل":"✏️ Shared (Edit)")}</span>}
           <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
           <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 10px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩ Undo</button>
+          <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"#16a34a":"#f0f4ff",color:presentMode?"#fff":"#2563eb",padding:"5px 12px",fontSize:10,fontWeight:600,border:presentMode?"none":"1px solid #bfdbfe"}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>
           <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
           <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
           <select value={project?.activeScenario||"Base Case"} onChange={e=>up({activeScenario:e.target.value})} style={{padding:"4px 8px",fontSize:10,borderRadius:4,border:"1px solid #e5e7ec",background:project?.activeScenario!=="Base Case"?"#fef3c7":"#f8f9fb",color:project?.activeScenario!=="Base Case"?"#92400e":"#6b7080",fontFamily:"inherit",cursor:"pointer"}} title={lang==="ar"?"السيناريو النشط":"Active Scenario"}>
@@ -3025,15 +3155,13 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
           {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
-        {/* Health Status Bar */}
+        {/* Health Status Bar + Warnings (Sprint 1D) */}
         {results && (project.assets||[]).length > 0 && (() => {
           try {
           const c = results.consolidated;
           if (!c) return null;
           const _ir = incentivesResult;
           const _fin = financing;
-          const _hasInc = (_ir && _ir.totalIncentiveValue > 0) || (_ir && _ir.finSupportEstimate) || (_fin && _fin.interestSubsidyTotal > 0);
-          // Use levered IRR if financing exists (includes all incentives), otherwise adjusted unlevered
           const irr = _fin && _fin.mode !== "self" && _fin.leveredIRR !== null ? _fin.leveredIRR
             : (_ir && _ir.totalIncentiveValue > 0 && _ir.adjustedIRR !== null) ? _ir.adjustedIRR : c.irr;
           const npv = (_ir && _ir.totalIncentiveValue > 0) ? _ir.adjustedNPV10 : (c.npv10 || 0);
@@ -3053,21 +3181,55 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
             minDscr !== null && { label: "DSCR", value: minDscr.toFixed(2)+"x", ok: dscrOk },
             { label: ar?"صافي القيمة":"NPV", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv > 0 ? "+":"—", ok: npvOk },
           ].filter(Boolean);
-          return (
-            <div style={{background:cfg.bg,borderBottom:"1px solid "+cfg.border,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11}}>
+          // Build clickable warnings
+          const warnings = [];
+          if (minDscr !== null && minDscr < 1.2) warnings.push({ icon:"⚠", text: ar?`DSCR أقل من 1.2x (${minDscr.toFixed(2)}x)`:`DSCR < 1.2x (${minDscr.toFixed(2)}x)`, tab:"financing" });
+          if (financing && (project.maxLtvPct||0) > 80) warnings.push({ icon:"⚠", text: ar?`LTV > 80% (${project.maxLtvPct}%)`:`LTV > 80% (${project.maxLtvPct}%)`, tab:"financing" });
+          if (npv < 0) warnings.push({ icon:"✗", text: ar?"صافي القيمة الحالية سالب":"Negative NPV", tab:"dashboard" });
+          if (irr !== null && financing && financing.rate && irr < financing.rate) warnings.push({ icon:"⚠", text: ar?"IRR أقل من تكلفة الدين":"IRR < Cost of Debt", tab:"dashboard" });
+          if (project.debtAllowed && (project.loanTenor||7) <= (project.debtGrace||3)) warnings.push({ icon:"✗", text: ar?"مدة القرض ≤ فترة السماح":"Tenor ≤ Grace Period", tab:"financing" });
+          // Check for out-of-benchmark assets
+          const bmWarnings = (project.assets||[]).filter(a => {
+            const bc = benchmarkColor("costPerSqm", a.costPerSqm, a.category);
+            return bc.color === "#ef4444";
+          });
+          if (bmWarnings.length > 0) warnings.push({ icon:"⚠", text: ar?`${bmWarnings.length} أصل خارج نطاق التكلفة`:`${bmWarnings.length} asset(s) outside cost benchmark`, tab:"assets" });
+          // Exit during ramp-up
+          if (financing && project.exitStrategy !== "hold") {
+            const exitYr = financing.exitYear ? financing.exitYear - (project.startYear||2026) : 0;
+            const maxRamp = Math.max(0,...(project.assets||[]).map(a => ((a.constrStart||1)-1)+Math.ceil((a.constrDuration||12)/12)+(a.rampUpYears||3)));
+            if (exitYr > 0 && exitYr < maxRamp) warnings.push({ icon:"⚠", text: ar?"التخارج خلال فترة النمو":"Exit during ramp-up period", tab:"waterfall" });
+          }
+          return (<>
+            <div style={{background:cfg.bg,borderBottom:"1px solid "+cfg.border,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11,flexWrap:"wrap"}}>
               <span style={{fontWeight:700,color:cfg.color,fontSize:13}}>{cfg.icon}</span>
               <span style={{fontWeight:600,color:cfg.color}}>{cfg.label}</span>
               <div style={{width:1,height:16,background:cfg.border}} />
-              {metrics.map((m,i)=><span key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+              {metrics.map((m,mi)=><span key={mi} style={{display:"flex",alignItems:"center",gap:4}}>
                 <span style={{width:7,height:7,borderRadius:4,background:m.ok>=2?"#16a34a":m.ok===1?"#eab308":"#ef4444"}} />
                 <span style={{color:"#6b7080"}}>{m.label}:</span>
                 <span style={{fontWeight:600,color:m.ok>=2?"#15803d":m.ok===1?"#92400e":"#991b1b"}}>{m.value}</span>
               </span>)}
+              {warnings.length > 0 && <>
+                <div style={{width:1,height:16,background:cfg.border}} />
+                {warnings.map((w,wi)=><button key={wi} onClick={()=>setActiveTab(w.tab)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:3,fontSize:10,color:"#991b1b",fontFamily:"inherit",padding:"2px 6px",borderRadius:4,transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#fef2f2"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                  <span>{w.icon}</span><span style={{textDecoration:"underline",textUnderlineOffset:2}}>{w.text}</span>
+                </button>)}
+              </>}
             </div>
-          );
+          </>);
           } catch(e) { console.error("Health bar render error:", e); return null; }
         })()}
         <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
+          {presentMode ? (
+            /* Presentation Mode Tab Bar */
+            <div style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",width:"100%"}}>
+              <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",letterSpacing:0.5}}>{ar?"وضع العرض":"Presentation Mode"}</span>
+              <div style={{width:1,height:20,background:"#e5e7ec"}} />
+              <button onClick={()=>setAudienceView("bank")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="bank"?"#1e40af":"#f0f1f5",color:audienceView==="bank"?"#fff":"#6b7080",borderRadius:20,border:"none"}}>{ar?"🏦 عرض البنك":"🏦 Bank View"}</button>
+              <button onClick={()=>setAudienceView("investor")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="investor"?"#7c3aed":"#f0f1f5",color:audienceView==="investor"?"#fff":"#6b7080",borderRadius:20,border:"none"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
+            </div>
+          ) : (<>
           {/* Progress steps */}
           <div style={{display:"flex",alignItems:"center",gap:2,padding:"8px 12px 8px 0",borderInlineEnd:"1px solid #f0f1f5",marginInlineEnd:4}}>
             {[
@@ -3107,8 +3269,12 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
               </span>;
             });
           })()}
+          </>)}
         </div>
-        <div style={{flex:1,overflow:"auto",padding:18}}>
+        <div style={{flex:1,overflow:"auto",padding:presentMode?24:18}}>
+          {presentMode ? (
+            <PresentationView project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} audienceView={audienceView} liveSliders={liveSliders} setLiveSliders={setLiveSliders} checks={checks} />
+          ) : (<>
           {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} />}
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
           {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} t={t} up={up} lang={lang} />}
@@ -3118,6 +3284,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {activeTab==="incentives"&&<IncentivesView project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />}
           {activeTab==="cashflow"&&<CashFlowView project={project} results={results} t={t} incentivesResult={incentivesResult} />}
           {activeTab==="checks"&&<ChecksView checks={checks} t={t} lang={lang} />}
+          </>)}
         </div>
       </div>
       {project && project._setupDone === false && (
@@ -3361,7 +3528,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
         )}
 
         <div style={{display:"flex",gap:12,marginBottom:32}}>
-          <button onClick={onCreate} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
+          <button onClick={()=>onCreate()} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
           <div style={{flex:1}} />
           <div style={{fontSize:12,color:"#6b7080",alignSelf:"center"}}>{sorted.length} {t.projects}</div>
         </div>
@@ -3370,21 +3537,15 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <div style={{fontSize:48,marginBottom:16,opacity:0.6}}>🏗</div>
             <div style={{fontSize:20,fontWeight:700,color:"#fff",marginBottom:8}}>{lang==="ar"?"ابدأ مشروعك الأول":"Start Your First Project"}</div>
             <div style={{fontSize:13,color:"#6b7080",marginBottom:32,maxWidth:400,margin:"0 auto 32px"}}>{lang==="ar"?"أنشئ مشروع جديد أو ابدأ من أحد القوالب الجاهزة":"Create a new project or start from a ready-made template"}</div>
-            <button onClick={onCreate} style={{...btnPrim,padding:"12px 28px",fontSize:14,marginBottom:32}}>{lang==="ar"?"+ مشروع جديد فارغ":"+ New Blank Project"}</button>
-            <div style={{fontSize:11,color:"#4b5060",textTransform:"uppercase",letterSpacing:1,marginBottom:16,fontWeight:600}}>{lang==="ar"?"أو ابدأ من قالب":"Or start from a template"}</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12,maxWidth:600,margin:"0 auto"}}>
-              {[
-                {icon:"🏠",name:lang==="ar"?"سكني":"Residential",desc:lang==="ar"?"أبراج سكنية / فلل":"Towers / Villas"},
-                {icon:"🛍",name:lang==="ar"?"تجاري":"Commercial",desc:lang==="ar"?"مولات / محلات":"Malls / Retail"},
-                {icon:"🏨",name:lang==="ar"?"فندقي":"Hospitality",desc:lang==="ar"?"فنادق / منتجعات":"Hotels / Resorts"},
-                {icon:"🏢",name:lang==="ar"?"مختلط":"Mixed-Use",desc:lang==="ar"?"سكني + تجاري + مكاتب":"Residential + Retail + Office"},
-              ].map((tmpl,i)=>(
-                <div key={i} onClick={onCreate} style={{background:"#161a24",border:"1px solid #1e2230",borderRadius:10,padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center"}}
+            <div style={{fontSize:11,color:"#4b5060",textTransform:"uppercase",letterSpacing:1,marginBottom:16,fontWeight:600}}>{lang==="ar"?"اختر قالب":"Choose a Template"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12,maxWidth:700,margin:"0 auto"}}>
+              {PROJECT_TEMPLATES.map((tmpl)=>(
+                <div key={tmpl.id} onClick={()=>onCreate(tmpl.id)} style={{background:"#161a24",border:"1px solid #1e2230",borderRadius:10,padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center"}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.background="#1a1f2e";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.background="#161a24";}}>
                   <div style={{fontSize:28,marginBottom:8}}>{tmpl.icon}</div>
-                  <div style={{fontSize:13,fontWeight:600,color:"#fff",marginBottom:4}}>{tmpl.name}</div>
-                  <div style={{fontSize:10,color:"#6b7080"}}>{tmpl.desc}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#fff",marginBottom:4}}>{ar?tmpl.ar:tmpl.en}</div>
+                  <div style={{fontSize:10,color:"#6b7080"}}>{ar?tmpl.desc_ar:tmpl.desc_en}</div>
                 </div>
               ))}
             </div>
@@ -3697,6 +3858,22 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
     setTimeout(() => setEditIdx(assets.length), 50);
   };
 
+  // Auto-fill defaults when category changes (Sprint 1B)
+  const handleCategoryChange = (i, newCat) => {
+    const a = assets[i];
+    const defs = getAutoFillDefaults(newCat);
+    // Only auto-fill fields that are at zero/default — don't overwrite user-entered values
+    const updates = { category: newCat };
+    if ((a.costPerSqm || 0) === 0 && defs.costPerSqm) updates.costPerSqm = defs.costPerSqm;
+    if ((a.efficiency || 0) === 0 && defs.efficiency != null) updates.efficiency = defs.efficiency;
+    if ((a.leaseRate || 0) === 0 && defs.leaseRate) updates.leaseRate = defs.leaseRate;
+    if (defs.revType && a.revType === "Lease" && defs.revType !== "Lease") updates.revType = defs.revType;
+    if ((a.rampUpYears || 3) === 3 && defs.rampUpYears) updates.rampUpYears = defs.rampUpYears;
+    if ((a.stabilizedOcc || 100) === 100 && defs.stabilizedOcc && defs.stabilizedOcc !== 100) updates.stabilizedOcc = defs.stabilizedOcc;
+    if ((a.constrDuration || 12) === 12 && defs.constrDuration) updates.constrDuration = defs.constrDuration;
+    upAsset(i, updates);
+  };
+
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -3911,7 +4088,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
               <F2 label={ar?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></F2>
-              <F2 label={ar?"التصنيف":"Category"}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>upAsset(i,{category:v})} /></F2>
+              <F2 label={ar?"التصنيف":"Category"}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></F2>
               <F2 label={ar?"نوع الإيراد":"Rev Type"}><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
@@ -3983,16 +4160,16 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                     <tr key={a.id||i} style={{background:bg}}>
                       <td style={{...tdSt,color:"#9ca3af",fontWeight:500,width:30}}>{i+1}</td>
                       <td style={tdSt}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={tdSt}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>upAsset(i,{category:v})} /></td>
+                      <td style={tdSt}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
                       <td style={tdSt}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder="Name" /></td>
                       <td style={tdSt}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:45}} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
                       <td style={tdSt}><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} /></td>
+                      <td style={tdSt}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,color:"#6b7080",textAlign:"right",fontSize:11}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
-                      <td style={{...tdSt,background:isOp?"#f5f5f5":undefined}}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1}} /></td>
+                      <td style={{...tdSt,background:isOp?"#f5f5f5":undefined}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
                       <td style={tdSt}>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
                           {isOp ? (
@@ -4008,7 +4185,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                       <td style={tdSt}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} /></td>
+                      <td style={tdSt}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={tdSt}><EditableCell type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
@@ -5806,6 +5983,337 @@ function ChecksView({ checks, t, lang }) {
       );
     })}
   </div>);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRESENTATION MODE (Sprint 2)
+// ═══════════════════════════════════════════════════════════════
+function PresentationView({ project, results, financing, waterfall, incentivesResult, lang, audienceView, liveSliders, setLiveSliders, checks }) {
+  const ar = lang === "ar";
+  if (!results || !project) return <div style={{textAlign:"center",padding:60,color:"#6b7080",fontSize:14}}>{ar?"لا توجد بيانات للعرض":"No data to present"}</div>;
+
+  const c = results.consolidated;
+  const f = financing;
+  const w = waterfall;
+  const ir = incentivesResult;
+
+  // Apply live sliders to create adjusted metrics
+  const capexMult = (liveSliders.capex || 100) / 100;
+  const rentMult = (liveSliders.rent || 100) / 100;
+  const exitMult = liveSliders.exitMult || 10;
+  // Rough-adjust consolidated numbers by sliders
+  const adjCapex = (c.totalCapex || 0) * capexMult;
+  const adjIncome = (c.totalIncome || 0) * rentMult;
+  // Use actual IRR when sliders are at defaults, otherwise rough-adjust
+  const slidersDefault = liveSliders.capex === 100 && liveSliders.rent === 100;
+  const irr = slidersDefault ? (f && f.mode !== "self" && f.leveredIRR !== null ? f.leveredIRR : (ir && ir.adjustedIRR !== null ? ir.adjustedIRR : c.irr)) : c.irr;
+  const npv = slidersDefault ? (ir && ir.totalIncentiveValue > 0 ? ir.adjustedNPV10 : c.npv10) : c.npv10;
+  const dscrVals = f && f.dscr ? f.dscr.filter(d => d !== null) : [];
+  const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
+  const avgDscr = dscrVals.length > 0 ? dscrVals.reduce((a, b) => a + b, 0) / dscrVals.length : null;
+
+  // Health badge
+  const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
+  const dscrOk = minDscr === null ? -1 : minDscr > 1.4 ? 2 : minDscr > 1.25 ? 1 : 0;
+  const npvOk = npv > 0 ? 2 : 0;
+  const score = irrOk + (dscrOk >= 0 ? dscrOk : 0) + npvOk;
+  const maxScore = 4 + (dscrOk >= 0 ? 2 : 0);
+  const healthLabel = score >= maxScore * 0.7 ? "Strong" : score >= maxScore * 0.4 ? "Good" : score >= maxScore * 0.15 ? "Moderate" : "Weak";
+  const healthColor = score >= maxScore * 0.7 ? "#16a34a" : score >= maxScore * 0.4 ? "#2563eb" : score >= maxScore * 0.15 ? "#eab308" : "#ef4444";
+  const healthLabelAr = { Strong: "قوي", Good: "جيد", Moderate: "متوسط", Weak: "ضعيف" }[healthLabel];
+
+  // One-liner
+  const paybackYr = c.netCF ? c.netCF.reduce((acc, v, i) => { acc.cum += v; if (acc.yr === null && acc.cum > 0) acc.yr = i + 1; return acc; }, { cum: 0, yr: null }).yr : null;
+
+  const KPI = ({ label, value, sub, color }) => (
+    <div className="hero-kpi" style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"20px 22px",minWidth:140,flex:1,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+      <div style={{fontSize:11,color:"#6b7080",fontWeight:500,marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>{label}</div>
+      <div style={{fontSize:26,fontWeight:700,color:color||"#1a1d23",lineHeight:1.1,fontVariantNumeric:"tabular-nums"}}>{value}</div>
+      {sub && <div style={{fontSize:10,color:"#9ca3af",marginTop:4}}>{sub}</div>}
+    </div>
+  );
+
+  const Section = ({ title, children, color }) => (
+    <div style={{marginBottom:24}}>
+      <div style={{fontSize:14,fontWeight:700,color:color||"#1a1d23",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:4,height:18,borderRadius:2,background:color||"#2563eb"}} />{title}
+      </div>
+      {children}
+    </div>
+  );
+
+  return (
+    <div style={{maxWidth:1100,margin:"0 auto",paddingBottom:120}}>
+      {/* ── Executive Summary Card (Sprint 2D) ── */}
+      <div style={{background:"linear-gradient(135deg,#0f1117 0%,#1a1d2e 100%)",borderRadius:16,padding:"28px 32px",marginBottom:24,color:"#fff",position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,right:0,width:200,height:200,background:"radial-gradient(circle,rgba(95,191,191,0.08) 0%,transparent 70%)",pointerEvents:"none"}} />
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
+          <div>
+            <div style={{fontSize:10,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:6}}>ZAN Financial Modeler</div>
+            <div style={{fontSize:24,fontWeight:700,letterSpacing:-0.5}}>{project.name || "Untitled"}</div>
+            {project.location && <div style={{fontSize:12,color:"#8b90a0",marginTop:4}}>{project.location}</div>}
+          </div>
+          <div style={{padding:"6px 16px",borderRadius:20,background:healthColor+"20",border:`1px solid ${healthColor}40`,display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:8,height:8,borderRadius:4,background:healthColor}} />
+            <span style={{fontSize:12,fontWeight:700,color:healthColor}}>{ar ? healthLabelAr : healthLabel}</span>
+          </div>
+        </div>
+        <div style={{fontSize:13,color:"#8b90a0",lineHeight:1.6,marginBottom:16}}>
+          {project.currency || "SAR"} {fmtM(adjCapex)} {ar?"مشروع تطوير":"development"} | {irr !== null ? (irr*100).toFixed(1)+"% IRR" : "—"} | {paybackYr ? paybackYr+"yr payback" : "—"} | {minDscr !== null ? minDscr.toFixed(1)+"x DSCR" : "—"}
+        </div>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          <KPI label={ar?"إجمالي التكاليف":"Total CAPEX"} value={fmtM(adjCapex)} color="#fff" />
+          <KPI label="IRR" value={irr !== null ? (irr*100).toFixed(1)+"%" : "—"} color={irrOk>=2?"#4ade80":irrOk===1?"#fbbf24":"#f87171"} />
+          <KPI label={ar?"صافي القيمة الحالية":"NPV @10%"} value={npv ? fmtM(npv) : "—"} color={npv>0?"#4ade80":"#f87171"} />
+          {minDscr !== null && <KPI label={ar?"أدنى DSCR":"Min DSCR"} value={minDscr.toFixed(2)+"x"} color={dscrOk>=2?"#4ade80":dscrOk===1?"#fbbf24":"#f87171"} />}
+          {w && <KPI label="LP MOIC" value={w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"} color="#fff" />}
+        </div>
+      </div>
+
+      {/* ── Bank View (Sprint 2B) ── */}
+      {audienceView === "bank" && (<>
+        <Section title={ar?"ملخص التمويل":"Financing Summary"} color="#1e40af">
+          {f ? (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:12}}>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"إجمالي الدين":"Total Debt"}</div>
+                <div style={{fontSize:20,fontWeight:700,color:"#1e40af"}}>{fmtM(f.totalDebt)}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>LTV: {f.totalProjectCost>0?((f.totalDebt/f.totalProjectCost)*100).toFixed(0):0}%</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"إجمالي حقوق الملكية":"Total Equity"}</div>
+                <div style={{fontSize:20,fontWeight:700,color:"#16a34a"}}>{fmtM(f.totalEquity)}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>GP: {fmtM(f.gpEquity)} | LP: {fmtM(f.lpEquity)}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"معدل التمويل":"Finance Rate"}</div>
+                <div style={{fontSize:20,fontWeight:700,color:"#1a1d23"}}>{(f.rate*100).toFixed(1)}%</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{ar?"المدة":"Tenor"}: {project.loanTenor||7}{ar?" سنة":"yr"} | {ar?"سماح":"Grace"}: {project.debtGrace||3}{ar?" سنة":"yr"}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"متوسط DSCR":"Avg DSCR"}</div>
+                <div style={{fontSize:20,fontWeight:700,color:dscrOk>=2?"#16a34a":dscrOk===1?"#eab308":"#ef4444"}}>{avgDscr ? avgDscr.toFixed(2)+"x" : "—"}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{ar?"أدنى":"Min"}: {minDscr ? minDscr.toFixed(2)+"x" : "—"}</div>
+              </div>
+            </div>
+          ) : <div style={{color:"#6b7080",fontSize:12}}>{ar?"لا يوجد تمويل مُعدّ":"No financing configured"}</div>}
+        </Section>
+
+        {/* DSCR Timeline */}
+        {f && dscrVals.length > 0 && (
+          <Section title={ar?"جدول DSCR":"DSCR Schedule"} color="#1e40af">
+            <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px",overflowX:"auto"}}>
+              <div style={{display:"flex",gap:4,alignItems:"flex-end",minHeight:120,paddingTop:8}}>
+                {f.dscr.slice(0, Math.min(results.horizon, 20)).map((d, y) => {
+                  if (d === null) return <div key={y} style={{flex:1,minWidth:24}} />;
+                  const h = Math.min(100, Math.max(8, d * 40));
+                  const clr = d >= 1.4 ? "#16a34a" : d >= 1.2 ? "#eab308" : "#ef4444";
+                  return (
+                    <div key={y} style={{flex:1,minWidth:24,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                      <span style={{fontSize:8,color:"#6b7080",fontWeight:600}}>{d.toFixed(1)}x</span>
+                      <div style={{width:"80%",height:h,background:clr,borderRadius:3,transition:"height 0.5s"}} />
+                      <span style={{fontSize:8,color:"#9ca3af"}}>{(project.startYear||2026)+y}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{borderTop:"2px solid #ef4444",marginTop:4,position:"relative"}}>
+                <span style={{position:"absolute",right:0,top:2,fontSize:8,color:"#ef4444",fontWeight:600}}>1.2x {ar?"حد أدنى":"min"}</span>
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {/* Sources & Uses */}
+        {f && (
+          <Section title={ar?"المصادر والاستخدامات":"Sources & Uses"} color="#1e40af">
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#1a1d23",marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>{ar?"المصادر":"Sources"}</div>
+                {[
+                  { label: ar?"دين بنكي":"Bank Debt", value: f.totalDebt, color: "#1e40af" },
+                  { label: ar?"حقوق ملكية GP":"GP Equity", value: f.gpEquity, color: "#16a34a" },
+                  { label: ar?"حقوق ملكية LP":"LP Equity", value: f.lpEquity, color: "#8b5cf6" },
+                ].filter(s => s.value > 0).map((s, i) => (
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #f0f1f5"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:2,background:s.color}} /><span style={{fontSize:12}}>{s.label}</span></div>
+                    <span style={{fontSize:12,fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{fmtM(s.value)}</span>
+                  </div>
+                ))}
+                <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontWeight:700,fontSize:13}}>
+                  <span>{ar?"الإجمالي":"Total"}</span><span>{fmtM(f.totalProjectCost||f.devCostInclLand)}</span>
+                </div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#1a1d23",marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>{ar?"الاستخدامات":"Uses"}</div>
+                {[
+                  { label: ar?"تكاليف البناء":"Construction CAPEX", value: c.totalCapex },
+                  { label: ar?"إيجار الأرض":"Land Cost/Rent", value: project.landType==="purchase" ? project.landPurchasePrice : 0 },
+                  { label: ar?"رسوم التمويل":"Financing Fees", value: (f.upfrontFee||0) },
+                ].filter(s => s.value > 0).map((s, i) => (
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #f0f1f5"}}>
+                    <span style={{fontSize:12}}>{s.label}</span>
+                    <span style={{fontSize:12,fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{fmtM(s.value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Section>
+        )}
+      </>)}
+
+      {/* ── Investor View (Sprint 2B) ── */}
+      {audienceView === "investor" && (<>
+        <Section title={ar?"عوائد المستثمرين":"Investor Returns"} color="#7c3aed">
+          {w ? (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>LP IRR</div>
+                <div style={{fontSize:24,fontWeight:700,color:"#7c3aed"}}>{w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—"}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>GP IRR</div>
+                <div style={{fontSize:24,fontWeight:700,color:"#16a34a"}}>{w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—"}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>LP MOIC</div>
+                <div style={{fontSize:24,fontWeight:700,color:"#7c3aed"}}>{w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{ar?"الاستثمار":"Invested"}: {fmtM(w.lpTotalInvested)} → {fmtM(w.lpTotalDist)}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>GP MOIC</div>
+                <div style={{fontSize:24,fontWeight:700,color:"#16a34a"}}>{w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—"}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{ar?"الاستثمار":"Invested"}: {fmtM(w.gpTotalInvested)} → {fmtM(w.gpTotalDist)}</div>
+              </div>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>DPI</div>
+                <div style={{fontSize:24,fontWeight:700,color:"#1a1d23"}}>{w.lpTotalInvested > 0 ? (w.lpTotalDist / w.lpTotalInvested).toFixed(2)+"x" : "—"}</div>
+              </div>
+            </div>
+          ) : <div style={{color:"#6b7080",fontSize:12}}>{ar?"الشلال غير مُعدّ — اختر صندوق استثماري":"Waterfall not configured - select Fund mode"}</div>}
+        </Section>
+
+        {/* Waterfall Visualization */}
+        {w && w.tier1 && (
+          <Section title={ar?"شلال التوزيعات":"Distribution Waterfall"} color="#7c3aed">
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:12}}>
+              {[
+                { label: ar?"رد رأس المال":"T1: Return of Capital", value: (w.tier1||[]).reduce((s,v)=>s+v,0), color: "#1e40af" },
+                { label: ar?"العائد التفضيلي":"T2: Pref Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" },
+                { label: ar?"تعويض المطور":"T3: GP Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "#16a34a" },
+                { label: ar?"تقسيم الأرباح":"T4: Profit Split", value: ((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)), color: "#f59e0b" },
+              ].map((tier, i) => (
+                <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px",borderTop:`3px solid ${tier.color}`}}>
+                  <div style={{fontSize:10,color:"#6b7080",marginBottom:4}}>{tier.label}</div>
+                  <div style={{fontSize:18,fontWeight:700,color:tier.color}}>{fmtM(tier.value)}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* GP Economics */}
+        {w && (
+          <Section title={ar?"اقتصاديات المطور (GP)":"GP Economics"} color="#16a34a">
+            <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
+                {[
+                  { label: ar?"رأس مال GP":"GP Equity", value: fmtM(w.gpTotalInvested) },
+                  { label: ar?"إجمالي توزيعات GP":"GP Distributions", value: fmtM(w.gpTotalDist) },
+                  { label: ar?"رسوم المطور":"Developer Fee", value: fmtM(w.developerFeeTotal||0) },
+                  { label: ar?"رسوم الإدارة":"Mgmt Fees", value: fmtM(w.mgmtFeeTotal||0) },
+                  { label: "GP IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—" },
+                  { label: "GP MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—" },
+                ].map((item, i) => (
+                  <div key={i}>
+                    <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{item.label}</div>
+                    <div style={{fontSize:14,fontWeight:600,color:"#1a1d23"}}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {/* Exit Analysis */}
+        {f && project.exitStrategy !== "hold" && (
+          <Section title={ar?"تحليل التخارج":"Exit Analysis"} color="#f59e0b">
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
+              {[
+                { label: ar?"سنة التخارج":"Exit Year", value: f.exitYear || "—" },
+                { label: ar?"قيمة التخارج":"Exit Value", value: f.exitProceeds ? fmtM(f.exitProceeds.reduce((s,v)=>s+v,0)) : "—" },
+                { label: ar?"مضاعف التخارج":"Exit Multiple", value: project.exitMultiple+"x" },
+                { label: ar?"تكاليف التخارج":"Exit Cost", value: project.exitCostPct+"%" },
+              ].map((item, i) => (
+                <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px"}}>
+                  <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{item.label}</div>
+                  <div style={{fontSize:16,fontWeight:700,color:"#1a1d23"}}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+      </>)}
+
+      {/* Asset Overview (shared between both views) */}
+      <Section title={ar?"نظرة عامة على الأصول":"Asset Overview"} color="#0f766e">
+        <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead>
+              <tr style={{background:"#f8f9fb"}}>
+                <th style={{...thSt,fontSize:11}}>{ar?"الأصل":"Asset"}</th>
+                <th style={{...thSt,fontSize:11}}>{ar?"المرحلة":"Phase"}</th>
+                <th style={{...thSt,fontSize:11}}>{ar?"التصنيف":"Category"}</th>
+                <th style={{...thSt,fontSize:11,textAlign:"right"}}>GFA</th>
+                <th style={{...thSt,fontSize:11,textAlign:"right"}}>CAPEX</th>
+                <th style={{...thSt,fontSize:11,textAlign:"right"}}>{ar?"الإيرادات":"Revenue"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.assetSchedules.map((a, i) => (
+                <tr key={i}>
+                  <td style={{...tdSt,fontSize:12,fontWeight:500}}>{a.name||"—"}</td>
+                  <td style={{...tdSt,fontSize:11,color:"#6b7080"}}>{a.phase}</td>
+                  <td style={{...tdSt,fontSize:11,color:"#6b7080"}}>{a.category}</td>
+                  <td style={{...tdN,fontSize:12}}>{fmt(a.gfa)}</td>
+                  <td style={{...tdN,fontSize:12,fontWeight:600}}>{fmtM(a.totalCapex * capexMult)}</td>
+                  <td style={{...tdN,fontSize:12,fontWeight:600,color:"#16a34a"}}>{fmtM(a.totalRevenue * rentMult)}</td>
+                </tr>
+              ))}
+              <tr style={{background:"#f8f9fb",fontWeight:700}}>
+                <td colSpan={4} style={{...tdSt,fontSize:12}}>{ar?"الإجمالي":"Total"}</td>
+                <td style={{...tdN,fontSize:12}}>{fmtM(adjCapex)}</td>
+                <td style={{...tdN,fontSize:12,color:"#16a34a"}}>{fmtM(adjIncome)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      {/* ── Live Scenario Sliders (Sprint 2C) ── */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(15,17,23,0.95)",backdropFilter:"blur(8px)",borderTop:"1px solid #282d3a",padding:"12px 24px",display:"flex",alignItems:"center",gap:24,justifyContent:"center",zIndex:9000}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>CAPEX</span>
+          <input type="range" min={80} max={120} value={liveSliders.capex} onChange={e=>setLiveSliders(s=>({...s,capex:+e.target.value}))} style={{width:120,accentColor:"#2563eb"}} />
+          <span style={{fontSize:11,color:"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.capex}%</span>
+        </div>
+        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>{ar?"الإيجار":"Rent"}</span>
+          <input type="range" min={80} max={120} value={liveSliders.rent} onChange={e=>setLiveSliders(s=>({...s,rent:+e.target.value}))} style={{width:120,accentColor:"#16a34a"}} />
+          <span style={{fontSize:11,color:"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.rent}%</span>
+        </div>
+        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>{ar?"المضاعف":"Exit ×"}</span>
+          <input type="range" min={6} max={15} step={0.5} value={liveSliders.exitMult} onChange={e=>setLiveSliders(s=>({...s,exitMult:+e.target.value}))} style={{width:120,accentColor:"#f59e0b"}} />
+          <span style={{fontSize:11,color:"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.exitMult}x</span>
+        </div>
+        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <button onClick={()=>setLiveSliders({capex:100,rent:100,exitMult:10})} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"6px 14px",fontSize:10,fontWeight:600,border:"1px solid #282d3a"}}>{ar?"إعادة تعيين":"Reset"}</button>
+      </div>
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
