@@ -3001,15 +3001,29 @@ const SidebarInput = memo(function SidebarInput({ value, onChange, type = "text"
 });
 
 // ═══════════════════════════════════════════════════════════════
+// MOBILE RESPONSIVE HOOK
+// ═══════════════════════════════════════════════════════════════
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < breakpoint : false);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 
 function ReDevModelerInner({ user, signOut, onSignIn }) {
+  const isMobile = useIsMobile();
   const [view, setView] = useState("dashboard");
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // default closed (mobile-friendly)
   const [activeTab, setActiveTab] = useState("dashboard");
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
@@ -3158,7 +3172,9 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         [dir="rtl"] .cm-editor { direction: ltr; }
       `}</style>
       {sidebarOpen && !presentMode && (
-        <div style={{width:340,minWidth:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <>
+        {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:90}} />}
+        <div style={{width:isMobile?"85vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?360:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.3)"}:{})}}>
           <div style={{padding:"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
             <button onClick={goBack} style={{...btnS,background:"#1e2230",color:"#8b90a0",padding:"5px 10px",fontSize:11}}>{t.back}</button>
             <div style={{flex:1}}><div style={{fontSize:10,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>ZAN Financial Modeler</div></div>
@@ -3169,6 +3185,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           </div>
           <SidebarAdvisor project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} setActiveTab={setActiveTab} />
         </div>
+        </>
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{height:48,minHeight:48,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 12px",gap:8}}>
@@ -3299,7 +3316,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
               prevGroup = tb.group;
               return <span key={tb.key} style={{display:"inline-flex",alignItems:"center"}}>
                 {showSep && <span style={{width:1,height:20,background:"#d1d5db",margin:"0 6px",flexShrink:0}} />}
-                <button onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 12px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
+                <button onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} style={{padding:isMobile?"10px 8px":"10px 12px",fontSize:isMobile?10:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
               </span>;
             });
           })()}
@@ -3462,6 +3479,7 @@ function FeaturesGrid({ lang }) {
 // ═══════════════════════════════════════════════════════════════
 function LandingPage({ onSignIn, lang, setLang }) {
   const ar = lang === "ar";
+  const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState("signin"); // signin | signup
@@ -3478,8 +3496,9 @@ function LandingPage({ onSignIn, lang, setLang }) {
   };
 
   return (
-    <div dir={ar?"rtl":"ltr"} style={{minHeight:"100vh",display:"flex",fontFamily:"'DM Sans',system-ui,sans-serif",background:"#0f1117"}}>
-      {/* ── Left/Right: Features ── */}
+    <div dir={ar?"rtl":"ltr"} style={{minHeight:"100vh",display:"flex",flexDirection:isMobile?"column":"row",fontFamily:"'DM Sans',system-ui,sans-serif",background:"#0f1117"}}>
+      {/* ── Features (hidden on mobile) ── */}
+      {!isMobile && (
       <div style={{flex:1,padding:"48px 40px",display:"flex",flexDirection:"column",justifyContent:"center",overflowY:"auto"}}>
         <div style={{maxWidth:600}}>
           <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Destination Development</div>
@@ -3493,10 +3512,12 @@ function LandingPage({ onSignIn, lang, setLang }) {
           </div>
         </div>
       </div>
-      {/* ── Right/Left: Auth ── */}
-      <div style={{width:420,minWidth:380,background:"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:"48px 36px",borderInlineStart:ar?"none":"1px solid #1e2230",borderInlineEnd:ar?"1px solid #1e2230":"none"}}>
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2,marginBottom:6}}>ZAN</div>
+      )}
+      {/* ── Auth ── */}
+      <div style={{width:isMobile?"100%":420,minWidth:isMobile?"auto":380,flex:isMobile?1:"none",background:isMobile?"#0f1117":"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:isMobile?"32px 24px":"48px 36px",borderInlineStart:isMobile?"none":(ar?"none":"1px solid #1e2230"),borderInlineEnd:isMobile?"none":(ar?"1px solid #1e2230":"none")}}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2,marginBottom:4}}>ZAN</div>
+          {isMobile && <div style={{fontSize:13,color:"#6b7080",marginBottom:4}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>}
           <div style={{fontSize:12,color:"#6b7080"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -3531,21 +3552,22 @@ function LandingPage({ onSignIn, lang, setLang }) {
 function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut }) {
   const [confirmDel, setConfirmDel] = useState(null);
   const [showFeatures, setShowFeatures] = useState(false);
+  const isMobile = useIsMobile();
   const sorted = [...index].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
   const ar = lang === "ar";
   return (
     <div style={{minHeight:"100vh",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif",color:"#d0d4dc"}}>
-      <div style={{maxWidth:900,margin:"0 auto",padding:"48px 24px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:32}}>
+      <div style={{maxWidth:900,margin:"0 auto",padding:isMobile?"20px 14px":"48px 24px"}}>
+        <div style={{display:"flex",flexDirection:isMobile?"column":"row",justifyContent:"space-between",alignItems:isMobile?"stretch":"flex-start",gap:isMobile?14:0,marginBottom:isMobile?20:32}}>
           <div>
             <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Destination Development</div>
-            <div style={{fontSize:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
-            <div style={{fontSize:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
+            <div style={{fontSize:isMobile?22:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
+            <div style={{fontSize:isMobile?11:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#1e2230",color:"#5fbfbf",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid #2e3340"}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
-            {user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
-            {signOut && <button onClick={signOut} style={{...btnS,background:"#2a0a0a",color:"#f87171",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
+            {!isMobile && user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
+            {signOut && <button onClick={signOut} style={{...btnSm,background:"#2a0a0a",color:"#f87171",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>
