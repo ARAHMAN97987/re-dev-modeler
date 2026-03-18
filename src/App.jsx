@@ -985,17 +985,16 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T0","Carry ≥ 100%", false, "Carry percentage must be < 100% when catch-up enabled");
   if ((project.maxLtvPct ?? 70) >= 100 && project.finMode === "fund")
     add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
-  const maxConstrEnd = Math.max(0, ...(project.assets||[]).map(a => ((a.constrStart||1)-1) + Math.ceil((a.constrDuration||12)/12)));
+  const maxConstrEnd = Math.max(0, ...as.map(a => a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0)));
   if (maxConstrEnd > (project.horizon||50))
     add("T0","Horizon < Construction", false, "Horizon doesn't cover full construction period", `Constr ends Y${maxConstrEnd}, Horizon Y${project.horizon||50}`);
 
   // H11: Exit during ramp-up warning
   if (f && project.exitStrategy !== "hold") {
     const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2025) : 0;
-    const maxRamp = Math.max(...(project.assets||[]).map(a => {
-      const cStart = (a.constrStart||1)-1;
-      const dur = Math.ceil((a.constrDuration||12)/12);
-      return cStart + dur + (a.rampUpYears??3);
+    const maxRamp = Math.max(...as.map(a => {
+      const lastCapex = a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0);
+      return lastCapex + (a.rampUpYears??3);
     }));
     if (exitYrIdx > 0 && exitYrIdx < maxRamp)
       add("T0","Exit Before Stabilization", true, "Exit year is during ramp-up. Valuation may use unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
@@ -3879,7 +3878,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
       warnings.push({ icon: "⏰", text: ar ? "مدة القرض ≤ فترة السماح" : "Tenor ≤ grace period", tab: "financing", sev: "error" });
     if (f && project.exitStrategy !== "hold") {
       const exitYr = f.exitYear ? f.exitYear - (project.startYear || 2026) : 0;
-      const maxRamp = Math.max(0, ...(project.assets || []).map(a => ((a.constrStart || 1) - 1) + Math.ceil((a.constrDuration || 12) / 12) + (a.rampUpYears || 3)));
+      const maxRamp = results?.assetSchedules ? Math.max(0, ...results.assetSchedules.map(a => a.capexSchedule.reduce((l,v,i)=>v>0?i+1:l,0) + (a.rampUpYears||3))) : 0;
       if (exitYr > 0 && exitYr < maxRamp) warnings.push({ icon: "🚪", text: ar ? "التخارج قبل استقرار الإشغال" : "Exit before stabilization", tab: "waterfall", sev: "warn" });
     }
   }
@@ -4476,7 +4475,8 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
     const income = comp?.totalRevenue || 0;
     const horizon = project.horizon || 50;
     const durYrs = Math.ceil((asset.constrDuration || 12) / 12);
-    const revYears = Math.max(1, horizon - (asset.constrStart || 1) + 1 - durYrs);
+    const revStart = comp?.revenueSchedule ? comp.revenueSchedule.findIndex(v => v > 0) : -1;
+    const revYears = revStart >= 0 ? Math.max(1, horizon - revStart) : Math.max(1, horizon - durYrs);
     const annualRev = revYears > 0 ? income / revYears : 0;
     const yoc = capex > 0 ? annualRev / capex : 0; // Yield on Cost
     const capexWeight = capex / totalProjectCapex; // CAPEX weight
