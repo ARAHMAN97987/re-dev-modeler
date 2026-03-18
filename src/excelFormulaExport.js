@@ -411,20 +411,33 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   // Waterfall — uses computed values from app engine for accuracy
   secr(ws5,fr,1,LC,"WATERFALL DISTRIBUTION"); fr++;
   if (hasWF) {
+    // Compute unpaid pref opening (shifted prefAccumulated)
+    const unpaidPrefOpen = new Array(h).fill(0);
+    for (let yi = 1; yi < h; yi++) unpaidPrefOpen[yi] = (waterfall.prefAccumulated && waterfall.prefAccumulated[yi-1]) || 0;
+    const totalPrefOwed = new Array(h).fill(0);
+    for (let yi = 0; yi < h; yi++) totalPrefOwed[yi] = ((waterfall.prefAccrual && waterfall.prefAccrual[yi]) || 0) + unpaidPrefOpen[yi];
+
     const wfRows = [
-      ["  Cash Available", waterfall.cashAvail],
-      ["  Equity Calls", waterfall.equityCalls.map(v => -Math.abs(v))],
-      ["  T1: Return of Capital", waterfall.tier1],
-      ["  T2: Preferred Return", waterfall.tier2],
-      ["  T3: GP Catch-Up", waterfall.tier3],
-      ["  T4: LP Profit Split", waterfall.tier4LP],
-      ["  T4: GP Profit Split", waterfall.tier4GP],
+      ["  Cash Available", waterfall.cashAvail, false],
+      ["  Equity Calls", waterfall.equityCalls.map(v => -Math.abs(v)), false],
+      ["  Unreturned Capital (Open)", waterfall.unreturnedOpen, false],
+      ["  T1: Return of Capital", waterfall.tier1, true],
+      ["  Unreturned Capital (Close)", waterfall.unreturnedClose, false],
+      ["  Pref Accrual (% × Unreturned)", waterfall.prefAccrual, false],
+      ["  Unpaid Pref (Opening)", unpaidPrefOpen, false],
+      ["  Total Pref Owed", totalPrefOwed, false],
+      ["  T2: Preferred Return Paid", waterfall.tier2, true],
+      ["  Unpaid Pref (Closing)", waterfall.prefAccumulated, false],
+      ["  Remaining after ROC + Pref", waterfall.cashAvail.map((ca,yi) => Math.max(0, ca - (waterfall.tier1[yi]||0) - (waterfall.tier2[yi]||0))), false],
+      ["  T3: GP Catch-Up", waterfall.tier3, true],
+      ["  T4: Profit Split", waterfall.cashAvail.map((ca,yi) => (waterfall.tier4LP[yi]||0) + (waterfall.tier4GP[yi]||0)), false],
+      ["  → LP Profit Split", waterfall.tier4LP, false],
+      ["  → GP / Carry", waterfall.tier4GP, false],
     ];
     const wfRowNums = {};
-    for (const [label, arr] of wfRows) {
-      const isBold = label.includes("T1:") || label.includes("T2:") || label.includes("T3:") || label.includes("T4:");
-      sc(ws5,fr,1,label,isBold?FBS:FNS);sc(ws5,fr,2,cur,FNS);
-      sc(ws5,fr,3,`=SUM(${YR(fr)})`,isBold?FBS:FNS,null,NUM);
+    for (const [label, arr, bold] of wfRows) {
+      sc(ws5,fr,1,label,bold?FBS:FNS);sc(ws5,fr,2,cur,FNS);
+      sc(ws5,fr,3,`=SUM(${YR(fr)})`,bold?FBS:FNS,null,NUM);
       for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),(arr && arr[yi]) || 0,FNS,null,NUM);
       wfRowNums[label.trim()] = fr;
       fr++;
@@ -546,8 +559,15 @@ export async function generateFormulaExcel(project, results, financing, waterfal
       pr++;
 
       secr(wsp, pr, 1, LC, "6  WATERFALL / الشلال"); pr++;
+      writeRow("Unreturned Capital (Open)", pw.unreturnedOpen);
       writeRow("T1: Return of Capital", pw.tier1, NUM, true);
-      writeRow("T2: Preferred Return", pw.tier2, NUM, true);
+      writeRow("Unreturned Capital (Close)", pw.unreturnedClose);
+      const pwUnpaidOpen = new Array(h).fill(0);
+      for (let yi = 1; yi < h; yi++) pwUnpaidOpen[yi] = (pw.prefAccumulated?.[yi-1]) || 0;
+      writeRow("Pref Accrual", pw.prefAccrual);
+      writeRow("Unpaid Pref (Opening)", pwUnpaidOpen);
+      writeRow("T2: Preferred Return Paid", pw.tier2, NUM, true);
+      writeRow("Unpaid Pref (Closing)", pw.prefAccumulated);
       writeRow("T3: GP Catch-Up", pw.tier3, NUM, true);
       writeRow("T4: LP Profit Split", pw.tier4LP);
       writeRow("T4: GP Profit Split", pw.tier4GP);
