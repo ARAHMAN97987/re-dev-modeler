@@ -836,45 +836,29 @@ function computeProjectCashFlows(project) {
 
     const phaseSharesLog = {};
 
-    // Compute when each phase STARTS construction (first CAPEX year)
-    const phaseConstrStart = {};
-    phaseNames.forEach(pn => {
-      const pa = assetSchedules.filter(a => (a.phase || 'Unphased') === pn);
-      let firstCap = horizon;
-      pa.forEach(a => { const fc = a.capexSchedule.findIndex(v => v > 0); if (fc >= 0 && fc < firstCap) firstCap = fc; });
-      phaseConstrStart[pn] = firstCap < horizon ? firstCap : (phaseCompYrs[pn] || horizon);
-    });
-
     for (let y = 0; y < term; y++) {
       if (y < rentStartYear) continue;
       const yrsFromStart = y - rentStartYear;
       const rent = base * Math.pow(1 + eP, Math.floor(yrsFromStart / eN));
       landSch[y] = rent;
 
-      // Which phases have STARTED construction by year y?
-      let activeFP = 0;
-      const activeP = [];
-      phaseNames.forEach(pn => {
-        if (y >= (phaseConstrStart[pn] ?? horizon)) {
-          activeP.push(pn);
-          activeFP += phaseFP[pn] || 0;
-        }
-      });
-
-      if (activeP.length > 0 && activeFP > 0) {
-        // Allocate to phases that have started construction, by footprint
-        activeP.forEach(pn => {
-          const share = (phaseFP[pn] || 0) / activeFP;
+      // Allocate to ALL phases by footprint proportion (land is leased as whole)
+      if (totalFootprint > 0) {
+        phaseNames.forEach(pn => {
+          const share = (phaseFP[pn] || 0) / totalFootprint;
           phaseAllocLand[pn][y] = rent * share;
-          if (!phaseSharesLog[pn]) phaseSharesLog[pn] = { footprint: phaseFP[pn]||0, constrStart: phaseConstrStart[pn], completionYear: phaseCompYrs[pn], firstRentYear: y, shareAtEntry: share };
+          if (!phaseSharesLog[pn]) phaseSharesLog[pn] = { footprint: phaseFP[pn]||0, completionYear: phaseCompYrs[pn], share, firstRentYear: y };
         });
       } else if (phaseNames.length > 0) {
-        // No phase started yet — assign to first phase (it'll start soonest)
-        const firstPhase = phaseNames.sort((a,b) => (phaseConstrStart[a]??999) - (phaseConstrStart[b]??999))[0];
-        phaseAllocLand[firstPhase][y] = rent;
+        // No footprint data — split equally
+        const share = 1 / phaseNames.length;
+        phaseNames.forEach(pn => {
+          phaseAllocLand[pn][y] = rent * share;
+          if (!phaseSharesLog[pn]) phaseSharesLog[pn] = { footprint: 0, completionYear: phaseCompYrs[pn], share, firstRentYear: y };
+        });
       }
     }
-    landRentMeta = { rentStartYear, graceEndIdx, leaseStartAbsolute, phase1CompletionYear: phase1Year, firstIncomeYear, startRule, phaseCompletionYears: phaseCompYrs, phaseConstrStart, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
+    landRentMeta = { rentStartYear, graceEndIdx, leaseStartAbsolute, phase1CompletionYear: phase1Year, firstIncomeYear, startRule, phaseCompletionYears: phaseCompYrs, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
   } else if (project.landType === "purchase") {
     // Purchase price goes to CAPEX (year 0), NOT land rent
     // landSch stays zero — purchase is capital expenditure, not ongoing rent
@@ -4165,22 +4149,20 @@ Annual escalation rate for land rent"><SidebarInput type="number" value={project
                   <thead><tr style={{borderBottom:"1px solid #e0e7ff"}}>
                     <th style={{textAlign:"start",padding:"2px 4px"}}>{ar?"المرحلة":"Phase"}</th>
                     <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"المساحة":"Area"}</th>
-                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"بداية البناء":"Builds"}</th>
-                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"بداية الإيجار":"Rent from"}</th>
                     <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"الحصة":"Share"}</th>
+                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"بداية الإيجار":"Rent from"}</th>
                   </tr></thead>
                   <tbody>
                     {Object.entries(m.phaseShares).map(([pn, ps]) => <tr key={pn} style={{borderBottom:"1px solid #f0f1f5"}}>
                       <td style={{padding:"2px 4px",fontWeight:500}}>{pn}</td>
                       <td style={{padding:"2px 4px",textAlign:"right"}}>{(ps.footprint||0).toLocaleString()}</td>
-                      <td style={{padding:"2px 4px",textAlign:"right"}}>{ar?"السنة":"Yr"} {ps.constrStart ?? ps.completionYear}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600}}>{((ps.share ?? ps.shareAtEntry ?? ps.shareAtOpen)*100).toFixed(0)}%</td>
                       <td style={{padding:"2px 4px",textAlign:"right"}}>{ar?"السنة":"Yr"} {ps.firstRentYear}</td>
-                      <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600}}>{((ps.shareAtEntry ?? ps.shareAtOpen)*100).toFixed(0)}%</td>
                     </tr>)}
                   </tbody>
                 </table>
                 <div style={{marginTop:6,color:"#6b7080",fontStyle:"italic"}}>
-                  {ar?"المرحلة تدخل في الإيجار عند بداية البناء، وتتغير الحصص حسب المساحة":"Phase enters rent when construction starts. Shares change by footprint ratio"}
+                  {ar?"كل المراحل تتحمل الإيجار بنسبة مساحتها من الأرض":"All phases share rent by their land area proportion"}
                 </div>
               </>}
             </div>}

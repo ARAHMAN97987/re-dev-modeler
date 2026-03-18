@@ -142,16 +142,7 @@ function computeLandSchedule(project, horizon, assetSchedules) {
 
   const totalFootprint = Object.values(phaseFootprints).reduce((s,v) => s+v, 0);
   const phaseSharesLog = {};
-
-  // Compute when each phase STARTS construction (first CAPEX year)
-  const phaseConstrStart = {};
   const phNames = [...new Set(assetSchedules.map(a => a.phase || 'Unphased'))];
-  phNames.forEach(pName => {
-    const pa = assetSchedules.filter(a => (a.phase || 'Unphased') === pName);
-    let firstCap = horizon;
-    pa.forEach(a => { const fc = a.capexSchedule.findIndex(v => v > 0); if (fc >= 0 && fc < firstCap) firstCap = fc; });
-    phaseConstrStart[pName] = firstCap < horizon ? firstCap : (phaseCompletionYears[pName] || horizon);
-  });
 
   for (let y = 0; y < term; y++) {
     if (y < rentStartYear) continue;
@@ -160,28 +151,23 @@ function computeLandSchedule(project, horizon, assetSchedules) {
     const rentThisYear = base * Math.pow(1 + eP, Math.floor(yearsFromRentStart / eN));
     totalSch[y] = rentThisYear;
 
-    // Which phases have STARTED construction by year y?
-    let activeFootprint = 0;
-    const activePhases = [];
-    phNames.forEach(pName => {
-      if (y >= (phaseConstrStart[pName] ?? horizon)) {
-        activePhases.push(pName);
-        activeFootprint += phaseFootprints[pName] || 0;
-      }
-    });
-
-    if (activePhases.length > 0 && activeFootprint > 0) {
-      activePhases.forEach(pName => {
-        const share = (phaseFootprints[pName] || 0) / activeFootprint;
+    // Allocate to ALL phases by footprint proportion (land is leased as whole)
+    if (totalFootprint > 0) {
+      phNames.forEach(pName => {
+        const share = (phaseFootprints[pName] || 0) / totalFootprint;
         phaseAllocations[pName][y] = rentThisYear * share;
         if (!phaseSharesLog[pName]) {
-          phaseSharesLog[pName] = { footprint: phaseFootprints[pName] || 0, constrStart: phaseConstrStart[pName], completionYear: phaseCompletionYears[pName], firstRentYear: y, shareAtEntry: share };
+          phaseSharesLog[pName] = { footprint: phaseFootprints[pName] || 0, completionYear: phaseCompletionYears[pName], share, firstRentYear: y };
         }
       });
     } else if (phNames.length > 0) {
-      // No phase started yet — assign to first phase
-      const firstPhase = phNames.sort((a,b) => (phaseConstrStart[a]??999) - (phaseConstrStart[b]||999))[0];
-      phaseAllocations[firstPhase][y] = rentThisYear;
+      const share = 1 / phNames.length;
+      phNames.forEach(pName => {
+        phaseAllocations[pName][y] = rentThisYear * share;
+        if (!phaseSharesLog[pName]) {
+          phaseSharesLog[pName] = { footprint: 0, completionYear: phaseCompletionYears[pName], share, firstRentYear: y };
+        }
+      });
     }
   }
 
@@ -197,7 +183,6 @@ function computeLandSchedule(project, horizon, assetSchedules) {
       firstIncomeYear,
       startRule,
       phaseCompletionYears,
-      phaseConstrStart,
       phaseFootprints,
       phaseShares: phaseSharesLog,
       escalationEveryN: eN,
