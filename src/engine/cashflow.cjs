@@ -116,7 +116,12 @@ function computeLandSchedule(project, horizon, assetSchedules) {
 
   const phase1CompletionYear = sortedPhases.length > 0 ? sortedPhases[0][1] : 0;
 
-  // First income year (when any asset starts generating revenue)
+  // Lease contract start (absolute year). 0 = same as project start.
+  const startYear = project.startYear || 2026;
+  const leaseStartAbsolute = (project.landLeaseStartYear || 0) > 0 ? project.landLeaseStartYear : startYear;
+  const graceEndIdx = Math.max(0, (leaseStartAbsolute + grace) - startYear);
+
+  // First income year
   let firstIncomeYear = horizon;
   assetSchedules.forEach(a => {
     const fy = a.revenueSchedule.findIndex(v => v > 0);
@@ -124,55 +129,50 @@ function computeLandSchedule(project, horizon, assetSchedules) {
   });
   if (firstIncomeYear >= horizon) firstIncomeYear = phase1CompletionYear;
 
-  // Land rent start rule: auto | grace | income
   const startRule = project.landRentStartRule || "auto";
   const graceEnd = grace;
   let rentStartYear;
   if (startRule === "grace") {
-    rentStartYear = graceEnd;
+    rentStartYear = graceEndIdx;
   } else if (startRule === "income") {
     rentStartYear = firstIncomeYear;
   } else {
-    // auto: whichever comes first (MIN)
-    rentStartYear = Math.min(graceEnd, firstIncomeYear);
+    rentStartYear = Math.min(graceEndIdx, firstIncomeYear);
   }
 
+  const totalFootprint = Object.values(phaseFootprints).reduce((s,v) => s+v, 0);
   const phaseSharesLog = {};
 
   for (let y = 0; y < term; y++) {
     if (y < rentStartYear) continue;
 
-    // Which phases are open at year y?
+    const yearsFromRentStart = y - rentStartYear;
+    const rentThisYear = base * Math.pow(1 + eP, Math.floor(yearsFromRentStart / eN));
+    totalSch[y] = rentThisYear;
+
+    // Which phases are open?
     let activeFootprint = 0;
     const activePhases = [];
     sortedPhases.forEach(([pName, completionYr]) => {
-      if (y >= completionYr) {
-        activePhases.push(pName);
-        activeFootprint += phaseFootprints[pName] || 0;
-      }
+      if (y >= completionYr) { activePhases.push(pName); activeFootprint += phaseFootprints[pName] || 0; }
     });
 
-    if (activePhases.length === 0 || activeFootprint === 0) continue;
-
-    // Escalation from rent start (not from year 0)
-    const yearsFromRentStart = y - rentStartYear;
-    const rentThisYear = base * Math.pow(1 + eP, Math.floor(yearsFromRentStart / eN));
-
-    totalSch[y] = rentThisYear;
-
-    // Allocate to active phases by footprint
-    activePhases.forEach(pName => {
-      const share = (phaseFootprints[pName] || 0) / activeFootprint;
-      phaseAllocations[pName][y] = rentThisYear * share;
-      if (!phaseSharesLog[pName]) {
-        phaseSharesLog[pName] = {
-          footprint: phaseFootprints[pName] || 0,
-          completionYear: phaseCompletionYears[pName],
-          firstRentYear: y,
-          shareAtOpen: share,
-        };
-      }
-    });
+    if (activePhases.length > 0 && activeFootprint > 0) {
+      activePhases.forEach(pName => {
+        const share = (phaseFootprints[pName] || 0) / activeFootprint;
+        phaseAllocations[pName][y] = rentThisYear * share;
+        if (!phaseSharesLog[pName]) {
+          phaseSharesLog[pName] = { footprint: phaseFootprints[pName] || 0, completionYear: phaseCompletionYears[pName], firstRentYear: y, shareAtOpen: share };
+        }
+      });
+    } else if (totalFootprint > 0) {
+      // No phase opened yet — allocate to ALL phases by footprint
+      const phNames = [...new Set(assetSchedules.map(a => a.phase || 'Unphased'))];
+      phNames.forEach(pName => {
+        const share = (phaseFootprints[pName] || 0) / totalFootprint;
+        phaseAllocations[pName][y] = rentThisYear * share;
+      });
+    }
   }
 
   return {
@@ -181,6 +181,8 @@ function computeLandSchedule(project, horizon, assetSchedules) {
     meta: {
       rentStartYear,
       graceEnd,
+      graceEndIdx,
+      leaseStartAbsolute,
       phase1CompletionYear,
       firstIncomeYear,
       startRule,
