@@ -3256,7 +3256,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
               ...(project?.market?.enabled ? [{key:"market",label:lang==="ar"?"السوق":"Market",group:"analysis"}] : []),
-              ...(checks.some(c=>!c.pass) ? [{key:"checks",label:lang==="ar"?"الفحوصات":"Checks",group:"analysis"}] : []),
+              {key:"checks",label:lang==="ar"?"الفحوصات":"Checks",group:"analysis"},
               {key:"reports",label:lang==="ar"?"التقارير":"Reports",group:"export"},
             ];
             const groupColors = {project:"#2563eb",finance:"#8b5cf6",analysis:"#f59e0b",export:"#16a34a"};
