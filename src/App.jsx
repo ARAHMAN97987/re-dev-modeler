@@ -351,6 +351,10 @@ const L = {
 
 const CATEGORIES = ["Hospitality","Retail","Office","Residential","Flexible","Marina","Cultural","Amenity","Open Space","Utilities","Industrial","Infrastructure"];
 const REV_TYPES = ["Lease","Operating","Sale"];
+const CAT_AR = { Hospitality:"ضيافة", Retail:"تجاري", Office:"مكاتب", Residential:"سكني", Flexible:"مرن", Marina:"مارينا", Cultural:"ثقافي", Amenity:"خدمات", "Open Space":"مساحة مفتوحة", Utilities:"مرافق", Industrial:"صناعي", Infrastructure:"بنية تحتية" };
+const REV_AR = { Lease:"إيجار", Operating:"تشغيلي", Sale:"بيع" };
+const catL = (c, ar) => ar ? (CAT_AR[c] || c) : c;
+const revL = (r, ar) => ar ? (REV_AR[r] || r) : r;
 const CURRENCIES = ["SAR","USD","AED","EUR","GBP"];
 const SCENARIOS = ["Base Case","CAPEX +10%","CAPEX -10%","Rent +10%","Rent -10%","Delay +6 months","Escalation +0.5%","Escalation -0.5%","Custom"];
 
@@ -2863,7 +2867,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
     </>)}
   </div>);
 }
-const EditableCell = memo(function EditableCell({ value, onChange, type = "text", options, style: sx, placeholder, step }) {
+const EditableCell = memo(function EditableCell({ value, onChange, type = "text", options, labelMap, style: sx, placeholder, step }) {
   const [local, setLocal] = useState(String(value ?? ""));
   const [focused, setFocused] = useState(false);
   const ref = useRef(null);
@@ -2895,7 +2899,7 @@ const EditableCell = memo(function EditableCell({ value, onChange, type = "text"
   if (options) {
     return (
       <select ref={ref} value={value || ""} onChange={e => onChange(e.target.value)} style={{ ...cellInputStyle, ...sx }}>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {options.map(o => <option key={o} value={o}>{labelMap?.[o] || o}</option>)}
       </select>
     );
   }
@@ -4071,11 +4075,11 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           </select>
           <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{padding:"5px 10px",fontSize:10,borderRadius:5,border:"1px solid #e5e7ec",background:"#fff",fontFamily:"inherit",color:"#1a1d23"}}>
             <option value="all">{ar?"كل التصنيفات":"All Categories"}</option>
-            {[...new Set(assets.map(a=>a.category))].filter(Boolean).map(c=><option key={c} value={c}>{c}</option>)}
+            {[...new Set(assets.map(a=>a.category))].filter(Boolean).map(c=><option key={c} value={c}>{catL(c,ar)}</option>)}
           </select>
           <select value={filterRev} onChange={e=>setFilterRev(e.target.value)} style={{padding:"5px 10px",fontSize:10,borderRadius:5,border:"1px solid #e5e7ec",background:"#fff",fontFamily:"inherit",color:"#1a1d23"}}>
             <option value="all">{ar?"كل أنواع الإيراد":"All Rev Types"}</option>
-            {[...new Set(assets.map(a=>a.revType))].filter(Boolean).map(r2=><option key={r2} value={r2}>{r2}</option>)}
+            {[...new Set(assets.map(a=>a.revType))].filter(Boolean).map(r2=><option key={r2} value={r2}>{revL(r2,ar)}</option>)}
           </select>
           {(filterPhase!=="all"||filterCat!=="all"||filterRev!=="all") && (
             <button onClick={()=>{setFilterPhase("all");setFilterCat("all");setFilterRev("all");}} style={{...btnS,padding:"4px 10px",fontSize:10,background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca"}}>{ar?"مسح الفلتر":"Clear"}</button>
@@ -4132,7 +4136,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
               <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:10,color:"#9ca3af"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
-                <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:cc+"15",color:cc,fontWeight:600}}>{a.category}</span>
+                <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:cc+"15",color:cc,fontWeight:600}}>{catL(a.category,ar)}</span>
               </div>
               <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
                 <div><span style={{color:"#9ca3af"}}>{ar?"GFA":"GFA"}</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
@@ -4148,15 +4152,15 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
         <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
-            <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"#9ca3af"}}>{a.category} · {a.phase}</div></div>
+            <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"#9ca3af"}}>{catL(a.category,ar)} · {a.phase}</div></div>
             <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>{ar?"حذف":"Delete"}</button>
             <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
           </div>
           <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
               <F2 label={ar?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></F2>
-              <F2 label={ar?"التصنيف":"Category"}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></F2>
-              <F2 label={ar?"نوع الإيراد":"Rev Type"}><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
+              <F2 label={ar?"التصنيف":"Category"}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></F2>
+              <F2 label={ar?"نوع الإيراد":"Rev Type"}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
               <F2 label={ar?"الاسم":"Name"}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"اسم الأصل":"Name"} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
@@ -4234,13 +4238,13 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                     <tr key={a.id||i} style={{background:bg}}>
                       <td style={{...tdSt,color:"#9ca3af",fontWeight:500,width:30}}>{i+1}</td>
                       <td style={tdSt}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={tdSt}><EditableCell options={CATEGORIES} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
-                      <td style={tdSt}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder="Name" /></td>
+                      <td style={tdSt}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
+                      <td style={tdSt}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /></td>
                       <td style={tdSt}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:45}} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
                       <td style={tdSt}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
-                      <td style={tdSt}><EditableCell options={REV_TYPES} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
+                      <td style={tdSt}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
                       <td style={tdSt}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,color:"#6b7080",textAlign:"right",fontSize:11}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
                       <td style={{...tdSt,background:isOp?"#f5f5f5":undefined}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
@@ -4595,10 +4599,10 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
       </tr></thead><tbody>
         {results.assetSchedules.map((a,i)=><tr key={a.id||i}>
           <td style={{...tdSt,color:"#9ca3af",width:30}}>{i+1}</td>
-          <td style={tdSt}>{a.name||"—"} <span style={{color:"#9ca3af",fontSize:10}}>({a.category})</span></td>
+          <td style={tdSt}>{a.name||"—"} <span style={{color:"#9ca3af",fontSize:10}}>({catL(a.category,ar)})</span></td>
           <td style={tdSt}>{a.phase}</td>
           <td style={tdN}>{fmt(a.gfa)}</td><td style={tdN}>{fmt(a.totalCapex)}</td>
-          <td style={{...tdN,color:"#16a34a"}}>{fmt(a.totalRevenue)}</td><td style={{...tdSt,fontSize:11}}>{a.revType}</td>
+          <td style={{...tdN,color:"#16a34a"}}>{fmt(a.totalRevenue)}</td><td style={{...tdSt,fontSize:11}}>{revL(a.revType,ar)}</td>
         </tr>)}
       </tbody></table></div>
     </div>}
@@ -5182,19 +5186,19 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4,marginTop:18}}>Asset Program ({filteredAssets.length} assets){isFiltered?" - "+activePh.join(", "):""}</h2>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
             <thead><tr style={{background:"#1e3a5f"}}>
-              {["#","Asset","Category","Phase","GFA","CAPEX","Income","Type"].map(h=><th key={h} style={{color:"#fff",padding:"4px 6px",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
+              {(ar?["#","الأصل","التصنيف","المرحلة","المساحة","التكاليف","الإيرادات","النوع"]:["#","Asset","Category","Phase","GFA","CAPEX","Income","Type"]).map(h=><th key={h} style={{color:"#fff",padding:"4px 6px",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
             </tr></thead>
             <tbody>
               {filteredAssets.map((a,i)=>(
                 <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{i+1}</td>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{a.name}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{a.category}</td>
+                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{catL(a.category,ar)}</td>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{a.phase}</td>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(a.gfa)}</td>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(a.totalCapex)}</td>
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right",color:"#16a34a"}}>{fmt(a.totalRevenue)}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{a.revType}</td>
+                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{revL(a.revType,ar)}</td>
                 </tr>
               ))}
             </tbody>
@@ -6390,7 +6394,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
                 <tr key={i}>
                   <td style={{...tdSt,fontSize:12,fontWeight:500}}>{a.name||"—"}</td>
                   {!isPhase && <td style={{...tdSt,fontSize:11,color:"#6b7080"}}>{a.phase}</td>}
-                  <td style={{...tdSt,fontSize:11,color:"#6b7080"}}>{a.category}</td>
+                  <td style={{...tdSt,fontSize:11,color:"#6b7080"}}>{catL(a.category,ar)}</td>
                   <td style={{...tdN,fontSize:12}}>{fmt(a.gfa)}</td>
                   <td style={{...tdN,fontSize:12,fontWeight:600}}>{fmtM(a.totalCapex)}</td>
                   <td style={{...tdN,fontSize:12,fontWeight:600,color:"#16a34a"}}>{fmtM(a.totalRevenue)}</td>
