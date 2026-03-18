@@ -4432,6 +4432,7 @@ function ScoreCell({ sc, name, ar }) {
 // ASSET PROGRAM TABLE
 // ═══════════════════════════════════════════════════════════════
 function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject }) {
+  const isMobile = useIsMobile();
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
   const [viewMode, setViewMode] = useState(() => typeof window !== "undefined" && window.innerWidth < 768 ? "cards" : "table");
@@ -6872,11 +6873,11 @@ function MarketView({ project, results, lang, up }) {
 }
 
 function ChecksView({ checks, t, lang }) {
+  const ar = lang === "ar";
   const ap = checks.every(c=>c.pass);
   const fc = checks.filter(c=>!c.pass).length;
   const cats = [...new Set(checks.map(c=>c.cat||"General"))];
   const catLabels = {T0:ar?"T0: فحص المدخلات":"T0: Input Validation",T1:ar?"T1: محرك المشروع":"T1: Project Engine",T2:ar?"T2: التمويل":"T2: Financing",T3:ar?"T3: الشلال":"T3: Waterfall",T4:ar?"T4: الحوافز":"T4: Incentives",T5:ar?"T5: التكامل":"T5: Integration",General:"General"};
-  const ar = lang === "ar";
   return (<div>
     <div style={{display:"flex",alignItems:"center",marginBottom:14,gap:12}}>
       <div style={{fontSize:15,fontWeight:600}}>{t.modelChecks}</div>
