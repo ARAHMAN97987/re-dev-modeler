@@ -3170,7 +3170,34 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{height:48,minHeight:48,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 12px",gap:8}}>
-          <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13,flexShrink:0}}>{sidebarOpen?(lang==="ar"?"▷":"◁"):(lang==="ar"?"◁":"▷")}</button>
+          {(() => {
+            // Compute sidebar warning badge
+            let _advWarn = 0;
+            if (results && financing) {
+              const _dv = financing.dscr ? financing.dscr.filter(d=>d!==null) : [];
+              const _md = _dv.length > 0 ? Math.min(..._dv) : null;
+              if (_md !== null && _md < 1.2) _advWarn++;
+              const _npv = results.consolidated?.npv10 || 0;
+              if (_npv < 0) _advWarn++;
+              if ((project?.maxLtvPct||0) > 80) _advWarn++;
+            }
+            if ((project?.assets||[]).some(a => benchmarkColor("costPerSqm",a.costPerSqm,a.category).color==="#ef4444")) _advWarn++;
+            if (project?.market?.enabled) {
+              const _mg=project.market.gaps||{},_mt=project.market.thresholds||{};
+              ["Retail","Office","Hospitality","Residential","Marina","Industrial"].forEach(sec=>{
+                const gap=_mg[sec]?.gap||0; if(gap<=0) return;
+                const aa=(project.assets||[]).filter(a2=>{const c2=(a2.category||"").toLowerCase();return c2.includes(sec.toLowerCase())||(sec==="Retail"&&c2.includes("commercial"))||(sec==="Hospitality"&&(c2.includes("hotel")||c2.includes("resort")));});
+                const supply=sec==="Hospitality"?aa.reduce((s,a2)=>s+(a2.hotelPL?.keys||0),0):sec==="Marina"?aa.reduce((s,a2)=>s+(a2.marinaPL?.berths||0),0):aa.reduce((s,a2)=>s+(a2.gfa||0)*((a2.efficiency||0)/100),0);
+                if(supply>0&&(supply/gap*100)>(_mt[sec]?.med||70)) _advWarn++;
+              });
+            }
+            return (
+              <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13,flexShrink:0,position:"relative"}}>
+                {sidebarOpen?(lang==="ar"?"▷":"◁"):(lang==="ar"?"◁":"▷")}
+                {!sidebarOpen && _advWarn > 0 && <span style={{position:"absolute",top:2,right:2,width:8,height:8,borderRadius:4,background:"#ef4444",border:"1.5px solid #fff"}} />}
+              </button>
+            );
+          })()}
           <div style={{flex:1,minWidth:0}}>
             <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:15,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
@@ -3227,20 +3254,22 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
               {key:"waterfall",label:lang==="ar"?"الشلال":"Waterfall",group:"finance"},
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
-              {key:"market",label:lang==="ar"?"السوق":"Market",group:"analysis"},
-              {key:"checks",label:lang==="ar"?"الفحوصات":"Checks",group:"analysis"},
+              ...(project?.market?.enabled ? [{key:"market",label:lang==="ar"?"السوق":"Market",group:"analysis"}] : []),
+              ...(checks.some(c=>!c.pass) ? [{key:"checks",label:lang==="ar"?"الفحوصات":"Checks",group:"analysis"}] : []),
               {key:"reports",label:lang==="ar"?"التقارير":"Reports",group:"export"},
             ];
             const groupColors = {project:"#2563eb",finance:"#8b5cf6",analysis:"#f59e0b",export:"#16a34a"};
+            const groupLabels = {project:ar?"المشروع":"Project",finance:ar?"التمويل":"Finance",analysis:ar?"التحليل":"Analysis",export:ar?"التصدير":"Export"};
             let prevGroup = null;
             return tabs.map(tb=>{
               const gc = groupColors[tb.group];
               const isActive = activeTab===tb.key;
               const showSep = prevGroup && prevGroup !== tb.group;
+              const showLabel = showSep;
               prevGroup = tb.group;
               return <span key={tb.key} style={{display:"inline-flex",alignItems:"center"}}>
-                {showSep && <span style={{width:1,height:20,background:"#e5e7ec",margin:"0 2px",flexShrink:0}} />}
-                <button onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 14px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
+                {showSep && <span style={{display:"inline-flex",alignItems:"center",gap:0}}><span style={{width:1,height:20,background:"#e5e7ec",margin:"0 4px",flexShrink:0}} /><span style={{fontSize:8,color:gc,fontWeight:600,letterSpacing:0.5,textTransform:"uppercase",padding:"0 2px",opacity:0.7}}>{groupLabels[tb.group]}</span></span>}
+                <button onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 12px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
               </span>;
             });
           })()}
@@ -3250,7 +3279,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {presentMode ? (
             <PresentationView project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} audienceView={audienceView} liveSliders={liveSliders} setLiveSliders={setLiveSliders} checks={checks} />
           ) : (<>
-          {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} />}
+          {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />}
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
           {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} t={t} up={up} lang={lang} />}
           {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} />}
@@ -3610,7 +3639,7 @@ function Sel({value,onChange,options,lang}) {
 // SIDEBAR ADVISOR PANEL (with Phase Tabs)
 // ═══════════════════════════════════════════════════════════════
 function SidebarAdvisor({ project, results, financing, waterfall, incentivesResult, lang, setActiveTab }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [advPhase, setAdvPhase] = useState("all"); // "all" or phase name
   const ar = lang === "ar";
   if (!project || !results || !(project.assets||[]).length) return null;
@@ -4256,7 +4285,11 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   const [filterPhase, setFilterPhase] = useState("all");
   const [filterCat, setFilterCat] = useState("all");
   const [filterRev, setFilterRev] = useState("all");
+  const [hiddenCols, setHiddenCols] = useState(() => new Set(["plotArea","footprint","esc","ramp","occ"]));
+  const [showColPicker, setShowColPicker] = useState(false);
   const ar = lang === "ar";
+  const toggleCol = (key) => { setHiddenCols(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); };
+  const visibleCols = cols.filter(c => !hiddenCols.has(c.key));
 
   // Phase management
   const addPhase = () => { const n = project.phases.length + 1; updateProject({ phases: [...project.phases, { name: `Phase ${n}`, startYearOffset: n, footprint: 0 }] }); };
@@ -4336,6 +4369,20 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           <button onClick={()=>setViewMode("cards")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="cards"?"#fff":"transparent",color:viewMode==="cards"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="cards"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>▦ {lang==="ar"?"بطاقات":"Cards"}</button>
           <button onClick={()=>setViewMode("table")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="table"?"#fff":"transparent",color:viewMode==="table"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="table"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>☰ {lang==="ar"?"جدول":"Table"}</button>
         </div>
+        {viewMode==="table" && <div style={{position:"relative"}}>
+          <button onClick={()=>setShowColPicker(!showColPicker)} style={{...btnS,background:showColPicker?"#e0e7ff":"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:10,fontWeight:500,border:"1px solid #e5e7ec"}} title={ar?"إظهار/إخفاء أعمدة":"Show/Hide Columns"}>⚙ {ar?"أعمدة":"Cols"} ({cols.length - hiddenCols.size}/{cols.length})</button>
+          {showColPicker && <div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,padding:"8px 0",width:180,maxHeight:320,overflowY:"auto"}}>
+            {cols.filter(c=>!["#","ops"].includes(c.key)).map(c=>(
+              <label key={c.key} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 14px",fontSize:11,cursor:"pointer",color:hiddenCols.has(c.key)?"#9ca3af":"#1a1d23"}} onMouseEnter={e=>e.currentTarget.style.background="#f8f9fb"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={()=>toggleCol(c.key)} style={{accentColor:"#2563eb"}} />
+                {ar?c.ar:c.en}
+              </label>
+            ))}
+            <div style={{borderTop:"1px solid #e5e7ec",margin:"4px 0"}} />
+            <button onClick={()=>setHiddenCols(new Set())} style={{width:"100%",padding:"5px 14px",fontSize:10,color:"#2563eb",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"إظهار الكل":"Show All"}</button>
+            <button onClick={()=>setHiddenCols(new Set(["plotArea","footprint","esc","ramp","occ"]))} style={{width:"100%",padding:"5px 14px",fontSize:10,color:"#6b7080",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"الافتراضي":"Default"}</button>
+          </div>}
+        </div>}
         <button onClick={()=>generateTemplate()} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
           {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
@@ -4455,7 +4502,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           <table style={{...tblStyle,fontSize:11}}>
             <thead>
               <tr>
-                {cols.map(c=>(
+                {visibleCols.map(c=>(
                   <th key={c.key} style={{...thSt,minWidth:c.w||40,maxWidth:c.key==="name"?200:undefined, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
                     <div>{c.en}</div>
                     {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"#9ca3af"}}>{c.ar}</div>}
@@ -4465,7 +4512,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             </thead>
             <tbody>
               {assets.length===0?(
-                <tr><td colSpan={cols.length} style={{...tdSt,textAlign:"center",color:"#9ca3af",padding:32}}>{t.noAssets}</td></tr>
+                <tr><td colSpan={visibleCols.length} style={{...tdSt,textAlign:"center",color:"#9ca3af",padding:32}}>{t.noAssets}</td></tr>
               ):(
                 filteredIndices.map(i=>{
                   const a = assets[i];
@@ -4474,21 +4521,22 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                   const isHotel = isOp && (a.category === "Hospitality");
                   const isMarina = isOp && (a.category === "Marina");
                   const bg = i%2===0?"#fff":"#fafbfc";
+                  const hd = (key) => hiddenCols.has(key) ? {display:"none"} : {};
                   return (
                     <tr key={a.id||i} style={{background:bg}}>
-                      <td style={{...tdSt,color:"#9ca3af",fontWeight:500,width:30}}>{i+1}</td>
-                      <td style={tdSt}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={tdSt}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
-                      <td style={tdSt}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /></td>
-                      <td style={tdSt}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:45}} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
-                      <td style={tdSt}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
-                      <td style={tdSt}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
-                      <td style={{...tdSt,color:"#6b7080",textAlign:"right",fontSize:11}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
-                      <td style={{...tdSt,background:isOp?"#f5f5f5":undefined}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
-                      <td style={tdSt}>
+                      <td style={{...tdSt,color:"#9ca3af",fontWeight:500,width:30,...hd("#")}}>{i+1}</td>
+                      <td style={{...tdSt,...hd("phase")}}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
+                      <td style={{...tdSt,...hd("category")}}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
+                      <td style={{...tdSt,...hd("name")}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /></td>
+                      <td style={{...tdSt,...hd("code")}}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:45}} /></td>
+                      <td style={{...tdSt,...hd("plotArea")}}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
+                      <td style={{...tdSt,...hd("footprint")}}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
+                      <td style={{...tdSt,...hd("gfa")}}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
+                      <td style={{...tdSt,...hd("revType")}}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
+                      <td style={{...tdSt,...hd("eff")}}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
+                      <td style={{...tdSt,color:"#6b7080",textAlign:"right",fontSize:11,...hd("leasable")}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
+                      <td style={{...tdSt,background:isOp?"#f5f5f5":undefined,...hd("rate")}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
+                      <td style={{...tdSt,...hd("opEbitda")}}>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
                           {isOp ? (
                             <>
@@ -4500,19 +4548,19 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                           )}
                         </div>
                       </td>
-                      <td style={tdSt}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
-                      <td style={tdSt}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
-                      <td style={tdSt}><EditableCell type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></td>
-                      <td style={tdSt}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
-                      <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
-                      <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11}}>{fmt(comp?.totalRevenue||0)}</td>
-                      <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative"}}>{(()=>{
+                      <td style={{...tdSt,...hd("esc")}}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></td>
+                      <td style={{...tdSt,...hd("ramp")}}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></td>
+                      <td style={{...tdSt,...hd("occ")}}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
+                      <td style={{...tdSt,...hd("cost")}}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
+                      <td style={{...tdSt,...hd("start")}}><EditableCell type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></td>
+                      <td style={{...tdSt,...hd("dur")}}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
+                      <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
+                      <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11,...hd("totalInc")}}>{fmt(comp?.totalRevenue||0)}</td>
+                      <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative",...hd("score")}}>{(()=>{
                         const sc = getAssetScore(a, comp);
                         return <ScoreCell sc={sc} name={a.name} ar={ar} />;
                       })()}</td>
-                      <td style={tdSt}><button onClick={()=>rmAsset(i)} style={{...btnSm,background:"#fef2f2",color:"#ef4444",fontSize:10}}>✕</button></td>
+                      <td style={{...tdSt,...hd("ops")}}><button onClick={()=>rmAsset(i)} style={{...btnSm,background:"#fef2f2",color:"#ef4444",fontSize:10}}>✕</button></td>
                     </tr>
                   );
                 })
@@ -4541,7 +4589,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
 // ═══════════════════════════════════════════════════════════════
 // PROJECT DASHBOARD
 // ═══════════════════════════════════════════════════════════════
-function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang, incentivesResult }) {
+function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang, incentivesResult, setActiveTab }) {
   if (!project || !results) return null;
   const c = results.consolidated;
   const cur = project.currency || "SAR";
@@ -4828,6 +4876,45 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </tr>
       </tbody></table></div>
     </div>}
+
+    {/* ═══ SECTION 4b: Market Gap Summary (if enabled) ═══ */}
+    {project.market?.enabled && (() => {
+      const mkt = project.market;
+      const mktGaps = mkt.gaps || {};
+      const mktTh = mkt.thresholds || {};
+      const MSECS = ["Retail","Office","Hospitality","Residential","Marina","Industrial"];
+      const getMktSup = (sec) => {
+        const aa = (project.assets||[]).filter(a2 => { const c2=(a2.category||"").toLowerCase(),s2=sec.toLowerCase(); return c2.includes(s2)||(s2==="retail"&&c2.includes("commercial"))||(s2==="hospitality"&&(c2.includes("hotel")||c2.includes("resort"))); });
+        if (sec==="Hospitality") return aa.reduce((s,a2)=>s+(a2.hotelPL?.keys||0),0);
+        if (sec==="Marina") return aa.reduce((s,a2)=>s+(a2.marinaPL?.berths||0),0);
+        return aa.reduce((s,a2)=>s+(a2.gfa||0)*((a2.efficiency||0)/100),0);
+      };
+      let low=0, med=0, high=0; const highNames = [];
+      MSECS.forEach(sec => {
+        const gap = mktGaps[sec]?.gap || 0; if (gap <= 0) return;
+        const supply = getMktSup(sec); if (supply <= 0) { low++; return; }
+        const pct = (supply / gap) * 100;
+        const th3 = mktTh[sec] || { low: 50, med: 70 };
+        if (pct > th3.med) { high++; highNames.push(catL(sec, ar)); }
+        else if (pct > th3.low) { med++; }
+        else { low++; }
+      });
+      const total = low + med + high;
+      if (total === 0) return null;
+      const hasRisk = high > 0;
+      return (
+        <div style={{background:hasRisk?"#fef2f2":"#f0fdf4",borderRadius:10,border:`1px solid ${hasRisk?"#fecaca":"#bbf7d0"}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",cursor:"pointer"}} onClick={()=>setActiveTab("market")}>
+          <span style={{fontSize:15}}>📊</span>
+          <span style={{fontSize:12,fontWeight:600,color:hasRisk?"#991b1b":"#15803d"}}>{ar?"مؤشرات السوق":"Market Indicators"}</span>
+          <div style={{display:"flex",gap:8,fontSize:11}}>
+            {low > 0 && <span style={{color:"#16a34a",fontWeight:500}}>{low} {ar?"آمن":"safe"}</span>}
+            {med > 0 && <span style={{color:"#eab308",fontWeight:500}}>{med} {ar?"متوسط":"medium"}</span>}
+            {high > 0 && <span style={{color:"#ef4444",fontWeight:600}}>{high} {ar?"مرتفع":"high"}: {highNames.join(", ")}</span>}
+          </div>
+          <span style={{fontSize:10,color:"#9ca3af",marginInlineStart:"auto"}}>{ar?"اضغط للتفاصيل →":"Click for details →"}</span>
+        </div>
+      );
+    })()}
 
     {/* ═══ SECTION 5: Asset Overview (compact) ═══ */}
     {results.assetSchedules.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
@@ -6144,7 +6231,6 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   );
 
   const F = ({ label, children, hint }) => <div style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: "#6b7080", marginBottom: 3 }}>{label}</div>{children}{hint && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{hint}</div>}</div>;
-  const NI = ({ value, onChange }) => <SidebarInput type="number" value={value} onChange={onChange} style={{ background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }} />;
 
   return (<div>
     {/* Summary KPIs */}
@@ -6261,6 +6347,12 @@ Rebates or deferrals of municipal charges, permits, and regulatory fees. Even de
 // ═══════════════════════════════════════════════════════════════
 // MARKET INDICATORS VIEW
 // ═══════════════════════════════════════════════════════════════
+// Stable input component for Market view (defined outside to prevent focus loss)
+const mktInputStyle = { padding: "6px 10px", border: "1px solid #e5e7ec", borderRadius: 6, fontSize: 12, fontFamily: "inherit", width: "100%", boxSizing: "border-box", background: "#fafbfc" };
+function NI({ value, onChange, style: sx }) {
+  return <input type="number" value={value||""} onChange={e => onChange(parseFloat(e.target.value) || 0)} style={{ ...mktInputStyle, ...sx }} />;
+}
+
 function MarketView({ project, results, lang, up }) {
   const ar = lang === "ar";
   if (!project) return null;
@@ -6279,8 +6371,6 @@ function MarketView({ project, results, lang, up }) {
   const upConv = (field, val) => {
     up(prev => ({ ...prev, market: { ...prev.market, conversionFactors: { ...prev.market.conversionFactors, [field]: val } } }));
   };
-
-  const NI = ({ value, onChange, style: sx }) => <input type="number" value={value||""} onChange={e => onChange(parseFloat(e.target.value) || 0)} style={{ padding: "6px 10px", border: "1px solid #e5e7ec", borderRadius: 6, fontSize: 12, fontFamily: "inherit", width: "100%", boxSizing: "border-box", background: "#fafbfc", ...sx }} />;
 
   if (!enabled) {
     return (
