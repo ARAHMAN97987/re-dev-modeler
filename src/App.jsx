@@ -268,7 +268,7 @@ const L = {
     assetOverview: "Asset Overview",
     // Cash flow
     unleveredCF: "Unlevered Project Cash Flow", lineItem: "Line Item", total: "Total",
-    income: "Income", landRentLabel: "Land Rent", capex: "CAPEX", netCF: "Net Cash Flow",
+    income: "Revenue", landRentLabel: "Land Rent", capex: "CAPEX", netCF: "Net Cash Flow",
     consolidated: "CONSOLIDATED",
     // Checks
     modelChecks: "Model Integrity Checks", allPass: "ALL PASS", errorFound: "ERRORS FOUND",
@@ -327,7 +327,7 @@ const L = {
     phaseSummary: "ملخص المراحل", landConfig: "إعدادات الأرض",
     assetOverview: "نظرة عامة على الأصول",
     unleveredCF: "التدفق النقدي قبل التمويل", lineItem: "البند", total: "الإجمالي",
-    income: "الدخل", landRentLabel: "إيجار الأرض", capex: "CAPEX", netCF: "صافي التدفق النقدي",
+    income: "الإيرادات", landRentLabel: "إيجار الأرض", capex: "CAPEX", netCF: "صافي التدفق النقدي",
     consolidated: "الموحّد",
     modelChecks: "فحوصات سلامة النموذج", allPass: "الكل ناجح", errorFound: "يوجد أخطاء",
     check: "الفحص", status: "الحالة", description: "الوصف",
@@ -3004,7 +3004,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
         <th style={{...thSt,textAlign:"right"}}>{lang==="ar"?"الإجمالي":"Total"}</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>{lang==="ar"?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
       </tr></thead><tbody>
-        <CFRow label={lang==="ar"?"الإيرادات":"Income"} values={c.income} total={c.totalIncome} color="#16a34a" />
+        <CFRow label={lang==="ar"?"الإيرادات":"Revenue"} values={c.income} total={c.totalIncome} color="#16a34a" />
         <CFRow label={lang==="ar"?"إيجار الأرض":"Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
         <CFRow label={lang==="ar"?"تكاليف التطوير":"CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
         <CFRow label={lang==="ar"?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.totalDebt} color="#3b82f6" />
@@ -4548,7 +4548,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
     { key:"cost", en:"Cost/sqm", ar:"تكلفة/م²", w:65 },
     { key:"dur", en:"Build (mo)", ar:"مدة البناء", w:70 },
     { key:"totalCapex", en:"CAPEX", ar:"التكاليف", w:80 },
-    { key:"totalInc", en:"Income", ar:"الإيرادات", w:80 },
+    { key:"totalInc", en:"Revenue", ar:"الإيرادات", w:80 },
     { key:"score", en:"Score", ar:"تقييم", w:90 },
     { key:"ops", en:"", ar:"", w:30 },
   ];
@@ -4704,7 +4704,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                 <div><span style={{color:"#9ca3af"}}>{ar?"GFA":"GFA"}</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
                 <div><span style={{color:"#9ca3af"}}>{a.revType==="Lease"?(ar?"الإيجار":"Rate"):a.revType==="Sale"?(ar?"سعر البيع":"Sale Price"):(ar?"أرباح تشغيلية":"EBITDA")}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":a.revType==="Sale"?fmt(a.salePricePerSqm||0)+" /m²":fmtM(a.opEbitda)}</div></div>
                 <div><span style={{color:"#9ca3af"}}>{ar?"CAPEX":"CAPEX"}</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
-                <div><span style={{color:"#9ca3af"}}>{ar?"الدخل":"Income"}</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
+                <div><span style={{color:"#9ca3af"}}>{ar?"الإيرادات":"Revenue"}</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
               </div>
             </div>;})}
           </div>
@@ -5080,7 +5080,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
       {/* Legend */}
       <div style={{display:"flex",gap:16,marginBottom:10,fontSize:11}}>
         <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#ef4444",display:"inline-block"}} />{ar?"التكاليف":"CAPEX"}</span>
-        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#22c55e",display:"inline-block"}} />{ar?"الإيرادات":"Income"}</span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#22c55e",display:"inline-block"}} />{ar?"الإيرادات":"Revenue"}</span>
         <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:3,borderRadius:2,background:"#3b82f6",display:"inline-block"}} />{ar?"صافي التدفق":"Net CF"}</span>
       </div>
       <svg viewBox={`0 0 ${chartYears * 42 + 20} 180`} style={{width:"100%",height:180}}>
@@ -5566,7 +5566,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
   // Section 4: Unlevered Cash Flow
   const yrs = Array.from({length: Math.min(20, h)}, (_, i) => i);
   sections.push(["UNLEVERED CASH FLOW"]);
-  sections.push(["Year", "Calendar", "Income", "Land Rent", "CAPEX", "Net CF"]);
+  sections.push(["Year", "Calendar", "Revenue", "Land Rent", "CAPEX", "Net CF"]);
   yrs.forEach(y => {
     sections.push([y + 1, sy + y, c?.income[y] || 0, c?.landRent[y] || 0, c?.capex[y] || 0, c?.netCF[y] || 0]);
   });
@@ -5781,7 +5781,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>{lang==="ar"?"ملخص المراحل":"Phase Summary"}</h2>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
             <thead><tr style={{background:"#1e3a5f"}}>
-              {["Phase","Assets","CAPEX","Income","Net CF","IRR"].map(h=><th key={h} style={{color:"#fff",padding:"5px 6px",textAlign:"start",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
+              {["Phase","Assets","CAPEX","Revenue","Net CF","IRR"].map(h=><th key={h} style={{color:"#fff",padding:"5px 6px",textAlign:"start",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
             </tr></thead>
             <tbody>
               {Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name)).map(([name,pr])=>(
@@ -5800,7 +5800,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4,marginTop:18}}>Asset Program ({filteredAssets.length} assets){isFiltered?" - "+activePh.join(", "):""}</h2>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
             <thead><tr style={{background:"#1e3a5f"}}>
-              {(ar?["#","الأصل","التصنيف","المرحلة","المساحة","التكاليف","الإيرادات","النوع"]:["#","Asset","Category","Phase","GFA","CAPEX","Income","Type"]).map(h=><th key={h} style={{color:"#fff",padding:"4px 6px",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
+              {(ar?["#","الأصل","التصنيف","المرحلة","المساحة","التكاليف","الإيرادات","النوع"]:["#","Asset","Category","Phase","GFA","CAPEX","Revenue","Type"]).map(h=><th key={h} style={{color:"#fff",padding:"4px 6px",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
             </tr></thead>
             <tbody>
               {filteredAssets.map((a,i)=>(
@@ -5891,7 +5891,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </tr></thead>
             <tbody>
               {[
-                {l:ar?"الدخل":"Income",v:fc.income,cl:"#16a34a"},
+                {l:ar?"الإيرادات":"Revenue",v:fc.income,cl:"#16a34a"},
                 {l:ar?"إيجار الأرض":"Land Rent",v:fc.landRent,cl:"#ef4444"},
                 {l:ar?"صافي الدخل التشغيلي":"NOI",v:bankYears.map(y=>(fc.income[y]||0)-(fc.landRent[y]||0)),cl:"#1a1d23",b:true},
                 {l:ar?"تكاليف التطوير":"CAPEX",v:fc.capex,cl:"#ef4444"},
@@ -7052,7 +7052,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
                   <div style={{fontSize:13,fontWeight:700,color:"#1a1d23",marginBottom:8}}>{pn}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                     <div><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>CAPEX</div><div style={{fontSize:14,fontWeight:600}}>{fmtM(pd?.totalCapex)}</div></div>
-                    <div><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"الإيرادات":"Income"}</div><div style={{fontSize:14,fontWeight:600,color:"#16a34a"}}>{fmtM(pd?.totalIncome)}</div></div>
+                    <div><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"الإيرادات":"Revenue"}</div><div style={{fontSize:14,fontWeight:600,color:"#16a34a"}}>{fmtM(pd?.totalIncome)}</div></div>
                     <div><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>IRR</div><div style={{fontSize:14,fontWeight:600,color:pd?.irr>0.12?"#16a34a":"#eab308"}}>{pd?.irr !== null ? (pd.irr*100).toFixed(1)+"%" : "—"}</div></div>
                     <div><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"الأصول":"Assets"}</div><div style={{fontSize:14,fontWeight:600}}>{pd?.assetCount||0}</div></div>
                   </div>
