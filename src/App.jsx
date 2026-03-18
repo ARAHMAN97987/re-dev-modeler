@@ -5464,7 +5464,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
       {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
-      <button onClick={()=>generateFormulaExcel(project)} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600}}>
+      <button onClick={()=>generateFormulaExcel(project, results, financing, waterfall)} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600}}>
         {lang==="ar"?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
       </button>
       <button onClick={()=>generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500}}>

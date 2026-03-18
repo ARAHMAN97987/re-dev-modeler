@@ -53,8 +53,10 @@ function secr(ws, r, c1, c2, t) {
   for (let c = c1; c <= c2; c++) sc(ws, r, c, c === c1 ? t : null, FSC, FILL_SEC);
 }
 
-export async function generateFormulaExcel(project) {
+export async function generateFormulaExcel(project, results, financing, waterfall) {
   const p = project;
+  const hasWF = waterfall && waterfall.lpIRR !== undefined;
+  const hasF = financing && financing.totalEquity !== undefined;
   const wb = new ExcelJS.Workbook();
   const assets = p.assets || [];
   const phases = p.phases || [];
@@ -405,94 +407,73 @@ export async function generateFormulaExcel(project) {
   }
   fr++;
 
-  // Waterfall
+  // Waterfall — uses computed values from app engine for accuracy
   secr(ws5,fr,1,LC,"WATERFALL DISTRIBUTION"); fr++;
-  const fCA=fr;sc(ws5,fr,1,"  Cash Available",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MAX(0,${CL(YC(yi))}${fLV})`,FNS,null,NUM);
-  fr++;
-  const fEC=fr;sc(ws5,fr,1,"  Equity Calls",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MIN(0,${CL(YC(yi))}${fLV})`,FNS,null,NUMN);
-  fr++;
-  const fUC=fr;sc(ws5,fr,1,"  Unreturned Capital",FNS);sc(ws5,fr,2,cur,FNS);
-  for (let yi = 0; yi < h; yi++) {
-    const c = YC(yi);
-    sc(ws5,fr,c,yi===0?`=ABS(${CL(c)}${fEC})`:`=MAX(0,${CL(YC(yi-1))}${fUC}-${CL(YC(yi-1))}${fUC+1}+ABS(${CL(c)}${fEC}))`,FNS,null,NUM);
-  }
-  fr++;
-  const fT1=fr;sc(ws5,fr,1,"  T1: Return of Capital",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MIN(${CL(YC(yi))}${fCA},${CL(YC(yi))}${fUC})`,FBS,null,NUM);
-  fr++;
-  const fR1=fr;sc(ws5,fr,1,"  Remaining after T1",FNS);sc(ws5,fr,2,cur,FNS);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fCA}-${CL(YC(yi))}${fT1}`,FNS,null,NUM);
-  fr++;
-  const fPAC=fr;sc(ws5,fr,1,"  Pref Accrual",FNS);sc(ws5,fr,2,cur,FNS);
-  for (let yi = 0; yi < h; yi++) {
-    const c = YC(yi);
-    sc(ws5,fr,c,yi===0?`=${CL(c)}${fUC}*Inputs!B${rPF}`:`=MAX(0,${CL(YC(yi-1))}${fPAC}-${CL(YC(yi-1))}${fPAC+1})+${CL(c)}${fUC}*Inputs!B${rPF}`,FNS,null,NUM);
-  }
-  fr++;
-  const fT2=fr;sc(ws5,fr,1,"  T2: Preferred Return",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MIN(${CL(YC(yi))}${fR1},${CL(YC(yi))}${fPAC})`,FBS,null,NUM);
-  fr++;
-  const fR2=fr;sc(ws5,fr,1,"  Remaining after T2",FNS);sc(ws5,fr,2,cur,FNS);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fR1}-${CL(YC(yi))}${fT2}`,FNS,null,NUM);
-  fr++;
-  const fT3=fr;sc(ws5,fr,1,"  T3: GP Catch-Up",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MIN(${CL(YC(yi))}${fR2},${CL(YC(yi))}${fR2}*Inputs!B${rCR_}/(1-Inputs!B${rCR_}))`,FBS,null,NUM);
-  fr++;
-  const fR3=fr;sc(ws5,fr,1,"  Remaining after T3",FNS);sc(ws5,fr,2,cur,FNS);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fR2}-${CL(YC(yi))}${fT3}`,FNS,null,NUM);
-  fr++;
-  const fT4LP=fr;sc(ws5,fr,1,"  T4: LP Profit Split",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fR3}*Inputs!B${rLS}`,FBS,null,NUM);
-  fr++;
-  const fT4GP=fr;sc(ws5,fr,1,"  T4: GP Profit Split",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fR3}*(1-Inputs!B${rLS})`,FBS,null,NUM);
-  fr += 2;
+  if (hasWF) {
+    const wfRows = [
+      ["  Cash Available", waterfall.cashAvail],
+      ["  Equity Calls", waterfall.equityCalls.map(v => -Math.abs(v))],
+      ["  T1: Return of Capital", waterfall.tier1],
+      ["  T2: Preferred Return", waterfall.tier2],
+      ["  T3: GP Catch-Up", waterfall.tier3],
+      ["  T4: LP Profit Split", waterfall.tier4LP],
+      ["  T4: GP Profit Split", waterfall.tier4GP],
+    ];
+    const wfRowNums = {};
+    for (const [label, arr] of wfRows) {
+      const isBold = label.includes("T1:") || label.includes("T2:") || label.includes("T3:") || label.includes("T4:");
+      sc(ws5,fr,1,label,isBold?FBS:FNS);sc(ws5,fr,2,cur,FNS);
+      sc(ws5,fr,3,`=SUM(${YR(fr)})`,isBold?FBS:FNS,null,NUM);
+      for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),(arr && arr[yi]) || 0,FNS,null,NUM);
+      wfRowNums[label.trim()] = fr;
+      fr++;
+    }
+    fr++;
 
-  // LP/GP Returns
-  secr(ws5,fr,1,LC,"INVESTOR RETURNS"); fr++;
-  const fLPD=fr;sc(ws5,fr,1,"  LP Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
-  for (let yi = 0; yi < h; yi++) { const c = YC(yi); sc(ws5,fr,c,`=${CL(c)}${fT1}*(1-Inputs!B${rGP})+${CL(c)}${fT2}*(1-Inputs!B${rGP})+${CL(c)}${fT4LP}`,FBS,null,NUM); }
-  fr++;
-  const fLPCF=fr;sc(ws5,fr,1,"  LP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fEC}*(1-Inputs!B${rGP})+${CL(YC(yi))}${fLPD}`,FBS,null,NUMN,BB);
-  fr++;
-  const fLPI=fr;sc(ws5,fr,1,"  LP IRR",FB);sc(ws5,fr,2,"%",FNS);
-  sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF}),"-")`,FB,null,PCT);fr++;
-  const fLPMOIC=fr;sc(ws5,fr,1,"  LP MOIC",FB);sc(ws5,fr,2,"x",FNS);
-  sc(ws5,fr,3,`=IFERROR(SUM(${YR(fLPD)})/ABS(SUM(${YR(fEC)})*(1-Inputs!B${rGP})),"-")`,FB,null,DX);fr++;
-  for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
-    sc(ws5,fr,1,`  LP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
-    sc(ws5,fr,3,`=NPV(${d},${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF})`,FNS,null,NUM);fr++;
-  }
-  // LP Cumulative CF
-  const fLPCUM=fr;sc(ws5,fr,1,"  LP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
-  for (let yi = 0; yi < h; yi++) {
-    const c = YC(yi);
-    sc(ws5,fr,c,yi===0?`=${CL(c)}${fLPCF}`:`=${CL(YC(yi-1))}${fLPCUM}+${CL(c)}${fLPCF}`,FNS,null,NUMN);
-  }
-  fr+=2;
+    // LP/GP Returns — computed values
+    secr(ws5,fr,1,LC,"INVESTOR RETURNS"); fr++;
+    const fLPD=fr;sc(ws5,fr,1,"  LP Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+    for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),(waterfall.lpDist && waterfall.lpDist[yi]) || 0,FNS,null,NUM);
+    fr++;
+    const fLPCF=fr;sc(ws5,fr,1,"  LP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
+    for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),(waterfall.lpNetCF && waterfall.lpNetCF[yi]) || 0,FBS,null,NUMN,BB);
+    fr++;
+    const fLPI=fr;sc(ws5,fr,1,"  LP IRR",FB);sc(ws5,fr,2,"%",FNS);
+    sc(ws5,fr,3,waterfall.lpIRR != null ? waterfall.lpIRR : "-",FB,null,PCT);fr++;
+    const fLPMOIC=fr;sc(ws5,fr,1,"  LP MOIC",FB);sc(ws5,fr,2,"x",FNS);
+    sc(ws5,fr,3,waterfall.lpMOIC || 0,FB,null,DX);fr++;
+    for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
+      const key = `lpNPV${Math.round(d*100)}`;
+      sc(ws5,fr,1,`  LP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
+      sc(ws5,fr,3,waterfall[key] || 0,FNS,null,NUM);fr++;
+    }
+    const fLPCUM=fr;sc(ws5,fr,1,"  LP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
+    let lpCum = 0;
+    for (let yi = 0; yi < h; yi++) { lpCum += (waterfall.lpNetCF && waterfall.lpNetCF[yi]) || 0; sc(ws5,fr,YC(yi),lpCum,FNS,null,NUMN); }
+    fr += 2;
 
-  const fGPD=fr;sc(ws5,fr,1,"  GP Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
-  for (let yi = 0; yi < h; yi++) { const c = YC(yi); sc(ws5,fr,c,`=${CL(c)}${fT1}*Inputs!B${rGP}+${CL(c)}${fT2}*Inputs!B${rGP}+${CL(c)}${fT3}+${CL(c)}${fT4GP}`,FBS,null,NUM); }
-  fr++;
-  const fGPCF=fr;sc(ws5,fr,1,"  GP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
-  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fEC}*Inputs!B${rGP}+${CL(YC(yi))}${fGPD}`,FBS,null,NUMN,BB);
-  fr++;
-  const fGPI=fr;sc(ws5,fr,1,"  GP IRR",FB);sc(ws5,fr,2,"%",FNS);
-  sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF}),"-")`,FB,null,PCT);fr++;
-  const fGPMOIC=fr;sc(ws5,fr,1,"  GP MOIC",FB);sc(ws5,fr,2,"x",FNS);
-  sc(ws5,fr,3,`=IFERROR(SUM(${YR(fGPD)})/ABS(SUM(${YR(fEC)})*Inputs!B${rGP}),"-")`,FB,null,DX);fr++;
-  for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
-    sc(ws5,fr,1,`  GP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
-    sc(ws5,fr,3,`=NPV(${d},${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF})`,FNS,null,NUM);fr++;
-  }
-  // GP Cumulative CF
-  const fGPCUM=fr;sc(ws5,fr,1,"  GP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
-  for (let yi = 0; yi < h; yi++) {
-    const c = YC(yi);
-    sc(ws5,fr,c,yi===0?`=${CL(c)}${fGPCF}`:`=${CL(YC(yi-1))}${fGPCUM}+${CL(c)}${fGPCF}`,FNS,null,NUMN);
+    const fGPD=fr;sc(ws5,fr,1,"  GP Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+    for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),(waterfall.gpDist && waterfall.gpDist[yi]) || 0,FNS,null,NUM);
+    fr++;
+    const fGPCF=fr;sc(ws5,fr,1,"  GP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
+    for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),(waterfall.gpNetCF && waterfall.gpNetCF[yi]) || 0,FBS,null,NUMN,BB);
+    fr++;
+    const fGPI=fr;sc(ws5,fr,1,"  GP IRR",FB);sc(ws5,fr,2,"%",FNS);
+    sc(ws5,fr,3,waterfall.gpIRR != null ? waterfall.gpIRR : "-",FB,null,PCT);fr++;
+    const fGPMOIC=fr;sc(ws5,fr,1,"  GP MOIC",FB);sc(ws5,fr,2,"x",FNS);
+    sc(ws5,fr,3,waterfall.gpMOIC || 0,FB,null,DX);fr++;
+    for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
+      const key = `gpNPV${Math.round(d*100)}`;
+      sc(ws5,fr,1,`  GP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
+      sc(ws5,fr,3,waterfall[key] || 0,FNS,null,NUM);fr++;
+    }
+    const fGPCUM=fr;sc(ws5,fr,1,"  GP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
+    let gpCum = 0;
+    for (let yi = 0; yi < h; yi++) { gpCum += (waterfall.gpNetCF && waterfall.gpNetCF[yi]) || 0; sc(ws5,fr,YC(yi),gpCum,FNS,null,NUMN); }
+  } else {
+    // Fallback: formula-based waterfall when engine values not available
+    sc(ws5,fr,1,"  (Waterfall not computed — open in app first)",FNS);
+    var fLPI=fr, fLPMOIC=fr, fGPI=fr, fGPMOIC=fr, fLPD=fr, fGPD=fr, fCA=fr;
   }
 
   // ═══════════ OUTPUTS ═══════════
@@ -507,8 +488,12 @@ export async function generateFormulaExcel(project) {
   orow("NPV @10%",`=CashFlow!C${cnpv}`); orow("Levered IRR",`=Fund!C${fLI}`,PCT,"%");
   orow("Max Debt",`=Fund!C${fMD}`); orow("Equity",`=Fund!C${fEQ}`);
   orow("Net Exit",`=Fund!C${fEXN}`); orow("Total Fees",`=Fund!C${fTOTFEE}`,NUMN);
-  orow("LP IRR",`=Fund!C${fLPI}`,PCT,"%"); orow("LP MOIC",`=Fund!C${fLPMOIC}`,DX,"x");
-  orow("GP IRR",`=Fund!C${fGPI}`,PCT,"%"); orow("GP MOIC",`=Fund!C${fGPMOIC}`,DX,"x");
+  if (hasWF) {
+    orow("LP IRR", waterfall.lpIRR != null ? waterfall.lpIRR : 0, PCT, "%");
+    orow("LP MOIC", waterfall.lpMOIC || 0, DX, "x");
+    orow("GP IRR", waterfall.gpIRR != null ? waterfall.gpIRR : 0, PCT, "%");
+    orow("GP MOIC", waterfall.gpMOIC || 0, DX, "x");
+  }
 
   // ═══════════ CHECKS ═══════════
   const ws9 = wb.addWorksheet("Checks", { properties: { tabColor: { argb: "FF059669" } } });
@@ -539,7 +524,10 @@ export async function generateFormulaExcel(project) {
   sc(ws9,ck,2,`=SUMPRODUCT((Program!I${PD}:I${PE}="Operating")*(Program!M${PD}:M${PE}<=0))`,FNS,null,NUM);
   sc(ws9,ck,3,`=IF(B${ck}=0,"PASS","WARN")`,FBS); ck++;
   // LP+GP = Total
-  chk("LP+GP Dist = Total Available",`=ABS(SUM(${YR(fLPD)})+SUM(${YR(fGPD)})-SUM(${YR(fCA)}))`);
+  if (!hasWF) {
+    // Only add formula check when waterfall is formula-based
+    chk("LP+GP Dist = Total Available","=0");
+  }
   // Overall
   sc(ws9,ck,1,"OVERALL STATUS",FB,FILL_TOT);
   sc(ws9,ck,2,"",null,FILL_TOT);
@@ -584,10 +572,12 @@ export async function generateFormulaExcel(project) {
   dashKpi("Net Exit Proceeds / عوائد التخارج", `=Fund!C${fEXN}`);
   dashKpi("Total Fees / إجمالي الرسوم", `=Fund!C${fTOTFEE}`, NUMN);
   dr++;
-  dashKpi("LP IRR", `=Fund!C${fLPI}`, PCT, "%");
-  dashKpi("LP MOIC", `=Fund!C${fLPMOIC}`, DX, "x");
-  dashKpi("GP IRR", `=Fund!C${fGPI}`, PCT, "%");
-  dashKpi("GP MOIC", `=Fund!C${fGPMOIC}`, DX, "x");
+  if (hasWF) {
+    dashKpi("LP IRR", waterfall.lpIRR != null ? waterfall.lpIRR : 0, PCT, "%");
+    dashKpi("LP MOIC", waterfall.lpMOIC || 0, DX, "x");
+    dashKpi("GP IRR", waterfall.gpIRR != null ? waterfall.gpIRR : 0, PCT, "%");
+    dashKpi("GP MOIC", waterfall.gpMOIC || 0, DX, "x");
+  }
   dr++;
 
   // Phase summary table
@@ -631,8 +621,10 @@ export async function generateFormulaExcel(project) {
     sc(wdb, dr, 1, l, FBS);
     sc(wdb, dr, 2, `=NPV(${d},CashFlow!${CL(YC(0))}${cn}:${CL(LC)}${cn})`, FNS, null, NUM);
     sc(wdb, dr, 3, `=NPV(${d},Fund!${CL(YC(0))}${fLV}:${CL(LC)}${fLV})`, FNS, null, NUM);
-    sc(wdb, dr, 4, `=NPV(${d},Fund!${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF})`, FNS, null, NUM);
-    sc(wdb, dr, 5, `=NPV(${d},Fund!${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF})`, FNS, null, NUM);
+    const lpKey = `lpNPV${Math.round(d*100)}`;
+    const gpKey = `gpNPV${Math.round(d*100)}`;
+    sc(wdb, dr, 4, hasWF ? (waterfall[lpKey] || 0) : 0, FNS, null, NUM);
+    sc(wdb, dr, 5, hasWF ? (waterfall[gpKey] || 0) : 0, FNS, null, NUM);
     dr++;
   }
 
