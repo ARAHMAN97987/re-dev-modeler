@@ -3169,24 +3169,30 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         </div>
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        <div style={{height:50,minHeight:50,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 16px",gap:10}}>
-          <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13}}>{sidebarOpen?(lang==="ar"?"▷":"◁"):(lang==="ar"?"◁":"▷")}</button>
-          <div style={{flex:1}}>
-            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:16,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
+        <div style={{height:48,minHeight:48,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 12px",gap:8}}>
+          <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:13,flexShrink:0}}>{sidebarOpen?(lang==="ar"?"▷":"◁"):(lang==="ar"?"◁":"▷")}</button>
+          <div style={{flex:1,minWidth:0}}>
+            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:15,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0"}} placeholder="Project Name" />
           </div>
-          {project?._shared && <span style={{fontSize:10,padding:"4px 12px",borderRadius:4,fontWeight:600,background:project._permission==="view"?"#fef3c7":"#dbeafe",color:project._permission==="view"?"#92400e":"#1d4ed8"}}>{project._permission==="view"?(lang==="ar"?"🔒 للقراءة فقط":"🔒 View-only"):(lang==="ar"?"✏️ مشارك للتعديل":"✏️ Shared (Edit)")}</span>}
+          {project?._shared && <span style={{fontSize:9,padding:"3px 10px",borderRadius:4,fontWeight:600,background:project._permission==="view"?"#fef3c7":"#dbeafe",color:project._permission==="view"?"#92400e":"#1d4ed8",flexShrink:0}}>{project._permission==="view"?(lang==="ar"?"🔒 قراءة":"🔒 View"):(lang==="ar"?"✏️ مشارك":"✏️ Edit")}</span>}
           <StatusBadge status={project?.status} onChange={s=>up({status:s})} />
-          <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 10px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩ Undo</button>
-          <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"#16a34a":"#f0f4ff",color:presentMode?"#fff":"#2563eb",padding:"5px 12px",fontSize:10,fontWeight:600,border:presentMode?"none":"1px solid #bfdbfe"}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>
-          <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 12px",fontSize:10,fontWeight:600,border:"none",letterSpacing:0.3}}>{lang==="ar"?"🤖 مساعد AI":"🤖 AI Assistant"}</button>
-          <div style={{fontSize:11,color:"#9ca3af"}}>{project?.currency||"SAR"}</div>
-          <select value={project?.activeScenario||"Base Case"} onChange={e=>up({activeScenario:e.target.value})} style={{padding:"4px 8px",fontSize:10,borderRadius:4,border:"1px solid #e5e7ec",background:project?.activeScenario!=="Base Case"?"#fef3c7":"#f8f9fb",color:project?.activeScenario!=="Base Case"?"#92400e":"#6b7080",fontFamily:"inherit",cursor:"pointer"}} title={lang==="ar"?"السيناريو النشط":"Active Scenario"}>
-            {SCENARIOS.map(s=><option key={s} value={s}>{s}</option>)}
-          </select>
-          <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"EN"}</button>
-          {!project?._shared && <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const emailLower=email.toLowerCase().trim();const shared=[...(project.sharedWith||[])];const existing=shared.find(e=>(typeof e==="string"?e:e?.email)?.toLowerCase()===emailLower);if(!existing){const perm=confirm(lang==="ar"?"اضغط OK للتعديل، أو Cancel للقراءة فقط":"Press OK for Edit access, or Cancel for View-only");shared.push({email:emailLower,permission:perm?"edit":"view"});up({sharedWith:shared});alert(lang==="ar"?("تمت المشاركة مع "+emailLower+" ("+(perm?"تعديل":"قراءة فقط")+")"):"Shared with "+emailLower+" ("+(perm?"edit":"view-only")+")");}else{alert(lang==="ar"?"مشارك مسبقاً مع "+emailLower:"Already shared with "+emailLower);}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 10px",fontSize:10,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"مشاركة":"Share"}{project?.sharedWith?.length>0?` (${project.sharedWith.length})`:""}</button>}
-          {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
-          {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
+          {/* Primary actions */}
+          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+            <button onClick={undo} disabled={undoStack.current.length===0} title="Undo (Ctrl+Z)" style={{...btnS,background:undoStack.current.length>0?"#f0f1f5":"#f8f9fb",color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",padding:"5px 8px",fontSize:10,fontWeight:500,cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>
+            <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"#16a34a":"#f0f4ff",color:presentMode?"#fff":"#2563eb",padding:"5px 10px",fontSize:10,fontWeight:600,border:presentMode?"none":"1px solid #bfdbfe"}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>
+            <button onClick={()=>setAiOpen(true)} style={{...btnS,background:"linear-gradient(135deg,#0f766e,#1e40af)",color:"#fff",padding:"5px 10px",fontSize:10,fontWeight:600,border:"none"}}>🤖 AI</button>
+          </div>
+          {/* Separator */}
+          <div style={{width:1,height:24,background:"#e5e7ec",flexShrink:0}} />
+          {/* Secondary controls */}
+          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+            <select value={project?.activeScenario||"Base Case"} onChange={e=>up({activeScenario:e.target.value})} style={{padding:"4px 6px",fontSize:9,borderRadius:4,border:"1px solid #e5e7ec",background:project?.activeScenario!=="Base Case"?"#fef3c7":"#f8f9fb",color:project?.activeScenario!=="Base Case"?"#92400e":"#6b7080",fontFamily:"inherit",cursor:"pointer",maxWidth:100}} title={lang==="ar"?"السيناريو النشط":"Active Scenario"}>
+              {SCENARIOS.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+            <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"4px 8px",fontSize:10,fontWeight:600}}>{lang==="en"?"ع":"EN"}</button>
+            {!project?._shared && <button onClick={()=>{const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const emailLower=email.toLowerCase().trim();const shared=[...(project.sharedWith||[])];const existing=shared.find(e=>(typeof e==="string"?e:e?.email)?.toLowerCase()===emailLower);if(!existing){const perm=confirm(lang==="ar"?"اضغط OK للتعديل، أو Cancel للقراءة فقط":"Press OK for Edit access, or Cancel for View-only");shared.push({email:emailLower,permission:perm?"edit":"view"});up({sharedWith:shared});alert(lang==="ar"?("تمت المشاركة مع "+emailLower+" ("+(perm?"تعديل":"قراءة فقط")+")"):"Shared with "+emailLower+" ("+(perm?"edit":"view-only")+")");}else{alert(lang==="ar"?"مشارك مسبقاً مع "+emailLower:"Already shared with "+emailLower);}}}} style={{...btnS,background:"#f0f4ff",color:"#2563eb",padding:"4px 8px",fontSize:9,fontWeight:500,border:"1px solid #bfdbfe"}}>{lang==="ar"?"📤":"📤"}{project?.sharedWith?.length>0?` ${project.sharedWith.length}`:""}</button>}
+            {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 8px",fontSize:9,fontWeight:500}} title={user?.email||"Sign out"}>↪</button>}
+          </div>
         </div>
         <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
           {presentMode ? (
