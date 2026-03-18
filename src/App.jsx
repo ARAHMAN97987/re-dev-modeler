@@ -3260,16 +3260,14 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
               {key:"reports",label:lang==="ar"?"التقارير":"Reports",group:"export"},
             ];
             const groupColors = {project:"#2563eb",finance:"#8b5cf6",analysis:"#f59e0b",export:"#16a34a"};
-            const groupLabels = {project:ar?"المشروع":"Project",finance:ar?"التمويل":"Finance",analysis:ar?"التحليل":"Analysis",export:ar?"التصدير":"Export"};
             let prevGroup = null;
             return tabs.map(tb=>{
               const gc = groupColors[tb.group];
               const isActive = activeTab===tb.key;
               const showSep = prevGroup && prevGroup !== tb.group;
-              const showLabel = showSep;
               prevGroup = tb.group;
               return <span key={tb.key} style={{display:"inline-flex",alignItems:"center"}}>
-                {showSep && <span style={{display:"inline-flex",alignItems:"center",gap:0}}><span style={{width:1,height:20,background:"#e5e7ec",margin:"0 4px",flexShrink:0}} /><span style={{fontSize:8,color:gc,fontWeight:600,letterSpacing:0.5,textTransform:"uppercase",padding:"0 2px",opacity:0.7}}>{groupLabels[tb.group]}</span></span>}
+                {showSep && <span style={{width:1,height:20,background:"#d1d5db",margin:"0 6px",flexShrink:0}} />}
                 <button onClick={()=>setActiveTab(tb.key)} style={{padding:"10px 12px",fontSize:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
               </span>;
             });
