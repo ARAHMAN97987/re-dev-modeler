@@ -3838,6 +3838,52 @@ function MarinaPLModal({ data, onSave, onClose, t }) {
   );
 }
 
+// ── Score Tooltip Cell (fixed-position, escapes overflow) ──
+function ScoreCell({ sc, name, ar }) {
+  const [show, setShow] = useState(false);
+  const ref = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const onEnter = () => {
+    if (ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      setPos({ top: r.top - 6, left: r.left + r.width / 2 });
+    }
+    setShow(true);
+  };
+  const vCfg = { strong:{bg:"#dcfce7",color:"#15803d",label:"✓",t:ar?"مجدي":"Viable"}, ok:{bg:"#fef9c3",color:"#854d0e",label:"~",t:ar?"مقبول":"Marginal"}, weak:{bg:"#fef2f2",color:"#991b1b",label:"✗",t:ar?"ضعيف":"Weak"}, none:{bg:"#f0f1f5",color:"#9ca3af",label:"—",t:"—"} }[sc.viable];
+  const iCfg = { high:{label:"▲",color:"#1e40af",t:ar?"أثر كبير":"High impact"}, med:{label:"▬",color:"#6b7080",t:ar?"أثر متوسط":"Med impact"}, low:{label:"▼",color:"#9ca3af",t:ar?"أثر محدود":"Low impact"} }[sc.impact];
+  const yocPct = (sc.yoc * 100).toFixed(1);
+  const wPct = (sc.capexWeight * 100).toFixed(0);
+  return (
+    <div ref={ref} onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)} onClick={()=>{if(!show)onEnter();else setShow(false);}} style={{display:"flex",alignItems:"center",gap:3,cursor:"help"}}>
+      <span style={{fontSize:9,padding:"1px 5px",borderRadius:3,background:vCfg.bg,color:vCfg.color,fontWeight:700}}>{vCfg.label}{yocPct>0?` ${yocPct}%`:""}</span>
+      <span style={{fontSize:9,color:iCfg.color,fontWeight:600}}>{iCfg.label}{wPct}%</span>
+      {show && <div style={{position:"fixed",top:pos.top,left:Math.max(10, Math.min(pos.left - 150, (typeof window!=="undefined"?window.innerWidth:800) - 310)),transform:"translateY(-100%)",width:300,background:"#1a1d23",color:"#e5e7ec",padding:"14px 16px",borderRadius:10,fontSize:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"start",pointerEvents:"none"}}>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#5fbfbf",borderBottom:"1px solid #282d3a",paddingBottom:6}}>{name || (ar?"أصل":"Asset")}</div>
+        <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",marginBottom:8}}>
+          <span style={{color:"#6b7080"}}>{ar?"الجدوى":"Viability"}</span>
+          <span style={{fontWeight:600,color:vCfg.color}}>{vCfg.t}</span>
+          <span style={{color:"#6b7080"}}>{ar?"العائد على التكلفة":"Yield on Cost"}</span>
+          <span style={{fontWeight:600}}>{yocPct}%  <span style={{fontWeight:400,color:"#6b7080"}}>({ar?"إيراد سنوي ÷ CAPEX":"annual rev ÷ CAPEX"})</span></span>
+          <span style={{color:"#6b7080"}}>{ar?"إيراد سنوي":"Annual Rev"}</span>
+          <span style={{fontWeight:600}}>{fmtM(sc.annualRev)}</span>
+          <span style={{color:"#6b7080"}}>CAPEX</span>
+          <span style={{fontWeight:600}}>{fmtM(sc.capex)}</span>
+        </div>
+        <div style={{borderTop:"1px solid #282d3a",paddingTop:6,display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",marginBottom:8}}>
+          <span style={{color:"#6b7080"}}>{ar?"الأثر":"Impact"}</span>
+          <span style={{fontWeight:600,color:iCfg.color}}>{iCfg.t}</span>
+          <span style={{color:"#6b7080"}}>{ar?"وزن CAPEX":"CAPEX Weight"}</span>
+          <span style={{fontWeight:600}}>{wPct}% {ar?"من المشروع":"of project"}</span>
+        </div>
+        <div style={{borderTop:"1px solid #282d3a",paddingTop:6,fontSize:10,color:"#9ca3af",fontStyle:"italic"}}>
+          {sc.impact==="low"?(ar?"نقل هذا الأصل بين المراحل لن يؤثر كثيراً على المشروع":"Moving this asset between phases won't significantly affect the project"):sc.impact==="high"?(ar?"أصل محوري — أي تغيير في موقعه أو توقيته يؤثر بشكل كبير":"Key asset — any change in timing significantly affects the project"):(ar?"أثر متوسط — يجب مراعاة التوقيت":"Moderate impact — timing matters")}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // ASSET PROGRAM TABLE
 // ═══════════════════════════════════════════════════════════════
@@ -4218,21 +4264,9 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                       <td style={tdSt}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11}}>{fmt(comp?.totalRevenue||0)}</td>
-                      <td style={{...tdSt,background:"#fffdf5"}}>{(()=>{
+                      <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative"}}>{(()=>{
                         const sc = getAssetScore(a, comp);
-                        const vCfg = { strong:{bg:"#dcfce7",color:"#15803d",label:"✓"}, ok:{bg:"#fef9c3",color:"#854d0e",label:"~"}, weak:{bg:"#fef2f2",color:"#991b1b",label:"✗"}, none:{bg:"#f0f1f5",color:"#9ca3af",label:"—"} }[sc.viable];
-                        const iCfg = { high:{label:"▲",color:"#1e40af"}, med:{label:"▬",color:"#6b7080"}, low:{label:"▼",color:"#9ca3af"} }[sc.impact];
-                        const yocPct = (sc.yoc * 100).toFixed(1);
-                        const wPct = (sc.capexWeight * 100).toFixed(0);
-                        const tipText = ar
-                          ? `العائد على التكلفة: ${yocPct}%\nالوزن: ${wPct}% من إجمالي CAPEX\n${sc.impact==="low"?"أثر محدود — نقله بين المراحل لا يؤثر كثيراً":sc.impact==="high"?"أصل محوري — أي تغيير يؤثر بشكل كبير":"أثر متوسط"}`
-                          : `Yield on Cost: ${yocPct}%\nWeight: ${wPct}% of total CAPEX\n${sc.impact==="low"?"Low impact — moving between phases won't matter much":sc.impact==="high"?"Key asset — any change significantly affects project":"Moderate impact"}`;
-                        return (
-                          <div title={tipText} style={{display:"flex",alignItems:"center",gap:3,cursor:"help"}}>
-                            <span style={{fontSize:9,padding:"1px 5px",borderRadius:3,background:vCfg.bg,color:vCfg.color,fontWeight:700}}>{vCfg.label}{yocPct>0?` ${yocPct}%`:""}</span>
-                            <span style={{fontSize:9,color:iCfg.color,fontWeight:600}} title={`${wPct}% CAPEX`}>{iCfg.label}{wPct}%</span>
-                          </div>
-                        );
+                        return <ScoreCell sc={sc} name={a.name} ar={ar} />;
                       })()}</td>
                       <td style={tdSt}><button onClick={()=>rmAsset(i)} style={{...btnSm,background:"#fef2f2",color:"#ef4444",fontSize:10}}>✕</button></td>
                     </tr>
