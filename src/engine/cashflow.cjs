@@ -73,15 +73,12 @@ function computeLandSchedule(project, horizon, assetSchedules) {
   const phaseNames = [...new Set(assetSchedules.map(a => a.phase || 'Unphased'))];
   phaseNames.forEach(pn => { phaseAllocations[pn] = new Array(horizon).fill(0); });
 
-  // Purchase: lump sum in year 0
+  // Purchase: price goes to CAPEX (year 0), not land rent
   if (project.landType === 'purchase') {
-    totalSch[0] = project.landPurchasePrice || 0;
-    if (phaseNames.length > 0) {
-      phaseAllocations[phaseNames[0]][0] = totalSch[0];
-    }
     return {
-      schedule: totalSch,
+      schedule: totalSch, // stays zero — purchase is CAPEX not rent
       phaseAllocations,
+      landPurchaseCapex: project.landPurchasePrice || 0,
       meta: { rentStartYear: 0, graceEnd: 0, phaseCompletionYears: {}, phaseShares: {} }
     };
   }
@@ -219,6 +216,10 @@ function computePhaseResults(assetSchedules, landResult, horizon) {
     const totalFP = assetSchedules.reduce((s, a) => s + (a.footprint || 0), 0);
     const pFP = pa.reduce((s, a) => s + (a.footprint || 0), 0);
     const alloc = totalFP > 0 ? pFP / totalFP : phaseNames.length > 0 ? 1 / phaseNames.length : 0;
+
+    // Add land purchase CAPEX to year 0 (allocated by footprint)
+    const landPurchaseCapex = landResult.landPurchaseCapex || 0;
+    if (landPurchaseCapex > 0) cap[0] += landPurchaseCapex * alloc;
 
     const net = new Array(horizon).fill(0);
     for (let y = 0; y < horizon; y++) net[y] = inc[y] - pLand[y] - cap[y];

@@ -178,8 +178,8 @@ suite('F3e-LandPurchase');
 {
   const pPurch = {...D1, landType:'purchase', landPurchasePrice:5000000};
   const r = E.computeProjectCashFlows(pPurch);
-  t('Land Y0 = purchase price', near(r.landSchedule[0], 5000000, TOL.MONEY_SMALL));
-  t('Land Y1+ = 0', r.landSchedule.slice(1).every(v => v === 0));
+  t('Land purchase in CAPEX Y0', r.consolidated.capex[0] >= 5000000);
+  t('Land rent = 0 (purchase)', r.landSchedule.every(v => v === 0));
 }
 
 // ── F4: calcIRR ──

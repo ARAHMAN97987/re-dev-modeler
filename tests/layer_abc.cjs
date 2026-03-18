@@ -386,16 +386,16 @@ test('T3.3c Land rent income rule: starts at first income', () => {
   assert(landResult.schedule[1] > 0, 'Year 1 has rent despite grace=10');
 });
 
-test('T3.4 Land purchase: lump sum in year 0', () => {
+test('T3.4 Land purchase: in CAPEX year 0, not land rent', () => {
   const p = defaultProject();
   p.landType = 'purchase';
   p.landPurchasePrice = 50000000;
   p.horizon = 10;
-  const scheds_lr = computeAssetSchedules(p);
-  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
-  const landSch = landResult.schedule;
-  assert(landSch[0] === 50000000, 'Year 0 = purchase price');
-  assert(landSch[1] === 0, 'Year 1 = 0');
+  p.phases = [{ name: 'Phase 1', completionMonth: 24 }];
+  p.assets = [{ id:'lp1', phase:'Phase 1', gfa:5000, footprint:3000, costPerSqm:3000, efficiency:80, leaseRate:500, revType:'Lease', stabilizedOcc:80, rampUpYears:2, constrDuration:24 }];
+  const result = computeUnleveredCashFlows(p);
+  assert(result.landSchedule[0] === 0, 'Land rent should be 0 for purchase');
+  assert(result.consolidated.capex[0] >= 50000000, `CAPEX Y0 should include 50M land: got ${result.consolidated.capex[0]}`);
 });
 
 test('T3.5 Phase results: single phase', () => {

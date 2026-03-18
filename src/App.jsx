@@ -845,9 +845,12 @@ function computeProjectCashFlows(project) {
     }
     landRentMeta = { rentStartYear, graceEnd: gr, phase1CompletionYear: phase1Year, firstIncomeYear, startRule, phaseCompletionYears: phaseCompYrs, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
   } else if (project.landType === "purchase") {
-    landSch[0] = project.landPurchasePrice || 0;
-    if (phaseNames.length > 0) phaseAllocLand[phaseNames[0]][0] = landSch[0];
+    // Purchase price goes to CAPEX (year 0), NOT land rent
+    // landSch stays zero — purchase is capital expenditure, not ongoing rent
   }
+
+  // Land purchase CAPEX: added to phase CAPEX in year 0
+  const landPurchaseCapex = (project.landType === "purchase") ? (project.landPurchasePrice || 0) : 0;
 
   // ── Phase Results (using pre-computed land allocations) ──
   const phaseResults = {};
@@ -858,6 +861,8 @@ function computeProjectCashFlows(project) {
     const totalFP = assetSchedules.reduce((s,a)=>s+(a.footprint||0),0);
     const pFP = pa.reduce((s,a)=>s+(a.footprint||0),0);
     const alloc = totalFP > 0 ? pFP/totalFP : phaseNames.length > 0 ? 1/phaseNames.length : 0;
+    // Add land purchase CAPEX to year 0 (allocated by footprint)
+    if (landPurchaseCapex > 0) cap[0] += landPurchaseCapex * alloc;
     const pLand = phaseAllocLand[pName] || new Array(horizon).fill(0);
     const net = new Array(horizon).fill(0);
     for (let y=0;y<horizon;y++) net[y] = inc[y] - pLand[y] - cap[y];
@@ -1011,7 +1016,7 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
   add("T1","NPV@10% Computed", c.npv10 !== undefined, "NPV at 10% computed", `NPV: ${fmt(c.npv10)}`);
   add("T1","Sum Consistency", Math.abs(c.totalNetCF-(c.totalIncome-c.totalCapex-c.totalLandRent))<tol, "Total Net CF = Income - CAPEX - Land");
   if (project.landType === "lease") { add("T1","Lease Land Rent", c.totalLandRent>0||(project.landRentAnnual||0)===0, "Leased land: rent configured correctly"); }
-  else if (project.landType === "purchase") { add("T1","Purchase Land Cost", c.landRent[0]>0||(project.landPurchasePrice||0)===0, "Purchase cost recorded"); }
+  else if (project.landType === "purchase") { add("T1","Purchase Land Cost", c.capex[0]>=(project.landPurchasePrice||0)||(project.landPurchasePrice||0)===0, "Purchase cost in CAPEX year 0"); }
   else if (project.landType === "partner" || project.landType === "bot") { add("T1","No Land Cost", c.totalLandRent===0, "No cash land cost for partner/BOT"); }
 
   // ═══════════════════════════════════════════════
