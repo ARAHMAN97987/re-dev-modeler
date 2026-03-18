@@ -545,6 +545,7 @@ const defaultProject = () => ({
   landCapRate: 1000, // SAR/sqm
   landCapTo: "gp", // gp | lp | split
   landRentPaidBy: "auto", // auto | project | gp | lp — who pays ongoing land rent after capitalization
+  landRentStartRule: "auto", // auto = MIN(grace, income) | grace = grace end only | income = first income only
   landCapGpBearRent: false, // GP bears land rent alone if capitalized
   // Debt
   debtAllowed: true,
@@ -805,7 +806,26 @@ function computeProjectCashFlows(project) {
 
     const sortedPh = Object.entries(phaseCompYrs).sort((a,b) => a[1]-b[1]);
     const phase1Year = sortedPh.length > 0 ? sortedPh[0][1] : 0;
-    const rentStartYear = Math.max(gr, phase1Year);
+
+    // First income year (when any asset starts generating revenue)
+    let firstIncomeYear = horizon;
+    assetSchedules.forEach(a => {
+      const fy = a.revenueSchedule.findIndex(v => v > 0);
+      if (fy >= 0 && fy < firstIncomeYear) firstIncomeYear = fy;
+    });
+    if (firstIncomeYear >= horizon) firstIncomeYear = phase1Year;
+
+    // Land rent start rule: auto | grace | income
+    const startRule = project.landRentStartRule || "auto";
+    let rentStartYear;
+    if (startRule === "grace") {
+      rentStartYear = gr; // starts after grace ends, regardless of income
+    } else if (startRule === "income") {
+      rentStartYear = firstIncomeYear; // starts when income begins, regardless of grace
+    } else {
+      // auto: whichever comes first (MIN)
+      rentStartYear = Math.min(gr, firstIncomeYear);
+    }
 
     const phaseSharesLog = {};
     for (let y = 0; y < term; y++) {
@@ -823,7 +843,7 @@ function computeProjectCashFlows(project) {
         if (!phaseSharesLog[pn]) phaseSharesLog[pn] = { footprint: phaseFP[pn]||0, completionYear: phaseCompYrs[pn], firstRentYear: y, shareAtOpen: share };
       });
     }
-    landRentMeta = { rentStartYear, graceEnd: gr, phase1CompletionYear: phase1Year, phaseCompletionYears: phaseCompYrs, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
+    landRentMeta = { rentStartYear, graceEnd: gr, phase1CompletionYear: phase1Year, firstIncomeYear, startRule, phaseCompletionYears: phaseCompYrs, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
   } else if (project.landType === "purchase") {
     landSch[0] = project.landPurchasePrice || 0;
     if (phaseNames.length > 0) phaseAllocLand[phaseNames[0]][0] = landSch[0];
@@ -4077,6 +4097,14 @@ Land rent grace years during construction"><SidebarInput type="number" value={pr
           <Fld label={t.leaseTerm} tip="مدة عقد حق الانتفاع بالسنوات. عادة 25-50 سنة
 Leasehold contract term in years. Typically 25-50 years"><SidebarInput type="number" value={project.landRentTerm} onChange={v=>up({landRentTerm:v})} /></Fld>
         </div>
+        <Fld label={ar?"بداية الإيجار":"Rent Start Rule"} tip="متى يبدأ إيجار الأرض: تلقائي = أيهما أسبق (انتهاء السماح أو بداية الإيراد). حسب السماح = ينتظر انتهاء فترة السماح فقط. حسب الإيراد = يبدأ فور بدء الإيراد
+When does land rent begin: Auto = whichever comes first (grace end or income start). Grace = waits for grace to expire. Income = starts when revenue begins">
+          <select value={project.landRentStartRule||"auto"} onChange={e=>up({landRentStartRule:e.target.value})} style={{width:"100%",padding:"6px 8px",fontSize:11,borderRadius:6,border:"1px solid #e5e7ec",background:"#fff",fontFamily:"inherit"}}>
+            <option value="auto">{ar?"تلقائي (أيهما أسبق)":"Auto (whichever first)"}</option>
+            <option value="grace">{ar?"حسب فترة السماح":"After grace period"}</option>
+            <option value="income">{ar?"حسب بداية الإيراد":"When income starts"}</option>
+          </select>
+        </Fld>
         {/* Land Rent Allocation Details */}
         {results?.landRentMeta?.rentStartYear != null && (() => {
           const m = results.landRentMeta;
@@ -4090,10 +4118,11 @@ Leasehold contract term in years. Typically 25-50 years"><SidebarInput type="num
                 <span style={{color:"#6b7080",marginInlineStart:8}}>({ar?"بعد":"after"} {m.rentStartYear} {ar?"سنة":"yr"})</span>
               </div>
               <div style={{marginBottom:4,color:"#6b7080"}}>
-                {ar?"فترة السماح:":"Grace:"} {m.graceEnd} {ar?"سنة":"yr"} | {ar?"افتتاح المرحلة 1:":"Phase 1 opens:"} {ar?"السنة":"Yr"} {m.phase1CompletionYear}
+                {ar?"فترة السماح:":"Grace:"} {m.graceEnd} {ar?"سنة":"yr"} | {ar?"بداية الإيراد:":"1st income:"} {ar?"السنة":"Yr"} {m.firstIncomeYear ?? '—'} | {ar?"افتتاح المرحلة 1:":"Phase 1 opens:"} {ar?"السنة":"Yr"} {m.phase1CompletionYear}
               </div>
               <div style={{marginBottom:4,color:"#6b7080"}}>
-                {ar?"القاعدة:":"Rule:"} {ar?"يبدأ الإيجار عند MAX(انتهاء السماح, افتتاح المرحلة 1)":"Rent starts at MAX(grace end, Phase 1 opens)"}
+                {ar?"القاعدة:":"Rule:"} {m.startRule === 'auto' ? (ar?"أيهما أسبق":"Whichever first") : m.startRule === 'grace' ? (ar?"بعد السماح":"After grace") : (ar?"بعد الإيراد":"After income")}
+                {m.startRule === 'auto' && <span> → MIN({m.graceEnd}, {m.firstIncomeYear ?? '—'}) = {m.rentStartYear}</span>}
               </div>
               {m.phaseShares && Object.keys(m.phaseShares).length > 0 && <>
                 <div style={{fontWeight:600,marginTop:8,marginBottom:4}}>{ar?"التوزيع بين المراحل:":"Phase allocation:"}</div>

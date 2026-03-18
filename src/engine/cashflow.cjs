@@ -119,9 +119,26 @@ function computeLandSchedule(project, horizon, assetSchedules) {
 
   const phase1CompletionYear = sortedPhases.length > 0 ? sortedPhases[0][1] : 0;
 
-  // Land rent starts at MAX(grace end, Phase 1 completion)
+  // First income year (when any asset starts generating revenue)
+  let firstIncomeYear = horizon;
+  assetSchedules.forEach(a => {
+    const fy = a.revenueSchedule.findIndex(v => v > 0);
+    if (fy >= 0 && fy < firstIncomeYear) firstIncomeYear = fy;
+  });
+  if (firstIncomeYear >= horizon) firstIncomeYear = phase1CompletionYear;
+
+  // Land rent start rule: auto | grace | income
+  const startRule = project.landRentStartRule || "auto";
   const graceEnd = grace;
-  const rentStartYear = Math.max(graceEnd, phase1CompletionYear);
+  let rentStartYear;
+  if (startRule === "grace") {
+    rentStartYear = graceEnd;
+  } else if (startRule === "income") {
+    rentStartYear = firstIncomeYear;
+  } else {
+    // auto: whichever comes first (MIN)
+    rentStartYear = Math.min(graceEnd, firstIncomeYear);
+  }
 
   const phaseSharesLog = {};
 
@@ -168,6 +185,8 @@ function computeLandSchedule(project, horizon, assetSchedules) {
       rentStartYear,
       graceEnd,
       phase1CompletionYear,
+      firstIncomeYear,
+      startRule,
       phaseCompletionYears,
       phaseFootprints,
       phaseShares: phaseSharesLog,

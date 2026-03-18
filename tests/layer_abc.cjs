@@ -327,8 +327,9 @@ test('T2.16 Multiple assets in same phase aggregate correctly', () => {
 console.log('\n═══ T3: Layer C — Unlevered Cash Flow ═══');
 // ═════════════════════════════════════════════
 
-test('T3.1 Land rent schedule (lease) matches oracle', () => {
+test('T3.1 Land rent schedule (grace rule) matches oracle', () => {
   const p = simpleProject();
+  p.landRentStartRule = "grace"; // use grace-only for oracle comparison
   const scheds_lr = computeAssetSchedules(p);
   const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
   const landSch = landResult.schedule;
@@ -337,8 +338,9 @@ test('T3.1 Land rent schedule (lease) matches oracle', () => {
   assert(check.ok, check.msg);
 });
 
-test('T3.2 Land rent grace period respected', () => {
+test('T3.2 Land rent grace period respected (grace rule)', () => {
   const p = simpleProject();
+  p.landRentStartRule = "grace";
   const scheds_lr = computeAssetSchedules(p);
   const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
   const landSch = landResult.schedule;
@@ -348,8 +350,9 @@ test('T3.2 Land rent grace period respected', () => {
   assert(near(landSch[2], 1000000, 0.01), 'Base rent = 1M');
 });
 
-test('T3.3 Land rent escalation every N years', () => {
+test('T3.3 Land rent escalation every N years (grace rule)', () => {
   const p = simpleProject();
+  p.landRentStartRule = "grace";
   const scheds_lr = computeAssetSchedules(p);
   const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
   const landSch = landResult.schedule;
@@ -358,6 +361,29 @@ test('T3.3 Land rent escalation every N years', () => {
   assert(near(landSch[6], 1000000, 0.01), 'Still base at year 6');
   assert(landSch[7] > landSch[6], 'Escalation at year 7');
   assert(near(landSch[7], 1000000 * 1.05, 0.01), `Escalated rent: ${landSch[7]}`);
+});
+
+test('T3.3b Land rent auto rule: starts at MIN(grace, firstIncome)', () => {
+  const p = simpleProject();
+  // p has grace=2, completionMonth=12 (1yr), asset dur=12 → revenue starts yr 1
+  // Auto: MIN(grace=2, firstIncome=1) = 1
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  const landSch = landResult.schedule;
+  assert(landResult.meta.startRule === 'auto', 'Default is auto');
+  assert(landResult.meta.rentStartYear === 1, `Rent starts yr 1 = MIN(2,1), got ${landResult.meta.rentStartYear}`);
+  assert(landSch[0] === 0, 'Year 0 no rent');
+  assert(landSch[1] > 0, 'Year 1 rent starts (income started)');
+});
+
+test('T3.3c Land rent income rule: starts at first income', () => {
+  const p = simpleProject();
+  p.landRentStartRule = "income";
+  p.landRentGrace = 10; // grace is 10yr but income rule ignores it
+  const scheds_lr = computeAssetSchedules(p);
+  const landResult = computeLandSchedule(p, p.horizon, scheds_lr);
+  assert(landResult.meta.rentStartYear === 1, `Rent starts yr 1 (income), got ${landResult.meta.rentStartYear}`);
+  assert(landResult.schedule[1] > 0, 'Year 1 has rent despite grace=10');
 });
 
 test('T3.4 Land purchase: lump sum in year 0', () => {
