@@ -3916,29 +3916,50 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   };
 
   // Bilingual column headers
+  // Viability & Impact scoring per asset
+  const totalProjectCapex = results?.consolidated?.totalCapex || 1;
+  const totalProjectIncome = results?.consolidated?.totalIncome || 1;
+  const getAssetScore = (asset, comp) => {
+    const capex = comp?.totalCapex || computeAssetCapex(asset, project);
+    const income = comp?.totalRevenue || 0;
+    const horizon = project.horizon || 50;
+    const durYrs = Math.ceil((asset.constrDuration || 12) / 12);
+    const revYears = Math.max(1, horizon - (asset.constrStart || 1) + 1 - durYrs);
+    const annualRev = revYears > 0 ? income / revYears : 0;
+    const yoc = capex > 0 ? annualRev / capex : 0; // Yield on Cost
+    const capexWeight = capex / totalProjectCapex; // CAPEX weight
+    const incomeWeight = income / totalProjectIncome; // Revenue weight
+    // Viability: based on yield on cost
+    const viable = capex === 0 ? "none" : yoc > 0.08 ? "strong" : yoc > 0.04 ? "ok" : income > 0 ? "weak" : "none";
+    // Impact: based on CAPEX share
+    const impact = capexWeight > 0.25 ? "high" : capexWeight > 0.10 ? "med" : "low";
+    return { yoc, capexWeight, incomeWeight, annualRev, viable, impact, capex, income };
+  };
+
   const cols = [
-    { key:"#", en:"#", ar:"#" },
-    { key:"phase", en:"Phase", ar:"المرحلة" },
-    { key:"category", en:"Category", ar:"التصنيف" },
-    { key:"name", en:"Asset Name", ar:"اسم الأصل" },
-    { key:"code", en:"Code", ar:"الرمز" },
-    { key:"plotArea", en:"Plot Area", ar:"مساحة القطعة" },
-    { key:"footprint", en:"Footprint", ar:"المسطح البنائي" },
-    { key:"gfa", en:"GFA (sqm)", ar:"المساحة (م²)" },
-    { key:"revType", en:"Rev Type", ar:"نوع الإيراد" },
-    { key:"eff", en:"Eff %", ar:"الكفاءة %" },
-    { key:"leasable", en:"Leasable", ar:"التأجيرية" },
-    { key:"rate", en:"Rate/sqm", ar:"إيجار/م²" },
-    { key:"opEbitda", en:"Op EBITDA", ar:"أرباح تشغيلية" },
-    { key:"esc", en:"Esc %", ar:"الزيادة %" },
-    { key:"ramp", en:"Ramp", ar:"النمو" },
-    { key:"occ", en:"Occ %", ar:"الإشغال %" },
-    { key:"cost", en:"Cost/sqm", ar:"تكلفة/م²" },
-    { key:"start", en:"Constr. Start (Yr)", ar:"بداية البناء (سنة)" },
-    { key:"dur", en:"Constr. Duration (mo)", ar:"مدة البناء (شهر)" },
-    { key:"totalCapex", en:"Total CAPEX", ar:"إجمالي التكاليف" },
-    { key:"totalInc", en:"Total Income", ar:"إجمالي الإيرادات" },
-    { key:"ops", en:"", ar:"" },
+    { key:"#", en:"#", ar:"#", w:30 },
+    { key:"phase", en:"Phase", ar:"المرحلة", w:80 },
+    { key:"category", en:"Category", ar:"التصنيف", w:95 },
+    { key:"name", en:"Asset Name", ar:"اسم الأصل", w:130 },
+    { key:"code", en:"Code", ar:"الرمز", w:42 },
+    { key:"plotArea", en:"Plot", ar:"القطعة", w:60 },
+    { key:"footprint", en:"Fprint", ar:"المسطح", w:55 },
+    { key:"gfa", en:"GFA", ar:"م.ط", w:60 },
+    { key:"revType", en:"Type", ar:"النوع", w:65 },
+    { key:"eff", en:"Eff%", ar:"كفاءة", w:45 },
+    { key:"leasable", en:"Lease.", ar:"تأجير", w:55 },
+    { key:"rate", en:"Rate", ar:"إيجار", w:55 },
+    { key:"opEbitda", en:"EBITDA", ar:"تشغيلي", w:75 },
+    { key:"esc", en:"Esc%", ar:"زيادة", w:40 },
+    { key:"ramp", en:"Ramp", ar:"نمو", w:38 },
+    { key:"occ", en:"Occ%", ar:"إشغال", w:42 },
+    { key:"cost", en:"Cost", ar:"تكلفة", w:55 },
+    { key:"start", en:"Start", ar:"بداية", w:42 },
+    { key:"dur", en:"Mo.", ar:"شهر", w:38 },
+    { key:"totalCapex", en:"CAPEX", ar:"التكاليف", w:80 },
+    { key:"totalInc", en:"Income", ar:"الإيرادات", w:80 },
+    { key:"score", en:"Score", ar:"تقييم", w:90 },
+    { key:"ops", en:"", ar:"", w:30 },
   ];
 
   const [editingPhase, setEditingPhase] = useState(null);
@@ -4123,9 +4144,16 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
               <F2 label={ar?"مدة البناء (شهر)":"Duration (mo)"}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>{isH?(ar?"⚙ حساب أرباح الفندق":"⚙ Hotel P&L"):(ar?"⚙ حساب أرباح المارينا":"⚙ Marina P&L")}</button>}
-            <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
+            <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:12}}>
               <div><span style={{color:"#6b7080"}}>{ar?"التكاليف:":"CAPEX:"}</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
               <div><span style={{color:"#6b7080"}}>{ar?"الإيرادات:":"Income:"}</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
+              {(()=>{
+                const sc = getAssetScore(a, comp);
+                const vCfg = { strong:{bg:"#dcfce7",color:"#15803d",t:ar?"مجدي":"Viable"}, ok:{bg:"#fef9c3",color:"#854d0e",t:ar?"مقبول":"Marginal"}, weak:{bg:"#fef2f2",color:"#991b1b",t:ar?"ضعيف":"Weak"}, none:{bg:"#f0f1f5",color:"#9ca3af",t:"—"} }[sc.viable];
+                const wPct = (sc.capexWeight * 100).toFixed(0);
+                const impLabel = sc.impact==="high"?(ar?"أثر كبير":"High impact"):sc.impact==="med"?(ar?"أثر متوسط":"Med impact"):(ar?"أثر محدود":"Low impact");
+                return <div><span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:vCfg.bg,color:vCfg.color,fontWeight:600}}>{vCfg.t}</span> <span style={{fontSize:9,color:"#6b7080"}}>{impLabel} ({wPct}%)</span></div>;
+              })()}
             </div>
           </div>
         </div></>;})()}
@@ -4138,7 +4166,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             <thead>
               <tr>
                 {cols.map(c=>(
-                  <th key={c.key} style={{...thSt,minWidth:c.key==="name"?130:c.key==="#"||c.key==="ops"?30:undefined, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:{})}}>
+                  <th key={c.key} style={{...thSt,minWidth:c.w||40,maxWidth:c.key==="name"?200:undefined, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
                     <div>{c.en}</div>
                     {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"#9ca3af"}}>{c.ar}</div>}
                   </th>
@@ -4190,6 +4218,22 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                       <td style={tdSt}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11}}>{fmt(comp?.totalRevenue||0)}</td>
+                      <td style={{...tdSt,background:"#fffdf5"}}>{(()=>{
+                        const sc = getAssetScore(a, comp);
+                        const vCfg = { strong:{bg:"#dcfce7",color:"#15803d",label:"✓"}, ok:{bg:"#fef9c3",color:"#854d0e",label:"~"}, weak:{bg:"#fef2f2",color:"#991b1b",label:"✗"}, none:{bg:"#f0f1f5",color:"#9ca3af",label:"—"} }[sc.viable];
+                        const iCfg = { high:{label:"▲",color:"#1e40af"}, med:{label:"▬",color:"#6b7080"}, low:{label:"▼",color:"#9ca3af"} }[sc.impact];
+                        const yocPct = (sc.yoc * 100).toFixed(1);
+                        const wPct = (sc.capexWeight * 100).toFixed(0);
+                        const tipText = ar
+                          ? `العائد على التكلفة: ${yocPct}%\nالوزن: ${wPct}% من إجمالي CAPEX\n${sc.impact==="low"?"أثر محدود — نقله بين المراحل لا يؤثر كثيراً":sc.impact==="high"?"أصل محوري — أي تغيير يؤثر بشكل كبير":"أثر متوسط"}`
+                          : `Yield on Cost: ${yocPct}%\nWeight: ${wPct}% of total CAPEX\n${sc.impact==="low"?"Low impact — moving between phases won't matter much":sc.impact==="high"?"Key asset — any change significantly affects project":"Moderate impact"}`;
+                        return (
+                          <div title={tipText} style={{display:"flex",alignItems:"center",gap:3,cursor:"help"}}>
+                            <span style={{fontSize:9,padding:"1px 5px",borderRadius:3,background:vCfg.bg,color:vCfg.color,fontWeight:700}}>{vCfg.label}{yocPct>0?` ${yocPct}%`:""}</span>
+                            <span style={{fontSize:9,color:iCfg.color,fontWeight:600}} title={`${wPct}% CAPEX`}>{iCfg.label}{wPct}%</span>
+                          </div>
+                        );
+                      })()}</td>
                       <td style={tdSt}><button onClick={()=>rmAsset(i)} style={{...btnSm,background:"#fef2f2",color:"#ef4444",fontSize:10}}>✕</button></td>
                     </tr>
                   );
