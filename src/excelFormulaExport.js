@@ -115,6 +115,13 @@ export async function generateFormulaExcel(project) {
   const rCR_ = inp("Carry %", p.carryPct || 25, PCT, true);
   const rLS = inp("LP Profit Split %", p.lpProfitSplitPct || 70, PCT, true);
 
+  sec("Fees / الرسوم");
+  const rSUB = inp("Subscription Fee %", p.subscriptionFeePct || 2, PCT, true);
+  const rMGM = inp("Annual Mgmt Fee %", p.annualMgmtFeePct || 0.9, PCT, true);
+  const rCUST = inp("Annual Custody Fee (fixed)", p.annualCustodyFee || 0, NUM);
+  const rDEV = inp("Developer Fee % (of CAPEX)", p.developerFeePct || 10, PCT, true);
+  const rSTR = inp("Structuring Fee %", p.structuringFeePct || 0, PCT, true);
+
   sec("Phase Allocation / التوزيع");
   const rPA = R;
   for (let i = 0; i < nph; i++) {
@@ -293,7 +300,8 @@ export async function generateFormulaExcel(project) {
   const fMD=fr;sc(ws5,fr,1,"  Max Debt (LTV)",FNS);sc(ws5,fr,3,`=C${fDC}*Inputs!B${rLV}`,FNS,null,NUM);fr++;
   const fEQ=fr;sc(ws5,fr,1,"  Total Equity",FBS);sc(ws5,fr,3,`=C${fDC}-C${fMD}`,FBS,null,NUM);fr++;
   sc(ws5,fr,1,"  GP Equity",FNS);sc(ws5,fr,3,`=C${fEQ}*Inputs!B${rGP}`,FNS,null,NUM);fr++;
-  sc(ws5,fr,1,"  LP Equity",FNS);sc(ws5,fr,3,`=C${fEQ}*(1-Inputs!B${rGP})`,FNS,null,NUM);fr+=2;
+  sc(ws5,fr,1,"  LP Equity",FNS);sc(ws5,fr,3,`=C${fEQ}*(1-Inputs!B${rGP})`,FNS,null,NUM);fr++;
+  const fEXY=fr;sc(ws5,fr,1,"  Exit Year",FBS);sc(ws5,fr,3,`=IF(Inputs!B${rEY}=0,Inputs!B${rTN}+1,Inputs!B${rEY})`,FBS);fr+=2;
 
   secr(ws5,fr,1,LC,"DEBT SCHEDULE"); fr++;
   const fDD=fr;sc(ws5,fr,1,"  Drawdown",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
@@ -321,9 +329,43 @@ export async function generateFormulaExcel(project) {
   for (let yi = 0; yi < h; yi++) { const c = YC(yi); sc(ws5,fr,c,`=IF(ABS(${CL(c)}${fDS})=0,"-",CashFlow!${CL(c)}${ci}/ABS(${CL(c)}${fDS}))`,FBS,null,DX); }
   fr += 2;
 
-  // Exit
+  // Fees
+  secr(ws5,fr,1,LC,"FEES / الرسوم"); fr++;
+  const fSUBF=fr;sc(ws5,fr,1,"  Subscription Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    // One-time at fund start year (year 1)
+    sc(ws5,fr,YC(yi),yi===0?`=-C${fEQ}*Inputs!B${rSUB}`:0,FNS,null,NUMN);
+  }
+  fr++;
+  const fMGMF=fr;sc(ws5,fr,1,"  Management Fee (annual)",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    // Annual % of equity committed, during fund life (up to exit year)
+    sc(ws5,fr,YC(yi),`=IF(${yi+1}<=C${fEXY},-C${fEQ}*Inputs!B${rMGM},0)`,FNS,null,NUMN);
+  }
+  fr++;
+  const fCUSTF=fr;sc(ws5,fr,1,"  Custody & Admin Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    sc(ws5,fr,YC(yi),`=IF(${yi+1}<=C${fEXY},-Inputs!B${rCUST},0)`,FNS,null,NUMN);
+  }
+  fr++;
+  const fDEVF=fr;sc(ws5,fr,1,"  Developer Fee (% of CAPEX)",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    // Spread over construction years (proportional to CAPEX spend)
+    sc(ws5,fr,YC(yi),`=IF(Calc!${CL(YC(yi))}${CXT}>0,-Calc!${CL(YC(yi))}${CXT}*Inputs!B${rDEV},0)`,FNS,null,NUMN);
+  }
+  fr++;
+  const fSTRF=fr;sc(ws5,fr,1,"  Structuring Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    sc(ws5,fr,YC(yi),yi===0?`=-C${fDC}*Inputs!B${rSTR}`:0,FNS,null,NUMN);
+  }
+  fr++;
+  const fTOTFEE=fr;sc(ws5,fr,1,"  Total Fees",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    const c = YC(yi);
+    sc(ws5,fr,c,`=${CL(c)}${fSUBF}+${CL(c)}${fMGMF}+${CL(c)}${fCUSTF}+${CL(c)}${fDEVF}+${CL(c)}${fSTRF}`,FBS,null,NUMN,BB);
+  }
+  fr += 2;
   secr(ws5,fr,1,LC,"EXIT PROCEEDS"); fr++;
-  const fEXY=fr;sc(ws5,fr,1,"  Exit Year",FBS);sc(ws5,fr,3,`=IF(Inputs!B${rEY}=0,Inputs!B${rTN}+1,Inputs!B${rEY})`,FBS);fr++;
   const fSTI=fr;sc(ws5,fr,1,"  Stabilized Income",FNS);sc(ws5,fr,2,cur,FNS);
   sc(ws5,fr,3,`=IFERROR(INDEX(CashFlow!${CL(YC(0))}${ci}:${CL(LC)}${ci},1,C${fEXY}),0)`,FNS,null,NUM);fr++;
   const fEXV=fr;sc(ws5,fr,1,"  Exit Value",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=C${fSTI}*Inputs!B${rEM}`,FBS,null,NUM);fr++;
@@ -349,8 +391,11 @@ export async function generateFormulaExcel(project) {
   const fEP=fr;sc(ws5,fr,1,"  + Exit Proceeds",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fEXN}`,FNS,null,NUM);
   fr++;
+  const fFEL=fr;sc(ws5,fr,1,"  - Total Fees",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fTOTFEE}`,FNS,null,NUMN);
+  fr++;
   const fLV=fr;sc(ws5,fr,1,"  Levered Net CF",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
-  for (let yi = 0; yi < h; yi++) { const c = YC(yi); sc(ws5,fr,c,`=${CL(c)}${fUL}+${CL(c)}${fDL}+${CL(c)}${fSL}+${CL(c)}${fDP}+${CL(c)}${fEP}`,FBS,null,NUMN,BB); }
+  for (let yi = 0; yi < h; yi++) { const c = YC(yi); sc(ws5,fr,c,`=${CL(c)}${fUL}+${CL(c)}${fDL}+${CL(c)}${fSL}+${CL(c)}${fDP}+${CL(c)}${fEP}+${CL(c)}${fFEL}`,FBS,null,NUMN,BB); }
   fr++;
   const fLI=fr;sc(ws5,fr,1,"  Levered IRR",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fLV}:${CL(LC)}${fLV}),"-")`,FB,null,PCT);fr++;
@@ -415,8 +460,19 @@ export async function generateFormulaExcel(project) {
   fr++;
   const fLPI=fr;sc(ws5,fr,1,"  LP IRR",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF}),"-")`,FB,null,PCT);fr++;
-  sc(ws5,fr,1,"  LP MOIC",FB);sc(ws5,fr,2,"x",FNS);
-  sc(ws5,fr,3,`=IFERROR(SUM(${YR(fLPD)})/ABS(SUM(${YR(fEC)})*(1-Inputs!B${rGP})),"-")`,FB,null,DX);fr+=2;
+  const fLPMOIC=fr;sc(ws5,fr,1,"  LP MOIC",FB);sc(ws5,fr,2,"x",FNS);
+  sc(ws5,fr,3,`=IFERROR(SUM(${YR(fLPD)})/ABS(SUM(${YR(fEC)})*(1-Inputs!B${rGP})),"-")`,FB,null,DX);fr++;
+  for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
+    sc(ws5,fr,1,`  LP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
+    sc(ws5,fr,3,`=NPV(${d},${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF})`,FNS,null,NUM);fr++;
+  }
+  // LP Cumulative CF
+  const fLPCUM=fr;sc(ws5,fr,1,"  LP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
+  for (let yi = 0; yi < h; yi++) {
+    const c = YC(yi);
+    sc(ws5,fr,c,yi===0?`=${CL(c)}${fLPCF}`:`=${CL(YC(yi-1))}${fLPCUM}+${CL(c)}${fLPCF}`,FNS,null,NUMN);
+  }
+  fr+=2;
 
   const fGPD=fr;sc(ws5,fr,1,"  GP Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) { const c = YC(yi); sc(ws5,fr,c,`=${CL(c)}${fT1}*Inputs!B${rGP}+${CL(c)}${fT2}*Inputs!B${rGP}+${CL(c)}${fT3}+${CL(c)}${fT4GP}`,FBS,null,NUM); }
@@ -426,8 +482,18 @@ export async function generateFormulaExcel(project) {
   fr++;
   const fGPI=fr;sc(ws5,fr,1,"  GP IRR",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF}),"-")`,FB,null,PCT);fr++;
-  sc(ws5,fr,1,"  GP MOIC",FB);sc(ws5,fr,2,"x",FNS);
-  sc(ws5,fr,3,`=IFERROR(SUM(${YR(fGPD)})/ABS(SUM(${YR(fEC)})*Inputs!B${rGP}),"-")`,FB,null,DX);
+  const fGPMOIC=fr;sc(ws5,fr,1,"  GP MOIC",FB);sc(ws5,fr,2,"x",FNS);
+  sc(ws5,fr,3,`=IFERROR(SUM(${YR(fGPD)})/ABS(SUM(${YR(fEC)})*Inputs!B${rGP}),"-")`,FB,null,DX);fr++;
+  for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
+    sc(ws5,fr,1,`  GP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
+    sc(ws5,fr,3,`=NPV(${d},${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF})`,FNS,null,NUM);fr++;
+  }
+  // GP Cumulative CF
+  const fGPCUM=fr;sc(ws5,fr,1,"  GP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
+  for (let yi = 0; yi < h; yi++) {
+    const c = YC(yi);
+    sc(ws5,fr,c,yi===0?`=${CL(c)}${fGPCF}`:`=${CL(YC(yi-1))}${fGPCUM}+${CL(c)}${fGPCF}`,FNS,null,NUMN);
+  }
 
   // ═══════════ OUTPUTS ═══════════
   const ws4 = wb.addWorksheet("Outputs", { properties: { tabColor: { argb: "FF8B5CF6" } } });
@@ -440,8 +506,9 @@ export async function generateFormulaExcel(project) {
   orow("Total Land Rent",`=Calc!D${LR}`); orow("Unlevered IRR",`=CashFlow!C${cirr}`,PCT,"%");
   orow("NPV @10%",`=CashFlow!C${cnpv}`); orow("Levered IRR",`=Fund!C${fLI}`,PCT,"%");
   orow("Max Debt",`=Fund!C${fMD}`); orow("Equity",`=Fund!C${fEQ}`);
-  orow("Net Exit",`=Fund!C${fEXN}`); orow("LP IRR",`=Fund!C${fLPI}`,PCT,"%");
-  orow("GP IRR",`=Fund!C${fGPI}`,PCT,"%");
+  orow("Net Exit",`=Fund!C${fEXN}`); orow("Total Fees",`=Fund!C${fTOTFEE}`,NUMN);
+  orow("LP IRR",`=Fund!C${fLPI}`,PCT,"%"); orow("LP MOIC",`=Fund!C${fLPMOIC}`,DX,"x");
+  orow("GP IRR",`=Fund!C${fGPI}`,PCT,"%"); orow("GP MOIC",`=Fund!C${fGPMOIC}`,DX,"x");
 
   // ═══════════ CHECKS ═══════════
   const ws9 = wb.addWorksheet("Checks", { properties: { tabColor: { argb: "FF059669" } } });
@@ -455,7 +522,28 @@ export async function generateFormulaExcel(project) {
   const pv = Array.from({length:nph},(_,i)=>`Calc!D${PR+i}`).join("+");
   chk("Revenue = Sum Phases", `=Calc!D${RVT}-(${pv})`);
   chk("D+E = Total Cost", `=ABS(Fund!C${fMD}+Fund!C${fEQ}-Fund!C${fDC})`);
-
+  // No negative GFA
+  sc(ws9,ck,1,"No Negative GFA",FNS);
+  sc(ws9,ck,2,`=COUNTIF(Program!H${PD}:H${PE},"<0")`,FNS,null,NUM);
+  sc(ws9,ck,3,`=IF(B${ck}=0,"PASS","FAIL")`,FBS); ck++;
+  // No zero duration for active assets
+  sc(ws9,ck,1,"Active Assets Have Duration > 0",FNS);
+  sc(ws9,ck,2,`=SUMPRODUCT((Program!H${PD}:H${PE}>0)*(Program!S${PD}:S${PE}=0))`,FNS,null,NUM);
+  sc(ws9,ck,3,`=IF(B${ck}=0,"PASS","FAIL")`,FBS); ck++;
+  // Phase allocation = 100%
+  sc(ws9,ck,1,"Phase Allocation = 100%",FNS);
+  sc(ws9,ck,2,`=ABS(SUM(Inputs!B${rPA}:B${rPA+nph-1})-1)`,FNS,null,'0.0000');
+  sc(ws9,ck,3,`=IF(B${ck}<0.01,"PASS","FAIL")`,FBS); ck++;
+  // Operating assets have EBITDA > 0
+  sc(ws9,ck,1,"Operating Assets Have EBITDA > 0",FNS);
+  sc(ws9,ck,2,`=SUMPRODUCT((Program!I${PD}:I${PE}="Operating")*(Program!M${PD}:M${PE}<=0))`,FNS,null,NUM);
+  sc(ws9,ck,3,`=IF(B${ck}=0,"PASS","WARN")`,FBS); ck++;
+  // LP+GP = Total
+  chk("LP+GP Dist = Total Available",`=ABS(SUM(${YR(fLPD)})+SUM(${YR(fGPD)})-SUM(${YR(fCA)}))`);
+  // Overall
+  sc(ws9,ck,1,"OVERALL STATUS",FB,FILL_TOT);
+  sc(ws9,ck,2,"",null,FILL_TOT);
+  sc(ws9,ck,3,`=IF(COUNTIF(C4:C${ck-1},"FAIL")=0,"ALL PASS","ERRORS")`,FB,FILL_TOT);
   // ═══════════ DOCS ═══════════
   const wsd = wb.addWorksheet("Docs", { properties: { tabColor: { argb: "FF6B7280" } } });
   wsd.getColumn(1).width = 65;
@@ -468,12 +556,95 @@ export async function generateFormulaExcel(project) {
     `Assets: ${na} | Phases: ${pn.join(", ")}`, "Generated by ZAN Financial Modeler"
   ].forEach((l, i) => sc(wsd, 2 + i, 1, l, FN));
 
+  // ═══════════ DASHBOARD ═══════════
+  const wdb = wb.addWorksheet("Dashboard", { properties: { tabColor: { argb: "FF0F172A" } } });
+  wdb.getColumn(1).width = 24; wdb.getColumn(2).width = 20; wdb.getColumn(3).width = 20;
+  wdb.getColumn(4).width = 20; wdb.getColumn(5).width = 16; wdb.getColumn(6).width = 14;
+
+  // Title
+  hdr(wdb, 1, 1, 6, `${p.name || "Project"}`);
+  sc(wdb, 2, 1, "Project Financial Model Dashboard  /  لوحة النموذج المالي", FSC);
+
+  // KPI row
+  let dr = 4;
+  secr(wdb, dr, 1, 6, "KEY METRICS / المؤشرات الرئيسية"); dr++;
+  chdr(wdb, dr, ["Metric / المؤشر", "Value / القيمة", "Unit", "", "", ""]); dr++;
+
+  const dashKpi = (label, formula, nf = NUM, unit = cur) => {
+    sc(wdb, dr, 1, label, FNS); sc(wdb, dr, 2, formula, FRB, null, nf); sc(wdb, dr, 3, unit, FNS); dr++;
+  };
+  dashKpi("Total CAPEX / تكاليف التطوير", `=Calc!D${CXT}`);
+  dashKpi(`Total Income (${h}yr) / الإيرادات`, `=Calc!D${RVT}`);
+  dashKpi("Total Land Rent / إيجار الأرض", `=Calc!D${LR}`);
+  dashKpi("Unlevered IRR / العائد غير المموّل", `=CashFlow!C${cirr}`, PCT, "%");
+  dashKpi("NPV @10%", `=CashFlow!C${cnpv}`);
+  dashKpi("Levered IRR / العائد المموّل", `=Fund!C${fLI}`, PCT, "%");
+  dashKpi("Max Debt / أقصى دين", `=Fund!C${fMD}`);
+  dashKpi("Total Equity / حقوق الملكية", `=Fund!C${fEQ}`);
+  dashKpi("Net Exit Proceeds / عوائد التخارج", `=Fund!C${fEXN}`);
+  dashKpi("Total Fees / إجمالي الرسوم", `=Fund!C${fTOTFEE}`, NUMN);
+  dr++;
+  dashKpi("LP IRR", `=Fund!C${fLPI}`, PCT, "%");
+  dashKpi("LP MOIC", `=Fund!C${fLPMOIC}`, DX, "x");
+  dashKpi("GP IRR", `=Fund!C${fGPI}`, PCT, "%");
+  dashKpi("GP MOIC", `=Fund!C${fGPMOIC}`, DX, "x");
+  dr++;
+
+  // Phase summary table
+  secr(wdb, dr, 1, 6, "PHASE SUMMARY / ملخص المراحل"); dr++;
+  chdr(wdb, dr, ["Phase / المرحلة", "CAPEX / التكاليف", "Income / الإيرادات", "Assets / الأصول", "% of CAPEX", ""]); dr++;
+  for (let pi = 0; pi < nph; pi++) {
+    sc(wdb, dr, 1, pn[pi], FBS);
+    sc(wdb, dr, 2, `=Calc!D${PC + pi}`, FR, null, NUM);
+    sc(wdb, dr, 3, `=Calc!D${PR + pi}`, FR, null, NUM);
+    sc(wdb, dr, 4, `=COUNTIF(Program!A${PD}:A${PE},"${pn[pi]}")`, FNS);
+    sc(wdb, dr, 5, `=IF(Calc!D${CXT}=0,0,Calc!D${PC + pi}/Calc!D${CXT})`, FNS, null, PCT);
+    dr++;
+  }
+  // Consolidated
+  sc(wdb, dr, 1, "CONSOLIDATED / الإجمالي", FB, FILL_TOT);
+  sc(wdb, dr, 2, `=Calc!D${CXT}`, FRB, FILL_TOT, NUM);
+  sc(wdb, dr, 3, `=Calc!D${RVT}`, FRB, FILL_TOT, NUM);
+  sc(wdb, dr, 4, na, FBS, FILL_TOT);
+  sc(wdb, dr, 5, 1, FBS, FILL_TOT, PCT);
+  dr += 2;
+
+  // Asset list
+  secr(wdb, dr, 1, 6, "ASSET PROGRAM / برنامج الأصول"); dr++;
+  chdr(wdb, dr, ["No.", "Asset / الأصل", "Category / التصنيف", "GFA (sqm)", "Cost/sqm", "Total CAPEX"]); dr++;
+  for (let i = 0; i < na; i++) {
+    const pr = PD + i;
+    sc(wdb, dr, 1, i + 1, FNS);
+    sc(wdb, dr, 2, `=Program!C${pr}`, FR);
+    sc(wdb, dr, 3, `=Program!B${pr}`, FR);
+    sc(wdb, dr, 4, `=Program!H${pr}`, FR, null, NUM);
+    sc(wdb, dr, 5, `=Program!Q${pr}`, FR, null, NUM);
+    sc(wdb, dr, 6, `=Program!T${pr}`, FR, null, NUM);
+    dr++;
+  }
+
+  // NPV Analysis table
+  dr += 1;
+  secr(wdb, dr, 1, 6, "NPV ANALYSIS / تحليل صافي القيمة الحالية"); dr++;
+  chdr(wdb, dr, ["Discount Rate", "Project (Unlevered)", "Project (Levered)", "LP", "GP", ""]); dr++;
+  for (const [d, l] of [[0.10, "10%"], [0.12, "12%"], [0.14, "14%"]]) {
+    sc(wdb, dr, 1, l, FBS);
+    sc(wdb, dr, 2, `=NPV(${d},CashFlow!${CL(YC(0))}${cn}:${CL(LC)}${cn})`, FNS, null, NUM);
+    sc(wdb, dr, 3, `=NPV(${d},Fund!${CL(YC(0))}${fLV}:${CL(LC)}${fLV})`, FNS, null, NUM);
+    sc(wdb, dr, 4, `=NPV(${d},Fund!${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF})`, FNS, null, NUM);
+    sc(wdb, dr, 5, `=NPV(${d},Fund!${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF})`, FNS, null, NUM);
+    dr++;
+  }
+
   // Freeze
   ws0.views = [{ state: "frozen", xSplit: 4, ySplit: 3 }];
   ws3.views = [{ state: "frozen", xSplit: 4, ySplit: 3 }];
   ws5.views = [{ state: "frozen", xSplit: 4, ySplit: 3 }];
 
   // Generate & download
+  // Reorder: Dashboard first
+  const dashWs = wb.getWorksheet("Dashboard");
+  if (dashWs) { dashWs.orderNo = 0; }
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
