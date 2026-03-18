@@ -566,7 +566,7 @@ const defaultProject = () => ({
   subscriptionFeePct: 2,
   annualMgmtFeePct: 0.9,
   custodyFeeAnnual: 130000,
-  mgmtFeeBase: "devCost", // devCost | equity | custom
+  mgmtFeeBase: "deployed", // deployed (ZAN: cumCAPEX) | devCost | equity
   feeTreatment: "capital", // H14: capital | expense
   graceBasis: "cod", // H10: cod | firstDraw
   developerFeePct: 10,
@@ -1746,7 +1746,9 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
   const devFeeTotal = c.totalCapex * (project.developerFeePct || 0) / 100;
   const structFee = isFund ? c.totalCapex * (project.structuringFeePct || 0) / 100 : 0;
-  const annualMgmt = isFund ? ((project.mgmtFeeBase === "equity" ? totalEquity : f.devCostInclLand) * (project.annualMgmtFeePct || 0) / 100) : 0;
+  // ZAN: mgmt fee = cumulative CAPEX deployed × rate (progressive, not fixed)
+  const mgmtFeeBase = project.mgmtFeeBase || "deployed";
+  const mgmtFeeRate = (project.annualMgmtFeePct || 0) / 100;
   const annualCustody = isFund ? (project.custodyFeeAnnual || 0) : 0;
 
   // Fee schedule
@@ -1779,8 +1781,20 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     if (c.totalCapex > 0) feeDev[y] = devFeeTotal * (c.capex[y] / c.totalCapex);
   }
   // Management + custody fees from fund start to exit
+  // ZAN formula: mgmtFee[y] = ABS(cumCAPEX from fund start to y) × rate
+  let cumCapex = 0;
   for (let y = fundStartIdx; y <= exitYr && y < h; y++) {
-    feeMgmt[y] = annualMgmt;
+    cumCapex += Math.abs(c.capex[y] || 0);
+    if (isFund) {
+      if (mgmtFeeBase === "equity") {
+        feeMgmt[y] = totalEquity * mgmtFeeRate;
+      } else if (mgmtFeeBase === "devCost") {
+        feeMgmt[y] = f.devCostInclLand * mgmtFeeRate;
+      } else {
+        // "deployed" (default, ZAN method): cumulative CAPEX deployed × rate
+        feeMgmt[y] = cumCapex * mgmtFeeRate;
+      }
+    }
     feeCustody[y] = annualCustody;
   }
   for (let y = 0; y < h; y++) fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] + feeStruct[y];
@@ -2900,7 +2914,7 @@ One-time entry fee at subscription. Usually 1-2% of invested capital"><Inp type=
                     <FL label={ar?"إدارة %":"Mgmt %"} tip="رسوم إدارة سنوية مقابل متابعة الاستثمار والتقارير. عادة 1.5-2.5% سنوياً
 Annual management fee for oversight and reporting. Usually 1.5-2.5% per year"><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
                   </div>
-                  <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="هل تحسب رسوم الإدارة على أساس رأس المال (Equity) أم تكلفة التطوير الكاملة؟\nCalculate mgmt fee on equity base or total development cost?"><Drp lang={lang} value={cfg.mgmtFeeBase||"devCost"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
+                  <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="أساس حساب رسوم الإدارة: تراكمي على CAPEX المنفذ (ZAN)، أو تكلفة التطوير الكاملة، أو رأس المال\nMgmt fee base: cumulative deployed CAPEX (ZAN), full dev cost, or equity"><Drp lang={lang} value={cfg.mgmtFeeBase||"deployed"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"deployed",en:"Deployed CAPEX (ZAN)",ar:"CAPEX المنفذ (ZAN)"},{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور لإدارة التنفيذ خلال البناء. عادة 3-7% من CAPEX
 Developer fee for managing construction execution. Usually 3-7% of CAPEX"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
