@@ -547,6 +547,7 @@ const defaultProject = () => ({
   landRentPaidBy: "auto", // auto | project | gp | lp — who pays ongoing land rent after capitalization
   landRentStartRule: "auto", // auto = MIN(grace, income) | grace = grace end only | income = first income only
   landLeaseStartYear: 0, // 0 = same as project startYear. Otherwise absolute year (e.g. 2025)
+  landRentManualAlloc: null, // null = auto (by footprint). Object like {"Phase 1":60,"Phase 2":40} = manual %
   landCapGpBearRent: false, // GP bears land rent alone if capitalized
   // Debt
   debtAllowed: true,
@@ -836,21 +837,32 @@ function computeProjectCashFlows(project) {
 
     const phaseSharesLog = {};
 
+    // Manual allocation override: user sets percentage per phase
+    const manualAlloc = project.landRentManualAlloc; // e.g. {"Phase 1":60,"Phase 2":40}
+    const useManual = manualAlloc && typeof manualAlloc === 'object' && Object.keys(manualAlloc).length > 0;
+    const manualSum = useManual ? Object.values(manualAlloc).reduce((s,v) => s + (Number(v)||0), 0) : 0;
+
     for (let y = 0; y < term; y++) {
       if (y < rentStartYear) continue;
       const yrsFromStart = y - rentStartYear;
       const rent = base * Math.pow(1 + eP, Math.floor(yrsFromStart / eN));
       landSch[y] = rent;
 
-      // Allocate to ALL phases by footprint proportion (land is leased as whole)
-      if (totalFootprint > 0) {
+      if (useManual) {
+        // Manual: user-defined percentages
+        phaseNames.forEach(pn => {
+          const pct = (Number(manualAlloc[pn]) || 0) / 100;
+          phaseAllocLand[pn][y] = rent * pct;
+          if (!phaseSharesLog[pn]) phaseSharesLog[pn] = { footprint: phaseFP[pn]||0, completionYear: phaseCompYrs[pn], share: pct, firstRentYear: y, manual: true };
+        });
+      } else if (totalFootprint > 0) {
+        // Auto: all phases by footprint proportion
         phaseNames.forEach(pn => {
           const share = (phaseFP[pn] || 0) / totalFootprint;
           phaseAllocLand[pn][y] = rent * share;
           if (!phaseSharesLog[pn]) phaseSharesLog[pn] = { footprint: phaseFP[pn]||0, completionYear: phaseCompYrs[pn], share, firstRentYear: y };
         });
       } else if (phaseNames.length > 0) {
-        // No footprint data — split equally
         const share = 1 / phaseNames.length;
         phaseNames.forEach(pn => {
           phaseAllocLand[pn][y] = rent * share;
@@ -858,7 +870,7 @@ function computeProjectCashFlows(project) {
         });
       }
     }
-    landRentMeta = { rentStartYear, graceEndIdx, leaseStartAbsolute, phase1CompletionYear: phase1Year, firstIncomeYear, startRule, phaseCompletionYears: phaseCompYrs, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
+    landRentMeta = { rentStartYear, graceEndIdx, leaseStartAbsolute, phase1CompletionYear: phase1Year, firstIncomeYear, startRule, useManual, manualSum, phaseCompletionYears: phaseCompYrs, phaseFootprints: phaseFP, phaseShares: phaseSharesLog, escalationEveryN: eN, escalationPct: eP*100, annualBase: base, term };
   } else if (project.landType === "purchase") {
     // Purchase price goes to CAPEX (year 0), NOT land rent
     // landSch stays zero — purchase is capital expenditure, not ongoing rent
@@ -1032,6 +1044,11 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
   if (project.landType === "lease") { add("T1","Lease Land Rent", c.totalLandRent>0||(project.landRentAnnual||0)===0, "Leased land: rent configured correctly"); }
   else if (project.landType === "purchase") { add("T1","Purchase Land Cost", c.capex[0]>=(project.landPurchasePrice||0)||(project.landPurchasePrice||0)===0, "Purchase cost in CAPEX year 0"); }
   else if (project.landType === "partner" || project.landType === "bot") { add("T1","No Land Cost", c.totalLandRent===0, "No cash land cost for partner/BOT"); }
+  // Manual allocation sum check
+  if (project.landRentManualAlloc && Object.keys(project.landRentManualAlloc).length > 0) {
+    const mSum = Object.values(project.landRentManualAlloc).reduce((s,v) => s + (Number(v)||0), 0);
+    add("T1","Rent Alloc = 100%", Math.abs(mSum - 100) <= 0.1, "Manual land rent allocation totals 100%", `Sum: ${mSum.toFixed(1)}%`);
+  }
 
   // ═══════════════════════════════════════════════
   // T2: FINANCING ENGINE (12 checks)
@@ -4143,28 +4160,74 @@ Annual escalation rate for land rent"><SidebarInput type="number" value={project
                 {ar?"القاعدة:":"Rule:"} {m.startRule === 'auto' ? (ar?"أيهما أسبق":"Whichever first") : m.startRule === 'grace' ? (ar?"بعد السماح":"After grace") : (ar?"بعد الإيراد":"After income")}
                 {m.startRule === 'auto' && <span> → MIN({m.graceEndIdx}, {m.firstIncomeYear}) = {m.rentStartYear}</span>}
               </div>
-              {m.phaseShares && Object.keys(m.phaseShares).length > 0 && <>
-                <div style={{fontWeight:600,marginTop:8,marginBottom:4}}>{ar?"التوزيع بين المراحل:":"Phase allocation:"}</div>
+              {m.phaseShares && Object.keys(m.phaseShares).length > 0 && (() => {
+                const phases = Object.entries(m.phaseShares);
+                const isManual = !!project.landRentManualAlloc && Object.keys(project.landRentManualAlloc).length > 0;
+                const manualSum = isManual ? Object.values(project.landRentManualAlloc).reduce((s,v)=>s+(Number(v)||0),0) : 0;
+                const toggleManual = () => {
+                  if (isManual) {
+                    up({landRentManualAlloc: null});
+                  } else {
+                    // Initialize manual with current auto values
+                    const init = {};
+                    phases.forEach(([pn, ps]) => { init[pn] = Math.round((ps.share||0)*100); });
+                    up({landRentManualAlloc: init});
+                  }
+                };
+                const setManualPct = (pn, val) => {
+                  const cur = {...(project.landRentManualAlloc||{})};
+                  cur[pn] = Number(val) || 0;
+                  up({landRentManualAlloc: cur});
+                };
+                return <>
+                <div style={{fontWeight:600,marginTop:8,marginBottom:4,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span>{ar?"التوزيع بين المراحل:":"Phase allocation:"}</span>
+                  <button onClick={toggleManual} style={{fontSize:9,padding:"2px 8px",borderRadius:4,border:"1px solid " + (isManual?"#f59e0b":"#d1d5db"),background:isManual?"#fffbeb":"#fff",color:isManual?"#b45309":"#6b7080",cursor:"pointer",fontFamily:"inherit"}}>
+                    {isManual ? (ar?"⚙ يدوي":"⚙ Manual") : (ar?"تلقائي":"Auto")}
+                  </button>
+                </div>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
                   <thead><tr style={{borderBottom:"1px solid #e0e7ff"}}>
                     <th style={{textAlign:"start",padding:"2px 4px"}}>{ar?"المرحلة":"Phase"}</th>
                     <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"المساحة":"Area"}</th>
                     <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"الحصة":"Share"}</th>
-                    <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"بداية الإيجار":"Rent from"}</th>
                   </tr></thead>
                   <tbody>
-                    {Object.entries(m.phaseShares).map(([pn, ps]) => <tr key={pn} style={{borderBottom:"1px solid #f0f1f5"}}>
+                    {phases.map(([pn, ps]) => <tr key={pn} style={{borderBottom:"1px solid #f0f1f5"}}>
                       <td style={{padding:"2px 4px",fontWeight:500}}>{pn}</td>
                       <td style={{padding:"2px 4px",textAlign:"right"}}>{(ps.footprint||0).toLocaleString()}</td>
-                      <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600}}>{((ps.share ?? ps.shareAtEntry ?? ps.shareAtOpen)*100).toFixed(0)}%</td>
-                      <td style={{padding:"2px 4px",textAlign:"right"}}>{ar?"السنة":"Yr"} {ps.firstRentYear}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600}}>
+                        {isManual ? (
+                          <input type="number" value={project.landRentManualAlloc?.[pn]??""} onChange={e=>setManualPct(pn,e.target.value)}
+                            style={{width:42,textAlign:"right",padding:"1px 3px",border:"1px solid #d1d5db",borderRadius:3,fontSize:10,fontWeight:600,fontFamily:"inherit"}} />
+                        ) : (
+                          <span>{((ps.share)*100).toFixed(0)}%</span>
+                        )}
+                      </td>
                     </tr>)}
+                    {isManual && <tr style={{borderTop:"1px solid #e0e7ff",fontWeight:700}}>
+                      <td colSpan={2} style={{padding:"2px 4px",textAlign:"right",fontSize:9}}>{ar?"المجموع":"Total"}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right",color:Math.abs(manualSum-100)>0.1?"#ef4444":"#059669"}}>{manualSum}%</td>
+                    </tr>}
                   </tbody>
                 </table>
-                <div style={{marginTop:6,color:"#6b7080",fontStyle:"italic"}}>
-                  {ar?"كل المراحل تتحمل الإيجار بنسبة مساحتها من الأرض":"All phases share rent by their land area proportion"}
+                {isManual && Math.abs(manualSum - 100) > 0.1 && (
+                  <div style={{marginTop:4,padding:"4px 8px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:4,fontSize:9,color:"#dc2626"}}>
+                    ⚠ {ar?"مجموع النسب = "+manualSum+"% (يجب أن يكون 100%)":"Total = "+manualSum+"% (should be 100%)"}
+                  </div>
+                )}
+                {m.rentStartYear < m.firstIncomeYear && (
+                  <div style={{marginTop:4,padding:"4px 8px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:4,fontSize:9,color:"#b45309"}}>
+                    ℹ {ar?"الإيجار يبدأ قبل الإيراد بـ "+(m.firstIncomeYear-m.rentStartYear)+" سنة":"Rent starts "+(m.firstIncomeYear-m.rentStartYear)+"yr before first income"}
+                  </div>
+                )}
+                <div style={{marginTop:4,color:"#6b7080",fontStyle:"italic",fontSize:9}}>
+                  {isManual
+                    ? (ar?"توزيع يدوي — أدخل النسب حسب الاتفاق":"Manual allocation — enter agreed percentages")
+                    : (ar?"كل المراحل تتحمل الإيجار بنسبة مساحتها من الأرض":"All phases share rent by their land area proportion")}
                 </div>
-              </>}
+                </>;
+              })()}
             </div>}
           </>;
         })()}
@@ -4730,7 +4793,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             <thead>
               <tr>
                 {visibleCols.map(c=>(
-                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap", ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
+                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
                     <div>{c.en}</div>
                     {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"#9ca3af"}}>{c.ar}</div>}
                   </th>

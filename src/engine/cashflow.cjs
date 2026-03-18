@@ -144,6 +144,10 @@ function computeLandSchedule(project, horizon, assetSchedules) {
   const phaseSharesLog = {};
   const phNames = [...new Set(assetSchedules.map(a => a.phase || 'Unphased'))];
 
+  // Manual allocation override
+  const manualAlloc = project.landRentManualAlloc;
+  const useManual = manualAlloc && typeof manualAlloc === 'object' && Object.keys(manualAlloc).length > 0;
+
   for (let y = 0; y < term; y++) {
     if (y < rentStartYear) continue;
 
@@ -151,8 +155,15 @@ function computeLandSchedule(project, horizon, assetSchedules) {
     const rentThisYear = base * Math.pow(1 + eP, Math.floor(yearsFromRentStart / eN));
     totalSch[y] = rentThisYear;
 
-    // Allocate to ALL phases by footprint proportion (land is leased as whole)
-    if (totalFootprint > 0) {
+    if (useManual) {
+      phNames.forEach(pName => {
+        const pct = (Number(manualAlloc[pName]) || 0) / 100;
+        phaseAllocations[pName][y] = rentThisYear * pct;
+        if (!phaseSharesLog[pName]) {
+          phaseSharesLog[pName] = { footprint: phaseFootprints[pName] || 0, completionYear: phaseCompletionYears[pName], share: pct, firstRentYear: y, manual: true };
+        }
+      });
+    } else if (totalFootprint > 0) {
       phNames.forEach(pName => {
         const share = (phaseFootprints[pName] || 0) / totalFootprint;
         phaseAllocations[pName][y] = rentThisYear * share;
