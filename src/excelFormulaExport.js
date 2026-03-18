@@ -53,10 +53,11 @@ function secr(ws, r, c1, c2, t) {
   for (let c = c1; c <= c2; c++) sc(ws, r, c, c === c1 ? t : null, FSC, FILL_SEC);
 }
 
-export async function generateFormulaExcel(project, results, financing, waterfall) {
+export async function generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings) {
   const p = project;
   const hasWF = waterfall && waterfall.lpIRR !== undefined;
   const hasF = financing && financing.totalEquity !== undefined;
+  const hasPW = phaseWaterfalls && Object.keys(phaseWaterfalls).length > 0;
   const wb = new ExcelJS.Workbook();
   const assets = p.assets || [];
   const phases = p.phases || [];
@@ -476,6 +477,128 @@ export async function generateFormulaExcel(project, results, financing, waterfal
     var fLPI=fr, fLPMOIC=fr, fGPI=fr, fGPMOIC=fr, fLPD=fr, fGPD=fr, fCA=fr;
   }
 
+  // ═══════════ PER-PHASE FUND SHEETS ═══════════
+  const phaseSheetNames = [];
+  if (hasPW) {
+    for (const phaseName of pn) {
+      const pw = phaseWaterfalls[phaseName];
+      const pf = phaseFinancings ? phaseFinancings[phaseName] : null;
+      if (!pw) continue;
+
+      const sheetName = `Fund_${phaseName.replace(/[^a-zA-Z0-9 ]/g,"").substring(0,25)}`;
+      phaseSheetNames.push(sheetName);
+      const wsp = wb.addWorksheet(sheetName, { properties: { tabColor: { argb: "FFD97706" } } });
+      wsp.getColumn(1).width = 34; wsp.getColumn(2).width = 14; wsp.getColumn(3).width = 16; wsp.getColumn(4).width = 14;
+      for (let yi = 0; yi < h; yi++) wsp.getColumn(YC(yi)).width = 12;
+
+      hdr(wsp, 1, 1, LC, `Fund — ${phaseName}`);
+      sc(wsp, 3, 1, "Line Item", FHS, FILL_HDR); sc(wsp, 3, 2, "Unit", FHS, FILL_HDR); sc(wsp, 3, 3, "Total", FHS, FILL_HDR);
+      for (let yi = 0; yi < h; yi++) sc(wsp, 3, YC(yi), sy + yi, FHS, FILL_HDR, "0");
+
+      let pr = 5;
+
+      // 1. Fund Information
+      secr(wsp, pr, 1, 6, "1  FUND INFORMATION / معلومات الصندوق"); pr++;
+      sc(wsp,pr,1,"  Fund Name",FNS); sc(wsp,pr,3,`${p.name || ""} — ${phaseName}`,FI); pr++;
+      sc(wsp,pr,1,"  Phase",FNS); sc(wsp,pr,3,phaseName,FI); pr++;
+      sc(wsp,pr,1,"  Strategy",FNS); sc(wsp,pr,3,p.exitStrategy || "sale",FI); pr++;
+      sc(wsp,pr,1,"  Exit Year",FBS); sc(wsp,pr,3,pw.exitYear || 0,FBS); pr += 2;
+
+      // 2. Capital Structure
+      secr(wsp, pr, 1, 6, "2  CAPITAL STRUCTURE / هيكل رأس المال"); pr++;
+      const kv = (label, val, nf = NUM, bold = false) => {
+        sc(wsp, pr, 1, `  ${label}`, bold ? FBS : FNS);
+        sc(wsp, pr, 3, val, bold ? FBS : FNS, null, nf); pr++;
+      };
+      kv("GP Equity", pw.gpEquity || 0); kv("LP Equity", pw.lpEquity || 0);
+      kv("Total Equity", pw.totalEquity || 0, NUM, true);
+      kv("GP %", pw.gpPct || 0, PCT); kv("LP %", pw.lpPct || 0, PCT);
+      kv("Dev Cost (excl land)", pf?.devCostExclLand || 0); kv("Dev Cost (incl land)", pf?.devCostInclLand || 0);
+      pr++;
+
+      // 3. Debt
+      secr(wsp, pr, 1, 6, "3  DEBT / الدين"); pr++;
+      kv("Max Debt", pf?.maxDebt || 0); kv("Total Debt Drawn", pf?.totalDebtDrawn || 0);
+      pr++;
+
+      // 4. Fees
+      secr(wsp, pr, 1, 6, "4  FEES / الرسوم"); pr++;
+      kv("Total Fees", pw.totalFees || 0, NUMN);
+      pr++;
+
+      // 5-7. Project CashFlows + Fund CF + Waterfall — year-by-year
+      const writeRow = (label, arr, nf = NUM, bold = false) => {
+        sc(wsp, pr, 1, `  ${label}`, bold ? FBS : FNS); sc(wsp, pr, 2, cur, FNS);
+        const total = (arr || []).reduce((a, b) => a + (b || 0), 0);
+        sc(wsp, pr, 3, total, bold ? FBS : FNS, null, nf);
+        for (let yi = 0; yi < h; yi++) sc(wsp, pr, YC(yi), (arr && arr[yi]) || 0, FNS, null, nf);
+        pr++;
+      };
+
+      secr(wsp, pr, 1, LC, "5  FUND CASH FLOW / تدفقات الصندوق"); pr++;
+      writeRow("Equity Calls", pw.equityCalls?.map(v => -Math.abs(v)), NUMN);
+      if (pf) {
+        writeRow("Debt Drawdown", pf.debtDrawdown);
+        writeRow("Debt Service", pf.debtService?.map(v => -Math.abs(v)), NUMN);
+      }
+      writeRow("Exit Proceeds", pw.exitProceeds);
+      writeRow("Cash Available", pw.cashAvail, NUM, true);
+      pr++;
+
+      secr(wsp, pr, 1, LC, "6  WATERFALL / الشلال"); pr++;
+      writeRow("T1: Return of Capital", pw.tier1, NUM, true);
+      writeRow("T2: Preferred Return", pw.tier2, NUM, true);
+      writeRow("T3: GP Catch-Up", pw.tier3, NUM, true);
+      writeRow("T4: LP Profit Split", pw.tier4LP);
+      writeRow("T4: GP Profit Split", pw.tier4GP);
+      pr++;
+
+      secr(wsp, pr, 1, LC, "7  DISTRIBUTIONS / التوزيعات"); pr++;
+      writeRow("LP Distribution", pw.lpDist, NUM, true);
+      writeRow("GP Distribution", pw.gpDist, NUM, true);
+      pr++;
+
+      secr(wsp, pr, 1, LC, "8  INVESTOR RETURNS / عوائد المستثمرين"); pr++;
+      writeRow("LP Net Cash Flow", pw.lpNetCF, NUMN, true);
+      // LP Cumulative
+      sc(wsp,pr,1,"  LP Cumulative CF",FNS); sc(wsp,pr,2,cur,FNS);
+      let lpC = 0;
+      for (let yi = 0; yi < h; yi++) { lpC += (pw.lpNetCF?.[yi] || 0); sc(wsp,pr,YC(yi),lpC,FNS,null,NUMN); }
+      pr++;
+
+      writeRow("GP Net Cash Flow", pw.gpNetCF, NUMN, true);
+      sc(wsp,pr,1,"  GP Cumulative CF",FNS); sc(wsp,pr,2,cur,FNS);
+      let gpC = 0;
+      for (let yi = 0; yi < h; yi++) { gpC += (pw.gpNetCF?.[yi] || 0); sc(wsp,pr,YC(yi),gpC,FNS,null,NUMN); }
+      pr += 2;
+
+      // KPI Summary
+      secr(wsp, pr, 1, 6, "9  KPI SUMMARY / ملخص الأداء"); pr++;
+      kv("LP IRR", pw.lpIRR != null ? pw.lpIRR : "-", PCT);
+      kv("GP IRR", pw.gpIRR != null ? pw.gpIRR : "-", PCT);
+      kv("LP MOIC", pw.lpMOIC || 0, DX);
+      kv("GP MOIC", pw.gpMOIC || 0, DX);
+      kv("Total Equity", pw.totalEquity || 0);
+      kv("Total LP Distributions", pw.lpTotalDist || 0);
+      kv("Total GP Distributions", pw.gpTotalDist || 0);
+      kv("Exit Proceeds", (pw.exitProceeds || []).reduce((a,b) => a+(b||0), 0));
+      pr++;
+
+      // NPV Analysis
+      secr(wsp, pr, 1, 6, "10  NPV ANALYSIS"); pr++;
+      sc(wsp,pr,1,"  Discount Rate",FBS); sc(wsp,pr,2,"Project",FBS); sc(wsp,pr,3,"LP",FBS); sc(wsp,pr,4,"GP",FBS); pr++;
+      for (const [d, l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
+        sc(wsp,pr,1,`  ${l}`,FNS);
+        const lpKey = `lpNPV${Math.round(d*100)}`, gpKey = `gpNPV${Math.round(d*100)}`;
+        sc(wsp,pr,2,pw.projNPV10 != null ? (d === 0.10 ? pw.projNPV10 : d === 0.12 ? pw.projNPV12 : pw.projNPV14) : 0,FNS,null,NUM);
+        sc(wsp,pr,3,pw[lpKey] || 0,FNS,null,NUM);
+        sc(wsp,pr,4,pw[gpKey] || 0,FNS,null,NUM); pr++;
+      }
+
+      wsp.views = [{ state: "frozen", xSplit: 4, ySplit: 3 }];
+    }
+  }
+
   // ═══════════ OUTPUTS ═══════════
   const ws4 = wb.addWorksheet("Outputs", { properties: { tabColor: { argb: "FF8B5CF6" } } });
   ws4.getColumn(1).width = 28; ws4.getColumn(2).width = 18; ws4.getColumn(3).width = 10;
@@ -626,6 +749,31 @@ export async function generateFormulaExcel(project, results, financing, waterfal
     sc(wdb, dr, 4, hasWF ? (waterfall[lpKey] || 0) : 0, FNS, null, NUM);
     sc(wdb, dr, 5, hasWF ? (waterfall[gpKey] || 0) : 0, FNS, null, NUM);
     dr++;
+  }
+
+  // Per-phase fund performance comparison (like ZAN Dashboard)
+  if (hasPW && pn.length > 1) {
+    dr++;
+    secr(wdb, dr, 1, 6, "FUND PERFORMANCE COMPARISON / مقارنة أداء الصناديق"); dr++;
+    chdr(wdb, dr, ["Phase / المرحلة", "Equity", "LP IRR", "GP IRR", "LP MOIC", "GP MOIC"]); dr++;
+    for (const pName of pn) {
+      const pw = phaseWaterfalls[pName];
+      if (!pw) continue;
+      sc(wdb, dr, 1, pName, FBS);
+      sc(wdb, dr, 2, pw.totalEquity || 0, FNS, null, NUM);
+      sc(wdb, dr, 3, pw.lpIRR != null ? pw.lpIRR : "-", FNS, null, PCT);
+      sc(wdb, dr, 4, pw.gpIRR != null ? pw.gpIRR : "-", FNS, null, PCT);
+      sc(wdb, dr, 5, pw.lpMOIC || 0, FNS, null, DX);
+      sc(wdb, dr, 6, pw.gpMOIC || 0, FNS, null, DX);
+      dr++;
+    }
+    // Consolidated
+    sc(wdb, dr, 1, "CONSOLIDATED", FB, FILL_TOT);
+    sc(wdb, dr, 2, hasWF ? (waterfall.totalEquity || 0) : 0, FBS, FILL_TOT, NUM);
+    sc(wdb, dr, 3, hasWF && waterfall.lpIRR != null ? waterfall.lpIRR : "-", FBS, FILL_TOT, PCT);
+    sc(wdb, dr, 4, hasWF && waterfall.gpIRR != null ? waterfall.gpIRR : "-", FBS, FILL_TOT, PCT);
+    sc(wdb, dr, 5, hasWF ? (waterfall.lpMOIC || 0) : 0, FBS, FILL_TOT, DX);
+    sc(wdb, dr, 6, hasWF ? (waterfall.gpMOIC || 0) : 0, FBS, FILL_TOT, DX);
   }
 
   // Freeze
