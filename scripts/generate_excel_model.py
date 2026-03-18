@@ -101,9 +101,13 @@ def generate(p, out):
     rPF=inp("Preferred Return %",p.get('prefReturnPct',15),PCT,True)
     rCR=inp("Carry %",p.get('carryPct',25),PCT,True)
     rLS=inp("LP Profit Split %",p.get('lpProfitSplitPct',70),PCT,True)
+
+    sec("Fees / الرسوم")
     rSB=inp("Subscription Fee %",p.get('subscriptionFeePct',2),PCT,True)
     rMG=inp("Annual Mgmt Fee %",p.get('annualMgmtFeePct',0.9),PCT,True)
-    rDF=inp("Developer Fee %",p.get('developerFeePct',10),PCT,True)
+    rCU=inp("Annual Custody Fee (fixed)",p.get('annualCustodyFee',0),NUM)
+    rDF=inp("Developer Fee % (CAPEX)",p.get('developerFeePct',10),PCT,True)
+    rSTF=inp("Structuring Fee %",p.get('structuringFeePct',0),PCT,True)
 
     sec("Phase Allocation / التوزيع")
     rPA=R
@@ -288,7 +292,8 @@ def generate(p, out):
     fMD=fr;sc(ws5,fr,1,"  Max Debt (LTV)",FNS);sc(ws5,fr,3,f"=C{fDC}*Inputs!B{rLV}",FNS,nf=NUM);fr+=1
     fEQ=fr;sc(ws5,fr,1,"  Total Equity Required",FBS);sc(ws5,fr,3,f"=C{fDC}-C{fMD}",FBS,nf=NUM);fr+=1
     fGPE=fr;sc(ws5,fr,1,"  GP Equity",FNS);sc(ws5,fr,3,f"=C{fEQ}*Inputs!B{rGP}",FNS,nf=NUM);fr+=1
-    fLPE=fr;sc(ws5,fr,1,"  LP Equity",FNS);sc(ws5,fr,3,f"=C{fEQ}*(1-Inputs!B{rGP})",FNS,nf=NUM);fr+=2
+    fLPE=fr;sc(ws5,fr,1,"  LP Equity",FNS);sc(ws5,fr,3,f"=C{fEQ}*(1-Inputs!B{rGP})",FNS,nf=NUM);fr+=1
+    fEXY=fr;sc(ws5,fr,1,"  Exit Year",FBS);sc(ws5,fr,3,f'=IF(Inputs!B{rEY}=0,Inputs!B{rTN}+1,Inputs!B{rEY})',FBS);fr+=2
 
     # Debt Schedule
     secr(ws5,fr,1,LC,"DEBT SCHEDULE / جدول الدين");fr+=1
@@ -341,12 +346,30 @@ def generate(p, out):
         c=YC(yi);sc(ws5,fr,c,f'=IF(ABS({CL(c)}{fDS})=0,"-",CashFlow!{CL(c)}{ci}/ABS({CL(c)}{fDS}))',FBS,nf=DX)
     fr+=2
 
+    # Fees
+    secr(ws5,fr,1,LC,"FEES / الرسوم");fr+=1
+    fSUBF=fr;sc(ws5,fr,1,"  Subscription Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FNS,nf=NUMN)
+    for yi in range(h): sc(ws5,fr,YC(yi),f"=-C{fEQ}*Inputs!B{rSB}" if yi==0 else 0,FNS,nf=NUMN)
+    fr+=1
+    fMGMF=fr;sc(ws5,fr,1,"  Management Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FNS,nf=NUMN)
+    for yi in range(h): sc(ws5,fr,YC(yi),f"=IF({yi+1}<=C{fEXY},-C{fEQ}*Inputs!B{rMG},0)",FNS,nf=NUMN)
+    fr+=1
+    fCUSTF=fr;sc(ws5,fr,1,"  Custody Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FNS,nf=NUMN)
+    for yi in range(h): sc(ws5,fr,YC(yi),f"=IF({yi+1}<=C{fEXY},-Inputs!B{rCU},0)",FNS,nf=NUMN)
+    fr+=1
+    fDEVF=fr;sc(ws5,fr,1,"  Developer Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FNS,nf=NUMN)
+    for yi in range(h): sc(ws5,fr,YC(yi),f"=IF(Calc!{CL(YC(yi))}{CXT}>0,-Calc!{CL(YC(yi))}{CXT}*Inputs!B{rDF},0)",FNS,nf=NUMN)
+    fr+=1
+    fSTRF=fr;sc(ws5,fr,1,"  Structuring Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FNS,nf=NUMN)
+    for yi in range(h): sc(ws5,fr,YC(yi),f"=-C{fDC}*Inputs!B{rSTF}" if yi==0 else 0,FNS,nf=NUMN)
+    fr+=1
+    fTFEE=fr;sc(ws5,fr,1,"  Total Fees",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FBS,nf=NUMN)
+    for yi in range(h):
+        c=YC(yi);sc(ws5,fr,c,f"={CL(c)}{fSUBF}+{CL(c)}{fMGMF}+{CL(c)}{fCUSTF}+{CL(c)}{fDEVF}+{CL(c)}{fSTRF}",FBS,nf=NUMN,bd=BB)
+    fr+=2
+
     # Exit Proceeds
     secr(ws5,fr,1,LC,"EXIT PROCEEDS / عوائد التخارج");fr+=1
-    # Exit year: if input=0, auto = max construction end + 2 (use a helper)
-    fEXY=fr;sc(ws5,fr,1,"  Exit Year",FBS);sc(ws5,fr,3,f'=IF(Inputs!B{rEY}=0,Inputs!B{rTN}+1,Inputs!B{rEY})',FBS)
-    fr+=1
-    # Stabilized income at exit = income at exit year from CashFlow
     fSTI=fr;sc(ws5,fr,1,"  Stabilized Annual Income",FNS);sc(ws5,fr,2,cur,FNS)
     sc(ws5,fr,3,f'=IFERROR(INDEX(CashFlow!{CL(YC(0))}{ci}:{CL(LC)}{ci},1,C{fEXY}),0)',FNS,nf=NUM)
     fr+=1
@@ -382,9 +405,12 @@ def generate(p, out):
     fEP=fr;sc(ws5,fr,1,"  + Exit Proceeds",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FNS,nf=NUM)
     for yi in range(h): sc(ws5,fr,YC(yi),f"={CL(YC(yi))}{fEXN}",FNS,nf=NUM)
     fr+=1
+    fFEL=fr;sc(ws5,fr,1,"  - Total Fees",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FNS,nf=NUMN)
+    for yi in range(h): sc(ws5,fr,YC(yi),f"={CL(YC(yi))}{fTFEE}",FNS,nf=NUMN)
+    fr+=1
     fLV=fr;sc(ws5,fr,1,"  Levered Net CF (to Equity)",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FB,nf=NUMN)
     for yi in range(h):
-        c=YC(yi);sc(ws5,fr,c,f"={CL(c)}{fUL}+{CL(c)}{fDL}+{CL(c)}{fSL}+{CL(c)}{fDP}+{CL(c)}{fEP}",FBS,nf=NUMN,bd=BB)
+        c=YC(yi);sc(ws5,fr,c,f"={CL(c)}{fUL}+{CL(c)}{fDL}+{CL(c)}{fSL}+{CL(c)}{fDP}+{CL(c)}{fEP}+{CL(c)}{fFEL}",FBS,nf=NUMN,bd=BB)
     fr+=1
     fLI=fr;sc(ws5,fr,1,"  Levered IRR",FB);sc(ws5,fr,2,"%",FNS)
     sc(ws5,fr,3,f'=IFERROR(IRR({CL(YC(0))}{fLV}:{CL(LC)}{fLV}),"-")',FB,nf=PCT);fr+=1
@@ -497,7 +523,15 @@ def generate(p, out):
     fLPI=fr;sc(ws5,fr,1,"  LP IRR",FB);sc(ws5,fr,2,"%",FNS)
     sc(ws5,fr,3,f'=IFERROR(IRR({CL(YC(0))}{fLPCF}:{CL(LC)}{fLPCF}),"-")',FB,nf=PCT);fr+=1
     fLPM=fr;sc(ws5,fr,1,"  LP MOIC",FB);sc(ws5,fr,2,"x",FNS)
-    sc(ws5,fr,3,f'=IFERROR(SUM({YR(fLPD)})/ABS(SUM({YR(fEC_)}))*(1-Inputs!B{rGP}),"-")',FB,nf=DX);fr+=2
+    sc(ws5,fr,3,f'=IFERROR(SUM({YR(fLPD)})/ABS(SUM({YR(fEC_)}))*(1-Inputs!B{rGP}),"-")',FB,nf=DX);fr+=1
+    for d,l in [(0.10,"10%"),(0.12,"12%"),(0.14,"14%")]:
+        sc(ws5,fr,1,f"  LP NPV @{l}",FNS);sc(ws5,fr,2,cur,FNS)
+        sc(ws5,fr,3,f'=NPV({d},{CL(YC(0))}{fLPCF}:{CL(LC)}{fLPCF})',FNS,nf=NUM);fr+=1
+    fLPCUM=fr;sc(ws5,fr,1,"  LP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS)
+    for yi in range(h):
+        c=YC(yi)
+        sc(ws5,fr,c,f"={CL(c)}{fLPCF}" if yi==0 else f"={CL(YC(yi-1))}{fLPCUM}+{CL(c)}{fLPCF}",FNS,nf=NUMN)
+    fr+=2
 
     fGPD=fr;sc(ws5,fr,1,"  GP Total Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,f'=SUM({YR(fr)})',FBS,nf=NUM)
     gpsh=f"Inputs!B{rGP}"
@@ -514,7 +548,14 @@ def generate(p, out):
     fGPI=fr;sc(ws5,fr,1,"  GP IRR",FB);sc(ws5,fr,2,"%",FNS)
     sc(ws5,fr,3,f'=IFERROR(IRR({CL(YC(0))}{fGPCF}:{CL(LC)}{fGPCF}),"-")',FB,nf=PCT);fr+=1
     fGPM=fr;sc(ws5,fr,1,"  GP MOIC",FB);sc(ws5,fr,2,"x",FNS)
-    sc(ws5,fr,3,f'=IFERROR(SUM({YR(fGPD)})/ABS(SUM({YR(fEC_)})*{gpsh}),"-")',FB,nf=DX)
+    sc(ws5,fr,3,f'=IFERROR(SUM({YR(fGPD)})/ABS(SUM({YR(fEC_)})*{gpsh}),"-")',FB,nf=DX);fr+=1
+    for d,l in [(0.10,"10%"),(0.12,"12%"),(0.14,"14%")]:
+        sc(ws5,fr,1,f"  GP NPV @{l}",FNS);sc(ws5,fr,2,cur,FNS)
+        sc(ws5,fr,3,f'=NPV({d},{CL(YC(0))}{fGPCF}:{CL(LC)}{fGPCF})',FNS,nf=NUM);fr+=1
+    fGPCUM=fr;sc(ws5,fr,1,"  GP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS)
+    for yi in range(h):
+        c=YC(yi)
+        sc(ws5,fr,c,f"={CL(c)}{fGPCF}" if yi==0 else f"={CL(YC(yi-1))}{fGPCUM}+{CL(c)}{fGPCF}",FNS,nf=NUMN)
 
     # ═══════════ OUTPUTS ═══════════
     ws4=wb.create_sheet("Outputs"); ws4.sheet_properties.tabColor="8B5CF6"
@@ -528,9 +569,9 @@ def generate(p, out):
     orow("Total Land Rent",f"=Calc!D{LR}");orow("Unlevered IRR",f"=CashFlow!C{cirr}",PCT,"%")
     orow("NPV @10%",f"=CashFlow!C{cnpv}");orow("Levered IRR",f"=Fund!C{fLI}",PCT,"%")
     orow("Max Debt",f"=Fund!C{fMD}");orow("Equity",f"=Fund!C{fEQ}")
-    orow("Net Exit Proceeds",f"=Fund!C{fEXN}");orow("LP IRR",f"=Fund!C{fLPI}",PCT,"%")
-    orow("LP MOIC",f"=Fund!C{fLPM}",DX,"x");orow("GP IRR",f"=Fund!C{fGPI}",PCT,"%")
-    orow("GP MOIC",f"=Fund!C{fGPM}",DX,"x")
+    orow("Net Exit",f"=Fund!C{fEXN}");orow("Total Fees",f"=Fund!C{fTFEE}",NUMN)
+    orow("LP IRR",f"=Fund!C{fLPI}",PCT,"%");orow("LP MOIC",f"=Fund!C{fLPM}",DX,"x")
+    orow("GP IRR",f"=Fund!C{fGPI}",PCT,"%");orow("GP MOIC",f"=Fund!C{fGPM}",DX,"x")
     o+=1;sc(ws4,o,1,"Phase Breakdown",FB,FS_);sc(ws4,o,2,None,fl=FS_);sc(ws4,o,3,None,fl=FS_);o+=1
     chdr(ws4,o,["Phase","CAPEX","Income"]);o+=1
     for pi in range(nph):
@@ -549,16 +590,77 @@ def generate(p, out):
     pv="+".join([f"Calc!D{PR+i}" for i in range(nph)])
     chk("Revenue Total = Sum Phases",f"=Calc!D{RVT}-({pv})")
     chk("D+E = Total Cost",f"=ABS(Fund!C{fMD}+Fund!C{fEQ}-Fund!C{fDC})")
+    sc(ws9,ck,1,"No Negative GFA",FNS)
+    sc(ws9,ck,2,f'=COUNTIF(Program!H{PD}:H{PE},"<0")',FNS,nf=NUM)
+    sc(ws9,ck,3,f'=IF(B{ck}=0,"PASS","FAIL")',FBS);ck+=1
+    sc(ws9,ck,1,"Active Assets Have Duration > 0",FNS)
+    sc(ws9,ck,2,f"=SUMPRODUCT((Program!H{PD}:H{PE}>0)*(Program!S{PD}:S{PE}=0))",FNS,nf=NUM)
+    sc(ws9,ck,3,f'=IF(B{ck}=0,"PASS","FAIL")',FBS);ck+=1
+    sc(ws9,ck,1,"Phase Allocation = 100%",FNS)
+    sc(ws9,ck,2,f"=ABS(SUM(Inputs!B{rPA}:B{rPA+nph-1})-1)",FNS,nf='0.0000')
+    sc(ws9,ck,3,f'=IF(B{ck}<0.01,"PASS","FAIL")',FBS);ck+=1
+    sc(ws9,ck,1,"Operating Assets Have EBITDA > 0",FNS)
+    sc(ws9,ck,2,f'=SUMPRODUCT((Program!I{PD}:I{PE}="Operating")*(Program!M{PD}:M{PE}<=0))',FNS,nf=NUM)
+    sc(ws9,ck,3,f'=IF(B{ck}=0,"PASS","WARN")',FBS);ck+=1
     chk("LP+GP Dist = Total Available",f"=ABS(SUM({YR(fLPD)})+SUM({YR(fGPD)})-SUM({YR(fCA)}))")
+    sc(ws9,ck,1,"OVERALL STATUS",FB,FT_)
+    sc(ws9,ck,2,"",None,FT_)
+    sc(ws9,ck,3,f'=IF(COUNTIF(C4:C{ck-1},"FAIL")=0,"ALL PASS","ERRORS")',FB,FT_)
+
+    # ═══════════ DASHBOARD ═══════════
+    wdb=wb.create_sheet("Dashboard"); wdb.sheet_properties.tabColor="0F172A"
+    wdb.column_dimensions['A'].width=24;wdb.column_dimensions['B'].width=20
+    wdb.column_dimensions['C'].width=20;wdb.column_dimensions['D'].width=20
+    wdb.column_dimensions['E'].width=16;wdb.column_dimensions['F'].width=14
+    hdr(wdb,1,1,6,f"{p.get('name','')}");sc(wdb,2,1,"Project Financial Model Dashboard",FSC)
+    dr=4;secr(wdb,dr,1,6,"KEY METRICS / المؤشرات الرئيسية");dr+=1
+    chdr(wdb,dr,["Metric","Value","Unit","","",""]);dr+=1
+    def dk(l,f,nf=NUM,u=cur):
+        nonlocal dr;sc(wdb,dr,1,l,FNS);sc(wdb,dr,2,f,FRB,nf=nf);sc(wdb,dr,3,u,FNS);dr+=1
+    dk("Total CAPEX",f"=Calc!D{CXT}");dk(f"Total Income ({h}yr)",f"=Calc!D{RVT}")
+    dk("Total Land Rent",f"=Calc!D{LR}");dk("Unlevered IRR",f"=CashFlow!C{cirr}",PCT,"%")
+    dk("NPV @10%",f"=CashFlow!C{cnpv}");dk("Levered IRR",f"=Fund!C{fLI}",PCT,"%")
+    dk("Max Debt",f"=Fund!C{fMD}");dk("Total Equity",f"=Fund!C{fEQ}")
+    dk("Net Exit",f"=Fund!C{fEXN}");dk("Total Fees",f"=Fund!C{fTFEE}",NUMN)
+    dr+=1
+    dk("LP IRR",f"=Fund!C{fLPI}",PCT,"%");dk("LP MOIC",f"=Fund!C{fLPM}",DX,"x")
+    dk("GP IRR",f"=Fund!C{fGPI}",PCT,"%");dk("GP MOIC",f"=Fund!C{fGPM}",DX,"x")
+    dr+=1
+    secr(wdb,dr,1,6,"PHASE SUMMARY / ملخص المراحل");dr+=1
+    chdr(wdb,dr,["Phase","CAPEX","Income","Assets","% of CAPEX",""]);dr+=1
+    for pi in range(nph):
+        sc(wdb,dr,1,pn[pi],FBS);sc(wdb,dr,2,f"=Calc!D{PC+pi}",FR,nf=NUM)
+        sc(wdb,dr,3,f"=Calc!D{PR+pi}",FR,nf=NUM)
+        sc(wdb,dr,4,f'=COUNTIF(Program!A{PD}:A{PE},"{pn[pi]}")',FNS)
+        sc(wdb,dr,5,f"=IF(Calc!D{CXT}=0,0,Calc!D{PC+pi}/Calc!D{CXT})",FNS,nf=PCT);dr+=1
+    sc(wdb,dr,1,"CONSOLIDATED",FB,FT_);sc(wdb,dr,2,f"=Calc!D{CXT}",FRB,FT_,nf=NUM)
+    sc(wdb,dr,3,f"=Calc!D{RVT}",FRB,FT_,nf=NUM);sc(wdb,dr,4,na,FBS,FT_);sc(wdb,dr,5,1,FBS,FT_,nf=PCT)
+    dr+=2
+    secr(wdb,dr,1,6,"ASSET PROGRAM / برنامج الأصول");dr+=1
+    chdr(wdb,dr,["No.","Asset","Category","GFA (sqm)","Cost/sqm","Total CAPEX"]);dr+=1
+    for i in range(na):
+        pr=PD+i;sc(wdb,dr,1,i+1,FNS);sc(wdb,dr,2,f"=Program!C{pr}",FR)
+        sc(wdb,dr,3,f"=Program!B{pr}",FR);sc(wdb,dr,4,f"=Program!H{pr}",FR,nf=NUM)
+        sc(wdb,dr,5,f"=Program!Q{pr}",FR,nf=NUM);sc(wdb,dr,6,f"=Program!T{pr}",FR,nf=NUM);dr+=1
+    dr+=1
+    secr(wdb,dr,1,6,"NPV ANALYSIS / تحليل القيمة الحالية");dr+=1
+    chdr(wdb,dr,["Discount Rate","Project (Unlev)","Project (Lev)","LP","GP",""]);dr+=1
+    for d,l in [(0.10,"10%"),(0.12,"12%"),(0.14,"14%")]:
+        sc(wdb,dr,1,l,FBS)
+        sc(wdb,dr,2,f"=NPV({d},CashFlow!{CL(YC(0))}{cn}:{CL(LC)}{cn})",FNS,nf=NUM)
+        sc(wdb,dr,3,f"=NPV({d},Fund!{CL(YC(0))}{fLV}:{CL(LC)}{fLV})",FNS,nf=NUM)
+        sc(wdb,dr,4,f"=NPV({d},Fund!{CL(YC(0))}{fLPCF}:{CL(LC)}{fLPCF})",FNS,nf=NUM)
+        sc(wdb,dr,5,f"=NPV({d},Fund!{CL(YC(0))}{fGPCF}:{CL(LC)}{fGPCF})",FNS,nf=NUM);dr+=1
 
     # ═══════════ DOCS ═══════════
     wsd=wb.create_sheet("Docs"); wsd.sheet_properties.tabColor="6B7280"
     wsd.column_dimensions['A'].width=65
     hdr(wsd,1,1,1,"Documentation / التوثيق")
-    for i,l in enumerate(["","Sheet Guide:","  Inputs — Editable assumptions (blue text)",
-        "  Program — Asset table (blue=input, black=formula)","  Calc — Engine (all formulas)",
-        "  CashFlow — Unlevered cash flows by phase","  Fund — Debt + Exit + Waterfall + LP/GP returns",
-        "  Outputs — Summary KPIs","  Checks — Integrity checks","",
+    for i,l in enumerate(["","Sheet Guide:","  Dashboard — KPIs + Phase Summary + Asset List + NPV Analysis",
+        "  Inputs — Editable assumptions (blue text)","  Program — Asset table",
+        "  Calc — Engine (all formulas)","  CashFlow — Unlevered cash flows by phase",
+        "  Fund — Debt + Fees + Exit + Waterfall + LP/GP returns",
+        "  Outputs — Summary KPIs","  Checks — Integrity checks (8 checks)","",
         "Color: Blue=Input, Black=Formula, Green=Cross-sheet",
         "","How to use:","  1. Edit Inputs sheet (blue cells)",
         "  2. Edit Program sheet (asset details)","  3. All other sheets recalculate automatically",
@@ -568,7 +670,7 @@ def generate(p, out):
 
     # Freeze + order
     ws0.freeze_panes=f'{CL(YC(0))}4';ws3.freeze_panes=f'{CL(YC(0))}4';ws5.freeze_panes=f'{CL(YC(0))}4'
-    desired=["Inputs","Program","Calc","CashFlow","Fund","Outputs","Checks","Docs"]
+    desired=["Dashboard","Inputs","Program","Calc","CashFlow","Fund","Outputs","Checks","Docs"]
     for i,name in enumerate(desired):
         idx=wb.sheetnames.index(name);wb.move_sheet(name,offset=i-idx)
     wb.save(out); return out
