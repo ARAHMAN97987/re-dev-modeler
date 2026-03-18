@@ -3232,7 +3232,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
                 <button onClick={()=>setMenuOpen(!menuOpen)} style={{...btnS,background:menuOpen?"#f0f1f5":"transparent",color:"#4b5060",padding:"5px 8px",fontSize:16,fontWeight:500,border:"none"}}>⋮</button>
                 {menuOpen && <>
                   <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:998}} />
-                  <div style={{position:"absolute",right:0,top:"100%",marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:200,padding:"6px 0"}}>
+                  <div style={{position:"absolute",top:"100%",marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:200,padding:"6px 0",...(lang==="ar"?{left:0}:{right:0})}}>
                     {/* Undo */}
                     <button onClick={()=>{undo();setMenuOpen(false);}} disabled={undoStack.current.length===0} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:undoStack.current.length>0?"#1a1d23":"#d0d4dc",cursor:undoStack.current.length>0?"pointer":"default",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>↩</span> {lang==="ar"?"تراجع":"Undo"} <span style={{marginLeft:"auto",fontSize:10,color:"#9ca3af"}}>Ctrl+Z</span>
