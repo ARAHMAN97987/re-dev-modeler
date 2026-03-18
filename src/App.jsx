@@ -3415,20 +3415,6 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
               <button onClick={()=>setAudienceView("investor")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="investor"?"#7c3aed":"#f0f1f5",color:audienceView==="investor"?"#fff":"#6b7080",borderRadius:20,border:"none"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
             </div>
           ) : (<>
-          {/* Progress steps */}
-          <div style={{display:"flex",alignItems:"center",gap:2,padding:"8px 12px 8px 0",borderInlineEnd:"1px solid #f0f1f5",marginInlineEnd:4}}>
-            {[
-              {n:"1",done:(project.assets||[]).length>0},
-              {n:"2",done:project.finMode!=="self"},
-              {n:"3",done:!!waterfall},
-              {n:"4",done:false},
-            ].map((s,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:2}}>
-                <div style={{width:18,height:18,borderRadius:9,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",background:s.done?"#16a34a":"#e5e7ec",color:s.done?"#fff":"#9ca3af"}}>{s.done?"✓":s.n}</div>
-                {i<3&&<div style={{width:12,height:1,background:s.done?"#16a34a":"#e5e7ec"}} />}
-              </div>
-            ))}
-          </div>
           {(() => {
             const tabs = [
               {key:"dashboard",label:t.dashboard,group:"project"},
