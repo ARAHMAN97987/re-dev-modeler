@@ -300,7 +300,7 @@ suite('F9-computeFinancing');
   t('devCostInclLand >= excl', f.devCostInclLand >= f.devCostExclLand);
   // C: Debt sizing
   t('maxDebt ≈ 60% of devCostInclLand', near(f.maxDebt, f.devCostInclLand * 0.6, TOL.MONEY_LARGE));
-  t('totalEquity = devCost + fee - debt', near(f.totalEquity, f.devCostInclLand + f.upfrontFee - f.maxDebt, TOL.MONEY_LARGE));
+  t('totalEquity = devCost - debt', near(f.totalEquity, f.devCostInclLand - f.maxDebt, TOL.MONEY_LARGE));
   // E: Drawdown
   t('Sum drawdown = totalDebt', near(sumArr(f.drawdown), f.totalDebt, TOL.MONEY_SMALL));
   t('No neg equity calls', f.equityCalls.every(v => v >= -TOL.MONEY_SMALL));
@@ -310,13 +310,17 @@ suite('F9-computeFinancing');
     if (!near(f.debtBalOpen[y], f.debtBalClose[y-1], TOL.MONEY_SMALL)) { balOk=false; break; }
   }
   t('Debt balance rolls forward', balOk);
-  // Midpoint interest
+  // ZAN interest: (Open+Close)/2 × rate + draw × upfrontFee%
+  // Note: debtBalClose may be zeroed at exit year, so reconstruct true close for comparison
   let intOk = true;
+  const ufPct = (D1.upfrontFeePct||0)/100;
   for (let y=0; y<D1.horizon; y++) {
-    const expInt = Math.max(0, (f.debtBalOpen[y] + 0.5*f.drawdown[y] - 0.5*f.repayment[y]) * (D1.financeRate/100));
+    // Reconstruct true close before exit zeroing: Open + Draw - Repay
+    const trueClose = Math.max(0, (f.debtBalOpen[y]||0) + (f.drawdown[y]||0) - (f.repayment[y]||0));
+    const expInt = Math.max(0, ((f.debtBalOpen[y]||0) + trueClose)/2 * (D1.financeRate/100) + (f.drawdown[y]||0) * ufPct);
     if (!near(f.originalInterest[y], expInt, TOL.MONEY_LARGE)) { intOk=false; break; }
   }
-  t('Midpoint interest formula', intOk);
+  t('AvgBal interest formula', intOk);
   // G: Exit
   t('Exit proceeds exist', f.exitProceeds.some(v => v > 0));
   // FIX#1: Post-exit truncation
@@ -816,7 +820,7 @@ suite('SCN-ZeroRate');
   const p = {...D1, financeRate:0};
   const r = E.computeProjectCashFlows(p);
   const f = E.computeFinancing(p, r, null);
-  t('Rate=0: zero interest', f.totalInterest === 0);
+  t('Rate=0: interest = upfront fees only', f.totalInterest <= f.totalDebt * (D1.upfrontFeePct||0)/100 + 1);
   t('Rate=0: no crash', f !== null);
 }
 

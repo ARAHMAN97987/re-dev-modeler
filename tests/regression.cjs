@@ -72,7 +72,7 @@ t("T1", "2 phases", Object.keys(r.phaseResults).length === 2);
 
 // ── T2: Financing ──
 t("T2", "Max Debt = 217,532,700", tol(f.maxDebt, 217532700, 0.01), `Got: ${Math.round(f.maxDebt)}`);
-t("T2", "Total Equity includes fee", tol(f.totalEquity, 146109464, 0.1), `Got: ${Math.round(f.totalEquity)}`);
+t("T2", "Total Equity (excl upfront fee)", tol(f.totalEquity, 145021800, 0.1), `Got: ${Math.round(f.totalEquity)}`);
 t("T2", "GP = LP (50/50)", Math.abs(f.gpEquity - f.lpEquity) < 1);
 t("T2", "Levered IRR > 25%", f.leveredIRR > 0.25, `Got: ${(f.leveredIRR*100).toFixed(2)}%`);
 t("T2", "DSCR all > 0 during repayment", f.dscr.filter(d => d !== null && d > 0).length > 0);
@@ -177,8 +177,8 @@ const y0Uses = fLand.drawdown[0] + fLand.equityCalls[0];
 t("T6", "FIX2: Y0 uses include land cost", y0Uses >= 80000000 - 1, `Y0 uses: ${Math.round(y0Uses)}`);
 // Source/use reconciliation
 const totalSources = fLand.drawdown.reduce((s,v)=>s+v,0) + fLand.equityCalls.reduce((s,v)=>s+v,0);
-t("T6", "FIX2: Sources ≈ Uses", Math.abs(totalSources - (rLand.consolidated.totalCapex + 80000000 + fLand.upfrontFee)) < 10000,
-  `Sources: ${Math.round(totalSources)}, Uses: ${Math.round(rLand.consolidated.totalCapex + 80000000 + fLand.upfrontFee)}`);
+t("T6", "FIX2: Sources ≈ Uses", Math.abs(totalSources - (rLand.consolidated.totalCapex + 80000000)) < 10000,
+  `Sources: ${Math.round(totalSources)}, Uses: ${Math.round(rLand.consolidated.totalCapex + 80000000)}`);
 
 // FIX#3 Option B: GP gets pro-rata T2, catch-up adjusted
 t("T6", "FIX3B: T2 pro-rata (GP gets gpPct)", (() => {

@@ -1063,14 +1063,16 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     const balEnd = rpEnd>=0&&rpEnd<h?(f.debtBalClose[rpEnd]||0):0;
     add("T2","Debt Fully Repaid", f.tenor===0||balEnd<1, "Debt repaid by tenor end", `Balance at year ${rpEnd+1}: ${fmt(balEnd)}`);
     let intOk=true;
+    const ufPct = (project.upfrontFeePct||0)/100;
     for (let y=0;y<Math.min(h,20);y++) {
       if ((f.debtBalOpen[y]||0)>0||(f.debtBalClose[y]||0)>0||(f.drawdown?.[y]||0)>0) {
-        const exp=Math.max(0,((f.debtBalOpen[y]||0)+0.5*(f.drawdown?.[y]||0)-0.5*(f.repayment?.[y]||0))*f.rate);
+        const trueClose = Math.max(0,(f.debtBalOpen[y]||0)+(f.drawdown?.[y]||0)-(f.repayment?.[y]||0));
+        const exp=Math.max(0,((f.debtBalOpen[y]||0)+trueClose)/2*f.rate + (f.drawdown?.[y]||0)*ufPct);
         const act=Math.abs(f.originalInterest?.[y]||f.interest[y]||0);
         if (exp>0&&Math.abs(act-exp)/exp>0.05) { intOk=false; break; }
       }
     }
-    add("T2","Interest = Midpoint × Rate", intOk, "Interest uses Open+0.5×Draw-0.5×Repay × rate");
+    add("T2","Interest = AvgBal × Rate + Draw × Fee%", intOk, "Interest uses (Open+Close)/2 × rate + draw × upfrontFee%");
     const totEqC=(f.equityCalls||[]).reduce((s,v)=>s+v,0);
     add("T2","Equity Calls ≥ Equity", totEqC>=f.totalEquity-10000, "Equity calls cover equity",
       `Calls: ${fmt(totEqC)} vs Equity: ${fmt(f.totalEquity)}`);
@@ -1490,11 +1492,11 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const grace = project.debtGrace ?? 3;
   const repayYears = tenor - grace;
   const maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
-  const upfrontFee = maxDebt * (project.upfrontFeePct || 0) / 100;
 
   // ── Equity Structure ──
-  // Total project cost includes upfront fee (equity must cover it unless bank100)
-  const totalProjectCost = devCostInclLand + (isBank100 ? 0 : upfrontFee);
+  // ZAN: upfront fee is per-draw interest cost, NOT part of project cost/equity
+  const upfrontFeePct = (project.upfrontFeePct || 0) / 100;
+  const totalProjectCost = devCostInclLand;
   let totalEquity = Math.max(0, totalProjectCost - maxDebt);
   let gpEquity, lpEquity;
 
@@ -1553,8 +1555,8 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const drawdown = new Array(h).fill(0);
   const equityCalls = new Array(h).fill(0);
   let totalDrawn = 0;
-  // Debt ratio based on financeable uses (scheduled uses + upfront fee, NOT non-cash land cap)
-  const financeableUses = totalScheduledUses + upfrontFee;
+  // Debt ratio based on financeable uses (scheduled uses only, upfront fee is per-draw interest)
+  const financeableUses = totalScheduledUses;
   const actualMaxDebt = Math.min(maxDebt, financeableUses);
   const debtRatio = totalScheduledUses > 0 ? Math.min(actualMaxDebt / totalScheduledUses, 1) : 0;
 
@@ -1568,10 +1570,6 @@ function computeFinancing(project, projectResults, incentivesResult) {
   }
   // Land capitalization value added as equity call in year 0 (non-cash but counts as equity)
   if (effectiveLandCap > 0) equityCalls[0] += effectiveLandCap;
-  // Upfront fee added to equity calls in first drawdown year
-  let firstDrawYear = -1;
-  for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { firstDrawYear = y; break; } }
-  if (firstDrawYear >= 0) equityCalls[firstDrawYear] += upfrontFee;
 
   // ── Post-drawdown reconciliation ──
   // When actualMaxDebt < maxDebt (e.g. landCap inflates devCost beyond cash needs),
@@ -1617,11 +1615,14 @@ function computeFinancing(project, projectResults, incentivesResult) {
       repay[y] = bal;
     }
     debtBalClose[y] = bal - repay[y];
-    // Interest on midpoint balance: Open + 0.5×Draw - 0.5×Repay (avoids drawdown double-count)
-    interest[y] = (debtBalOpen[y] + 0.5 * drawdown[y] - 0.5 * repay[y]) * rate;
+    // ZAN interest: average of opening and closing balance × rate + per-draw upfront fee
+    interest[y] = (debtBalOpen[y] + debtBalClose[y]) / 2 * rate + drawdown[y] * upfrontFeePct;
     if (interest[y] < 0) interest[y] = 0;
     debtService[y] = repay[y] + interest[y];
   }
+
+  // Total upfront fee = sum of per-draw fees (for reporting)
+  const upfrontFee = drawdown.reduce((s, d) => s + d * upfrontFeePct, 0);
 
   // ── Exit ──
   const exitProceeds = new Array(h).fill(0);
