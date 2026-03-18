@@ -3136,7 +3136,10 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
             <div style={{flex:1}}><div style={{fontSize:10,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>ZAN Financial Modeler</div></div>
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#0a2a1a":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
           </div>
-          <div ref={sidebarRef} style={{flex:1,overflowY:"auto"}}><ControlPanel project={project} up={up} t={t} lang={lang} /></div>
+          <div ref={sidebarRef} style={{flex:1,overflowY:"auto"}}>
+            <ControlPanel project={project} up={up} t={t} lang={lang} />
+          </div>
+          <SidebarAdvisor project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} setActiveTab={setActiveTab} />
         </div>
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -3159,71 +3162,6 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {user && <div style={{fontSize:10,color:"#9ca3af",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
           {signOut && <button onClick={signOut} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"4px 10px",fontSize:10,fontWeight:500}}>Sign Out</button>}
         </div>
-        {/* Health Status Bar + Warnings (Sprint 1D) */}
-        {results && (project.assets||[]).length > 0 && (() => {
-          try {
-          const c = results.consolidated;
-          if (!c) return null;
-          const _ir = incentivesResult;
-          const _fin = financing;
-          const irr = _fin && _fin.mode !== "self" && _fin.leveredIRR !== null ? _fin.leveredIRR
-            : (_ir && _ir.totalIncentiveValue > 0 && _ir.adjustedIRR !== null) ? _ir.adjustedIRR : c.irr;
-          const npv = (_ir && _ir.totalIncentiveValue > 0) ? _ir.adjustedNPV10 : (c.npv10 || 0);
-          const dscrVals = financing && financing.dscr ? financing.dscr.filter(d=>d!==null) : [];
-          const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
-          const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
-          const dscrOk = minDscr === null ? -1 : minDscr > 1.4 ? 2 : minDscr > 1.25 ? 1 : 0;
-          const npvOk = npv > 0 ? 2 : 0;
-          const score = irrOk + (dscrOk >= 0 ? dscrOk : 0) + npvOk;
-          const maxScore = 4 + (dscrOk >= 0 ? 2 : 0);
-          const health = score >= maxScore * 0.7 ? "strong" : score >= maxScore * 0.4 ? "moderate" : "weak";
-          const cfg = { strong: { bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d", icon: "✓", label: lang==="ar"?"صحة المشروع: قوية":"Project Health: Strong" },
-                        moderate: { bg: "#fefce8", border: "#fde68a", color: "#92400e", icon: "⚠", label: lang==="ar"?"صحة المشروع: متوسطة":"Project Health: Moderate" },
-                        weak: { bg: "#fef2f2", border: "#fecaca", color: "#991b1b", icon: "✗", label: lang==="ar"?"صحة المشروع: ضعيفة":"Project Health: Weak" } }[health];
-          const metrics = [
-            irr !== null && { label: "IRR", value: (irr*100).toFixed(1)+"%", ok: irrOk },
-            minDscr !== null && { label: "DSCR", value: minDscr.toFixed(2)+"x", ok: dscrOk },
-            { label: ar?"صافي القيمة":"NPV", value: npv >= 1e6 ? (npv/1e6).toFixed(0)+"M" : npv > 0 ? "+":"—", ok: npvOk },
-          ].filter(Boolean);
-          // Build clickable warnings
-          const warnings = [];
-          if (minDscr !== null && minDscr < 1.2) warnings.push({ icon:"⚠", text: ar?`DSCR أقل من 1.2x (${minDscr.toFixed(2)}x)`:`DSCR < 1.2x (${minDscr.toFixed(2)}x)`, tab:"financing" });
-          if (financing && (project.maxLtvPct||0) > 80) warnings.push({ icon:"⚠", text: ar?`LTV > 80% (${project.maxLtvPct}%)`:`LTV > 80% (${project.maxLtvPct}%)`, tab:"financing" });
-          if (npv < 0) warnings.push({ icon:"✗", text: ar?"صافي القيمة الحالية سالب":"Negative NPV", tab:"dashboard" });
-          if (irr !== null && financing && financing.rate && irr < financing.rate) warnings.push({ icon:"⚠", text: ar?"IRR أقل من تكلفة الدين":"IRR < Cost of Debt", tab:"dashboard" });
-          if (project.debtAllowed && (project.loanTenor||7) <= (project.debtGrace||3)) warnings.push({ icon:"✗", text: ar?"مدة القرض ≤ فترة السماح":"Tenor ≤ Grace Period", tab:"financing" });
-          // Check for out-of-benchmark assets
-          const bmWarnings = (project.assets||[]).filter(a => {
-            const bc = benchmarkColor("costPerSqm", a.costPerSqm, a.category);
-            return bc.color === "#ef4444";
-          });
-          if (bmWarnings.length > 0) warnings.push({ icon:"⚠", text: ar?`${bmWarnings.length} أصل خارج نطاق التكلفة`:`${bmWarnings.length} asset(s) outside cost benchmark`, tab:"assets" });
-          // Exit during ramp-up
-          if (financing && project.exitStrategy !== "hold") {
-            const exitYr = financing.exitYear ? financing.exitYear - (project.startYear||2026) : 0;
-            const maxRamp = Math.max(0,...(project.assets||[]).map(a => ((a.constrStart||1)-1)+Math.ceil((a.constrDuration||12)/12)+(a.rampUpYears||3)));
-            if (exitYr > 0 && exitYr < maxRamp) warnings.push({ icon:"⚠", text: ar?"التخارج خلال فترة النمو":"Exit during ramp-up period", tab:"waterfall" });
-          }
-          return (<>
-            <div style={{background:cfg.bg,borderBottom:"1px solid "+cfg.border,padding:"6px 18px",display:"flex",alignItems:"center",gap:14,fontSize:11,flexWrap:"wrap"}}>
-              <span style={{fontWeight:700,color:cfg.color,fontSize:13}}>{cfg.icon}</span>
-              <span style={{fontWeight:600,color:cfg.color}}>{cfg.label}</span>
-              <div style={{width:1,height:16,background:cfg.border}} />
-              {metrics.map((m,mi)=><span key={mi} style={{display:"flex",alignItems:"center",gap:4}}>
-                <span style={{width:7,height:7,borderRadius:4,background:m.ok>=2?"#16a34a":m.ok===1?"#eab308":"#ef4444"}} />
-                <span style={{color:"#6b7080"}}>{m.label}:</span>
-                <span style={{fontWeight:600,color:m.ok>=2?"#15803d":m.ok===1?"#92400e":"#991b1b"}}>{m.value}</span>
-              </span>)}
-              {warnings.length > 0 && <>
-                <div style={{width:1,height:16,background:cfg.border}} />
-                {warnings.map((w,wi)=><button key={wi} onClick={()=>setActiveTab(w.tab)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:3,fontSize:10,color:"#991b1b",fontFamily:"inherit",padding:"2px 6px",borderRadius:4,transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#fef2f2"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                  <span>{w.icon}</span><span style={{textDecoration:"underline",textUnderlineOffset:2}}>{w.text}</span>
-                </button>)}
-              </>}
-            </div>
-          </>);
-          } catch(e) { console.error("Health bar render error:", e); return null; }
-        })()}
         <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
           {presentMode ? (
             /* Presentation Mode Tab Bar */
@@ -3596,6 +3534,170 @@ function StatusBadge({status,onChange}) {
       {sts.map(s=><button key={s} onClick={()=>{onChange(s);setOpen(false);}} style={{display:"block",width:"100%",padding:"8px 16px",border:"none",background:status===s?"#f0f1f5":"#fff",fontSize:12,cursor:"pointer",textAlign:"start",color:"#1a1d23"}}>{s}</button>)}
     </div>}
   </div>);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIDEBAR ADVISOR (Health, Metrics, Warnings)
+// ═══════════════════════════════════════════════════════════════
+function SidebarAdvisor({ project, results, financing, waterfall, incentivesResult, lang, setActiveTab }) {
+  const [expanded, setExpanded] = useState(true);
+  const ar = lang === "ar";
+  if (!project || !results || !(project.assets||[]).length) return null;
+  const c = results.consolidated;
+  if (!c) return null;
+
+  try {
+  const _ir = incentivesResult;
+  const _fin = financing;
+  const w = waterfall;
+  const irr = _fin && _fin.mode !== "self" && _fin.leveredIRR !== null ? _fin.leveredIRR
+    : (_ir && _ir.totalIncentiveValue > 0 && _ir.adjustedIRR !== null) ? _ir.adjustedIRR : c.irr;
+  const npv = (_ir && _ir.totalIncentiveValue > 0) ? _ir.adjustedNPV10 : (c.npv10 || 0);
+  const npv12 = c.npv12 || 0;
+  const dscrVals = _fin && _fin.dscr ? _fin.dscr.filter(d => d !== null) : [];
+  const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
+  const avgDscr = dscrVals.length > 0 ? dscrVals.reduce((a, b) => a + b, 0) / dscrVals.length : null;
+
+  // Health score
+  const irrOk = irr === null ? 0 : irr > 0.15 ? 2 : irr > 0.12 ? 1 : 0;
+  const dscrOk = minDscr === null ? -1 : minDscr > 1.4 ? 2 : minDscr > 1.25 ? 1 : 0;
+  const npvOk = npv > 0 ? 2 : 0;
+  const score = irrOk + (dscrOk >= 0 ? dscrOk : 0) + npvOk;
+  const maxScore = 4 + (dscrOk >= 0 ? 2 : 0);
+  const health = score >= maxScore * 0.7 ? "strong" : score >= maxScore * 0.4 ? "moderate" : "weak";
+  const hCfg = { strong: { color: "#4ade80", bg: "#0a2a1a", border: "#16a34a40", label: ar ? "قوي" : "Strong", icon: "✓" },
+                  moderate: { color: "#fbbf24", bg: "#2a2a0a", border: "#eab30840", label: ar ? "متوسط" : "Moderate", icon: "⚠" },
+                  weak: { color: "#f87171", bg: "#2a0a0a", border: "#ef444440", label: ar ? "ضعيف" : "Weak", icon: "✗" } }[health];
+
+  // Payback
+  const paybackYr = c.netCF ? c.netCF.reduce((acc, v, i) => { acc.cum += v; if (acc.yr === null && acc.cum > 0) acc.yr = i + 1; return acc; }, { cum: 0, yr: null }).yr : null;
+
+  // Average cost/sqm
+  const totalGFA = (project.assets || []).reduce((s, a) => s + (a.gfa || 0), 0);
+  const avgCostSqm = totalGFA > 0 ? c.totalCapex / totalGFA : 0;
+
+  // Revenue per sqm (stabilized year estimate)
+  const leasableTotal = results.assetSchedules.reduce((s, a) => s + (a.leasableArea || 0), 0);
+
+  // Construction timeline
+  const maxConstrEnd = Math.max(0, ...(project.assets || []).map(a => ((a.constrStart || 1) - 1) + Math.ceil((a.constrDuration || 12) / 12)));
+  const maxRampEnd = Math.max(0, ...(project.assets || []).map(a => ((a.constrStart || 1) - 1) + Math.ceil((a.constrDuration || 12) / 12) + (a.rampUpYears || 3)));
+
+  // Warnings
+  const warnings = [];
+  if (minDscr !== null && minDscr < 1.2) warnings.push({ icon: "⚠", text: ar ? `DSCR أقل من 1.2x (${minDscr.toFixed(2)}x)` : `DSCR < 1.2x in repayment (${minDscr.toFixed(2)}x)`, tab: "financing", severity: "error" });
+  if (_fin && (project.maxLtvPct || 0) > 80) warnings.push({ icon: "⚠", text: ar ? `LTV مرتفع: ${project.maxLtvPct}%` : `High LTV: ${project.maxLtvPct}%`, tab: "financing", severity: "warn" });
+  if (npv < 0) warnings.push({ icon: "✗", text: ar ? "صافي القيمة الحالية سالب" : "Negative NPV — project destroys value", tab: "dashboard", severity: "error" });
+  if (irr !== null && _fin && _fin.rate && irr < _fin.rate) warnings.push({ icon: "⚠", text: ar ? "IRR أقل من تكلفة الدين" : "IRR below cost of debt", tab: "dashboard", severity: "error" });
+  if (project.debtAllowed && (project.loanTenor || 7) <= (project.debtGrace || 3)) warnings.push({ icon: "✗", text: ar ? "مدة القرض ≤ فترة السماح" : "Tenor ≤ Grace period", tab: "financing", severity: "error" });
+  // Benchmark outliers
+  const bmRed = (project.assets || []).filter(a => benchmarkColor("costPerSqm", a.costPerSqm, a.category).color === "#ef4444");
+  const bmYellow = (project.assets || []).filter(a => benchmarkColor("costPerSqm", a.costPerSqm, a.category).color === "#eab308");
+  if (bmRed.length > 0) warnings.push({ icon: "✗", text: ar ? `${bmRed.length} أصل: تكلفة خارج النطاق` : `${bmRed.length} asset(s): cost far outside benchmark`, tab: "assets", severity: "error", detail: bmRed.map(a => a.name || a.code).join(", ") });
+  if (bmYellow.length > 0) warnings.push({ icon: "~", text: ar ? `${bmYellow.length} أصل: تكلفة قريبة من الحد` : `${bmYellow.length} asset(s): cost near benchmark edge`, tab: "assets", severity: "warn", detail: bmYellow.map(a => a.name || a.code).join(", ") });
+  // Exit during ramp-up
+  if (_fin && project.exitStrategy !== "hold") {
+    const exitYr = _fin.exitYear ? _fin.exitYear - (project.startYear || 2026) : 0;
+    if (exitYr > 0 && exitYr < maxRampEnd) warnings.push({ icon: "⚠", text: ar ? "التخارج قبل اكتمال النمو" : "Exit before full stabilization", tab: "waterfall", severity: "warn" });
+  }
+  // Horizon vs construction
+  if (maxConstrEnd > (project.horizon || 50)) warnings.push({ icon: "✗", text: ar ? "الأفق أقصر من فترة البناء" : "Horizon shorter than construction", tab: "assets", severity: "error" });
+  // Zero-revenue assets
+  const zeroRev = (project.assets || []).filter(a => {
+    if (a.revType === "Lease") return (a.gfa || 0) > 0 && (a.leaseRate || 0) === 0 && (a.efficiency || 0) > 0;
+    if (a.revType === "Operating") return (a.opEbitda || 0) === 0;
+    return false;
+  });
+  if (zeroRev.length > 0) warnings.push({ icon: "~", text: ar ? `${zeroRev.length} أصل بدون إيراد` : `${zeroRev.length} asset(s) with zero revenue`, tab: "assets", severity: "warn", detail: zeroRev.map(a => a.name || a.code).join(", ") });
+
+  const errCount = warnings.filter(w => w.severity === "error").length;
+  const warnCount = warnings.filter(w => w.severity === "warn").length;
+
+  const Metric = ({ label, value, sub, color }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "3px 0" }}>
+      <span style={{ fontSize: 10, color: "#6b7080" }}>{label}</span>
+      <div style={{ textAlign: "end" }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: color || "#d0d4dc", fontVariantNumeric: "tabular-nums" }}>{value}</span>
+        {sub && <div style={{ fontSize: 9, color: "#4b5060" }}>{sub}</div>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ borderTop: "1px solid #1e2230", background: "#0d0f14" }}>
+      {/* Collapsed bar - always visible */}
+      <button onClick={() => setExpanded(!expanded)} style={{ width: "100%", padding: "10px 16px", background: hCfg.bg, border: "none", borderTop: `1px solid ${hCfg.border}`, color: hCfg.color, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontFamily: "inherit", transition: "all 0.15s" }}>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>{hCfg.icon}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, flex: 1, textAlign: "start" }}>{ar ? "صحة المشروع" : "Project Health"}: {hCfg.label}</span>
+        {errCount > 0 && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, background: "#ef444430", color: "#f87171", fontWeight: 600 }}>{errCount}</span>}
+        {warnCount > 0 && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 8, background: "#eab30830", color: "#fbbf24", fontWeight: 600 }}>{warnCount}</span>}
+        <span style={{ fontSize: 10, color: "#4b5060", transition: "transform 0.2s", transform: expanded ? "rotate(0)" : "rotate(180deg)" }}>▾</span>
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "0 14px 14px", maxHeight: 400, overflowY: "auto" }}>
+          {/* Key Metrics */}
+          <div style={{ background: "#161a24", borderRadius: 8, padding: "10px 12px", marginTop: 10, marginBottom: 10, border: "1px solid #1e2230" }}>
+            <div style={{ fontSize: 9, color: "#5fbfbf", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, marginBottom: 6 }}>{ar ? "المؤشرات الرئيسية" : "Key Metrics"}</div>
+            <Metric label="IRR" value={irr !== null ? (irr * 100).toFixed(1) + "%" : "—"} color={irrOk >= 2 ? "#4ade80" : irrOk === 1 ? "#fbbf24" : "#f87171"} sub={_fin && _fin.mode !== "self" ? (ar ? "بعد التمويل" : "levered") : ""} />
+            <Metric label={ar ? "صافي القيمة @10%" : "NPV @10%"} value={fmtM(npv)} color={npvOk >= 2 ? "#4ade80" : "#f87171"} />
+            <Metric label={ar ? "صافي القيمة @12%" : "NPV @12%"} value={fmtM(npv12)} color={npv12 > 0 ? "#8b90a0" : "#f87171"} />
+            {minDscr !== null && <Metric label={ar ? "أدنى DSCR" : "Min DSCR"} value={minDscr.toFixed(2) + "x"} color={dscrOk >= 2 ? "#4ade80" : dscrOk === 1 ? "#fbbf24" : "#f87171"} sub={avgDscr ? (ar ? "متوسط " : "avg ") + avgDscr.toFixed(2) + "x" : ""} />}
+            {w && w.lpMOIC && <Metric label="LP MOIC" value={w.lpMOIC.toFixed(2) + "x"} color="#d0d4dc" />}
+            {w && w.gpMOIC && <Metric label="GP MOIC" value={w.gpMOIC.toFixed(2) + "x"} color="#d0d4dc" />}
+            {paybackYr && <Metric label={ar ? "فترة الاسترداد" : "Payback"} value={paybackYr + (ar ? " سنة" : " yr")} color="#8b90a0" />}
+          </div>
+
+          {/* Project Snapshot */}
+          <div style={{ background: "#161a24", borderRadius: 8, padding: "10px 12px", marginBottom: 10, border: "1px solid #1e2230" }}>
+            <div style={{ fontSize: 9, color: "#5fbfbf", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, marginBottom: 6 }}>{ar ? "لمحة سريعة" : "Quick Snapshot"}</div>
+            <Metric label={ar ? "إجمالي CAPEX" : "Total CAPEX"} value={fmtM(c.totalCapex)} />
+            <Metric label={ar ? `إجمالي الدخل (${project.horizon}ع)` : `Total Income (${project.horizon}yr)`} value={fmtM(c.totalIncome)} color="#4ade80" />
+            <Metric label={ar ? "متوسط تكلفة/م²" : "Avg Cost/sqm"} value={fmt(Math.round(avgCostSqm))} />
+            <Metric label={ar ? "إجمالي المساحة" : "Total GFA"} value={fmt(totalGFA) + " m²"} />
+            <Metric label={ar ? "المساحة التأجيرية" : "Leasable Area"} value={fmt(Math.round(leasableTotal)) + " m²"} />
+            <Metric label={ar ? "عدد الأصول" : "Assets"} value={String((project.assets || []).length)} />
+            <Metric label={ar ? "نهاية البناء" : "Constr. End"} value={(ar ? "السنة " : "Year ") + maxConstrEnd} />
+            <Metric label={ar ? "الاستقرار الكامل" : "Full Stabilization"} value={(ar ? "السنة " : "Year ") + maxRampEnd} />
+            {_fin && _fin.totalDebt > 0 && <>
+              <div style={{ borderTop: "1px solid #1e2230", margin: "6px 0" }} />
+              <Metric label={ar ? "إجمالي الدين" : "Total Debt"} value={fmtM(_fin.totalDebt)} />
+              <Metric label="LTV" value={(_fin.totalProjectCost > 0 ? ((_fin.totalDebt / _fin.totalProjectCost) * 100).toFixed(0) : 0) + "%"} />
+            </>}
+          </div>
+
+          {/* Warnings */}
+          {warnings.length > 0 && (
+            <div style={{ background: "#161a24", borderRadius: 8, padding: "10px 12px", marginBottom: 10, border: "1px solid #1e2230" }}>
+              <div style={{ fontSize: 9, color: errCount > 0 ? "#f87171" : "#fbbf24", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600, marginBottom: 8 }}>
+                {ar ? "ملاحظات وتحذيرات" : "Warnings & Notes"} ({warnings.length})
+              </div>
+              {warnings.map((w, i) => (
+                <button key={i} onClick={() => setActiveTab(w.tab)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 6, padding: "5px 4px", borderRadius: 4, fontFamily: "inherit", textAlign: "start", transition: "background 0.15s", marginBottom: 2 }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#1e2230"} onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                  <span style={{ fontSize: 11, flexShrink: 0, marginTop: 1, color: w.severity === "error" ? "#f87171" : "#fbbf24" }}>{w.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 10, color: w.severity === "error" ? "#f87171" : "#fbbf24", fontWeight: 500, lineHeight: 1.4 }}>{w.text}</div>
+                    {w.detail && <div style={{ fontSize: 9, color: "#4b5060", marginTop: 1 }}>{w.detail}</div>}
+                  </div>
+                  <span style={{ fontSize: 9, color: "#3b4050", marginInlineStart: "auto", flexShrink: 0 }}>→</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* All clear */}
+          {warnings.length === 0 && (
+            <div style={{ background: "#0a2a1a", borderRadius: 8, padding: "10px 12px", border: "1px solid #16a34a30", textAlign: "center" }}>
+              <div style={{ fontSize: 12, color: "#4ade80", fontWeight: 600 }}>✓ {ar ? "لا توجد مشاكل" : "No issues detected"}</div>
+              <div style={{ fontSize: 9, color: "#4b5060", marginTop: 2 }}>{ar ? "جميع المؤشرات ضمن النطاق الطبيعي" : "All metrics within acceptable range"}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  } catch (e) { console.error("SidebarAdvisor error:", e); return null; }
 }
 
 // ═══════════════════════════════════════════════════════════════
