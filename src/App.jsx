@@ -3004,7 +3004,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
         <th style={{...thSt,textAlign:"right"}}>{lang==="ar"?"الإجمالي":"Total"}</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>{lang==="ar"?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
       </tr></thead><tbody>
-        <CFRow label={lang==="ar"?"إيرادات الإيجار":"Rental Income"} values={c.income} total={c.totalIncome} color="#16a34a" />
+        <CFRow label={lang==="ar"?"الإيرادات":"Income"} values={c.income} total={c.totalIncome} color="#16a34a" />
         <CFRow label={lang==="ar"?"إيجار الأرض":"Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
         <CFRow label={lang==="ar"?"تكاليف التطوير":"CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
         <CFRow label={lang==="ar"?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.totalDebt} color="#3b82f6" />
