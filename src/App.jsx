@@ -3330,7 +3330,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
           {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} t={t} up={up} lang={lang} />}
           {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} />}
-          {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} checks={checks} lang={lang} />}
+          {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />}
           {activeTab==="scenarios"&&<ScenariosView project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />}
           {activeTab==="market"&&<MarketView project={project} results={results} lang={lang} up={up} />}
           {activeTab==="incentives"&&<IncentivesView project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />}
@@ -4488,8 +4488,10 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         )}
         {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isSale=a.revType==="Sale",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
         const F2=({label,children})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>;
+        const g3=isMobile?"1fr 1fr":"1fr 1fr 1fr";
+        const g2=isMobile?"1fr":"1fr 1fr";
         return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
-        <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.15)",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{position:"fixed",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden",background:"#fff",boxShadow:"0 20px 60px rgba(0,0,0,0.15)",...(isMobile?{inset:0,borderRadius:0}:{top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",borderRadius:16})}}>
           <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
             <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"#9ca3af"}}>{catL(a.category,ar)} · {a.phase}</div></div>
             <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>{ar?"حذف":"Delete"}</button>
@@ -5374,7 +5376,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
   URL.revokeObjectURL(url);
 }
 
-function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, checks, lang }) {
+function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, checks, lang }) {
   const reportRef = useRef(null);
   const [activeReport, setActiveReport] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
@@ -5515,10 +5517,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
       {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
-      <button onClick={()=>generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings)} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600}}>
+      <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);}catch(e){console.error("Formula Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600}}>
         {lang==="ar"?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
       </button>
-      <button onClick={()=>generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks)} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500}}>
+      <button onClick={async()=>{try{await generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks);}catch(e){console.error("Data Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500}}>
         {lang==="ar"?"⬇ تقرير بيانات (Excel)":"⬇ Data Report (Excel)"}
       </button>
     </div>
