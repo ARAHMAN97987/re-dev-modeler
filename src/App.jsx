@@ -258,7 +258,7 @@ const L = {
     plotArea: "Plot Area", bldgFootprint: "Footprint", gfa: "GFA (sqm)", revType: "Rev Type",
     efficiency: "Eff %", leasable: "Leasable", leaseRate: "Rate/sqm", opEbitda: "Op EBITDA",
     escPct: "Esc %", rampYrs: "Ramp Yrs", occPct: "Occ %", costSqm: "Cost/sqm",
-    constrStart: "Start Yr", constrDur: "Duration (mo)", totalCapex: "Total CAPEX",
+    constrStart: "Start Yr", constrDur: "Build (months)", totalCapex: "Total CAPEX",
     totalIncome: "Total Income",
     // Dashboard
     totalCapexLabel: "Total CAPEX", totalIncomeLabel: "Total Income",
@@ -318,7 +318,7 @@ const L = {
     plotArea: "مساحة القطعة Plot Area", bldgFootprint: "المسطح البنائي Footprint", gfa: "المساحة الطابقية GFA (م²)", revType: "نوع الإيراد",
     efficiency: "نسبة الكفاءة Eff %", leasable: "المساحة التأجيرية Leasable", leaseRate: "إيجار/م²", opEbitda: "EBITDA التشغيلية",
     escPct: "الزيادة %", rampYrs: "سنوات النمو", occPct: "الإشغال %", costSqm: "تكلفة/م² Cost/sqm",
-    constrStart: "سنة بداية البناء", constrDur: "المدة (شهر)", totalCapex: "إجمالي التكاليف",
+    constrStart: "سنة بداية البناء", constrDur: "مدة البناء (شهر)", totalCapex: "إجمالي التكاليف",
     totalIncome: "إجمالي الإيرادات",
     totalCapexLabel: "إجمالي CAPEX", totalIncomeLabel: "إجمالي الدخل",
     consolidatedIRR: "IRR الموحّد", totalNetCF: "صافي التدفق النقدي Net CF",
@@ -446,7 +446,7 @@ function getAutoFillDefaults(category) {
 const PROJECT_TEMPLATES = [
   { id:"waterfront", icon:"🌊", en:"Waterfront Mixed-Use", ar:"واجهة بحرية متعددة الاستخدامات",
     desc_en:"Mall, hotel, office, residential, marina, fuel station", desc_ar:"مول، فندق، مكاتب، سكني، مارينا، محطة وقود",
-    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0},{name:"Phase 2",startYearOffset:3,footprint:0}],
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,completionMonth:36,footprint:0},{name:"Phase 2",startYearOffset:3,completionMonth:72,footprint:0}],
     finMode:"fund", exitStrategy:"sale",
     assets:[
       {phase:"Phase 1",category:"Retail",name:"Marina Mall",code:"C1",gfa:31260,footprint:20840,plotArea:28947,revType:"Lease",efficiency:80,leaseRate:2100,escalation:0.75,rampUpYears:4,stabilizedOcc:100,costPerSqm:3900,constrStart:2,constrDuration:36,opEbitda:0},
@@ -458,7 +458,7 @@ const PROJECT_TEMPLATES = [
     ]},
   { id:"residential", icon:"🏘", en:"Residential Compound", ar:"مجمع سكني",
     desc_en:"Tower, villas, amenities, parking", desc_ar:"برج، فلل، مرافق خدمية، مواقف",
-    landType:"purchase", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    landType:"purchase", phases:[{name:"Phase 1",startYearOffset:1,completionMonth:30,footprint:0}],
     finMode:"debt", exitStrategy:"hold",
     assets:[
       {phase:"Phase 1",category:"Residential",name:"Residential Tower",code:"T1",gfa:24000,footprint:3000,plotArea:5000,revType:"Lease",efficiency:85,leaseRate:900,escalation:1.0,rampUpYears:2,stabilizedOcc:92,costPerSqm:3000,constrStart:1,constrDuration:30,opEbitda:0},
@@ -468,7 +468,7 @@ const PROJECT_TEMPLATES = [
     ]},
   { id:"commercial", icon:"🏢", en:"Commercial Center", ar:"مركز تجاري",
     desc_en:"Retail, offices, parking", desc_ar:"محلات، مكاتب، مواقف",
-    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,completionMonth:30,footprint:0}],
     finMode:"debt", exitStrategy:"sale",
     assets:[
       {phase:"Phase 1",category:"Retail",name:"Retail Mall",code:"RM",gfa:20000,footprint:10000,plotArea:15000,revType:"Lease",efficiency:80,leaseRate:2200,escalation:1.0,rampUpYears:3,stabilizedOcc:90,costPerSqm:4000,constrStart:1,constrDuration:30,opEbitda:0},
@@ -477,14 +477,14 @@ const PROJECT_TEMPLATES = [
     ]},
   { id:"hotel", icon:"🏨", en:"Single Hotel", ar:"فندق منفرد",
     desc_en:"Full hotel with operating P&L", desc_ar:"فندق واحد مع قائمة أرباح وخسائر تشغيلية كاملة",
-    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,completionMonth:42,footprint:0}],
     finMode:"fund", exitStrategy:"sale",
     assets:[
       {phase:"Phase 1",category:"Hospitality",name:"5-Star Hotel",code:"H5",gfa:22000,footprint:5000,plotArea:12000,revType:"Operating",efficiency:0,leaseRate:0,escalation:0.75,rampUpYears:4,stabilizedOcc:100,costPerSqm:12000,constrStart:1,constrDuration:42,opEbitda:47630685},
     ]},
   { id:"blank", icon:"📄", en:"Blank Project", ar:"مشروع فارغ",
     desc_en:"Start from scratch", desc_ar:"ابدأ من الصفر",
-    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,footprint:0}],
+    landType:"lease", phases:[{name:"Phase 1",startYearOffset:1,completionMonth:18,footprint:0}],
     finMode:"self", exitStrategy:"hold", assets:[] },
 ];
 
@@ -532,7 +532,7 @@ const defaultProject = () => ({
   softCostPct: 10, contingencyPct: 5,
   rentEscalation: 0.75, vacancyPct: 0, defaultEfficiency: 85, defaultLeaseRate: 700, defaultCostPerSqm: 3500,
   activeScenario: "Base Case", customCapexMult: 100, customRentMult: 100, customDelay: 0, customEscAdj: 0,
-  phases: [{ name: "Phase 1", startYearOffset: 1, footprint: 0 }],
+  phases: [{ name: "Phase 1", startYearOffset: 1, completionMonth: 36, footprint: 0 }],
   assets: [],
   // Financing (Phase 2)
   finMode: "self", // self | debt | fund
@@ -715,7 +715,15 @@ function computeProjectCashFlows(project) {
     const opEbitda = (asset.opEbitda || 0) * rm;
     const capexSch = new Array(horizon).fill(0);
     const revSch = new Array(horizon).fill(0);
-    const cStart = (asset.constrStart || 1) - 1 + delayYears; // H12: Delay shifts start forward
+    const cStart = (() => {
+      // NEW: Calculate start from phase completionMonth (all assets in phase finish together)
+      const assetPhase = (project.phases || []).find(ph => ph.name === (asset.phase || 'Phase 1'));
+      if (assetPhase?.completionMonth) {
+        const phaseEndYear = Math.ceil(assetPhase.completionMonth / 12);
+        return Math.max(0, phaseEndYear - durYears) + delayYears;
+      }
+      return (asset.constrStart || 1) - 1 + delayYears; // Legacy fallback
+    })();
 
     if (durYears > 0 && totalCapex > 0) {
       const ann = totalCapex / durYears;
@@ -4260,7 +4268,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
       let updatedPhases = [...project.phases];
       if (newPhases.length > 0) {
         newPhases.forEach((pName, i) => {
-          updatedPhases.push({ name: pName, startYearOffset: updatedPhases.length + 1, footprint: 0 });
+          updatedPhases.push({ name: pName, startYearOffset: updatedPhases.length + 1, completionMonth: 36, footprint: 0 });
         });
       }
       updateProject({ assets: [...project.assets, ...imported], phases: updatedPhases });
@@ -4324,9 +4332,8 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
     { key:"esc", en:"Esc%", ar:"زيادة", w:40 },
     { key:"ramp", en:"Ramp", ar:"نمو", w:38 },
     { key:"occ", en:"Occ%", ar:"إشغال", w:42 },
-    { key:"cost", en:"Cost", ar:"تكلفة", w:55 },
-    { key:"start", en:"Start", ar:"بداية", w:42 },
-    { key:"dur", en:"Mo.", ar:"شهر", w:38 },
+    { key:"cost", en:"Cost/sqm", ar:"تكلفة/م²", w:65 },
+    { key:"dur", en:"Build (mo)", ar:"مدة البناء", w:70 },
     { key:"totalCapex", en:"CAPEX", ar:"التكاليف", w:80 },
     { key:"totalInc", en:"Income", ar:"الإيرادات", w:80 },
     { key:"score", en:"Score", ar:"تقييم", w:90 },
@@ -4344,7 +4351,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   const visibleCols = cols.filter(c => !hiddenCols.has(c.key));
 
   // Phase management
-  const addPhase = () => { const n = project.phases.length + 1; updateProject({ phases: [...project.phases, { name: `Phase ${n}`, startYearOffset: n, footprint: 0 }] }); };
+  const addPhase = () => { const n = project.phases.length + 1; const prevMonth = project.phases[project.phases.length-1]?.completionMonth || 36; updateProject({ phases: [...project.phases, { name: `Phase ${n}`, startYearOffset: n, completionMonth: prevMonth + 24, footprint: 0 }] }); };
   const renamePhase = (i, name) => { const ph = [...project.phases]; ph[i] = { ...ph[i], name }; updateProject({ phases: ph }); };
   const rmPhase = (i) => { if (project.phases.length <= 1) return; updateProject({ phases: project.phases.filter((_, j) => j !== i) }); };
 
@@ -4381,6 +4388,9 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                   <span onClick={() => setEditingPhase(i)} style={{fontSize:11,fontWeight:600,color:"#1a1d23",cursor:"pointer"}} title={ar?"اضغط لإعادة التسمية":"Click to rename"}>{ph.name}</span>
                 )}
                 <span style={{fontSize:9,color:"#9ca3af",background:"#e5e7ec",borderRadius:8,padding:"1px 5px"}}>{assetCount}</span>
+                <span style={{fontSize:9,color:"#6b7080",marginInlineStart:2}} title={ar?"شهر اكتمال المرحلة":"Phase completion month"}>{ar?"افتتاح:":"Opens:"}</span>
+                <input type="number" value={ph.completionMonth||36} onChange={e=>{const ph2=[...project.phases];ph2[i]={...ph2[i],completionMonth:parseInt(e.target.value)||36};updateProject({phases:ph2});}} style={{width:38,fontSize:10,fontWeight:600,border:"1px solid #e5e7ec",borderRadius:3,padding:"1px 4px",textAlign:"center",fontFamily:"inherit",background:"#fff"}} min={1} />
+                <span style={{fontSize:8,color:"#9ca3af"}}>{ar?"شهر":"mo"}</span>
                 {project.phases.length > 1 && (
                   <button onClick={()=>rmPhase(i)} style={{background:"none",border:"none",color:"#d0d4dc",padding:0,fontSize:11,cursor:"pointer",lineHeight:1,fontFamily:"inherit"}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#d0d4dc"} title={ar?"حذف":"Delete"}>✕</button>
                 )}
@@ -4529,10 +4539,9 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
               <F2 label={ar?"نسبة الإشغال Occ %":"Occupancy %"}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>{ar?"البناء":"Construction"}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
               <F2 label={ar?"تكلفة/م² Cost/sqm":"Cost/m²"}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
-              <F2 label={ar?"سنة بداية البناء":"Start Year"}><EditableCell type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
-              <F2 label={ar?"مدة البناء (شهر)":"Duration (mo)"}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"مدة البناء (شهر)":"Build duration (months)"}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>{isH?(ar?"⚙ حساب أرباح الفندق":"⚙ Hotel P&L"):(ar?"⚙ حساب أرباح المارينا":"⚙ Marina P&L")}</button>}
             <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:12}}>
@@ -4557,7 +4566,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             <thead>
               <tr>
                 {visibleCols.map(c=>(
-                  <th key={c.key} style={{...thSt,minWidth:c.w||40,maxWidth:c.key==="name"?200:undefined, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
+                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap", ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
                     <div>{c.en}</div>
                     {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"#9ca3af"}}>{c.ar}</div>}
                   </th>
@@ -4606,7 +4615,6 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                       <td style={{...tdSt,...hd("ramp")}}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></td>
                       <td style={{...tdSt,...hd("occ")}}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
                       <td style={{...tdSt,...hd("cost")}}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
-                      <td style={{...tdSt,...hd("start")}}><EditableCell type="number" value={a.constrStart} onChange={v=>upAsset(i,{constrStart:v})} /></td>
                       <td style={{...tdSt,...hd("dur")}}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11,...hd("totalInc")}}>{fmt(comp?.totalRevenue||0)}</td>
