@@ -2625,6 +2625,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   } : waterfall;
   const cur = project.currency || "SAR";
 
+  // Phase-aware data sources for table §7 and §8
+  const pc = (selectedPhase !== "all" && results.phaseResults?.[selectedPhase]) ? results.phaseResults[selectedPhase] : results.consolidated;
+  const f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing;
+
   // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
   const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
   const gpPayback = (() => { if ((w.gpTotalInvested||0) <= 0) return null; let cum = 0; for (let y = 0; y < h; y++) { cum += w.gpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
@@ -2948,28 +2952,28 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       {/* ═══ § 7. PROJECT CF ═══ */}
       <tr onClick={()=>setWSec(p=>({...p,s7:!p.s7}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",userSelect:"none"}}>{wSec.s7?"▶":"▼"} {ar?"7. تدفقات المشروع (غير ممول)":"7. PROJECT CASH FLOWS (Unlevered)"}</td></tr>
       {!wSec.s7 && <>
-      <CFRow label={ar?"الإيرادات":"Rental Income"} values={results.consolidated.income} total={results.consolidated.totalIncome} color="#16a34a" />
-      <CFRow label={ar?"إيجار الأرض":"Land Rent"} values={results.consolidated.landRent} total={results.consolidated.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
-      <CFRow label={ar?"تكلفة التطوير (CAPEX)":"Development CAPEX"} values={results.consolidated.capex} total={results.consolidated.totalCapex} negate color="#ef4444" />
-      <CFRow label={ar?"صافي التدفق النقدي (غير ممول)":"Net Project CF (Unlevered)"} values={results.consolidated.netCF} total={results.consolidated.netCF.reduce((a,b)=>a+b,0)} bold />
+      <CFRow label={ar?"الإيرادات":"Rental Income"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
+      <CFRow label={ar?"إيجار الأرض":"Land Rent"} values={pc.landRent} total={pc.totalLandRent ?? pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
+      <CFRow label={ar?"تكلفة التطوير (CAPEX)":"Development CAPEX"} values={pc.capex} total={pc.totalCapex} negate color="#ef4444" />
+      <CFRow label={ar?"صافي التدفق النقدي (غير ممول)":"Net Project CF (Unlevered)"} values={pc.netCF} total={pc.totalNetCF ?? pc.netCF.reduce((a,b)=>a+b,0)} bold />
       </>}
 
       {/* ═══ § 8. FUND CF ═══ */}
       <tr onClick={()=>setWSec(p=>({...p,s8:!p.s8}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #3b82f6",userSelect:"none"}}>{wSec.s8?"▶":"▼"} {ar?"8. تدفقات الصندوق (ممول)":"8. FUND CASH FLOW (Levered)"}</td></tr>
       {!wSec.s8 && <>
       <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={w.equityCalls} total={w.equityCalls.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
-      {financing && <>
-        <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={financing.drawdown} total={financing.drawdown?.reduce((a,b)=>a+b,0)||0} />
-        <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={financing.debtBalOpen} total={null} />
-        <CFRow label={ar?"سداد أصل الدين":"Debt Repayment"} values={financing.repayment} total={financing.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
-        <CFRow label={ar?"رصيد الدين (نهاية)":"Debt Balance (Close)"} values={financing.debtBalClose} total={null} />
-        <CFRow label={ar?"تكلفة التمويل (فائدة)":"Interest/Profit"} values={financing.interest} total={financing.totalInterest||0} negate color="#ef4444" />
-        <CFRow label={ar?"إجمالي خدمة الدين":"Total Debt Service"} values={financing.debtService} total={financing.debtService?.reduce((a,b)=>a+b,0)||0} negate bold color="#ef4444" />
+      {f && <>
+        <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.drawdown?.reduce((a,b)=>a+b,0)||0} />
+        <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={f.debtBalOpen} total={null} />
+        <CFRow label={ar?"سداد أصل الدين":"Debt Repayment"} values={f.repayment} total={f.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
+        <CFRow label={ar?"رصيد الدين (نهاية)":"Debt Balance (Close)"} values={f.debtBalClose} total={null} />
+        <CFRow label={ar?"تكلفة التمويل (فائدة)":"Interest/Profit"} values={f.interest} total={f.totalInterest||0} negate color="#ef4444" />
+        <CFRow label={ar?"إجمالي خدمة الدين":"Total Debt Service"} values={f.debtService} total={f.debtService?.reduce((a,b)=>a+b,0)||0} negate bold color="#ef4444" />
         {/* DSCR */}
-        {financing.dscr && <tr>
+        {f.dscr && <tr>
           <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>DSCR</td>
           <td style={tdN}></td>
-          {years.map(y=>{const v=financing.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.2?"#f59e0b":"#16a34a"}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
+          {years.map(y=>{const v=f.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.2?"#f59e0b":"#16a34a"}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
         </tr>}
       </>}
 
