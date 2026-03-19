@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo, Component } from "react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid, ReferenceLine, Area, AreaChart } from "recharts";
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
 import { generateFormulaExcel } from "./excelFormulaExport";
@@ -2588,6 +2589,75 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   } : waterfall;
   const cur = project.currency || "SAR";
 
+  // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
+  const lpPayback = (() => { let cum = 0; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
+  const gpPayback = (() => { let cum = 0; for (let y = 0; y < h; y++) { cum += w.gpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
+
+  // Exit details
+  const exitProc = (w.exitProceeds || []).reduce((a, b) => a + b, 0);
+  const exitYr = w.exitYear || 0;
+  const exitMult = cfg.exitMultiple || project.exitMultiple || 0;
+  const exitCostPct = cfg.exitCostPct || project.exitCostPct || 0;
+
+  const lpCashYield = w.lpTotalInvested > 0 ? (w.lpDist || []).map(d => d / w.lpTotalInvested) : [];
+  const gpCashYield = w.gpTotalInvested > 0 ? (w.gpDist || []).map(d => d / w.gpTotalInvested) : [];
+  const lpStabYield = lpCashYield.length > 0 && exitYr > 2 ? lpCashYield[Math.min(exitYr - 2, lpCashYield.length - 1)] : 0;
+  const gpStabYield = gpCashYield.length > 0 && exitYr > 2 ? gpCashYield[Math.min(exitYr - 2, gpCashYield.length - 1)] : 0;
+
+  // Return attribution (where did distributions come from?)
+  const t1Total = w.tier1.reduce((a, b) => a + b, 0);
+  const t2Total = w.tier2.reduce((a, b) => a + b, 0);
+  const t3Total = w.tier3.reduce((a, b) => a + b, 0);
+  const t4LPTotal = w.tier4LP.reduce((a, b) => a + b, 0);
+  const t4GPTotal = w.tier4GP.reduce((a, b) => a + b, 0);
+
+  // Cumulative CF chart data
+  const cfChartData = (() => {
+    let lpCum = 0, gpCum = 0;
+    return Array.from({ length: Math.min(showYrs, h) }, (_, y) => {
+      lpCum += w.lpNetCF[y] || 0;
+      gpCum += w.gpNetCF[y] || 0;
+      return { year: sy + y, yr: `Yr ${y + 1}`, lp: Math.round(lpCum), gp: Math.round(gpCum) };
+    });
+  })();
+
+  // Attribution data for donut
+  const lpAttrib = [
+    { name: ar ? "رد رأس المال" : "Return of Capital", value: Math.round(t1Total * (w.lpPct || 0)), color: "#3b82f6" },
+    { name: ar ? "عائد تفضيلي" : "Pref Return", value: Math.round(t2Total * (w.lpPct || 0)), color: "#8b5cf6" },
+    { name: ar ? "توزيع أرباح" : "Profit Split", value: Math.round(t4LPTotal), color: "#16a34a" },
+  ].filter(d => d.value > 0);
+  const gpAttrib = [
+    { name: ar ? "رد رأس المال" : "Return of Capital", value: Math.round(t1Total * (w.gpPct || 0)), color: "#3b82f6" },
+    { name: ar ? "عائد تفضيلي" : "Pref Return", value: Math.round(t2Total * (w.gpPct || 0)), color: "#8b5cf6" },
+    { name: ar ? "تعويض المطور" : "GP Catch-up", value: Math.round(t3Total), color: "#f59e0b" },
+    { name: ar ? "توزيع أرباح" : "Profit Split", value: Math.round(t4GPTotal), color: "#16a34a" },
+  ].filter(d => d.value > 0);
+
+  const DonutChart = ({ data, label, size = 140 }) => {
+    if (!data || data.length === 0) return null;
+    const total = data.reduce((s, d) => s + d.value, 0);
+    return <div style={{ textAlign: "center" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "#1a1d23" }}>{label}</div>
+      <ResponsiveContainer width="100%" height={size}>
+        <PieChart>
+          <Pie data={data} dataKey="value" cx="50%" cy="50%" innerRadius={size * 0.25} outerRadius={size * 0.4} paddingAngle={2} strokeWidth={0}>
+            {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+          </Pie>
+          <Tooltip formatter={(v) => fmtM(v)} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
+        {data.map((d, i) => <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, justifyContent: "center" }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+          <span style={{ color: "#6b7080" }}>{d.name}</span>
+          <span style={{ fontWeight: 600 }}>{fmtM(d.value)}</span>
+          <span style={{ color: "#9ca3af" }}>({total > 0 ? fmtPct(d.value / total * 100) : "0%"})</span>
+        </div>)}
+      </div>
+    </div>;
+  };
+
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
     const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af";};
@@ -2689,9 +2759,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:10,fontSize:11}}>
+          <div><span style={{color:"#6b7080"}}>{ar?"استرداد":"Payback"}</span><br/><span style={{fontWeight:600,color:lpPayback?"#16a34a":"#9ca3af"}}>{lpPayback ? `${lpPayback} ${ar?"سنة":"yr"}` : "—"}</span></div>
+          <div><span style={{color:"#6b7080"}}>{ar?"عائد نقدي":"Cash Yield"}</span><br/><span style={{fontWeight:600}}>{lpStabYield > 0 ? fmtPct(lpStabYield * 100) : "—"}</span></div>
           <div><span style={{color:"#6b7080"}}>DPI</span><br/><span style={{fontWeight:600}}>{w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"}</span></div>
           <div><span style={{color:"#6b7080"}}>NPV @10%</span><br/><span style={{fontWeight:600}}>{fmtM(w.lpNPV10)}</span></div>
           <div><span style={{color:"#6b7080"}}>NPV @12%</span><br/><span style={{fontWeight:600}}>{fmtM(w.lpNPV12)}</span></div>
+          <div><span style={{color:"#6b7080"}}>NPV @14%</span><br/><span style={{fontWeight:600}}>{fmtM(w.lpNPV14)}</span></div>
         </div>
       </div>
       {/* GP Card */}
@@ -2712,6 +2785,11 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <div style={{fontSize:10,color:"#6b7080"}}>{ar?"المضاعف":"MOIC"}</div>
             <div style={{fontSize:20,fontWeight:800,color:w.gpMOIC>1.01?"#16a34a":"#6b7080"}}>{w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—"}</div>
           </div>
+        </div>
+        {/* GP extra metrics row */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:10,fontSize:11}}>
+          <div><span style={{color:"#6b7080"}}>{ar?"استرداد":"Payback"}</span><br/><span style={{fontWeight:600,color:gpPayback?"#16a34a":"#9ca3af"}}>{gpPayback ? `${gpPayback} ${ar?"سنة":"yr"}` : "—"}</span></div>
+          <div><span style={{color:"#6b7080"}}>{ar?"عائد نقدي":"Cash Yield"}</span><br/><span style={{fontWeight:600}}>{gpStabYield > 0 ? fmtPct(gpStabYield * 100) : "—"}</span></div>
         </div>
         {/* GP context note when IRR ~ 0 */}
         {(w.gpIRR === null || w.gpIRR < 0.005) && w.gpTotalInvested > 0 && (
@@ -2750,6 +2828,85 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         })()}
       </div>
     </div>
+
+    {/* ═══ SECTION 1.5: Exit Summary + Visual Analytics ═══ */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:18}}>
+      {/* Exit Summary Card */}
+      <div style={{background:"linear-gradient(135deg, #fefce8, #fff7ed)",borderRadius:12,border:"2px solid #f59e0b",padding:"18px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+          <div style={{width:32,height:32,borderRadius:8,background:"#f59e0b",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:16}}>🚪</div>
+          <div style={{fontSize:14,fontWeight:700,color:"#92400e"}}>{ar?"ملخص التخارج":"Exit Summary"}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"6px 16px",fontSize:12}}>
+          <span style={{color:"#6b7080"}}>{ar?"سنة التخارج":"Exit Year"}</span>
+          <span style={{fontWeight:700,textAlign:"right"}}>{exitYr > 0 ? `${ar?"السنة":"Yr"} ${exitYr} (${sy + exitYr - 1})` : "—"}</span>
+          <span style={{color:"#6b7080"}}>{ar?"مضاعف التخارج":"Exit Multiple"}</span>
+          <span style={{fontWeight:700,textAlign:"right"}}>{exitMult > 0 ? `${exitMult}x ${ar?"الإيجار":"Rent"}` : "—"}</span>
+          <span style={{color:"#6b7080"}}>{ar?"تكلفة التخارج":"Exit Cost"}</span>
+          <span style={{fontWeight:500,textAlign:"right"}}>{exitCostPct > 0 ? fmtPct(exitCostPct) : "—"}</span>
+          <span style={{borderTop:"2px solid #f59e0b",paddingTop:6,marginTop:4,fontWeight:700,color:"#92400e"}}>{ar?"عائد التخارج":"Exit Proceeds"}</span>
+          <span style={{borderTop:"2px solid #f59e0b",paddingTop:6,marginTop:4,fontWeight:800,fontSize:16,textAlign:"right",color:exitProc>0?"#16a34a":"#9ca3af"}}>{exitProc > 0 ? fmtM(exitProc) : "—"}</span>
+        </div>
+        {exitProc > 0 && w.totalEquity > 0 && <div style={{marginTop:12,background:"#fff",borderRadius:8,padding:"8px 12px",border:"1px solid #fde68a",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:11,color:"#6b7080"}}>{ar?"التخارج / رأس المال":"Exit / Equity"}</span>
+          <span style={{fontSize:16,fontWeight:800,color:"#16a34a"}}>{(exitProc / w.totalEquity).toFixed(2)}x</span>
+        </div>}
+      </div>
+
+      {/* LP Attribution Donut */}
+      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"14px 16px"}}>
+        <DonutChart data={lpAttrib} label={ar ? "مصادر عوائد المستثمر (LP)" : "LP Return Sources"} size={150} />
+      </div>
+
+      {/* GP Attribution Donut */}
+      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"14px 16px"}}>
+        <DonutChart data={gpAttrib} label={ar ? "مصادر عوائد المطور (GP)" : "GP Return Sources"} size={150} />
+      </div>
+    </div>
+
+    {/* ═══ SECTION 1.7: Cumulative Cash Flow Chart ═══ */}
+    {cfChartData.length > 2 && (
+      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"18px 22px",marginBottom:18}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <div style={{fontSize:14,fontWeight:700}}>{ar?"التدفق النقدي التراكمي":"Cumulative Net Cash Flow"}</div>
+          <div style={{fontSize:11,color:"#6b7080"}}>{ar?"LP بنفسجي · GP أزرق":"LP purple · GP blue"}</div>
+        </div>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={cfChartData} margin={{top:5,right:10,left:10,bottom:5}}>
+            <defs>
+              <linearGradient id="lpGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.15}/>
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="gpGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f1f5" />
+            <XAxis dataKey="year" tick={{fontSize:10,fill:"#6b7080"}} />
+            <YAxis tick={{fontSize:10,fill:"#6b7080"}} tickFormatter={v => v >= 1e6 ? `${(v/1e6).toFixed(0)}M` : v >= 1e3 ? `${(v/1e3).toFixed(0)}K` : v} />
+            <Tooltip formatter={(v) => fmt(v)} labelFormatter={(l) => `${l}`} />
+            <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} />
+            <Area type="monotone" dataKey="lp" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#lpGrad)" name={ar?"المستثمر LP":"LP Cumulative"} dot={false} />
+            <Area type="monotone" dataKey="gp" stroke="#3b82f6" strokeWidth={2.5} fill="url(#gpGrad)" name={ar?"المطور GP":"GP Cumulative"} dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+        {/* Payback markers */}
+        <div style={{display:"flex",gap:20,justifyContent:"center",marginTop:8,fontSize:11}}>
+          {lpPayback && <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:"#8b5cf6"}} />
+            <span style={{color:"#6b7080"}}>{ar?"استرداد LP:":"LP Payback:"}</span>
+            <span style={{fontWeight:700,color:"#8b5cf6"}}>{ar?"السنة":"Yr"} {lpPayback} ({sy + lpPayback - 1})</span>
+          </div>}
+          {gpPayback && <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:"#3b82f6"}} />
+            <span style={{color:"#6b7080"}}>{ar?"استرداد GP:":"GP Payback:"}</span>
+            <span style={{fontWeight:700,color:"#3b82f6"}}>{ar?"السنة":"Yr"} {gpPayback} ({sy + gpPayback - 1})</span>
+          </div>}
+        </div>
+      </div>
+    )}
 
     {/* ═══ SECTION 2: Waterfall Flow ═══ */}
     <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"18px 22px",marginBottom:18}}>
