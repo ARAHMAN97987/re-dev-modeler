@@ -2703,7 +2703,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
       <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
         <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>{ar?"الرسوم":"Fees"}</div>
-        <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+        <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
           {[
             {label:ar?"اكتتاب":"Subscription", val:(w.feeSub||[]).reduce((a,b)=>a+b,0)},
             {label:ar?"إدارة":"Management", val:(w.feeMgmt||[]).reduce((a,b)=>a+b,0)},
@@ -2718,7 +2718,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       {/* Capital structure */}
       <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
         <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>{ar?"هيكل رأس المال":"Capital Structure"}</div>
-        <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+        <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
           <span style={{color:"#6b7080"}}>{ar?"إجمالي الملكية":"Total Equity"}</span><span style={{textAlign:"right",fontWeight:700}}>{fmt(w.totalEquity)} {cur}</span>
           <span style={{color:"#8b5cf6"}}>LP ({fmtPct(w.lpPct*100)})</span><span style={{textAlign:"right"}}>{fmt(w.lpEquity)}</span>
           <span style={{color:"#3b82f6"}}>GP ({fmtPct(w.gpPct*100)})</span><span style={{textAlign:"right"}}>{fmt(w.gpEquity)}</span>
@@ -3217,7 +3217,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:12}}>
           <div>
             <div style={{fontSize:11,fontWeight:700,color:"#16a34a",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
-            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               {f.totalDebt > 0 && <><span style={{color:"#6b7080"}}>{ar?"الدين البنكي":"Bank Debt"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.totalDebt)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct((f.totalDebt/(f.devCostInclLand||1))*100)}</span></span></>}
               {f.gpEquity > 0 && <><span style={{color:"#3b82f6"}}>{ar?"حصة المطور (GP)":"GP Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.gpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.gpPct*100)}</span></span></>}
               {f.lpEquity > 0 && <><span style={{color:"#8b5cf6"}}>{ar?"حصة الممول (LP)":"LP Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.lpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.lpPct*100)}</span></span></>}
@@ -3227,7 +3227,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
           </div>
           <div>
             <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{ar?"الاستخدامات":"USES"}</div>
-            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction Cost"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.devCostExclLand)}</span>
               {f.landCapValue > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Capitalization"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.landCapValue)}</span></>}
               {f.upfrontFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Upfront Fee"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.upfrontFee)}</span></>}
@@ -3252,7 +3252,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
           {/* Bank/Debt Costs */}
           {f.totalDebt > 0 && <div>
             <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{ar?"تكلفة الدين":"DEBT COSTS"}</div>
-            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               <span style={{color:"#6b7080"}}>{ar?"إجمالي الفوائد":"Total Interest"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>{fmt(f.totalInterest)}</span>
               <span style={{color:"#6b7080"}}>{ar?"رسوم القرض المقدمة":"Upfront Loan Fee"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.upfrontFee||0)} <span style={{fontSize:10,color:"#9ca3af"}}>{cfg.upfrontFeePct||0}%</span></span>
               <span style={{color:"#6b7080"}}>{ar?"معدل التمويل":"Finance Rate"}</span><span style={{textAlign:"right",fontWeight:600}}>{cfg.financeRate||0}%</span>
@@ -3267,7 +3267,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
           {/* Fund Fees */}
           {isFund && feeData && <div>
             <div style={{fontSize:11,fontWeight:700,color:"#f59e0b",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fde68a"}}>{ar?"رسوم الصندوق":"FUND FEES"}</div>
-            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               {[
                 {l:ar?"اكتتاب":"Subscription",v:feeData.sub,pct:cfg.subscriptionFeePct},
                 {l:ar?"إدارة (سنوي)":"Management (annual)",v:feeData.mgmt,pct:cfg.annualMgmtFeePct},
@@ -3286,7 +3286,7 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
         </div>
 
         {/* Total Financing Cost Summary */}
-        <div style={{marginTop:12,background:"#fefce8",borderRadius:6,padding:"10px 14px",display:"grid",gridTemplateColumns:"1fr auto",gap:6,fontSize:12}}>
+        <div style={{marginTop:12,background:"#fefce8",borderRadius:6,padding:"10px 14px",display:"grid",gridTemplateColumns:"1fr auto",gap:"6px 20px",fontSize:12,maxWidth:520}}>
           <span style={{fontWeight:700}}>{ar?"إجمالي تكلفة التمويل الكلية":"TOTAL FINANCING COST"}</span>
           <span style={{textAlign:"right",fontWeight:800,fontSize:14,color:"#ef4444"}}>{fmt(totalFinCost)} {cur}</span>
           <span style={{fontSize:11,color:"#6b7080"}}>{ar?"كنسبة من تكلفة التطوير":"As % of Dev Cost"}</span>
@@ -5361,7 +5361,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
             {/* Sources */}
             <div>
               <div style={{fontSize:10,fontWeight:600,color:"#16a34a",textTransform:"uppercase",letterSpacing:0.6,marginBottom:8,paddingBottom:4,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
-              <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:3,rowGap:5}}>
+              <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:5,maxWidth:420}}>
                 {totalDebt > 0 && [<span key="dl" style={{color:"#6b7080"}}>{ar?"قرض بنكي":"Bank Debt"}</span>,<span key="dv" style={{textAlign:"right",fontWeight:500}}>{fmtM(totalDebt)}</span>]}
                 <span style={{color:"#6b7080"}}>{ar?"حقوق ملكية":"Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(totalEquity)}</span>
                 {grantTotal > 0 && [<span key="gl" style={{color:"#6b7080"}}>{ar?"منحة حكومية":"CAPEX Grant"}</span>,<span key="gv" style={{textAlign:"right",fontWeight:500,color:"#16a34a"}}>{fmtM(grantTotal)}</span>]}
@@ -5382,7 +5382,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
             {/* Uses */}
             <div>
               <div style={{fontSize:10,fontWeight:600,color:"#ef4444",textTransform:"uppercase",letterSpacing:0.6,marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fee2e2"}}>{ar?"الاستخدامات":"USES"}</div>
-              <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:3,rowGap:5}}>
+              <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:5,maxWidth:420}}>
                 <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(totalCapex)}</span>
                 {landCost > 0 && [<span key="ll" style={{color:"#6b7080"}}>{ar?"شراء الأرض":"Land Purchase"}</span>,<span key="lv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCost)}</span>]}
                 {landCap > 0 && [<span key="cl" style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Cap."}</span>,<span key="cv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCap)}</span>]}
