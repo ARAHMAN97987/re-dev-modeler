@@ -1801,64 +1801,75 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 
   const totalFees = fees.reduce((a, b) => a + b, 0);
 
+  // ── ZAN: Unfunded Fees ──
+  // Fees that operating CF cannot cover → must be funded from equity
+  // ZAN: UnfundedFees[y] = MAX(0, Fees[y] - MAX(0, UnlevCF[y] + DS[y] + Exit[y]))
+  // In ZAN: DS is negative. In our code: DS is positive → subtract.
+  // UnlevCF = c.netCF = income - landRent - capex
+  const unfundedFees = new Array(h).fill(0);
+  for (let y = 0; y < h; y++) {
+    if (fees[y] > 0) {
+      const operatingCF = c.netCF[y] - (f.debtService[y] || 0) + (f.exitProceeds?.[y] || 0);
+      unfundedFees[y] = Math.max(0, fees[y] - Math.max(0, operatingCF));
+    }
+  }
+
   // H14: Fee treatment policy
   // "capital" = fees count as invested capital (earn ROC + Pref) - default, current behavior
   // "expense" = fees are expenses (outside capital base - don't earn Pref, smaller unreturned capital)
   const feeTreatment = project.feeTreatment || "capital";
+  // ZAN Equity Calls: (CAPEX_yr / Total_CAPEX) × TotalEquity + UnfundedFees
   const equityCalls = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
-    equityCalls[y] = feeTreatment === "capital" ? f.equityCalls[y] + fees[y] : f.equityCalls[y];
+    // Base: equity pro-rata to CAPEX spending
+    const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
+    // Add unfunded fees (fees not covered by operating CF)
+    equityCalls[y] = capexPortion + unfundedFees[y];
   }
 
   // Exit proceeds - use from financing engine (already net of debt)
   const exitProceeds = [...(f.exitProceeds || new Array(h).fill(0))];
 
-  // Cash available for distribution (C8: uses incentive-adjusted values)
+  // Cash available for distribution - ZAN formula:
+  // cashAvail[y] = MAX(0, IF(yr in [fundStart..exit], UnlevCF, 0) + DS - Fees + UF + Exit)
+  // UnlevCF = c.netCF = income - landRent - CAPEX (already includes CAPEX, unlike NOI-only)
+  // DS is positive in our code → subtract. Fees positive → subtract. UF positive → add back.
   const ir = incentivesResult;
   const adjLandRent = ir?.adjustedLandRent || c.landRent;
-  // Land rent paid by whom: resolve "auto" based on landCapTo
+  // Land rent payer resolution (platform-specific, not in ZAN)
   const lrPaidByRaw = project.landRentPaidBy || "auto";
   let resolvedLandRentPayer = lrPaidByRaw;
   if (lrPaidByRaw === "auto" && project.landCapitalize) {
-    resolvedLandRentPayer = project.landCapTo || "gp"; // follows whoever capitalized the land
+    resolvedLandRentPayer = project.landCapTo || "gp";
   } else if (lrPaidByRaw === "auto" || lrPaidByRaw === "developer") {
-    resolvedLandRentPayer = "project"; // no capitalization = project bears cost
+    resolvedLandRentPayer = "project";
   }
-  // resolvedLandRentPayer: "project" | "gp" | "lp" | "split"
   const gpPaysLandRent = resolvedLandRentPayer === "gp" || resolvedLandRentPayer === "split";
   const lpPaysLandRent = resolvedLandRentPayer === "lp" || resolvedLandRentPayer === "split";
   const gpLandRentObligation = new Array(h).fill(0);
   const lpLandRentObligation = new Array(h).fill(0);
   const cashAvail = new Array(h).fill(0);
-  let cumDeficit = 0; // C6: Track operating deficits
   for (let y = 0; y < h; y++) {
-    // When GP/LP pays land rent: exclude from NOI, track as obligation
-    let effectiveLandRent = adjLandRent[y];
+    // Track GP/LP land rent obligations (platform feature)
     if (gpPaysLandRent && resolvedLandRentPayer === "gp") {
       gpLandRentObligation[y] = adjLandRent[y];
-      effectiveLandRent = 0;
     } else if (lpPaysLandRent && resolvedLandRentPayer === "lp") {
       lpLandRentObligation[y] = adjLandRent[y];
-      effectiveLandRent = 0;
     } else if (resolvedLandRentPayer === "split") {
       gpLandRentObligation[y] = adjLandRent[y] * gpPct;
       lpLandRentObligation[y] = adjLandRent[y] * lpPct;
-      effectiveLandRent = 0;
     }
-    const noi = c.income[y] - effectiveLandRent + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0);
-    const debtSvc = f.debtService[y] || 0;
-    const netOp = noi - debtSvc - fees[y];
-    let raw = (y <= exitYr ? netOp : 0) + exitProceeds[y];
-    // C6: Recover prior deficits from positive cash before distributing
-    if (raw > 0 && cumDeficit > 0) {
-      const cover = Math.min(raw, cumDeficit);
-      raw -= cover;
-      cumDeficit -= cover;
-    } else if (raw < 0) {
-      cumDeficit += Math.abs(raw);
-      raw = 0;
-    }
-    cashAvail[y] = raw;
+    // ZAN Cash Available: MAX(0, UnlevCF - DS - Fees + UF + Exit)
+    // Use incentive-adjusted CF if available
+    const unlevCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
+    const inPeriod = y >= fundStartIdx && y <= exitYr;
+    cashAvail[y] = Math.max(0,
+      (inPeriod ? unlevCF : 0)
+      - (f.debtService[y] || 0)
+      - fees[y]
+      + unfundedFees[y]
+      + exitProceeds[y]
+    );
   }
 
   // 4-tier waterfall
@@ -1990,7 +2001,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 
   return {
     gpEquity, lpEquity, totalEquity, gpPct, lpPct,
-    fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, totalFees,
+    fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, totalFees, unfundedFees,
     equityCalls, exitProceeds, cashAvail,
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
@@ -2195,7 +2206,7 @@ function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     gpPct: totalEquity > 0 ? gpEquity / totalEquity : 0,
     lpPct: totalEquity > 0 ? lpEquity / totalEquity : 0,
     equityCalls: sumArr('equityCalls'), fees: sumArr('fees'),
-    totalFees: sum('totalFees'),
+    totalFees: sum('totalFees'), unfundedFees: sumArr('unfundedFees'),
     exitProceeds: sumArr('exitProceeds'), exitYear: Math.max(...names.map(n => phaseWaterfalls[n]?.exitYear || 0)),
     cashAvail: sumArr('cashAvail'),
     tier1: sumArr('tier1'), tier2: sumArr('tier2'),
