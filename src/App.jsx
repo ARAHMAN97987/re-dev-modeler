@@ -2550,6 +2550,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhase, setSelectedPhase] = useState("all");
   const [showTerms, setShowTerms] = useState(false);
+  const [wSec, setWSec] = useState({});  // collapsible sections
+  const wToggle = (id) => setWSec(p => ({...p, [id]: !p[id]}));
+  const wOpen = (id) => !wSec[id]; // all open by default
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
     <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
@@ -2658,6 +2661,19 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     </div>;
   };
 
+  const WSecHeader = ({ id, icon, title, summary, border, bg }) => (
+    <div onClick={() => wToggle(id)} style={{
+      display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
+      cursor: "pointer", userSelect: "none", borderRadius: wOpen(id) ? "10px 10px 0 0" : 10,
+      background: bg || "#f8f9fb", borderBottom: wOpen(id) ? `1px solid ${border || "#e5e7ec"}` : "none",
+    }}>
+      <span style={{ fontSize: 13 }}>{icon}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1d23", flex: 1 }}>{title}</span>
+      {summary && <span style={{ fontSize: 11, color: "#6b7080" }}>{summary}</span>}
+      <span style={{ fontSize: 11, color: "#9ca3af", transition: "transform 0.2s", transform: wOpen(id) ? "rotate(0)" : "rotate(-90deg)" }}>▼</span>
+    </div>
+  );
+
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
     const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af";};
@@ -2738,7 +2754,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     )}
 
     {/* ═══ SECTION 1: LP vs GP Hero Comparison ═══ */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+    <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
+      <WSecHeader id="hero" icon="👥" title={ar?"المستثمر مقابل المطور":"LP vs GP Returns"} summary={`LP ${w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} · GP ${w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"}`} />
+      {wOpen("hero") && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,padding:14}}>
       {/* LP Card */}
       <div style={{background:"linear-gradient(135deg, #faf5ff, #f5f3ff)",borderRadius:12,border:"2px solid #8b5cf6",padding:"20px 22px"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
@@ -2827,10 +2845,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </div>;
         })()}
       </div>
+    </div>}
     </div>
 
     {/* ═══ SECTION 1.5: Exit Summary + Visual Analytics ═══ */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:18}}>
+    <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
+      <WSecHeader id="exit" icon="🚪" title={ar?"التخارج وتحليل العوائد":"Exit & Return Attribution"} summary={exitProc > 0 ? `${fmtM(exitProc)} ${ar?"في السنة":"Yr"} ${exitYr}` : ""} />
+      {wOpen("exit") && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,padding:14}}>
       {/* Exit Summary Card */}
       <div style={{background:"linear-gradient(135deg, #fefce8, #fff7ed)",borderRadius:12,border:"2px solid #f59e0b",padding:"18px 20px"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
@@ -2862,15 +2883,14 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"14px 16px"}}>
         <DonutChart data={gpAttrib} label={ar ? "مصادر عوائد المطور (GP)" : "GP Return Sources"} size={150} />
       </div>
+    </div>}
     </div>
 
     {/* ═══ SECTION 1.7: Cumulative Cash Flow Chart ═══ */}
     {cfChartData.length > 2 && (
-      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"18px 22px",marginBottom:18}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <div style={{fontSize:14,fontWeight:700}}>{ar?"التدفق النقدي التراكمي":"Cumulative Net Cash Flow"}</div>
-          <div style={{fontSize:11,color:"#6b7080"}}>{ar?"LP بنفسجي · GP أزرق":"LP purple · GP blue"}</div>
-        </div>
+      <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
+        <WSecHeader id="chart" icon="📈" title={ar?"التدفق النقدي التراكمي":"Cumulative Net Cash Flow"} summary={lpPayback ? `${ar?"استرداد LP السنة":"LP Payback Yr"} ${lpPayback}` : ""} />
+        {wOpen("chart") && <div style={{padding:"18px 22px",background:"#fff"}}>
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={cfChartData} margin={{top:5,right:10,left:10,bottom:5}}>
             <defs>
@@ -2905,12 +2925,14 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <span style={{fontWeight:700,color:"#3b82f6"}}>{ar?"السنة":"Yr"} {gpPayback} ({sy + gpPayback - 1})</span>
           </div>}
         </div>
+      </div>}
       </div>
     )}
 
     {/* ═══ SECTION 2: Waterfall Flow ═══ */}
-    <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",padding:"18px 22px",marginBottom:18}}>
-      <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>{ar?"شلال التوزيعات":"Distribution Waterfall"}</div>
+    <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
+      <WSecHeader id="flow" icon="🏗" title={ar?"شلال التوزيعات":"Distribution Waterfall"} summary={fmtM(w.cashAvail.reduce((a,b)=>a+b,0))} />
+      {wOpen("flow") && <div style={{padding:"18px 22px",background:"#fff"}}>
       {(() => {
         const totalCash = w.cashAvail.reduce((a,b)=>a+b,0);
         const tiers = [
@@ -2943,10 +2965,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           })}
         </div>;
       })()}
+    </div>}
     </div>
 
     {/* ═══ SECTION 3: Fee Breakdown (compact) ═══ */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+    <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
+      <WSecHeader id="fees" icon="💰" title={ar?"الرسوم وهيكل رأس المال":"Fees & Capital Structure"} summary={`${fmtM(w.totalFees)} ${ar?"رسوم":"fees"}`} />
+      {wOpen("fees") && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,padding:14}}>
       <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
         <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>{ar?"الرسوم":"Fees"}</div>
         <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
@@ -2972,9 +2997,11 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           <span style={{color:"#6b7080"}}>{ar?"معاملة الرسوم":"Fee Treatment"}</span><span style={{textAlign:"right",fontWeight:500}}>{project.feeTreatment==="expense"?(ar?"مصروف":"Expense"):project.feeTreatment==="rocOnly"?(ar?"استرداد فقط":"ROC Only"):(ar?"رأسمال":"Capital")}</span>
         </div>
       </div>
+    </div>}
     </div>
 
     {/* ═══ SECTION 4: Developer Total Economics + Fund Manager ═══ */}
+    <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
     {(() => {
       const gpManagesFund = cfg.gpIsFundManager !== false;
       const gpDist = w.gpTotalDist || 0;
@@ -2996,9 +3023,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const gpFromSplit = (w.tier4GP||[]).reduce((a,b)=>a+b,0);
 
       return <>
+      <WSecHeader id="deveco" icon="🏢" title={ar?"إجمالي عوائد المطور (GP)":"Developer Total Economics (GP)"} summary={`${fmtM(totalGPCash)} · ${totalMult.toFixed(2)}x`} border="#3b82f6" bg="#eff6ff" />
+      {wOpen("deveco") && <>
       {/* Developer (GP) Economics */}
-      <div style={{background:"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:"2px solid #3b82f6",padding:"16px 20px",marginBottom:fmFees>0?10:18}}>
-        <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:12}}>{ar?"إجمالي عوائد المطور (GP)":"Developer Total Economics (GP)"}</div>
+      <div style={{background:"linear-gradient(135deg, #eff6ff, #f0fdf4)",padding:"16px 20px",marginBottom:fmFees>0?0:0}}>
 
         {/* Row 1: Income Sources */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
@@ -3054,14 +3082,16 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           <div style={{marginTop:8,fontSize:10,color:"#a16207"}}>{ar?"هذه الرسوم تُدفع من الصندوق للشركة المالية المديرة وليست للمطور (GP)":"These fees are paid by the fund to the financial management company, not to the developer (GP)"}</div>
         </div>
       )}
+      </>}
       </>;
     })()}
+    </div>
 
     {/* ═══ SECTION 5: Phase Comparison ═══ */}
     {hasPhases && selectedPhase === "all" && (
-      <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:18}}>
-        <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600}}>{ar?"مقارنة المراحل":"Phase Comparison"}</div>
-        <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}>
+      <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
+        <WSecHeader id="phases" icon="📊" title={ar?"مقارنة المراحل":"Phase Comparison"} />
+        {wOpen("phases") && <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}>
           <thead><tr>
             <th style={{...thSt,minWidth:100}}>{ar?"المرحلة":"Phase"}</th>
             <th style={{...thSt,textAlign:"right"}}>CAPEX %</th>
@@ -3092,23 +3122,14 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               </tr>;
             })}
           </tbody>
-        </table></div>
+        </table></div>}
       </div>
     )}
 
     {/* ═══ SECTION 6: Annual Distributions Table ═══ */}
-    <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12}}>
-      <div style={{fontSize:15,fontWeight:600}}>{ar?"التوزيعات السنوية":"Annual Distributions"}</div><div style={{flex:1}} />
-      <select value={showYrs} onChange={e=>setShowYrs(parseInt(e.target.value))} style={{padding:"4px 8px",borderRadius:4,border:"1px solid #e5e7ec",fontSize:12}}>
-        {[10,15,20,30,50].map(n=><option key={n} value={n}>{n} years</option>)}
-      </select>
-    </div>
-
-    <div style={{background:"#fff",borderRadius:10,border:"2px solid #8b5cf6",overflow:"hidden",marginBottom:18}}>
-      <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,background:"#f5f3ff"}}>
-        {ar?"شلال التوزيعات":"Waterfall Distributions"}
-      </div>
-      <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
+    <div style={{borderRadius:10,border:"2px solid #8b5cf6",marginBottom:18,overflow:"hidden"}}>
+      <WSecHeader id="annual" icon="📋" title={ar?"التوزيعات السنوية":"Annual Distributions"} bg="#f5f3ff" border="#8b5cf6" summary={<select onClick={e=>e.stopPropagation()} value={showYrs} onChange={e=>{e.stopPropagation();setShowYrs(parseInt(e.target.value));}} style={{padding:"3px 8px",borderRadius:4,border:"1px solid #e5e7ec",fontSize:11,background:"#fff"}}>{[10,15,20,30,50].map(n=><option key={n} value={n}>{n} {ar?"سنة":"yrs"}</option>)}</select>} />
+      {wOpen("annual") && <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
         <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:180}}>{ar?"البند":"Line Item"}</th>
         <th style={{...thSt,textAlign:"right"}}>Total</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
@@ -3189,7 +3210,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           <td style={tdN}></td>
           {years.map(y=>{cum+=w.gpNetCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
         </tr>; })()}
-      </tbody></table></div>
+      </tbody></table></div>}
     </div>
   </div>);
 }
