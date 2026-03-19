@@ -2832,28 +2832,74 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {ar?"شلال التوزيعات":"Waterfall Distributions"}
       </div>
       <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:160}}>Line Item</th>
+        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:180}}>Line Item</th>
         <th style={{...thSt,textAlign:"right"}}>Total</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
       </tr></thead><tbody>
-        <CFRow label={ar?"سحب رأس المال":"Equity Calls"} values={w.equityCalls} total={w.equityCalls.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
-        <CFRow label={ar?"النقد المتاح":"Cash Available"} values={w.cashAvail} total={w.cashAvail.reduce((a,b)=>a+b,0)} color="#16a34a" />
-        <CFRow label={ar?"رد رأس المال":"T1: Return of Capital"} values={w.tier1} total={w.tier1.reduce((a,b)=>a+b,0)} color="#2563eb" />
-        <CFRow label={ar?"العائد التفضيلي":"T2: Preferred Return"} values={w.tier2} total={w.tier2.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
-        <CFRow label={ar?"تعويض المطور (GP)":"T3: GP Catch-up"} values={w.tier3} total={w.tier3.reduce((a,b)=>a+b,0)} color="#f59e0b" />
-        <CFRow label={ar?"حصة الممول (LP)":"T4: LP Split"} values={w.tier4LP} total={w.tier4LP.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
-        <CFRow label={ar?"حصة المطور (GP)":"T4: GP Split"} values={w.tier4GP} total={w.tier4GP.reduce((a,b)=>a+b,0)} color="#3b82f6" />
-        <tr style={{background:"#f0f4ff"}}><td colSpan={years.length+2} style={{padding:"4px 10px",fontSize:10,fontWeight:600,color:"#6b7080"}}>{ar?"صافي التوزيعات":"NET DISTRIBUTIONS"}</td></tr>
+        {/* ── Capital Calls ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#ef4444",background:"#fef2f2",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"سحب رأس المال":"EQUITY CALLS"}</td></tr>
+        <CFRow label={ar?"(-) سحب رأس المال":"(-) Equity Calls"} values={w.equityCalls} total={w.equityCalls.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
+
+        {/* ── Cash Available ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"النقد المتاح للتوزيع":"CASH AVAILABLE FOR DISTRIBUTION"}</td></tr>
+        <CFRow label={ar?"النقد المتاح":"Cash Available"} values={w.cashAvail} total={w.cashAvail.reduce((a,b)=>a+b,0)} color="#16a34a" bold />
+
+        {/* ── Waterfall Tiers ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#f0f4ff",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"شلال التوزيع":"DISTRIBUTION WATERFALL"}</td></tr>
+        <CFRow label={ar?"T1: رد رأس المال":"T1: Return of Capital"} values={w.tier1} total={w.tier1.reduce((a,b)=>a+b,0)} color="#2563eb" />
+        {/* Unreturned Capital tracking */}
+        <tr style={{background:"#f0f4ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#f0f4ff",zIndex:1,fontWeight:400,fontSize:10,color:"#3b82f6",paddingInlineStart:24}}>{ar?"رأس المال غير المسترد (بداية)":"Unreturned Capital (Open)"}</td>
+          <td style={tdN}></td>
+          {years.map(y=><td key={y} style={{...tdN,color:"#3b82f6",fontSize:10}}>{(w.unreturnedOpen[y]||0)===0?"—":fmt(w.unreturnedOpen[y])}</td>)}
+        </tr>
+        <tr style={{background:"#f0f4ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#f0f4ff",zIndex:1,fontWeight:500,fontSize:10,color:"#3b82f6",paddingInlineStart:24}}>{ar?"رأس المال غير المسترد (نهاية)":"Unreturned Capital (Close)"}</td>
+          <td style={tdN}></td>
+          {years.map(y=><td key={y} style={{...tdN,color:w.unreturnedClose[y]>0?"#3b82f6":"#16a34a",fontSize:10,fontWeight:w.unreturnedClose[y]===0?600:400}}>{w.unreturnedClose[y]===0?"✓ 0":fmt(w.unreturnedClose[y])}</td>)}
+        </tr>
+
+        <CFRow label={ar?"T2: العائد التفضيلي":"T2: Preferred Return"} values={w.tier2} total={w.tier2.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
+        {/* Pref Accrual tracking */}
+        <tr style={{background:"#faf5ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:400,fontSize:10,color:"#8b5cf6",paddingInlineStart:24}}>{ar?"استحقاق العائد التفضيلي":"Pref Accrual (calculated)"}</td>
+          <td style={tdN}></td>
+          {years.map(y=><td key={y} style={{...tdN,color:"#8b5cf6",fontSize:10}}>{(w.prefAccrual[y]||0)===0?"—":fmt(w.prefAccrual[y])}</td>)}
+        </tr>
+        <tr style={{background:"#faf5ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:500,fontSize:10,color:"#7c3aed",paddingInlineStart:24}}>{ar?"العائد التفضيلي المتراكم (غير مدفوع)":"Unpaid Pref (Accumulated)"}</td>
+          <td style={tdN}></td>
+          {years.map(y=><td key={y} style={{...tdN,color:(w.prefAccumulated[y]||0)>0?"#7c3aed":"#16a34a",fontSize:10,fontWeight:(w.prefAccumulated[y]||0)===0?600:400}}>{(w.prefAccumulated[y]||0)===0?"✓ 0":fmt(w.prefAccumulated[y])}</td>)}
+        </tr>
+
+        {/* Remaining After ROC + Pref */}
+        {(() => { const remaining = new Array(h).fill(0); for(let y=0;y<h;y++) remaining[y] = Math.max(0, (w.cashAvail[y]||0) - (w.tier1[y]||0) - (w.tier2[y]||0)); const tot = remaining.reduce((a,b)=>a+b,0); return tot > 0 ? <CFRow label={ar?"= المتبقي بعد ROC + Pref":"= Remaining After ROC + Pref"} values={remaining} total={tot} bold /> : null; })()}
+
+        <CFRow label={ar?"T3: تعويض المطور (GP)":"T3: GP Catch-up"} values={w.tier3} total={w.tier3.reduce((a,b)=>a+b,0)} color="#f59e0b" />
+        <CFRow label={ar?"T4: حصة الممول (LP)":"T4: LP Split"} values={w.tier4LP} total={w.tier4LP.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
+        <CFRow label={ar?"T4: حصة المطور (GP)":"T4: GP Split"} values={w.tier4GP} total={w.tier4GP.reduce((a,b)=>a+b,0)} color="#3b82f6" />
+
+        {/* ── Net Distributions ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #16a34a"}}>{ar?"صافي التوزيعات":"NET DISTRIBUTIONS"}</td></tr>
         <CFRow label={ar?"توزيعات الممول (LP)":"LP Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
         <CFRow label={ar?"توزيعات المطور (GP)":"GP Distributions"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
-        <tr style={{background:"#fefce8"}}><td colSpan={years.length+2} style={{padding:"4px 10px",fontSize:10,fontWeight:600,color:"#6b7080"}}>{ar?"صافي التدفق النقدي":"NET CASH FLOW"}</td></tr>
+
+        {/* ── Net Cash Flow + Cumulative ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#fefce8",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f"}}>{ar?"صافي التدفق النقدي":"NET CASH FLOW"}</td></tr>
         <CFRow label={ar?"صافي CF الممول":"LP Net CF"} values={w.lpNetCF} total={w.lpNetCF.reduce((a,b)=>a+b,0)} bold />
-        <CFRow label={ar?"صافي CF المطور":"GP Net CF"} values={w.gpNetCF} total={w.gpNetCF.reduce((a,b)=>a+b,0)} bold />
-        <tr style={{background:"#f0fdf4"}}>
-          <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontWeight:500,fontSize:11,color:"#6b7080"}}>{ar?"رأس المال غير المسترد":"Unreturned Capital"}</td>
+        {/* LP Cumulative */}
+        {(() => { let cum=0; return <tr style={{background:"#faf5ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:600,fontSize:10,color:"#7c3aed",paddingInlineStart:24}}>{ar?"↳ تراكمي LP":"↳ LP Cumulative"}</td>
           <td style={tdN}></td>
-          {years.map(y=><td key={y} style={{...tdN,color:"#6b7080",fontSize:11}}>{w.unreturnedClose[y]===0?"—":fmt(w.unreturnedClose[y])}</td>)}
-        </tr>
+          {years.map(y=>{cum+=w.lpNetCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
+        </tr>; })()}
+        <CFRow label={ar?"صافي CF المطور":"GP Net CF"} values={w.gpNetCF} total={w.gpNetCF.reduce((a,b)=>a+b,0)} bold />
+        {/* GP Cumulative */}
+        {(() => { let cum=0; return <tr style={{background:"#eff6ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:600,fontSize:10,color:"#1e40af",paddingInlineStart:24}}>{ar?"↳ تراكمي GP":"↳ GP Cumulative"}</td>
+          <td style={tdN}></td>
+          {years.map(y=>{cum+=w.gpNetCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
+        </tr>; })()}
       </tbody></table></div>
     </div>
   </div>);
@@ -3108,6 +3154,31 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
       <KPI label={ar?"حصة الممول (LP)":"Investor Equity (LP)"} value={fmtM(f.lpEquity)} sub={fmtPct(f.lpPct*100)} color="#8b5cf6" tip="حصة المستثمرين من رأس المال = الباقي بعد الدين وGP\nInvestor equity = remainder after Debt and GP" />
       <KPI label={lang==="ar"?"إجمالي الفوائد":"Total Interest"} value={fmtM(f.totalInterest)} sub={cur} color="#ef4444" tip="مجموع الفوائد المدفوعة خلال كامل مدة القرض\nTotal interest paid over entire loan period" />
       <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color="#16a34a" tip="معدل العائد بعد خدمة الدين. أعلى من Unlevered عادة\nReturn after debt service. Usually higher than unlevered" />
+      {(() => { const stableIncome = c.income.find((v,i) => i > (f.constrEnd||0) && v > 0) || 0; const cashOnCash = f.totalEquity > 0 && stableIncome > 0 ? stableIncome / f.totalEquity : 0; return <KPI label={ar?"عائد نقدي سنوي":"Cash-on-Cash Yield"} value={cashOnCash>0?fmtPct(cashOnCash*100):"—"} color={cashOnCash>0.08?"#16a34a":"#f59e0b"} tip={ar?"أول دخل تشغيلي / إجمالي الملكية. مقياس مهم للمستثمر\nFirst stabilized income / Total equity. Key investor metric":""} />; })()}
+    </div>
+
+    {/* ═══ SOURCES & USES ═══ */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+      <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#16a34a",letterSpacing:0.5,textTransform:"uppercase",marginBottom:10,paddingBottom:6,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
+        <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+          {f.totalDebt > 0 && <><span style={{color:"#6b7080"}}>{ar?"الدين البنكي":"Bank Debt"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.totalDebt)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct((f.totalDebt/(f.devCostInclLand||1))*100)}</span></span></>}
+          {f.gpEquity > 0 && <><span style={{color:"#3b82f6"}}>{ar?"حصة المطور (GP)":"GP Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.gpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.gpPct*100)}</span></span></>}
+          {f.lpEquity > 0 && <><span style={{color:"#8b5cf6"}}>{ar?"حصة الممول (LP)":"LP Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.lpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.lpPct*100)}</span></span></>}
+          <span style={{borderTop:"2px solid #16a34a",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
+          <span style={{borderTop:"2px solid #16a34a",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmt(f.totalDebt + f.gpEquity + f.lpEquity)}</span>
+        </div>
+      </div>
+      <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:10,paddingBottom:6,borderBottom:"2px solid #fecaca"}}>{ar?"الاستخدامات":"USES"}</div>
+        <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:6}}>
+          <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction Cost"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.devCostExclLand)}</span>
+          {f.landCapValue > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Capitalization"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.landCapValue)}</span></>}
+          {f.upfrontFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Upfront Fee"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.upfrontFee)}</span></>}
+          <span style={{borderTop:"2px solid #ef4444",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
+          <span style={{borderTop:"2px solid #ef4444",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmt(f.devCostInclLand)}</span>
+        </div>
+      </div>
     </div>
 
     {/* Equation check */}
@@ -3175,29 +3246,55 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
         {lang==="ar"?"تدفقات الصندوق (ممولة)":"Fund Cash Flow (Levered)"}
       </div>
       <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:140}}>{lang==="ar"?"البند":"Line Item"}</th>
+        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:170}}>{lang==="ar"?"البند":"Line Item"}</th>
         <th style={{...thSt,textAlign:"right"}}>{lang==="ar"?"الإجمالي":"Total"}</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>{lang==="ar"?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
       </tr></thead><tbody>
+        {/* ── Section 1: Project CF ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"6px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",borderTop:"1px solid #e5e7ec"}}>{ar?"التدفق التشغيلي":"PROJECT CASH FLOW"}</td></tr>
         <CFRow label={lang==="ar"?"الإيرادات":"Revenue"} values={c.income} total={c.totalIncome} color="#16a34a" />
-        <CFRow label={lang==="ar"?"إيجار الأرض":"Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
-        <CFRow label={lang==="ar"?"تكاليف التطوير":"CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
+        <CFRow label={lang==="ar"?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
+        <CFRow label={lang==="ar"?"(-) تكاليف التطوير":"(-) CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
+        {(() => { const unlev = new Array(h).fill(0); for(let y=0;y<h;y++) unlev[y]=c.income[y]-c.landRent[y]-c.capex[y]; return <CFRow label={lang==="ar"?"= صافي التدفق (قبل التمويل)":"= Unlevered Net CF"} values={unlev} total={unlev.reduce((a,b)=>a+b,0)} bold />; })()}
+
+        {/* ── Section 2: Financing ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"6px 10px",fontSize:10,fontWeight:700,color:"#3b82f6",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"1px solid #e5e7ec"}}>{ar?"التمويل":"FINANCING"}</td></tr>
+        <CFRow label={lang==="ar"?"سحب الملكية":"Equity Calls"} values={f.equityCalls} total={f.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
         <CFRow label={lang==="ar"?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.totalDebt} color="#3b82f6" />
-        <CFRow label={lang==="ar"?"سداد أصل الدين":"Debt Repayment"} values={f.repayment} total={f.repayment.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
-        <CFRow label={project.islamicMode==="conventional"?(lang==="ar"?"فوائد":"Interest"):(lang==="ar"?"تكلفة التمويل":"Profit Cost")} values={f.interest} total={f.totalInterest} color="#ef4444" negate />
-        <CFRow label={lang==="ar"?"إجمالي خدمة الدين":"Total Debt Service"} values={f.debtService} total={f.debtService.reduce((a,b)=>a+b,0)} color="#dc2626" negate />
-        <CFRow label={lang==="ar"?"حصيلة التخارج":"Exit Proceeds"} values={f.exitProceeds} total={f.exitProceeds.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
-        <CFRow label={lang==="ar"?"صافي التدفق الممول":"Levered Net CF"} values={f.leveredCF} total={f.leveredCF.reduce((a,b)=>a+b,0)} bold />
-        {/* Debt balance row */}
+        <CFRow label={lang==="ar"?"(-) سداد أصل الدين":"(-) Debt Repayment"} values={f.repayment} total={f.repayment.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
+        <CFRow label={project.islamicMode==="conventional"?(lang==="ar"?"(-) فوائد":"(-) Interest"):(lang==="ar"?"(-) تكلفة التمويل":"(-) Profit Cost")} values={f.interest} total={f.totalInterest} color="#ef4444" negate />
+        <CFRow label={lang==="ar"?"= إجمالي خدمة الدين":"= Total Debt Service"} values={f.debtService} total={f.debtService.reduce((a,b)=>a+b,0)} color="#dc2626" negate bold />
+        {/* Debt balance rows */}
         <tr style={{background:"#f0f4ff"}}>
-          <td style={{...tdSt,position:"sticky",left:0,background:"#f0f4ff",zIndex:1,fontWeight:500,fontSize:11,color:"#3b82f6"}}>{lang==="ar"?"رصيد الدين":"Debt Balance (Close)"}</td>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#f0f4ff",zIndex:1,fontWeight:400,fontSize:10,color:"#3b82f6",paddingInlineStart:24}}>{lang==="ar"?"رصيد الدين (بداية)":"Debt Balance (Open)"}</td>
           <td style={tdN}></td>
-          {years.map(y=><td key={y} style={{...tdN,color:"#3b82f6",fontSize:11}}>{f.debtBalClose[y]===0?"—":fmt(f.debtBalClose[y])}</td>)}
+          {years.map(y=><td key={y} style={{...tdN,color:"#3b82f6",fontSize:10}}>{f.debtBalOpen[y]===0?"—":fmt(f.debtBalOpen[y])}</td>)}
         </tr>
+        <tr style={{background:"#f0f4ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#f0f4ff",zIndex:1,fontWeight:500,fontSize:10,color:"#3b82f6",paddingInlineStart:24}}>{lang==="ar"?"رصيد الدين (نهاية)":"Debt Balance (Close)"}</td>
+          <td style={tdN}></td>
+          {years.map(y=><td key={y} style={{...tdN,color:"#3b82f6",fontSize:10}}>{f.debtBalClose[y]===0?"—":fmt(f.debtBalClose[y])}</td>)}
+        </tr>
+
+        {/* ── Section 3: Exit ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"6px 10px",fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#faf5ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"1px solid #e5e7ec"}}>{ar?"التخارج":"EXIT"}</td></tr>
+        <CFRow label={lang==="ar"?"حصيلة التخارج":"Exit Proceeds"} values={f.exitProceeds} total={f.exitProceeds.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
+
+        {/* ── Section 4: Net Result ── */}
+        <tr><td colSpan={years.length+2} style={{padding:"6px 10px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#f0f4ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #2563eb"}}>{ar?"النتيجة":"NET RESULT"}</td></tr>
+        <CFRow label={lang==="ar"?"= صافي التدفق الممول":"= Levered Net CF"} values={f.leveredCF} total={f.leveredCF.reduce((a,b)=>a+b,0)} bold />
+        {/* Cumulative Levered CF */}
+        {(() => { let cum=0; return <tr style={{background:"#fffbeb"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:170}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
+          <td style={tdN}></td>
+          {years.map(y=>{cum+=f.leveredCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
+        </tr>; })()}
+
+        {/* DSCR */}
         <tr style={{background:"#fefce8"}}>
           <td style={{...tdSt,position:"sticky",left:0,background:"#fefce8",zIndex:1,fontWeight:600,fontSize:11,color:"#a16207"}}>DSCR</td>
           <td style={tdN}></td>
-          {years.map(y=><td key={y} style={{...tdN,color:f.dscr[y]===null?"#9ca3af":f.dscr[y]>=1.2?"#16a34a":"#ef4444",fontWeight:600,fontSize:11}}>{f.dscr[y]===null?"—":f.dscr[y].toFixed(2)+"x"}</td>)}
+          {years.map(y=><td key={y} style={{...tdN,color:f.dscr[y]===null?"#9ca3af":f.dscr[y]>=1.5?"#16a34a":f.dscr[y]>=1.2?"#a16207":"#ef4444",fontWeight:600,fontSize:11}}>{f.dscr[y]===null?"—":f.dscr[y].toFixed(2)+"x"}</td>)}
         </tr>
       </tbody></table></div>
     </div>
@@ -5415,33 +5512,72 @@ function KPI({label,value,sub,color,tip}) {
 function CashFlowView({ project, results, t, incentivesResult }) {
   if (!project||!results) return <div style={{color:"#9ca3af"}}>Add assets to see projections.</div>;
   const [showYrs,setShowYrs]=useState(15);
-  const [showCumulative,setShowCumulative]=useState(false);
   const {horizon,startYear}=results;
   const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
   const phases=Object.entries(results.phaseResults);
   const c=results.consolidated;
+  const ar = t.dashboard === "لوحة التحكم";
 
-  const CFRow=({label,values,total,bold,color,negate})=>{
+  // ── Period detection: construction vs operating years ──
+  let constrEnd = 0;
+  for (let y = horizon - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEnd = y; break; } }
+  const isConstrYear = y => c.capex[y] > 0;
+  const isIncomeYear = y => c.income[y] > 0;
+
+  // ── NOI = Income - Land Rent (operating cash before CAPEX) ──
+  const noiArr = new Array(horizon).fill(0);
+  for (let y = 0; y < horizon; y++) noiArr[y] = c.income[y] - c.landRent[y];
+  const totalNOI = noiArr.reduce((a,b)=>a+b,0);
+  // Per-phase NOI
+  const phaseNOI = {};
+  phases.forEach(([name, pr]) => {
+    const noi = new Array(horizon).fill(0);
+    for (let y = 0; y < horizon; y++) noi[y] = pr.income[y] - pr.landRent[y];
+    phaseNOI[name] = { values: noi, total: noi.reduce((a,b)=>a+b,0) };
+  });
+
+  // ── Yield on Cost = Stabilized NOI / Total CAPEX ──
+  const stabilizedNOI = noiArr[Math.min(constrEnd + 3, horizon - 1)] || 0;
+  const yieldOnCost = c.totalCapex > 0 ? stabilizedNOI / c.totalCapex : 0;
+
+  const CFRow=({label,values,total,bold,color,negate,sub})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
     const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#d0d4dc";};
     return <tr style={st} onMouseEnter={e=>{if(!bold)e.currentTarget.style.background="#fafbff";}} onMouseLeave={e=>{if(!bold)e.currentTarget.style.background="";}}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:120}}>{label}</td>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:sub?400:500,minWidth:150,paddingInlineStart:sub?24:10,fontSize:sub?10:11,color:sub?"#6b7080":undefined}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-total:total)}}>{fmt(total)}</td>
       {years.map(y=>{const v=values[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v),background:v===0?"":"transparent"}}>{v===0?"—":fmt(v)}</td>;})}
     </tr>;
   };
 
-  // Cumulative row helper
+  // Section header row
+  const SectionRow=({label,color,bg})=><tr><td colSpan={years.length+2} style={{padding:"6px 10px",fontSize:10,fontWeight:700,color:color||"#6b7080",background:bg||"#f0f4ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"1px solid #e5e7ec"}}>{label}</td></tr>;
+
+  // Cumulative row (always visible)
   const CumRow=({label,values})=>{
     let cum=0;
-    return <tr style={{background:"#fffbeb"}} onMouseEnter={e=>e.currentTarget.style.background="#fef9c3"} onMouseLeave={e=>e.currentTarget.style.background="#fffbeb"}>
-      <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:120}}>{label}</td>
+    return <tr style={{background:"#fffbeb"}}>
+      <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:150}}>{label}</td>
       <td style={tdN}></td>
       {years.map(y=>{cum+=values[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
     </tr>;
   };
 
-  const ar = t.dashboard === "لوحة التحكم";
+  // ── Period marker header (construction / operating / payback) ──
+  const PeriodHeaderRow = () => <tr>
+    <td style={{position:"sticky",left:0,background:"#fff",zIndex:2,padding:0}}></td>
+    <td style={{padding:0}}></td>
+    {years.map(y => {
+      const constr = isConstrYear(y);
+      const income = isIncomeYear(y);
+      const isPB = c.paybackYear !== null && y === c.paybackYear;
+      const bg = constr && !income ? "#fef3c7" : constr && income ? "#fef9c3" : income ? "#dcfce7" : "#f8f9fb";
+      const lbl = constr && !income ? (ar?"بناء":"Build") : constr && income ? (ar?"بناء+دخل":"Build+Op") : income ? (ar?"تشغيل":"Oper.") : "";
+      return <td key={y} style={{padding:"2px 4px",textAlign:"center",background:bg,fontSize:8,fontWeight:600,color:constr?"#a16207":"#16a34a",borderBottom:isPB?"3px solid #2563eb":"1px solid #e5e7ec",position:"relative"}}>
+        {lbl}{isPB && <span style={{display:"block",fontSize:7,color:"#2563eb",fontWeight:700}}>{ar?"استرداد":"Payback"}</span>}
+      </td>;
+    })}
+  </tr>;
 
   return (<div>
     {/* Disclaimer */}
@@ -5458,20 +5594,27 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         {label:"NPV @14%",value:fmtM(c.npv14),color:c.npv14>0?"#2563eb":"#ef4444"},
         {label:ar?"إجمالي التكاليف":"Total CAPEX",value:fmtM(c.totalCapex),color:"#ef4444"},
         {label:ar?"إجمالي الإيرادات":"Total Income",value:fmtM(c.totalIncome),color:"#16a34a"},
+        {label:ar?"صافي الدخل التشغيلي (NOI)":"Net Operating Income",value:fmtM(totalNOI),color:"#2563eb",tip:ar?"الإيرادات - إيجار الأرض (قبل CAPEX)":"Revenue minus Land Rent (before CAPEX)"},
+        {label:ar?"عائد على التكلفة":"Yield on Cost",value:yieldOnCost>0?fmtPct(yieldOnCost*100):"—",color:yieldOnCost>0.08?"#16a34a":"#f59e0b",tip:ar?"NOI المستقر / CAPEX":"Stabilized NOI / Total CAPEX"},
         {label:ar?"فترة الاسترداد":"Payback Period",value:c.paybackYear!=null?(c.paybackYear+(ar?" سنة":" yr")):"—",color:c.paybackYear&&c.paybackYear<=10?"#16a34a":c.paybackYear?"#f59e0b":"#9ca3af"},
-        {label:ar?"أقصى سحب سلبي":"Peak Negative CF",value:fmtM(c.peakNegative||0),color:"#ef4444"},
+        {label:ar?"أقصى سحب سلبي":"Peak Negative CF",value:fmtM(c.peakNegative||0),color:"#ef4444",tip:c.peakNegativeYear!=null?(ar?`السنة ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`:`Year ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`):""},
       ].map((k,i) => <div key={i} style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"8px 12px"}}>
         <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{k.label}</div>
         <div style={{fontSize:16,fontWeight:700,color:k.color}}>{k.value}</div>
+        {k.tip && <div style={{fontSize:9,color:"#9ca3af",marginTop:2}}>{k.tip}</div>}
       </div>)}
     </div>
+
+    {/* Period Legend */}
+    <div style={{display:"flex",gap:14,marginBottom:8,fontSize:10,color:"#6b7080",flexWrap:"wrap",alignItems:"center"}}>
+      <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#fef3c7",border:"1px solid #fde68a"}} />{ar?"بناء":"Construction"}</span>
+      <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,borderRadius:2,background:"#dcfce7",border:"1px solid #bbf7d0"}} />{ar?"تشغيل":"Operating"}</span>
+      <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:4,borderRadius:1,background:"#2563eb"}} />{ar?"سنة الاسترداد":"Payback Year"}</span>
+    </div>
+
     <div style={{display:"flex",alignItems:"center",marginBottom:12,gap:12,flexWrap:"wrap"}}>
       <div style={{fontSize:15,fontWeight:600}}>{t.unleveredCF}</div>
       <div style={{flex:1}} />
-      <label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7080",cursor:"pointer"}}>
-        <input type="checkbox" checked={showCumulative} onChange={e=>setShowCumulative(e.target.checked)} style={{accentColor:"#2563eb"}} />
-        {t.dashboard==="لوحة التحكم"?"تراكمي":"Cumulative"}
-      </label>
       <div style={{display:"flex",background:"#f0f1f5",borderRadius:6,padding:2}}>
         {[10,15,20,30,50].map(n=><button key={n} onClick={()=>setShowYrs(n)} style={{...btnS,padding:"4px 10px",fontSize:10,fontWeight:600,background:showYrs===n?"#fff":"transparent",color:showYrs===n?"#1a1d23":"#9ca3af",boxShadow:showYrs===n?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>{n}yr</button>)}
       </div>
@@ -5482,15 +5625,20 @@ function CashFlowView({ project, results, t, incentivesResult }) {
           <span>{name}</span><span style={{color:"#6b7080",fontWeight:400,fontSize:11}}>IRR: <strong style={{color:pr.irr!==null?"#2563eb":"#9ca3af"}}>{pr.irr!==null?fmtPct(pr.irr*100):"—"}</strong></span>
         </div>
         <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-          <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:100}}>{t.lineItem}</th>
+          <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:150}}>{t.lineItem}</th>
           <th style={{...thSt,textAlign:"right"}}>{t.total}</th>
           {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:75}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{startYear+y}</span></th>)}
         </tr></thead><tbody>
+          <PeriodHeaderRow />
+          <SectionRow label={ar?"الإيرادات والتشغيل":"REVENUE & OPERATIONS"} color="#16a34a" bg="#f0fdf4" />
           <CFRow label={t.income} values={pr.income} total={pr.totalIncome} color="#16a34a" />
-          <CFRow label={t.landRentLabel} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate />
-          <CFRow label={t.capex} values={pr.capex} total={pr.totalCapex} color="#ef4444" negate />
-          <CFRow label={t.netCF} values={pr.netCF} total={pr.totalNetCF} bold />
-          {showCumulative&&<CumRow label="↳ Cumulative" values={pr.netCF} />}
+          <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate sub />
+          <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={phaseNOI[name]?.values||[]} total={phaseNOI[name]?.total||0} bold />
+          <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="#ef4444" bg="#fef2f2" />
+          <CFRow label={ar?"(-) تكاليف التطوير":"(-) Development CAPEX"} values={pr.capex} total={pr.totalCapex} color="#ef4444" negate />
+          <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
+          <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={pr.netCF} total={pr.totalNetCF} bold />
+          <CumRow label={ar?"↳ تراكمي":"↳ Cumulative"} values={pr.netCF} />
         </tbody></table></div>
       </div>
     ))}
@@ -5499,15 +5647,20 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         <span>{t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>IRR: <strong style={{color:"#2563eb"}}>{(incentivesResult&&incentivesResult.totalIncentiveValue>0&&incentivesResult.adjustedIRR!==null)?fmtPct(incentivesResult.adjustedIRR*100):c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
       </div>
       <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:100}}>{t.lineItem}</th>
+        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:150}}>{t.lineItem}</th>
         <th style={{...thSt,textAlign:"right"}}>{t.total}</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:75}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{startYear+y}</span></th>)}
       </tr></thead><tbody>
+        <PeriodHeaderRow />
+        <SectionRow label={ar?"الإيرادات والتشغيل":"REVENUE & OPERATIONS"} color="#16a34a" bg="#f0fdf4" />
         <CFRow label={t.income} values={c.income} total={c.totalIncome} color="#16a34a" />
-        <CFRow label={t.landRentLabel} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
-        <CFRow label={t.capex} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
-        <CFRow label={t.netCF} values={c.netCF} total={c.totalNetCF} bold />
-        {showCumulative&&<CumRow label="↳ Cumulative" values={c.netCF} />}
+        <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate sub />
+        <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noiArr} total={totalNOI} bold />
+        <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="#ef4444" bg="#fef2f2" />
+        <CFRow label={ar?"(-) تكاليف التطوير":"(-) Development CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
+        <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
+        <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={c.netCF} total={c.totalNetCF} bold />
+        <CumRow label={ar?"↳ تراكمي":"↳ Cumulative"} values={c.netCF} />
       </tbody></table></div>
     </div>
   </div>);
