@@ -1901,6 +1901,10 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const prefAccrual = new Array(h).fill(0);
   const prefAccumulated = new Array(h).fill(0);
 
+  // Waterfall convention settings
+  const prefAlloc = project.prefAllocation || "proRata";   // proRata (ZAN) / lpOnly
+  const catchMethod = project.catchupMethod || "perYear";  // perYear (ZAN) / cumulative
+
   let cumEquityCalled = 0;
   let cumReturned = 0;
   let cumPrefPaid = 0;
@@ -1941,17 +1945,28 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
       cumPrefPaid += t2;
     }
 
-    // C5: Tier 3: GP Catch-up (Option B - adjusted for pro-rata T2)
-    // GP already received gpPct of T2 pref. Catch-up must account for that.
-    // targetCatchup = max(0, (carry × cumPrefPaid - gpProfitFromPref) / (1 - carry))
+    // C5: Tier 3: GP Catch-up
+    // Convention: waterfallConvention controls T3 + distribution allocation
+    // - prefAllocation: "proRata" (GP gets GP% of T2 as investor) / "lpOnly" (T2 all to LP)
+    // - catchupMethod: "perYear" (ZAN: based on this year's T2) / "cumulative" (tracked across years)
+
     if (project.gpCatchup && remaining > 0 && carryPct > 0) {
-      const gpProfitFromPref = cumPrefPaid * gpPct; // GP already got this from T2
-      const targetCatchupOnly = Math.max(0, (carryPct * cumPrefPaid - gpProfitFromPref) / (1 - carryPct));
-      const catchupNeeded = Math.max(0, targetCatchupOnly - cumGPCatchup);
-      const catchup = Math.min(remaining, catchupNeeded);
-      tier3[y] = catchup;
-      remaining -= catchup;
-      cumGPCatchup += catchup;
+      if (catchMethod === "perYear") {
+        // ZAN method: T3 = MIN(remaining, T2_thisYear × carry/(1-carry))
+        // Simple per-year formula. No cumulative tracking. No GP offset.
+        const catchup = Math.min(remaining, tier2[y] * carryPct / (1 - carryPct));
+        tier3[y] = catchup;
+        remaining -= catchup;
+      } else {
+        // Cumulative method: track GP's pref participation and offset
+        const gpProfitFromPref = prefAlloc === "proRata" ? cumPrefPaid * gpPct : 0;
+        const targetCatchupOnly = Math.max(0, (carryPct * cumPrefPaid - gpProfitFromPref) / (1 - carryPct));
+        const catchupNeeded = Math.max(0, targetCatchupOnly - cumGPCatchup);
+        const catchup = Math.min(remaining, catchupNeeded);
+        tier3[y] = catchup;
+        remaining -= catchup;
+        cumGPCatchup += catchup;
+      }
     }
 
     // Tier 4: Profit Split
@@ -1961,11 +1976,17 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
       remaining = 0;
     }
 
-    // Allocate distributions
-    // Option B: T1 + T2 both pro-rata. GP gets his share of pref as investor.
-    // GP wears two hats: as investor (ROC + Pref pro-rata) and as developer (catch-up + carry)
-    lpDist[y] = (tier1[y] + tier2[y]) * lpPct + tier4LP[y];
-    gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+    // Allocate distributions based on prefAllocation convention
+    // proRata: T1 + T2 split by GP%/LP%. GP wears two hats (investor + manager).
+    // lpOnly: T1 pro-rata, T2 100% to LP. GP compensated only via T3 + T4.
+    if (prefAlloc === "lpOnly") {
+      lpDist[y] = tier1[y] * lpPct + tier2[y] + tier4LP[y];
+      gpDist[y] = tier1[y] * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+    } else {
+      // proRata (ZAN default): GP gets investor share of T1 + T2
+      lpDist[y] = (tier1[y] + tier2[y]) * lpPct + tier4LP[y];
+      gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+    }
 
     unreturnedClose[y] = cumEquityCalled - cumReturned;
   }
@@ -2023,6 +2044,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     gpPaysLandRent, lpPaysLandRent, resolvedLandRentPayer,
     lpNPV10, lpNPV12, lpNPV14, gpNPV10, gpNPV12, gpNPV14,
     projNPV10, projNPV12, projNPV14, isFund,
+    prefAllocation: prefAlloc, catchupMethod: catchMethod,
     exitYear: exitYr + sy,
   };
 }
@@ -2041,7 +2063,7 @@ const FINANCING_FIELDS = [
   'islamicMode','gpEquityManual','lpEquityManual',
   'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
-  'feeTreatment','subscriptionFeePct','annualMgmtFeePct','custodyFeeAnnual',
+  'feeTreatment','prefAllocation','catchupMethod','subscriptionFeePct','annualMgmtFeePct','custodyFeeAnnual',
   'developerFeePct','structuringFeePct','mgmtFeeBase',
   'fundStartYear','fundName','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
 ];

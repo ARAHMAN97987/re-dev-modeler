@@ -437,10 +437,11 @@ suite('F10-computeWaterfall');
 // ── F10b: Waterfall oracle comparison ──
 suite('F10b-WaterfallOracle');
 {
+  // Oracle uses cumulative catch-up (Option B). Test engine in same mode.
   const r = E.computeProjectCashFlows(D2);
   const i = E.computeIncentives(D2, r);
   const f = E.computeFinancing(D2, r, i);
-  const w = E.computeWaterfall(D2, r, f, i);
+  const w = E.computeWaterfall({...D2, catchupMethod:'cumulative'}, r, f, i);
   const ow = oracleWaterfall(w.cashAvail, w.equityCalls, (D2.prefReturnPct)/100, Math.min(0.9999,(D2.carryPct)/100), (D2.lpProfitSplitPct)/100, w.gpPct, w.lpPct, D2.gpCatchup, false);
   const t1chk = arrClose(w.tier1, ow.tier1, TOL.MONEY_LARGE);
   t('Oracle T1 match', t1chk.ok, t1chk.msg);
@@ -912,34 +913,35 @@ suite('LR2-LandRentPaidByDeveloper');
 
 suite('LR3-OptionB-GPTwoHats');
 {
-  // Core test: GP as investor gets pref + as developer gets fees/carry
-  // Use manual equity to ensure both GP and LP have equity
+  // Test cumulative catch-up path (Option B: GP pref offset)
   const p = {...D2, landCapitalize:false, landRentPaidBy:'project',
-    gpEquityManual:20000000, // GP 20M, LP gets remainder (~31M)
+    gpEquityManual:20000000, catchupMethod:'cumulative',
     prefReturnPct:10, gpCatchup:true, carryPct:25};
   const r = E.computeProjectCashFlows(p);
   const i = E.computeIncentives(p, r);
   const f = E.computeFinancing(p, r, i);
   const w = E.computeWaterfall(p, r, f, i);
   t('GP+LP both have equity', w.gpPct > 0.01 && w.lpPct > 0.01, 'GP%=' + (w.gpPct*100).toFixed(1) + ' LP%=' + (w.lpPct*100).toFixed(1));
-  // GP should get pro-rata share of T2 (pref on his equity)
   const totalT2 = sumArr(w.tier2);
   const gpT2share = totalT2 * w.gpPct;
   t('GP gets pref on equity (T2*gpPct > 0)', totalT2 > 0 && gpT2share > 0, 'T2=' + Math.round(totalT2) + ' GP share=' + Math.round(gpT2share));
-  // GP catch-up should be LESS than standard formula (carry/(1-carry)*totalPref)
-  // because Option B subtracts what GP already got from T2
   const totalT3 = sumArr(w.tier3);
-  const standardCatchup = totalT2 * 0.25 / 0.75;
   const optionBTarget = Math.max(0, (0.25 * totalT2 - totalT2 * w.gpPct) / 0.75);
-  t('Catch-up = Option B formula', totalT3 <= optionBTarget + TOL.MONEY_LARGE || totalT3 === 0,
-    'Actual=' + Math.round(totalT3) + ' OptionB=' + Math.round(optionBTarget) + ' Standard=' + Math.round(standardCatchup));
-  // Verify total LP+GP dist = total tiers (conservation)
+  t('Catch-up = Option B formula (cumulative)', totalT3 <= optionBTarget + TOL.MONEY_LARGE || totalT3 === 0,
+    'Actual=' + Math.round(totalT3) + ' OptionB=' + Math.round(optionBTarget));
+  // Verify conservation
   let distOk = true;
   for (let y=0; y<D2.horizon; y++) {
     const totalTiers = w.tier1[y]+w.tier2[y]+w.tier3[y]+w.tier4LP[y]+w.tier4GP[y];
     if (!near(w.lpDist[y]+w.gpDist[y], totalTiers, TOL.MONEY_LARGE)) { distOk=false; break; }
   }
   t('LP+GP dist = all tiers (conservation)', distOk);
+
+  // Test perYear catch-up path (ZAN method)
+  const w2 = E.computeWaterfall({...p, catchupMethod:'perYear'}, r, f, i);
+  const totalT3zy = sumArr(w2.tier3);
+  // perYear: T3 = T2_yr × carry/(1-carry), so total = sum of per-year values
+  t('perYear T3 > 0 when catch-up enabled', totalT3zy > 0, 'T3=' + Math.round(totalT3zy));
 }
 
 
