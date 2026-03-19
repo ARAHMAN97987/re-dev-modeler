@@ -3771,6 +3771,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
+  useEffect(() => { window.scrollTo(0, 0); }, [view]);
   const [aiOpen, setAiOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -3856,9 +3857,9 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
       p.phases = tmpl.phases.map(ph=>({...ph}));
       p.assets = tmpl.assets.map(a=>({...a, id:crypto.randomUUID(), hotelPL:null, marinaPL:null}));
     }
-    await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard");
+    await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); window.scrollTo(0,0);
   };
-  const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } setLoading(false); };
+  const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); window.scrollTo(0,0); } setLoading(false); };
   const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); }};
   const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} };
 
@@ -3911,7 +3912,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
     costPerSqm:0, constrStart:1, constrDuration:12, hotelPL:null, marinaPL:null,
   }]}; }), [pushUndo]);
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
-  const goBack = () => { setView("dashboard"); setProject(null); };
+  const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0B2341",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#2EC4B6",letterSpacing:2}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
   if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
