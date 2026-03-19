@@ -537,6 +537,7 @@ const defaultProject = () => ({
   // Financing (Phase 2)
   finMode: "self", // self | debt | fund
   vehicleType: "fund", // fund | direct | spv
+  gpIsFundManager: true, // true = GP manages the fund (gets all fees). false = separate financial company
   fundName: "",
   fundStrategy: "Develop & Hold",
   fundStartYear: 0, // 0 = auto
@@ -2157,7 +2158,7 @@ const FINANCING_FIELDS = [
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
   'feeTreatment','prefAllocation','catchupMethod','subscriptionFeePct','annualMgmtFeePct','custodyFeeAnnual',
   'developerFeePct','structuringFeePct','mgmtFeeBase',
-  'fundStartYear','fundName','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
+  'fundStartYear','fundName','gpIsFundManager','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
 ];
 
 /** Get financing settings for a specific phase. Falls back to project-level. */
@@ -2715,10 +2716,11 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         )}
         {/* GP fees income + pref + land rent */}
         {(() => {
+          const gpManagesFund = cfg.gpIsFundManager !== false;
           const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
           const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
           const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
-          const totalFeeToGP = devFee + mgmtFee + structFee;
+          const totalFeeToGP = gpManagesFund ? devFee + mgmtFee + structFee : devFee;
           const gpPrefIncome = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
           const landRentPaid = w.gpLandRentTotal || 0;
           const hasExtra = totalFeeToGP > 0 || gpPrefIncome > 0 || landRentPaid > 0;
@@ -2729,7 +2731,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <span key="pv" style={{fontWeight:700,textAlign:"right",color:"#8b5cf6"}}>{fmtM(gpPrefIncome)}</span>
             ]}
             {totalFeeToGP > 0 && [
-              <span key="fl" style={{color:"#1e40af",fontWeight:600}}>{ar?"+ رسوم المطور":"+ GP Fee Income"}</span>,
+              <span key="fl" style={{color:"#1e40af",fontWeight:600}}>{ar?(gpManagesFund?"+ رسوم المطور والإدارة":"+ رسوم التطوير فقط"):(gpManagesFund?"+ GP Fee Income (all)":"+ Developer Fee only")}</span>,
               <span key="fv" style={{fontWeight:700,textAlign:"right",color:"#1e40af"}}>{fmtM(totalFeeToGP)}</span>
             ]}
             {landRentPaid > 0 && [
@@ -2807,57 +2809,78 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </div>
     </div>
 
-    {/* ═══ SECTION 4: Developer Total Economics ═══ */}
-    <div style={{background:"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:"2px solid #3b82f6",padding:"16px 20px",marginBottom:18}}>
-      <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:12}}>{ar?"إجمالي عوائد المطور (GP)":"Developer Total Economics (GP)"}</div>
-      {(() => {
-        const gpDist = w.gpTotalDist || 0;
-        const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
-        const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
-        const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
-        const totalFeeToGP = devFee + mgmtFee + structFee;
-        const landRentPaid = w.gpLandRentTotal || 0;
-        const totalGPCash = gpDist + totalFeeToGP - landRentPaid;
-        const gpInvested = w.gpEquity || 0;
-        const netProfit = totalGPCash - gpInvested;
-        const totalMult = gpInvested > 0 ? totalGPCash / gpInvested : 0;
-        // GP's share from each tier
-        const gpFromROC = (w.tier1||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
-        const gpFromPref = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
-        const gpFromCatchup = (w.tier3||[]).reduce((a,b)=>a+b,0);
-        const gpFromSplit = (w.tier4GP||[]).reduce((a,b)=>a+b,0);
-        return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+    {/* ═══ SECTION 4: Developer Total Economics + Fund Manager ═══ */}
+    {(() => {
+      const gpManagesFund = cfg.gpIsFundManager !== false;
+      const gpDist = w.gpTotalDist || 0;
+      const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
+      const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
+      const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
+      const subFee = (w.feeSub||[]).reduce((a,b)=>a+b,0);
+      const custodyFee = (w.feeCustody||[]).reduce((a,b)=>a+b,0);
+      const gpFees = gpManagesFund ? devFee + mgmtFee + structFee : devFee;
+      const fmFees = gpManagesFund ? 0 : mgmtFee + structFee + subFee + custodyFee;
+      const landRentPaid = w.gpLandRentTotal || 0;
+      const totalGPCash = gpDist + gpFees - landRentPaid;
+      const gpInvested = w.gpEquity || 0;
+      const netProfit = totalGPCash - gpInvested;
+      const totalMult = gpInvested > 0 ? totalGPCash / gpInvested : 0;
+      const gpFromROC = (w.tier1||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
+      const gpFromPref = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
+      const gpFromCatchup = (w.tier3||[]).reduce((a,b)=>a+b,0);
+      const gpFromSplit = (w.tier4GP||[]).reduce((a,b)=>a+b,0);
+
+      return <>
+      {/* Developer (GP) Economics */}
+      <div style={{background:"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:"2px solid #3b82f6",padding:"16px 20px",marginBottom:fmFees>0?10:18}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:12}}>{ar?"إجمالي عوائد المطور (GP)":"Developer Total Economics (GP)"}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
           <div>
-            {/* Investor hat */}
             <div style={{fontSize:10,fontWeight:600,color:"#8b5cf6",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{ar?"قبعة المستثمر":"AS INVESTOR"}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:5,fontSize:12,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:5,fontSize:12,marginBottom:12,maxWidth:420}}>
               <span style={{color:"#6b7080"}}>{ar?"رد رأس المال (T1 × GP%)":"Capital Return (T1 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromROC)}</span>
               <span style={{color:"#6b7080"}}>{ar?"عائد تفضيلي (T2 × GP%)":"Pref Return (T2 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM(gpFromPref)}</span>
             </div>
-            {/* Developer hat */}
             <div style={{fontSize:10,fontWeight:600,color:"#3b82f6",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{ar?"قبعة المطور":"AS DEVELOPER"}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:4,rowGap:5,fontSize:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:5,fontSize:12,maxWidth:420}}>
               <span style={{color:"#6b7080"}}>{ar?"تعويض المطور (T3)":"GP Catch-up (T3)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromCatchup)}</span>
               <span style={{color:"#6b7080"}}>{ar?"حصة الأرباح (T4)":"Profit Split (T4)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromSplit)}</span>
               <span style={{color:"#6b7080"}}>{ar?"رسوم التطوير":"Developer Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(devFee)}</span>
-              <span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(mgmtFee)}</span>
-              {structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الهيكلة":"Structuring Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(structFee)}</span></>}
+              {gpManagesFund && mgmtFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(mgmtFee)}</span></>}
+              {gpManagesFund && structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الهيكلة":"Structuring Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(structFee)}</span></>}
               {landRentPaid > 0 && <><span style={{color:"#ef4444",fontWeight:500}}>{ar?"إيجار الأرض (يدفعه GP)":"Land Rent (paid by GP)"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
             </div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:6,fontSize:12,alignContent:"start"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"6px 20px",fontSize:12,alignContent:"start",maxWidth:420}}>
             <span style={{color:"#6b7080"}}>{ar?"رأس مال المطور":"GP Equity"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>({fmtM(gpInvested)})</span>
             <span style={{color:"#6b7080"}}>{ar?"توزيعات الشلال":"Waterfall Dist."}</span><span style={{textAlign:"right",fontWeight:500,color:"#16a34a"}}>{fmtM(gpDist)}</span>
-            <span style={{color:"#6b7080"}}>{ar?"رسوم مستلمة":"Fees Received"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(totalFeeToGP)}</span>
+            <span style={{color:"#6b7080"}}>{ar?"رسوم مستلمة":"Fees Received"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(gpFees)}</span>
             {landRentPaid > 0 && <><span style={{color:"#6b7080"}}>{ar?"إيجار الأرض":"Land Rent Paid"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
             <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,fontWeight:700,fontSize:13}}>{ar?"صافي النقد":"Net Cash"}</span>
             <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,textAlign:"right",fontWeight:800,fontSize:16,color:totalGPCash>=0?"#16a34a":"#ef4444"}}>{fmtM(totalGPCash)}</span>
             <span style={{fontWeight:600}}>{ar?"صافي الربح":"Net Profit"}</span><span style={{textAlign:"right",fontWeight:700,color:netProfit>=0?"#16a34a":"#ef4444"}}>{fmtM(netProfit)}</span>
             <span style={{fontWeight:600}}>{ar?"المضاعف الإجمالي":"Total Multiple"}</span><span style={{textAlign:"right",fontWeight:800,fontSize:14,color:totalMult>=1.5?"#16a34a":totalMult>=1?"#ca8a04":"#ef4444"}}>{totalMult.toFixed(2)}x</span>
           </div>
-        </div>;
-      })()}
-    </div>
+        </div>
+      </div>
+
+      {/* Fund Manager Economics (only when GP ≠ Fund Manager) */}
+      {fmFees > 0 && (
+        <div style={{background:"linear-gradient(135deg, #fefce8, #fff7ed)",borderRadius:10,border:"2px solid #f59e0b",padding:"16px 20px",marginBottom:18}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#92400e",marginBottom:12}}>{ar?"عوائد مدير الصندوق (الشركة المالية)":"Fund Manager Economics (Financial Company)"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,fontSize:12,maxWidth:420}}>
+            {mgmtFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(mgmtFee)}</span></>}
+            {subFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الاكتتاب":"Subscription Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(subFee)}</span></>}
+            {structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الهيكلة":"Structuring Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(structFee)}</span></>}
+            {custodyFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الحفظ":"Custody Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(custodyFee)}</span></>}
+            <span style={{borderTop:"2px solid #f59e0b",paddingTop:4,fontWeight:700,color:"#92400e"}}>{ar?"إجمالي رسوم مدير الصندوق":"Total Fund Manager Fees"}</span>
+            <span style={{borderTop:"2px solid #f59e0b",paddingTop:4,textAlign:"right",fontWeight:800,fontSize:14,color:"#f59e0b"}}>{fmtM(fmFees)}</span>
+          </div>
+          <div style={{marginTop:8,fontSize:10,color:"#a16207"}}>{ar?"هذه الرسوم تُدفع من الصندوق للشركة المالية المديرة وليست للمطور (GP)":"These fees are paid by the fund to the financial management company, not to the developer (GP)"}</div>
+        </div>
+      )}
+      </>;
+    })()}
 
     {/* ═══ SECTION 5: Phase Comparison ═══ */}
     {hasPhases && selectedPhase === "all" && (
@@ -3181,6 +3204,9 @@ Vehicle type such as private fund, SPV, or JV. Affects governance and regulatory
 Legal or operating fund name. For display and reports only"><Inp value={cfg.fundName} onChange={v=>upCfg({fundName:v})} /></FL>}
                 <FL label={ar?"سنة بداية الصندوق":"Fund Start"} hint="0=auto" tip="سنة بدء جمع رأس المال. غالباً قبل البناء بسنة لتغطية التأسيس
 Year capital raising begins. Often one year before construction for setup costs"><Inp type="number" value={cfg.fundStartYear} onChange={v=>upCfg({fundStartYear:v})} /></FL>
+                <FL label={ar?"المطور = مدير الصندوق؟":"GP = Fund Manager?"} tip={ar?"نعم: المطور يدير الصندوق ويستلم كل الرسوم (تطوير + إدارة + هيكلة)\nلا: شركة مالية مستقلة تدير الصندوق. المطور يأخذ رسوم التطوير فقط":"Yes: Developer manages the fund and receives all fees\nNo: Separate financial company manages. Developer gets dev fee only"}>
+                  <Drp lang={lang} value={cfg.gpIsFundManager===false?"N":"Y"} onChange={v=>upCfg({gpIsFundManager:v==="Y"})} options={[{value:"Y",en:"Yes (GP = Manager)",ar:"نعم (المطور = المدير)"},{value:"N",en:"No (Separate Manager)",ar:"لا (مدير مستقل)"}]} />
+                </FL>
                 <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                   <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="الحد الأدنى للعائد السنوي لـ LP قبل مشاركة GP. عادة 8-15%\nMinimum annual return for LP before GP shares profits. Usually 8-15%"><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:v})} /></FL>
