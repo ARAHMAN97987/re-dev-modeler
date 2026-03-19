@@ -2573,6 +2573,7 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
   return result;
 }
 function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, t, lang, up }) {
+  const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhase, setSelectedPhase] = useState("all");
@@ -2778,7 +2779,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const badge = (label, value, color) => <span style={{display:"inline-flex",alignItems:"center",gap:4,background:color+"18",color,borderRadius:5,padding:"3px 8px",fontSize:10,fontWeight:700}}>{label} <strong>{value}</strong></span>;
       const KR = ({l,v,c,bold}) => <><span style={{color:"#6b7080",fontSize:11}}>{l}</span><span style={{textAlign:"right",fontWeight:bold?700:500,fontSize:11,color:c||"#1a1d23"}}>{v}</span></>;
       const SecHd = ({text}) => <div style={{gridColumn:"1/-1",fontSize:9,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:"#9ca3af",paddingTop:6,borderTop:"1px solid #f0f1f5",marginTop:2}}>{text}</div>;
-      return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+      return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:16}}>
         {/* ── GP (Developer) Card ── */}
         <div style={{background:kpiOpen.gp?"#fff":"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:kpiOpen.gp?"2px solid #3b82f6":"1px solid #bfdbfe",padding:"12px 16px",transition:"all 0.2s"}}>
           <div onClick={()=>setKpiOpen(p=>({...p,gp:!p.gp}))} style={cardHd}>
@@ -2943,7 +2944,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     </div>
 
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
-    <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
+    <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
       <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
       <th style={{...thSt,textAlign:"right",minWidth:85}}>Total</th>
       {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
@@ -3095,6 +3096,7 @@ function Drp({value,onChange,options,lang:dl}) {
 }
 
 function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, t, up, lang }) {
+  const isMobile = useIsMobile();
   const [showYrs, setShowYrs] = useState(15);
   const [showConfig, setShowConfig] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState("all");
@@ -3443,7 +3445,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       {/* ═══ SECTION 2: CAPITAL STRUCTURE (collapsible) ═══ */}
       <Sec id="capital" icon="🏗" title="Capital Structure" titleAr="هيكل رأس المال" color="#3b82f6" badge={`${fmtM(f.devCostInclLand)}`}>
         {/* Sources & Uses */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:12}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:12}}>
           <div>
             <div style={{fontSize:11,fontWeight:700,color:"#16a34a",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
@@ -3477,7 +3479,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
       {/* ═══ SECTION 3: FINANCING COSTS (collapsible) ═══ */}
       {!isSelf && <Sec id="costs" icon="💸" title={isFund?"Fund Fees & Financing Costs":"Financing Costs"} titleAr={isFund?"رسوم الصندوق وتكاليف التمويل":"تكاليف التمويل"} color="#f59e0b" badge={fmtM(totalFinCost)}>
-        <div style={{display:"grid",gridTemplateColumns:isFund?"1fr 1fr":"1fr",gap:14}}>
+        <div style={{display:"grid",gridTemplateColumns:isFund&&!isMobile?"1fr 1fr":"1fr",gap:14}}>
           {/* Bank/Debt Costs */}
           {f.totalDebt > 0 && <div>
             <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{ar?"تكلفة الدين":"DEBT COSTS"}</div>
@@ -3561,7 +3563,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </div>
 
         <div style={{borderRadius:8,border:"2px solid #1e3a5f",overflow:"hidden"}}>
-          <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
+          <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
             <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:180}}>{ar?"البند":"Line Item"}</th>
             <th style={{...thSt,textAlign:"right"}}>{ar?"الإجمالي":"Total"}</th>
             {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>{ar?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
@@ -3726,6 +3728,7 @@ const SidebarInput = memo(function SidebarInput({ value, onChange, type = "text"
   return (
     <input
       ref={ref}
+      className="sidebar-input"
       type="text"
       inputMode={type === "number" ? "decimal" : undefined}
       value={focused ? local : displayValue}
@@ -3769,6 +3772,15 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
   const [aiOpen, setAiOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  // ── Share Link Detection ──
+  const [pendingShare, setPendingShare] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("s"), o = params.get("o");
+    if (s && o) return { projectId: s, ownerId: o };
+    return null;
+  });
   // ── Presentation Mode (Sprint 2) ──
   const [presentMode, setPresentMode] = useState(false);
   const [audienceView, setAudienceView] = useState("bank"); // bank | investor
@@ -3779,7 +3791,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const sidebarRef = useRef(null);
 
   // Show landing page if not logged in
-  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} />;
+  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} pendingShare={pendingShare} />;
 
   useEffect(() => { (async () => {
     const own = await loadProjectIndex();
@@ -3789,6 +3801,21 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
     const merged = [...own, ...shared.filter(p => !ownIds.has(p.id))];
     setProjectIndex(merged);
     setLoading(false);
+    // ── Handle pending share link ──
+    if (pendingShare && user) {
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
+      const { projectId, ownerId } = pendingShare;
+      // If it's own project, just open it
+      const ownMatch = merged.find(p => p.id === projectId && !p._shared);
+      if (ownMatch) { setPendingShare(null); const p = await loadProject(projectId); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); } return; }
+      // Try to open as shared
+      try {
+        const p = await loadProject(projectId, ownerId, "view");
+        if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); }
+      } catch (e) { console.error("Share link error:", e); }
+      setPendingShare(null);
+    }
   })(); }, [user]);
 
   useEffect(() => {
@@ -3912,16 +3939,51 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         [dir="rtl"] label { text-align: start; }
         [dir="rtl"] button { text-align: start; }
         [dir="rtl"] .cm-editor { direction: ltr; }
+        /* ═══ MOBILE RESPONSIVE ═══ */
+        @media (max-width: 768px) {
+          /* Touch targets minimum 44px */
+          button, select, input, .touch-target { min-height: 44px; }
+          select { font-size: 14px !important; padding: 10px 12px !important; }
+          /* Sidebar inputs bigger */
+          .sidebar-input { font-size: 14px !important; padding: 10px 12px !important; min-height: 44px !important; }
+          /* Tab bar scrollable with momentum */
+          .tab-bar { -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scrollbar-width: none; }
+          .tab-bar::-webkit-scrollbar { display: none; }
+          .tab-bar button { scroll-snap-align: start; min-height: 44px !important; padding: 10px 14px !important; font-size: 12px !important; }
+          /* Tables horizontal scroll */
+          .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -10px; padding: 0 10px; }
+          .table-wrap table { min-width: 600px; }
+          /* Grid layouts stack on mobile */
+          .mobile-stack { grid-template-columns: 1fr !important; }
+          .mobile-2col { grid-template-columns: 1fr 1fr !important; }
+          /* KPI cards */
+          .hero-kpi { min-width: 140px !important; }
+          /* Modals full width */
+          .modal-content { width: 96vw !important; max-width: 96vw !important; padding: 16px !important; }
+          /* Hide on mobile */
+          .desktop-only { display: none !important; }
+          /* Sidebar advisor compact */
+          .sidebar-advisor { max-height: 35vh; }
+          /* Prevent zoom on input focus (iOS) */
+          input[type="text"], input[type="number"], input[type="email"], input[type="password"], select, textarea { font-size: 16px !important; }
+        }
+        @media (max-width: 480px) {
+          .hero-kpi { min-width: 100% !important; }
+          .tab-bar button { padding: 10px 10px !important; font-size: 11px !important; }
+        }
+        /* Smooth sidebar transition */
+        .sidebar-slide { transition: transform 0.25s cubic-bezier(0.4,0,0.2,1); }
       `}</style>
       {sidebarOpen && !presentMode && (
         <>
-        {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:90}} />}
-        <div style={{width:isMobile?"85vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?360:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.3)"}:{})}}>
-          <div style={{padding:"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
+        {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:90,backdropFilter:"blur(2px)"}} />}
+        <div className="sidebar-slide" style={{width:isMobile?"88vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?400:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.4)"}:{})}}>
+          <div style={{padding:isMobile?"12px 14px":"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
             <div style={{flex:1}}><div style={{fontSize:10,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>ZAN Financial Modeler</div></div>
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#0a2a1a":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
+            {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"#1e2230",border:"none",borderRadius:6,color:"#9ca3af",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
           </div>
-          <div ref={sidebarRef} style={{flex:1,overflowY:"auto"}}>
+          <div ref={sidebarRef} style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
             <ControlPanel project={project} up={up} t={t} lang={lang} results={results} />
           </div>
           <SidebarAdvisor project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} setActiveTab={setActiveTab} />
@@ -3982,6 +4044,13 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
                     <button onClick={()=>{setAiOpen(true);setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>🤖</span> {lang==="ar"?"مساعد AI":"AI Assistant"}
                     </button>
+                    {/* Status (mobile only - hidden from header) */}
+                    {isMobile && <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 16px"}}>
+                      <span style={{fontSize:12,color:"#6b7080"}}>{lang==="ar"?"الحالة":"Status"}</span>
+                      <StatusBadge status={project?.status} onChange={s=>{up({status:s});setMenuOpen(false);}} />
+                    </div>}
+                    {/* User email (mobile only) */}
+                    {isMobile && user && <div style={{padding:"4px 16px 8px",fontSize:11,color:"#9ca3af",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
                     {/* Divider */}
                     <div style={{height:1,background:"#f0f1f5",margin:"4px 0"}} />
                     {/* Scenario */}
@@ -3998,7 +4067,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
                     {/* Divider */}
                     <div style={{height:1,background:"#f0f1f5",margin:"4px 0"}} />
                     {/* Share */}
-                    {!project?._shared && <button onClick={()=>{setMenuOpen(false);const email=prompt(lang==="ar"?"أدخل إيميل المستخدم للمشاركة:":"Enter email to share with:");if(email&&email.includes("@")){const emailLower=email.toLowerCase().trim();const shared=[...(project.sharedWith||[])];const existing=shared.find(e=>(typeof e==="string"?e:e?.email)?.toLowerCase()===emailLower);if(!existing){const perm=confirm(lang==="ar"?"اضغط OK للتعديل، أو Cancel للقراءة فقط":"Press OK for Edit access, or Cancel for View-only");shared.push({email:emailLower,permission:perm?"edit":"view"});up({sharedWith:shared});alert(lang==="ar"?("تمت المشاركة مع "+emailLower+" ("+(perm?"تعديل":"قراءة فقط")+")"):"Shared with "+emailLower+" ("+(perm?"edit":"view-only")+")");}else{alert(lang==="ar"?"مشارك مسبقاً مع "+emailLower:"Already shared with "+emailLower);}}}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
+                    {!project?._shared && <button onClick={()=>{setShareModalOpen(true);setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>📤</span> {lang==="ar"?"مشاركة":"Share"} {project?.sharedWith?.length>0&&<span style={{marginLeft:"auto",fontSize:10,background:"#dbeafe",color:"#2563eb",padding:"1px 6px",borderRadius:8}}>{project.sharedWith.length}</span>}
                     </button>}
                     {/* Sign Out */}
@@ -4011,7 +4080,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
             );
           })()}
         </div>
-        <div style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto"}}>
+        <div className="tab-bar" style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
           {presentMode ? (
             /* Presentation Mode Tab Bar */
             <div style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",width:"100%"}}>
@@ -4081,6 +4150,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
         />
       )}
       <AiAssistant open={aiOpen} onClose={()=>setAiOpen(false)} project={project} onApply={up} lang={lang} projectIndex={projectIndex} loadProjectFn={loadProject} results={results} financing={financing} waterfall={waterfall} />
+      {shareModalOpen && project && !project._shared && <ShareModal project={project} up={up} lang={lang} user={user} onClose={()=>setShareModalOpen(false)} />}
     </div>
   );
 }
@@ -4212,7 +4282,7 @@ function FeaturesGrid({ lang }) {
 // ═══════════════════════════════════════════════════════════════
 // LANDING PAGE (before sign-in: split screen - features + auth)
 // ═══════════════════════════════════════════════════════════════
-function LandingPage({ onSignIn, lang, setLang }) {
+function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
   const ar = lang === "ar";
   const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
@@ -4255,6 +4325,14 @@ function LandingPage({ onSignIn, lang, setLang }) {
           {isMobile && <div style={{fontSize:13,color:"#6b7080",marginBottom:4}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>}
           <div style={{fontSize:12,color:"#6b7080"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
         </div>
+        {/* Pending share invite banner */}
+        {pendingShare && (
+          <div style={{background:"#0c1a3a",border:"1px solid #1e3a5f",borderRadius:10,padding:"14px 16px",marginBottom:18,textAlign:"center"}}>
+            <div style={{fontSize:14,marginBottom:6}}>📬</div>
+            <div style={{fontSize:13,fontWeight:600,color:"#60a5fa",marginBottom:4}}>{ar?"تمت دعوتك لمشروع مشترك":"You've been invited to a shared project"}</div>
+            <div style={{fontSize:11,color:"#9ca3af",lineHeight:1.5}}>{ar?"سجّل دخول أو أنشئ حساب جديد عشان تشوف المشروع":"Sign in or create an account to access the project"}</div>
+          </div>
+        )}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <div>
             <label style={{fontSize:11,color:"#6b7080",marginBottom:4,display:"block"}}>{ar?"البريد الإلكتروني":"Email"}</label>
@@ -4356,6 +4434,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                 </div>
                 <span style={{fontSize:isMobile?9:10,padding:"3px 8px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af",flexShrink:0}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة":"View"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
                 {!isMobile && !p._shared && <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>}
+                {!p._shared && <button onClick={e=>{e.stopPropagation();const url=`${window.location.origin}?s=${p.id}&o=${user?.id||""}`;navigator.clipboard?.writeText(url).then(()=>{e.currentTarget.textContent="✓";setTimeout(()=>{e.currentTarget.textContent="🔗";},1500);});}} style={{...btnSm,background:"#0a1a3a",color:"#60a5fa",padding:"4px 10px",fontSize:13}} title={lang==="ar"?"نسخ رابط المشاركة":"Copy share link"}>🔗</button>}
                 {!p._shared && (confirmDel===p.id ? (
                   <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>{onDel(p.id);setConfirmDel(null);}} style={{...btnSm,background:"#7f1d1d",color:"#fca5a5"}}>Yes</button>
@@ -4371,6 +4450,145 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
       </div>
     </div>
   );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHARE MODAL — Manage shared users, copy link, generate invite
+// ═══════════════════════════════════════════════════════════════
+function ShareModal({ project, up, lang, user, onClose }) {
+  const ar = lang === "ar";
+  const isMobile = useIsMobile();
+  const [email, setEmail] = useState("");
+  const [perm, setPerm] = useState("view");
+  const [copied, setCopied] = useState("");
+  const [error, setError] = useState("");
+  const shared = (project?.sharedWith || []).map(e => typeof e === "string" ? { email: e, permission: "edit" } : e);
+  
+  const shareUrl = typeof window !== "undefined" 
+    ? `${window.location.origin}?s=${project?.id || ""}&o=${user?.id || ""}` 
+    : "";
+
+  const addUser = () => {
+    setError("");
+    const em = email.toLowerCase().trim();
+    if (!em || !em.includes("@")) { setError(ar ? "أدخل بريد صحيح" : "Enter a valid email"); return; }
+    if (em === user?.email?.toLowerCase()) { setError(ar ? "لا يمكن مشاركة مع نفسك" : "Cannot share with yourself"); return; }
+    if (shared.some(e => e.email.toLowerCase() === em)) { setError(ar ? "مشارك مسبقاً" : "Already shared"); return; }
+    up({ sharedWith: [...shared, { email: em, permission: perm, addedAt: new Date().toISOString() }] });
+    setEmail("");
+  };
+
+  const removeUser = (em) => {
+    up({ sharedWith: shared.filter(e => e.email.toLowerCase() !== em.toLowerCase()) });
+  };
+
+  const changePerm = (em, newPerm) => {
+    up({ sharedWith: shared.map(e => e.email.toLowerCase() === em.toLowerCase() ? { ...e, permission: newPerm } : e) });
+  };
+
+  const copyLink = () => {
+    navigator.clipboard?.writeText(shareUrl).then(() => { setCopied("link"); setTimeout(() => setCopied(""), 2000); });
+  };
+
+  const copyInvite = () => {
+    const projName = project?.name || "—";
+    const assets = (project?.assets || []).length;
+    const phases = [...new Set((project?.assets || []).map(a => a.phase))].length;
+    const text = ar
+      ? `مرحباً،\nأود مشاركة نموذج مالي معك على منصة ZAN Financial Modeler.\n\n📋 المشروع: ${projName}\n📊 عدد الأصول: ${assets} | المراحل: ${phases}\n\n🔗 رابط الوصول:\n${shareUrl}\n\nإذا ما عندك حساب، سجّل من نفس الرابط وبيظهر لك المشروع تلقائي.`
+      : `Hi,\nI'd like to share a financial model with you on ZAN Financial Modeler.\n\n📋 Project: ${projName}\n📊 Assets: ${assets} | Phases: ${phases}\n\n🔗 Access link:\n${shareUrl}\n\nIf you don't have an account, register from the same link and the project will appear automatically.`;
+    navigator.clipboard?.writeText(text).then(() => { setCopied("invite"); setTimeout(() => setCopied(""), 2000); });
+  };
+
+  const sty = {
+    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, backdropFilter: "blur(2px)" },
+    modal: { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: isMobile ? "94vw" : 480, maxWidth: "94vw", maxHeight: "85vh", background: "#fff", borderRadius: 14, boxShadow: "0 24px 80px rgba(0,0,0,0.2)", zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden" },
+    header: { padding: "18px 22px 14px", borderBottom: "1px solid #e5e7ec", display: "flex", alignItems: "center", gap: 10 },
+    body: { flex: 1, overflow: "auto", padding: "16px 22px" },
+    input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #e5e7ec", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box", minHeight: 44 },
+    btn: { padding: "10px 18px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 44, display: "flex", alignItems: "center", gap: 6 },
+  };
+
+  return (<>
+    <div onClick={onClose} style={sty.overlay} />
+    <div style={sty.modal}>
+      {/* Header */}
+      <div style={sty.header}>
+        <span style={{ fontSize: 18 }}>📤</span>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>{ar ? "مشاركة المشروع" : "Share Project"}</span>
+        <button onClick={onClose} style={{ ...sty.btn, background: "#f0f1f5", color: "#6b7080", padding: "6px 12px", fontSize: 16 }}>✕</button>
+      </div>
+
+      <div style={sty.body}>
+        {/* ── Copy Link Section ── */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{ar ? "رابط المشروع" : "Project Link"}</div>
+          <div style={{ display: "flex", gap: 8, alignItems: isMobile ? "stretch" : "center", flexDirection: isMobile ? "column" : "row" }}>
+            <div style={{ flex: 1, padding: "10px 12px", background: "#f8f9fb", borderRadius: 8, border: "1px solid #e5e7ec", fontSize: 11, color: "#6b7080", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", direction: "ltr", minHeight: 44, display: "flex", alignItems: "center" }}>{shareUrl}</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={copyLink} style={{ ...sty.btn, background: copied === "link" ? "#16a34a" : "#2563eb", color: "#fff", whiteSpace: "nowrap" }}>
+                {copied === "link" ? "✓" : "🔗"} {copied === "link" ? (ar ? "تم النسخ" : "Copied!") : (ar ? "نسخ الرابط" : "Copy Link")}
+              </button>
+              <button onClick={copyInvite} style={{ ...sty.btn, background: copied === "invite" ? "#16a34a" : "#f0f4ff", color: copied === "invite" ? "#fff" : "#2563eb", border: "1px solid #bfdbfe", whiteSpace: "nowrap" }}>
+                {copied === "invite" ? "✓" : "💬"} {copied === "invite" ? (ar ? "تم" : "Done") : (ar ? "نص دعوة" : "Invite Text")}
+              </button>
+            </div>
+          </div>
+          <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6 }}>{ar ? "أي شخص عنده الرابط ومسجل بالمنصة يقدر يفتح المشروع. غير المسجلين يطلب منهم التسجيل أول." : "Anyone with this link who is registered can access the project. Unregistered users will be prompted to sign up."}</div>
+        </div>
+
+        {/* ── Add User ── */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{ar ? "إضافة مشارك" : "Add Person"}</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={ar ? "البريد الإلكتروني" : "Email address"} 
+              style={sty.input} onKeyDown={e => e.key === "Enter" && addUser()} />
+            <select value={perm} onChange={e => setPerm(e.target.value)} 
+              style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #e5e7ec", fontSize: 12, fontFamily: "inherit", background: "#fff", cursor: "pointer", minHeight: 44 }}>
+              <option value="view">{ar ? "قراءة فقط" : "View only"}</option>
+              <option value="edit">{ar ? "تعديل" : "Can edit"}</option>
+            </select>
+            <button onClick={addUser} style={{ ...sty.btn, background: "#2563eb", color: "#fff" }}>
+              {ar ? "أضف" : "Add"}
+            </button>
+          </div>
+          {error && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 6 }}>{error}</div>}
+        </div>
+
+        {/* ── Shared Users List ── */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+            {ar ? "المشاركون" : "Shared With"} {shared.length > 0 && <span style={{ fontSize: 10, background: "#dbeafe", color: "#2563eb", padding: "1px 6px", borderRadius: 8, marginInlineStart: 6 }}>{shared.length}</span>}
+          </div>
+          {shared.length === 0 ? (
+            <div style={{ padding: "20px 0", textAlign: "center", color: "#9ca3af", fontSize: 12 }}>
+              {ar ? "لم تتم المشاركة مع أحد بعد" : "Not shared with anyone yet"}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {shared.map((s, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#f8f9fb", borderRadius: 8, border: "1px solid #e5e7ec" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#2563eb", fontWeight: 600, flexShrink: 0 }}>
+                    {(s.email || "?")[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#1a1d23", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.email}</div>
+                    {s.addedAt && <div style={{ fontSize: 10, color: "#9ca3af" }}>{new Date(s.addedAt).toLocaleDateString()}</div>}
+                  </div>
+                  <select value={s.permission || "edit"} onChange={e => changePerm(s.email, e.target.value)} 
+                    style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #e5e7ec", fontSize: 11, fontFamily: "inherit", background: s.permission === "edit" ? "#dbeafe" : "#fef3c7", color: s.permission === "edit" ? "#1d4ed8" : "#92400e", cursor: "pointer", fontWeight: 600, minHeight: 36 }}>
+                    <option value="view">{ar ? "قراءة" : "View"}</option>
+                    <option value="edit">{ar ? "تعديل" : "Edit"}</option>
+                  </select>
+                  <button onClick={() => removeUser(s.email)} style={{ ...btnSm, background: "#fef2f2", color: "#ef4444", padding: "6px 10px", minHeight: 36 }} title={ar ? "إزالة" : "Remove"}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </>);
 }
 
 function StatusBadge({status,onChange}) {
@@ -5481,6 +5699,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
 // ═══════════════════════════════════════════════════════════════
 function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang, incentivesResult, setActiveTab }) {
   if (!project || !results) return null;
+  const isMobile = useIsMobile();
   const c = results.consolidated;
   const cur = project.currency || "SAR";
   const phases = Object.entries(results.phaseResults);
@@ -5558,7 +5777,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
 
   return (<div>
     {/* ═══ SECTION 1: Decision Summary ═══ */}
-    <div style={{background:`linear-gradient(135deg, ${healthColor}08, ${healthColor}18)`,borderRadius:14,border:`2px solid ${healthColor}30`,padding:"22px 26px",marginBottom:20,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+    <div style={{background:`linear-gradient(135deg, ${healthColor}08, ${healthColor}18)`,borderRadius:14,border:`2px solid ${healthColor}30`,padding:isMobile?"16px 14px":"22px 26px",marginBottom:20,display:"flex",flexDirection:isMobile?"column":"row",alignItems:isMobile?"stretch":"center",gap:isMobile?14:20,flexWrap:"wrap"}}>
       {/* Health badge */}
       <div style={{textAlign:"center",minWidth:90}}>
         <div style={{width:72,height:72,borderRadius:"50%",background:`${healthColor}18`,border:`3px solid ${healthColor}`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 6px"}}>
@@ -5596,7 +5815,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     </div>
 
     {/* ═══ SECTION 2: Sources & Uses + Key Metrics ═══ */}
-    <div style={{display:"grid",gridTemplateColumns:f&&f.mode!=="self"?"1fr 1fr":"1fr",gap:14,marginBottom:20}}>
+    <div style={{display:"grid",gridTemplateColumns:f&&f.mode!=="self"?(isMobile?"1fr":"1fr 1fr"):"1fr",gap:14,marginBottom:20}}>
       {/* Sources & Uses */}
       {f && f.mode !== "self" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 20px"}}>
@@ -5740,7 +5959,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
       <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
         <span style={{fontSize:15}}>🏗</span> {t.phaseSummary}
       </div>
-      <div style={{overflowX:"auto"}}><table style={tblStyle}><thead><tr>
+      <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={tblStyle}><thead><tr>
         {(ar?["المرحلة","الأصول","إجمالي التكاليف","إجمالي الإيرادات","إيجار الأرض","صافي التدفق","IRR","نسبة الأرض"]:["Phase","Assets","Total CAPEX","Total Income","Land Rent","Net CF","IRR","Land %"]).map(h=><th key={h} style={thSt}>{h}</th>)}
       </tr></thead><tbody>
         {phases.map(([n,pr])=>{
@@ -5811,7 +6030,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
       <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
         <span style={{fontSize:15}}>🏢</span> {t.assetOverview} ({results.assetSchedules.length})
       </div>
-      <div style={{overflowX:"auto"}}><table style={tblStyle}><thead><tr>
+      <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={tblStyle}><thead><tr>
         {(ar?["#","الأصل","المرحلة","المساحة","التكاليف",`الإيرادات (${project.horizon}ع)`,"النوع"]:["#","Asset","Phase","GFA","CAPEX",`Income (${project.horizon}yr)`,"Type"]).map(h=><th key={h} style={thSt}>{h}</th>)}
       </tr></thead><tbody>
         {results.assetSchedules.map((a,i)=><tr key={a.id||i}>
@@ -5854,6 +6073,7 @@ function KPI({label,value,sub,color,tip}) {
 // ═══════════════════════════════════════════════════════════════
 function CashFlowView({ project, results, t, incentivesResult }) {
   if (!project||!results) return <div style={{color:"#9ca3af"}}>Add assets to see projections.</div>;
+  const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
   const {horizon,startYear}=results;
   const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
@@ -5929,7 +6149,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
       {ar ? "هذه المؤشرات قبل احتساب طريقة التمويل وآلية التخارج - ستتغير بعد تحديد التمويل" : "Pre-financing & pre-exit metrics — will change after financing mode and exit strategy are set"}
     </div>
     {/* NPV/IRR Summary */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))",gap:10,marginBottom:16}}>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(130px, 1fr))",gap:10,marginBottom:16}}>
       {[
         {label:ar?"IRR المشروع (قبل التمويل)":"Unlevered IRR",value:c.irr!==null?fmtPct(c.irr*100):"N/A",color:c.irr>0.12?"#16a34a":"#f59e0b"},
         {label:"NPV @10%",value:fmtM(c.npv10),color:c.npv10>0?"#2563eb":"#ef4444"},
@@ -5967,7 +6187,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600,display:"flex",justifyContent:"space-between"}}>
           <span>{name}</span><span style={{color:"#6b7080",fontWeight:400,fontSize:11}}>{ar?"IRR قبل التمويل":"Unlevered IRR"}: <strong style={{color:pr.irr!==null?"#2563eb":"#9ca3af"}}>{pr.irr!==null?fmtPct(pr.irr*100):"—"}</strong></span>
         </div>
-        <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
+        <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
           <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:150}}>{t.lineItem}</th>
           <th style={{...thSt,textAlign:"right"}}>{t.total}</th>
           {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:75}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{startYear+y}</span></th>)}
@@ -5989,7 +6209,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
       <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,background:"#f0f4ff",display:"flex",justifyContent:"space-between"}}>
         <span>{t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>{ar?"IRR قبل التمويل":"Unlevered IRR"}: <strong style={{color:"#2563eb"}}>{(incentivesResult&&incentivesResult.totalIncentiveValue>0&&incentivesResult.adjustedIRR!==null)?fmtPct(incentivesResult.adjustedIRR*100):c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
       </div>
-      <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
+      <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
         <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:150}}>{t.lineItem}</th>
         <th style={{...thSt,textAlign:"right"}}>{t.total}</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:75}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{startYear+y}</span></th>)}
@@ -6278,6 +6498,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
 }
 
 function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, checks, lang }) {
+  const isMobile = useIsMobile();
   const reportRef = useRef(null);
   const [activeReport, setActiveReport] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
@@ -6698,6 +6919,7 @@ function runScenario(project, overrides) {
 }
 
 function ScenariosView({ project, results, financing, waterfall, lang }) {
+  const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState("compare");
   const [sensRow, setSensRow] = useState("rentEscalation");
   const [sensCol, setSensCol] = useState("softCostPct");
@@ -7144,6 +7366,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
 // INCENTIVES VIEW
 // ═══════════════════════════════════════════════════════════════
 function IncentivesView({ project, results, incentivesResult, financing, lang, up }) {
+  const isMobile = useIsMobile();
   if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
   const ir = incentivesResult;
   const inc = project.incentives || {};
