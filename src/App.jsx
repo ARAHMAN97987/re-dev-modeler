@@ -1856,6 +1856,14 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : constrEnd + (project.debtGrace ?? 3) + 2);
   const operYears = exitYr - constrStart + 1;
 
+  // Fee period end: fund has a defined life even in hold strategy
+  // For sale: fees run until exit year
+  // For hold: fees run until constrEnd + grace + 2 (same auto logic as sale)
+  // This prevents fees from running 50 years in hold mode
+  const feeEndYr = exitStrategy === "hold"
+    ? constrEnd + (project.debtGrace ?? 3) + 2
+    : exitYr;
+
   // Subscription fee at fund start (not construction start)
   if (fundStartIdx < h) feeSub[fundStartIdx] = subFee;
   // Structuring fee at fund start
@@ -1865,10 +1873,10 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   for (let y = constrStart; y <= constrEnd && y < h; y++) {
     if (c.totalCapex > 0) feeDev[y] = devFeeTotal * (c.capex[y] / c.totalCapex);
   }
-  // Management + custody fees from fund start to exit
+  // Management + custody fees from fund start to fee period end
   // ZAN formula: mgmtFee[y] = ABS(cumCAPEX from fund start to y) × rate
   let cumCapex = 0;
-  for (let y = fundStartIdx; y <= exitYr && y < h; y++) {
+  for (let y = fundStartIdx; y <= feeEndYr && y < h; y++) {
     cumCapex += Math.abs(c.capex[y] || 0);
     if (isFund) {
       if (mgmtFeeBase === "equity") {
