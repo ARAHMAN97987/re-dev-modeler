@@ -1596,10 +1596,14 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const interest = new Array(h).fill(0);
   const debtService = new Array(h).fill(0);
 
-  // H10: Grace basis - "firstDraw" (first drawdown year) or "cod" (completion of development)
+  // H10: Grace basis - "firstDraw" / "cod" / "fundStart" (ZAN: from fund start year)
   const graceBasis = project.graceBasis || "cod";
   let graceStartIdx = constrEnd; // default: COD
-  if (graceBasis === "firstDraw") {
+  if (graceBasis === "fundStart") {
+    // ZAN method: grace counts from fund start year
+    const fundStartYr = (project.fundStartYear || 0) > 0 ? project.fundStartYear - startYear : Math.max(0, constrEnd - 3);
+    graceStartIdx = fundStartYr;
+  } else if (graceBasis === "firstDraw") {
     for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { graceStartIdx = y; break; } }
   } else if (project.debtGraceStartYear > 0) {
     graceStartIdx = Math.max(0, project.debtGraceStartYear - startYear);
@@ -2004,19 +2008,22 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const lpIRR = calcIRR(lpNetCF);
   const gpIRR = calcIRR(gpNetCF);
   const projIRR = c.irr;
-  // MOIC = Total Distributions / Equity Invested
-  // FIX#8: When fees are capitalized, invested base includes fee capital calls
+  // MOIC: Total Distributions / Paid-In Capital (industry standard default)
+  // Paid-In = actual equity calls × share (cash actually transferred)
+  // Committed MOIC = Distributions / Original Equity (secondary metric)
   const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
   const lpNetDist = lpTotalDist - lpLandRentTotal;
   const gpNetDist = gpTotalDist - gpLandRentTotal;
   const lpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
   const gpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
-  const lpTotalInvested = feeTreatment === "capital" ? lpTotalCalled : lpEquity;
-  const gpTotalInvested = feeTreatment === "capital" ? gpTotalCalled : gpEquity;
-  const lpMOIC = lpTotalInvested > 0 ? lpNetDist / lpTotalInvested : 0;
-  const gpMOIC = gpTotalInvested > 0 ? gpNetDist / gpTotalInvested : 0;
-  // H13: DPI = Total Distributions / Total Equity Called (paid-in, includes fees)
+  // Default MOIC = Paid-In basis (actual cash contributed)
+  const lpMOIC = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
+  const gpMOIC = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
+  // Committed MOIC = Original equity commitment basis (secondary)
+  const lpCommittedMOIC = lpEquity > 0 ? lpNetDist / lpEquity : 0;
+  const gpCommittedMOIC = gpEquity > 0 ? gpNetDist / gpEquity : 0;
+  // H13: DPI = Total Distributions / Total Equity Called (same as paid-in MOIC for net dist)
   const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
 
@@ -2038,8 +2045,9 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
-    lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, lpDPI, gpDPI,
-    lpTotalInvested, gpTotalInvested, lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,
+    lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
+    lpTotalInvested: lpTotalCalled, gpTotalInvested: gpTotalCalled, // aliases for UI backward compat
+    lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,
     gpLandRentObligation, gpLandRentTotal, lpLandRentObligation, lpLandRentTotal,
     gpPaysLandRent, lpPaysLandRent, resolvedLandRentPayer,
     lpNPV10, lpNPV12, lpNPV14, gpNPV10, gpNPV12, gpNPV14,

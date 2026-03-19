@@ -429,9 +429,9 @@ suite('F10-computeWaterfall');
     if (!near(w.lpNetCF[y], -w.equityCalls[y]*w.lpPct + w.lpDist[y], TOL.MONEY_SMALL)) { ncfOk=false; break; }
   }
   t('LP netCF = -calls*lpPct + dist', ncfOk);
-  // K: MOIC
-  t('LP MOIC = dist/invested', near(w.lpMOIC, w.lpTotalDist/w.lpTotalInvested, 0.01));
-  t('GP MOIC = dist/invested', near(w.gpMOIC, w.gpTotalDist/w.gpTotalInvested, 0.01));
+  // K: MOIC = dist / paid-in (actual equity called × share)
+  t('LP MOIC = dist/paidIn', near(w.lpMOIC, w.lpNetDist/w.lpTotalCalled, 0.01));
+  t('GP MOIC = dist/paidIn', near(w.gpMOIC, w.gpNetDist/w.gpTotalCalled, 0.01));
 }
 
 // ── F10b: Waterfall oracle comparison ──
@@ -455,18 +455,17 @@ suite('F10b-WaterfallOracle');
   t('Oracle GP dist match', gpchk.ok, gpchk.msg);
 }
 
-// ── F10c: Fee treatment MOIC (FIX#8) ──
-suite('F10c-MOIC-FeeTreatment');
+// ── F10c: MOIC Paid-In vs Committed ──
+suite('F10c-MOIC-PaidInVsCommitted');
 {
   const r = E.computeProjectCashFlows(D2);
   const i = E.computeIncentives(D2, r);
   const f = E.computeFinancing(D2, r, i);
-  const wCap = E.computeWaterfall({...D2, feeTreatment:'capital'}, r, f, i);
-  const wExp = E.computeWaterfall({...D2, feeTreatment:'expense'}, r, f, i);
-  t('FIX8: Capital MOIC < Expense MOIC', wCap.lpMOIC < wExp.lpMOIC, `Cap=${wCap.lpMOIC.toFixed(2)} Exp=${wExp.lpMOIC.toFixed(2)}`);
-  // Under capital: invested = totalCalled * pct
-  const expInvCap = sumArr(wCap.equityCalls) * wCap.lpPct;
-  t('FIX8: LP invested = totalCalled*lpPct', near(wCap.lpTotalInvested, expInvCap, TOL.MONEY_LARGE));
+  const w = E.computeWaterfall(D2, r, f, i);
+  // Paid-in MOIC = dist / totalCalled
+  t('MOIC paid-in = dist/called', near(w.lpMOIC, w.lpNetDist / w.lpTotalCalled, 0.01));
+  // Committed MOIC = dist / original equity (may differ if not all equity called)
+  t('CommittedMOIC exists', w.lpCommittedMOIC > 0 && w.gpCommittedMOIC > 0);
 }
 
 // ── F11: getPhaseFinancing ──
@@ -638,7 +637,7 @@ suite('BH5-PhaseLandDuplication');
   t('FIX5: Phase land NOT duplicated', near(sumLandPP, 20000000, TOL.MONEY_LARGE), `Sum=${Math.round(sumLandPP)} vs 20M`);
 }
 
-// BH9: MOIC denominator with capital fees
+// BH9: MOIC denominator = paid-in capital
 suite('BH9-MOICDenominator');
 {
   const r = E.computeProjectCashFlows(D2);
@@ -647,7 +646,7 @@ suite('BH9-MOICDenominator');
   const w = E.computeWaterfall({...D2, feeTreatment:'capital'}, r, f, i);
   const totalCalled = sumArr(w.equityCalls);
   const lpCalled = totalCalled * w.lpPct;
-  t('FIX8: MOIC denom includes fees', near(w.lpTotalInvested, lpCalled, TOL.MONEY_LARGE), `Invested=${Math.round(w.lpTotalInvested)} Called=${Math.round(lpCalled)}`);
+  t('MOIC denom = paid-in (totalCalled*lpPct)', near(w.lpTotalCalled, lpCalled, TOL.MONEY_LARGE), `Called=${Math.round(w.lpTotalCalled)} Expected=${Math.round(lpCalled)}`);
 }
 
 // ═══════════════════════════════════════════════

@@ -227,11 +227,11 @@ if (capexYears.length > 1) {
   t("T6", "FIX6: Grant spend-weighted", true, "Single construction year");
 }
 
-// FIX#8: MOIC with capitalized fees
+// MOIC: paid-in basis (default) + committed MOIC exists
 const wCap = computeWaterfall({...JAZAN, feeTreatment:"capital"}, r, f, i);
-const wExp2 = computeWaterfall({...JAZAN, feeTreatment:"expense"}, r, f, i);
-t("T6", "FIX8: Capital MOIC < Expense MOIC", wCap.lpMOIC < wExp2.lpMOIC,
-  `Cap: ${wCap.lpMOIC.toFixed(2)}x, Exp: ${wExp2.lpMOIC.toFixed(2)}x`);
+t("T6", "MOIC paid-in > 0", wCap.lpMOIC > 0 && wCap.gpMOIC > 0,
+  `LP: ${wCap.lpMOIC.toFixed(2)}x, GP: ${wCap.gpMOIC.toFixed(2)}x`);
+t("T6", "CommittedMOIC exists", wCap.lpCommittedMOIC > 0 && wCap.gpCommittedMOIC > 0);
 
 // FIX#7: Land rent v2 — rent starts at MAX(grace, phase1 completion), not during construction
 const pLR = {...JAZAN, landRentGrace: 0, assets: JAZAN.assets.map(a => ({...a, constrStart: 3})),
