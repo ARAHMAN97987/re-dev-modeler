@@ -2626,8 +2626,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const cur = project.currency || "SAR";
 
   // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
-  const lpPayback = (() => { let cum = 0; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
-  const gpPayback = (() => { let cum = 0; for (let y = 0; y < h; y++) { cum += w.gpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
+  const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
+  const gpPayback = (() => { if ((w.gpTotalInvested||0) <= 0) return null; let cum = 0; for (let y = 0; y < h; y++) { cum += w.gpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
 
   // Exit details
   const exitProc = (w.exitProceeds || []).reduce((a, b) => a + b, 0);
@@ -2755,6 +2755,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const gpFeesTotal = gpIsManager ? _feeDev+_feeMgmt+_feeStruct+_feeCustody+_feePreEst+_feeSpv+_feeAuditor : _feeDev;
       const gpNetCash = (w.gpTotalDist||0) + gpFeesTotal - (w.gpLandRentTotal||0);
       const gpNetProfit = gpNetCash - (w.gpTotalInvested||0);
+      // Project-level land rent for this phase (shown when not GP-specific obligation)
+      const phaseLR = (() => {
+        if (selectedPhase !== "all") { const pr = results.phaseResults?.[selectedPhase]; return pr?.totalLandRent || 0; }
+        return results.consolidated?.totalLandRent || 0;
+      })();
+      const showLandRent = (w.gpLandRentTotal||0) > 0 || phaseLR > 0;
       const gpPctVal = w.gpPct||0;
       const lpPctVal = w.lpPct||0;
       const isLpOnlyPref = (w.prefAllocation||cfg.prefAllocation) === "lpOnly";
@@ -2798,7 +2804,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
                 <KR l="SPV" v={fmt(_feeSpv)} c="#a16207" />
                 <KR l={ar?"مراجع":"Auditor"} v={fmt(_feeAuditor)} c="#a16207" />
               </>}
-              {(w.gpLandRentTotal||0)>0 && <KR l={ar?"إيجار أرض":"Land Rent"} v={`(${fmt(w.gpLandRentTotal)})`} c="#ef4444" />}
+              {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (GP)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (GP)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
               <SecHd text={ar?"الملخص":"NET SUMMARY"} />
               <KR l={ar?"حصة GP":"GP Equity"} v={fmt(w.gpTotalInvested)} bold />
               <KR l={ar?"توزيعات الشلال":"Waterfall Dist"} v={fmt(w.gpTotalDist)} />
