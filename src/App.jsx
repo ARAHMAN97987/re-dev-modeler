@@ -2999,15 +2999,19 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       {/* Developer (GP) Economics */}
       <div style={{background:"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:"2px solid #3b82f6",padding:"16px 20px",marginBottom:fmFees>0?10:18}}>
         <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:12}}>{ar?"إجمالي عوائد المطور (GP)":"Developer Total Economics (GP)"}</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+
+        {/* Row 1: Income Sources */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
           <div>
             <div style={{fontSize:10,fontWeight:600,color:"#8b5cf6",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{ar?"قبعة المستثمر":"AS INVESTOR"}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:5,fontSize:12,marginBottom:12,maxWidth:420}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:5,fontSize:12}}>
               <span style={{color:"#6b7080"}}>{ar?"رد رأس المال (T1 × GP%)":"Capital Return (T1 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromROC)}</span>
               <span style={{color:"#6b7080"}}>{ar?"عائد تفضيلي (T2 × GP%)":"Pref Return (T2 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM(gpFromPref)}</span>
             </div>
+          </div>
+          <div>
             <div style={{fontSize:10,fontWeight:600,color:"#3b82f6",textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{ar?"قبعة المطور":"AS DEVELOPER"}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:5,fontSize:12,maxWidth:420}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:5,fontSize:12}}>
               <span style={{color:"#6b7080"}}>{ar?"تعويض المطور (T3)":"GP Catch-up (T3)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromCatchup)}</span>
               <span style={{color:"#6b7080"}}>{ar?"حصة الأرباح (T4)":"Profit Split (T4)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromSplit)}</span>
               <span style={{color:"#6b7080"}}>{ar?"رسوم التطوير":"Developer Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(devFee)}</span>
@@ -3016,15 +3020,21 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               {landRentPaid > 0 && <><span style={{color:"#ef4444",fontWeight:500}}>{ar?"إيجار الأرض (يدفعه GP)":"Land Rent (paid by GP)"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
             </div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"6px 20px",fontSize:12,alignContent:"start",maxWidth:420}}>
-            <span style={{color:"#6b7080"}}>{ar?"رأس مال المطور":"GP Equity"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>({fmtM(gpInvested)})</span>
-            <span style={{color:"#6b7080"}}>{ar?"توزيعات الشلال":"Waterfall Dist."}</span><span style={{textAlign:"right",fontWeight:500,color:"#16a34a"}}>{fmtM(gpDist)}</span>
-            <span style={{color:"#6b7080"}}>{ar?"رسوم مستلمة":"Fees Received"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(gpFees)}</span>
-            {landRentPaid > 0 && <><span style={{color:"#6b7080"}}>{ar?"إيجار الأرض":"Land Rent Paid"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
-            <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,fontWeight:700,fontSize:13}}>{ar?"صافي النقد":"Net Cash"}</span>
-            <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,textAlign:"right",fontWeight:800,fontSize:16,color:totalGPCash>=0?"#16a34a":"#ef4444"}}>{fmtM(totalGPCash)}</span>
-            <span style={{fontWeight:600}}>{ar?"صافي الربح":"Net Profit"}</span><span style={{textAlign:"right",fontWeight:700,color:netProfit>=0?"#16a34a":"#ef4444"}}>{fmtM(netProfit)}</span>
-            <span style={{fontWeight:600}}>{ar?"المضاعف الإجمالي":"Total Multiple"}</span><span style={{textAlign:"right",fontWeight:800,fontSize:14,color:totalMult>=1.5?"#16a34a":totalMult>=1?"#ca8a04":"#ef4444"}}>{totalMult.toFixed(2)}x</span>
+        </div>
+
+        {/* Row 2: Net Summary */}
+        <div style={{borderTop:"2px solid #1e40af22",paddingTop:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(6, auto)",gap:"0 28px",fontSize:12,alignItems:"end"}}>
+            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"رأس مال المطور":"GP Equity"}</div><div style={{fontWeight:600,color:"#ef4444"}}>({fmtM(gpInvested)})</div></div>
+            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"توزيعات الشلال":"Waterfall Dist."}</div><div style={{fontWeight:600,color:"#16a34a"}}>{fmtM(gpDist)}</div></div>
+            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"رسوم مستلمة":"Fees Received"}</div><div style={{fontWeight:600,color:"#2563eb"}}>{fmtM(gpFees)}</div></div>
+            {landRentPaid > 0 && <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"إيجار الأرض":"Land Rent"}</div><div style={{fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</div></div>}
+            <div style={{borderInlineStart:"2px solid #1e40af",paddingInlineStart:16}}><div style={{fontSize:10,color:"#1e40af",fontWeight:600,marginBottom:2}}>{ar?"صافي النقد":"Net Cash"}</div><div style={{fontWeight:800,fontSize:18,color:totalGPCash>=0?"#16a34a":"#ef4444"}}>{fmtM(totalGPCash)}</div></div>
+            <div><div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"صافي الربح":"Net Profit"}</div><div style={{fontWeight:700,color:netProfit>=0?"#16a34a":"#ef4444"}}>{fmtM(netProfit)}</div></div>
+          </div>
+          <div style={{marginTop:10,display:"inline-flex",alignItems:"center",gap:8,background:"#fff",borderRadius:8,padding:"6px 14px",border:"1px solid #bfdbfe"}}>
+            <span style={{fontSize:11,color:"#6b7080"}}>{ar?"المضاعف الإجمالي":"Total Multiple"}</span>
+            <span style={{fontSize:18,fontWeight:800,color:totalMult>=1.5?"#16a34a":totalMult>=1?"#ca8a04":"#ef4444"}}>{totalMult.toFixed(2)}x</span>
           </div>
         </div>
       </div>
