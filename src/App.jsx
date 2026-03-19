@@ -567,7 +567,7 @@ const defaultProject = () => ({
   annualMgmtFeePct: 0.9,
   custodyFeeAnnual: 130000,
   mgmtFeeBase: "deployed", // deployed (ZAN: cumCAPEX) | devCost | equity
-  feeTreatment: "capital", // H14: capital | expense
+  feeTreatment: "capital", // H14: capital (ROC+Pref) | rocOnly (ROC, no Pref) | expense (no ROC, no Pref)
   graceBasis: "cod", // H10: cod | firstDraw
   developerFeePct: 10,
   structuringFeePct: 0.1,
@@ -1983,21 +1983,29 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   let cumPrefPaid = 0;
   let cumPrefAccrued = 0;
   let cumGPCatchup = 0; // C5: Track cumulative GP catch-up
-  let cumFeesCalled = 0; // H14: Track fee portion of equity calls for expense treatment
+  let cumFeesCalled = 0; // H14: Track fee portion of equity calls
 
   for (let y = 0; y < h; y++) {
     cumEquityCalled += equityCalls[y];
     cumFeesCalled += unfundedFees[y]; // Track cumulative fees funded from equity
-    // H14: In "expense" mode, fees are NOT part of capital base (don't earn ROC + Pref)
-    // In "capital" mode (default), fees ARE invested capital (earn ROC + Pref)
-    const capitalBase = feeTreatment === "expense"
-      ? cumEquityCalled - cumFeesCalled  // Exclude fees from capital base
-      : cumEquityCalled;                 // Include fees (default ZAN behavior)
-    const unreturned = capitalBase - cumReturned;
+
+    // H14: Fee Treatment - 3 modes:
+    // "capital"  (ZAN default): fees in ROC + Pref (full invested capital)
+    // "rocOnly": fees in ROC (returned to LP) but NO Pref calculated on them
+    // "expense": fees excluded from ROC and Pref (gone, not returned)
+    const rocBase = feeTreatment === "expense"
+      ? cumEquityCalled - cumFeesCalled  // Exclude fees from ROC
+      : cumEquityCalled;                 // Include fees in ROC (capital + rocOnly)
+    const prefBase = (feeTreatment === "expense" || feeTreatment === "rocOnly")
+      ? cumEquityCalled - cumFeesCalled  // Exclude fees from Pref base
+      : cumEquityCalled;                 // Include fees in Pref (capital only)
+
+    const unreturned = rocBase - cumReturned;
     unreturnedOpen[y] = unreturned;
 
-    // Pref accrual on unreturned capital
-    const yearPref = unreturned * prefRate;
+    // Pref accrual on pref-eligible capital (may differ from ROC base)
+    const prefEligible = Math.max(0, prefBase - cumReturned);
+    const yearPref = prefEligible * prefRate;
     cumPrefAccrued += yearPref;
     prefAccrual[y] = yearPref;
     prefAccumulated[y] = cumPrefAccrued - cumPrefPaid;
@@ -2068,7 +2076,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
       gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
     }
 
-    unreturnedClose[y] = capitalBase - cumReturned;
+    unreturnedClose[y] = rocBase - cumReturned;
   }
 
   // LP Net Cash Flow: -equity calls (LP share) + distributions - land rent obligation
@@ -2628,7 +2636,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080"}}>{ar?"معاملة الرسوم":"Fee Treatment"}</span>
               <select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
-                <option value="capital">{ar?"رأسمال":"Capital"}</option><option value="expense">{ar?"مصروف":"Expense"}</option>
+                <option value="capital">{ar?"رأسمال":"Capital"}</option><option value="rocOnly">{ar?"استرداد فقط":"ROC Only"}</option><option value="expense">{ar?"مصروف":"Expense"}</option>
               </select>
             </div>
           </div>
@@ -2794,7 +2802,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           <span style={{color:"#8b5cf6"}}>LP ({fmtPct(w.lpPct*100)})</span><span style={{textAlign:"right"}}>{fmt(w.lpEquity)}</span>
           <span style={{color:"#3b82f6"}}>GP ({fmtPct(w.gpPct*100)})</span><span style={{textAlign:"right"}}>{fmt(w.gpEquity)}</span>
           <span style={{borderTop:"1px solid #e5e7ec",paddingTop:6,color:"#6b7080",marginTop:4}}>{ar?"سنة التخارج":"Exit Year"}</span><span style={{borderTop:"1px solid #e5e7ec",paddingTop:6,textAlign:"right",fontWeight:700,marginTop:4}}>{w.exitYear}</span>
-          <span style={{color:"#6b7080"}}>{ar?"معاملة الرسوم":"Fee Treatment"}</span><span style={{textAlign:"right",fontWeight:500}}>{project.feeTreatment==="expense"?(ar?"مصروف":"Expense"):(ar?"رأسمال":"Capital")}</span>
+          <span style={{color:"#6b7080"}}>{ar?"معاملة الرسوم":"Fee Treatment"}</span><span style={{textAlign:"right",fontWeight:500}}>{project.feeTreatment==="expense"?(ar?"مصروف":"Expense"):project.feeTreatment==="rocOnly"?(ar?"استرداد فقط":"ROC Only"):(ar?"رأسمال":"Capital")}</span>
         </div>
       </div>
     </div>
@@ -3183,7 +3191,7 @@ Year capital raising begins. Often one year before construction for setup costs"
 LP share of remaining profits after pref and catch-up. Usually 70-80%"><Inp type="number" value={cfg.lpProfitSplitPct} onChange={v=>upCfg({lpProfitSplitPct:v})} /></FL>
                   <FL label={ar?"تعويض المطور (GP Catch-up)":"Developer Catch-up (GP)"} tip="بعد حصول LP على Pref، يأخذ GP حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها
 After LP receives pref, GP takes a larger temporary share until agreed economics are reached"><Drp lang={lang} value={cfg.gpCatchup?"Y":"N"} onChange={v=>upCfg({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
-                  <FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip="الرسوم كرأسمال: تدخل في الحساب وتحصل على عائد مفضل\nالرسوم كمصروف: لا تدخل في رأس المال ولا تحصل على Pref\nCapital: fees earn ROC+Pref. Expense: fees outside capital base"><select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال (تحصل Pref)":"Capital (earns Pref)"}</option><option value="expense">{ar?"مصروف (خارج رأس المال)":"Expense (outside capital)"}</option></select></FL>
+                  <FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip={ar?"رأسمال: الرسوم تُسترد + تحصل عائد تفضيلي\nاسترداد فقط: تُسترد لكن بدون عائد تفضيلي\nمصروف: لا تُسترد ولا تحصل عائد":"Capital: fees earn ROC + Pref\nROC Only: fees returned but no Pref\nExpense: fees not returned, no Pref"}><select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال (استرداد + Pref)":"Capital (ROC + Pref)"}</option><option value="rocOnly">{ar?"استرداد فقط (بدون Pref)":"ROC Only (no Pref)"}</option><option value="expense">{ar?"مصروف (لا استرداد)":"Expense (no ROC)"}</option></select></FL>
                 </div>
                 {cfg.vehicleType==="fund"&&<>
                   <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />

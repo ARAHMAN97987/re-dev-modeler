@@ -161,7 +161,8 @@ M=run(makeProject({prefReturnPct:8,exitMultiple:25}));chk('prefReturn',M.w&&M.w.
 M=run(makeProject({carryPct:10,exitMultiple:25}));chk('carryPct',M.w&&M.w.gpTotalDist!==BW.w.gpTotalDist,'no impact');
 M=run(makeProject({lpProfitSplitPct:80,exitMultiple:25}));chk('lpSplit',M.w&&M.w.lpTotalDist!==BW.w.lpTotalDist,'no impact');
 M=run(makeProject({gpCatchup:false,exitMultiple:25}));chk('catchup=off',M.w&&M.w.tier3.reduce((a,b)=>a+b,0)===0,'T3 not 0');
-M=run(makeProject({feeTreatment:'expense',exitMultiple:25}));chk('feeTreat',M.w&&M.w.lpIRR!==BW.w.lpIRR,'no impact');
+M=run(makeProject({feeTreatment:'expense',exitMultiple:25}));chk('feeTreat=expense',M.w&&M.w.lpIRR!==BW.w.lpIRR,'no impact');
+M=run(makeProject({feeTreatment:'rocOnly',exitMultiple:25}));chk('feeTreat=rocOnly',M.w&&M.w.lpIRR!==BW.w.lpIRR,'no impact');
 M=run(makeProject({subscriptionFeePct:5}));chk('subFee',M.w&&M.w.totalFees>B.w.totalFees,'no impact');
 M=run(makeProject({annualMgmtFeePct:3}));chk('mgmtFee',M.w&&M.w.totalFees>B.w.totalFees*1.5,'no impact');
 M=run(makeProject({mgmtFeeBase:'devCost'}));chk('mgmtBase=dev',M.w&&M.w.totalFees!==B.w.totalFees,'no impact');
