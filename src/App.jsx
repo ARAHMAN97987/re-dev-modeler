@@ -4010,20 +4010,28 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           })()}
           </>)}
         </div>
-        <div style={{flex:1,overflow:"auto",padding:isMobile?10:(presentMode?24:18)}}>
+        <div style={{flex:1,overflow:"hidden",position:"relative"}}>
           {presentMode ? (
+            <div style={{overflow:"auto",height:"100%",padding:isMobile?10:24}}>
             <PresentationView project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} audienceView={audienceView} liveSliders={liveSliders} setLiveSliders={setLiveSliders} checks={checks} />
+            </div>
           ) : (<>
-          {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />}
-          {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
-          {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} up={up} lang={lang} />}
-          {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />}
-          {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />}
-          {activeTab==="scenarios"&&<ScenariosView project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />}
-          {activeTab==="market"&&<MarketView project={project} results={results} lang={lang} up={up} />}
-          {activeTab==="incentives"&&<IncentivesView project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />}
-          {activeTab==="cashflow"&&<CashFlowView project={project} results={results} t={t} incentivesResult={incentivesResult} />}
-          {activeTab==="checks"&&<ChecksView checks={checks} t={t} lang={lang} />}
+          {[
+            ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
+            ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />],
+            ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} up={up} lang={lang} />],
+            ["waterfall", <WaterfallView key="waterfall" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />],
+            ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
+            ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />],
+            ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],
+            ["incentives", <IncentivesView key="incentives" project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />],
+            ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} />],
+            ["checks", <ChecksView key="checks" checks={checks} t={t} lang={lang} />],
+          ].map(([tabKey, tabContent]) => (
+            <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",overflow:"auto",height:"100%",padding:isMobile?10:18}}>
+              {tabContent}
+            </div>
+          ))}
           </>)}
         </div>
       </div>
