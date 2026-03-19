@@ -2572,7 +2572,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
           : p)
       }))
-    : up) : null;
+    : (fields) => up(prev => ({
+        ...fields,
+        phases: (prev.phases||[]).map(p => p.financing
+          ? { ...p, financing: { ...p.financing, ...fields } }
+          : p)
+      }))) : null;
 
   const h = results.horizon;
   const sy = results.startYear;
@@ -3328,7 +3333,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
           : p)
       }))
-    : up;
+    : (fields) => up(prev => ({
+        ...fields,
+        // Propagate to ALL phases so per-phase overrides don't mask the change
+        phases: (prev.phases||[]).map(p => p.financing
+          ? { ...p, financing: { ...p.financing, ...fields } }
+          : p)
+      }));
   const copyFromPhase = (sourceName) => {
     const source = getPhaseFinancing(project, sourceName);
     upCfg({ ...source });
