@@ -18,18 +18,18 @@ class AppErrorBoundary extends Component {
     if (this.state.hasError) {
       const isAr = document.documentElement.lang === "ar";
       return (
-        <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif",color:"#d0d4dc"}}>
+        <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0B2341",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif",color:"#d0d4dc"}}>
           <div style={{textAlign:"center",maxWidth:460,padding:32}}>
-            <div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2,marginBottom:8}}>ZAN</div>
+            <div style={{fontSize:28,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",marginBottom:8}}>زان</div>
             <div style={{fontSize:16,fontWeight:600,color:"#f87171",marginBottom:16}}>{isAr?"حدث خطأ غير متوقع":"An unexpected error occurred"}</div>
             <div style={{fontSize:12,color:"#6b7080",marginBottom:24,lineHeight:1.6}}>{isAr?"يمكنك إعادة المحاولة أو تحميل الصفحة من جديد. بياناتك محفوظة.":"You can retry or reload the page. Your data is saved."}</div>
             <div style={{display:"flex",gap:12,justifyContent:"center"}}>
               <button onClick={()=>this.setState({hasError:false,error:null})} style={{padding:"10px 24px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"إعادة المحاولة":"Retry"}</button>
-              <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"#1e2230",color:"#d0d4dc",border:"1px solid #282d3a",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"تحديث الصفحة":"Reload Page"}</button>
+              <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"#163050",color:"#d0d4dc",border:"1px solid #1a3a5a",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"تحديث الصفحة":"Reload Page"}</button>
             </div>
             <details style={{marginTop:24,textAlign:"start"}}>
               <summary style={{fontSize:10,color:"#4b5060",cursor:"pointer"}}>{isAr?"تفاصيل الخطأ":"Error details"}</summary>
-              <pre style={{fontSize:10,color:"#6b7080",background:"#161a24",padding:12,borderRadius:6,marginTop:8,overflow:"auto",maxHeight:120,whiteSpace:"pre-wrap"}}>{this.state.error?.message || "Unknown error"}{"\n"}{this.state.error?.stack?.split("\n").slice(0,4).join("\n")}</pre>
+              <pre style={{fontSize:10,color:"#6b7080",background:"#0F2D4F",padding:12,borderRadius:6,marginTop:8,overflow:"auto",maxHeight:120,whiteSpace:"pre-wrap"}}>{this.state.error?.message || "Unknown error"}{"\n"}{this.state.error?.stack?.split("\n").slice(0,4).join("\n")}</pre>
             </details>
           </div>
         </div>
@@ -3913,14 +3913,14 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); };
 
-  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
+  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0B2341",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#2EC4B6",letterSpacing:2}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
   if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
-  if (!project) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#f87171",letterSpacing:2}}>!</div><div style={{fontSize:14,color:"#d0d4dc",marginTop:8}}>{lang==="ar"?"لم يتم تحميل المشروع":"Project failed to load"}</div><button onClick={goBack} style={{marginTop:16,padding:"8px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{lang==="ar"?"رجوع":"Go Back"}</button></div></div>;
+  if (!project) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0B2341",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#f87171",letterSpacing:2}}>!</div><div style={{fontSize:14,color:"#d0d4dc",marginTop:8}}>{lang==="ar"?"لم يتم تحميل المشروع":"Project failed to load"}</div><button onClick={goBack} style={{marginTop:16,padding:"8px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{lang==="ar"?"رجوع":"Go Back"}</button></div></div>;
 
   const dir = lang === "ar" ? "rtl" : "ltr";
 
   return (
-    <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:"#f8f9fb",color:"#1a1d23",fontSize:13}}>
+    <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"'IBM Plex Sans Arabic','Tajawal','Segoe UI',system-ui,sans-serif",background:"#f8f9fb",color:"#1a1d23",fontSize:13}}>
       <style>{`
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -3978,11 +3978,11 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
       {sidebarOpen && !presentMode && (
         <>
         {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:90,backdropFilter:"blur(2px)"}} />}
-        <div className="sidebar-slide" style={{width:isMobile?"88vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?400:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.4)"}:{})}}>
-          <div style={{padding:isMobile?"12px 14px":"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
-            <div style={{flex:1}}><div style={{fontSize:10,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>ZAN Financial Modeler</div></div>
+        <div className="sidebar-slide" style={{width:isMobile?"88vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?400:340,background:"#0B2341",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.4)"}:{})}}>
+          <div style={{padding:isMobile?"12px 14px":"14px 16px",borderBottom:"1px solid #163050",display:"flex",alignItems:"center",gap:8}}>
+            <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>زان</span><span style={{width:1,height:18,background:"#2EC4B6",opacity:0.5}} /><span style={{fontSize:9,color:"#2EC4B6",lineHeight:1.3,fontWeight:300}}>{lang==="ar"?"النمذجة":"Financial"}<br/>{lang==="ar"?"المالية":"Modeler"}</span></div>
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#0a2a1a":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
-            {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"#1e2230",border:"none",borderRadius:6,color:"#9ca3af",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
+            {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"#163050",border:"none",borderRadius:6,color:"#9ca3af",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
           </div>
           <div ref={sidebarRef} style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
             <ControlPanel project={project} up={up} t={t} lang={lang} results={results} />
@@ -4222,7 +4222,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
   const canNext = step === 0 ? (project.name && project.name !== "New Project") : true;
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif"}}>
       <div style={{background:"#fff",borderRadius:20,width:520,maxWidth:"94vw",padding:0,boxShadow:"0 24px 80px rgba(0,0,0,0.2)",overflow:"hidden"}}>
         {/* Progress */}
         <div style={{padding:"20px 28px 0",display:"flex",gap:6}}>
@@ -4268,7 +4268,7 @@ function FeaturesGrid({ lang }) {
   return (
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))",gap:16}}>
       {features.map((f, i) => (
-        <div key={i} style={{background:"#161a24",borderRadius:12,border:"1px solid #1e2230",padding:"20px 18px",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=f.color+"60";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.transform="translateY(0)";}}>
+        <div key={i} style={{background:"#0F2D4F",borderRadius:12,border:"1px solid #163050",padding:"20px 18px",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=f.color+"60";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#163050";e.currentTarget.style.transform="translateY(0)";}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
             <div style={{width:40,height:40,borderRadius:10,background:f.color+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{f.icon}</div>
             <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>{f.title}</div>
@@ -4301,63 +4301,102 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
     setLoading(false);
   };
 
+  const WATERFRONT_IMG = "https://files.manuscdn.com/user_upload_by_module/session_file/310419663027980795/PfUcTsRAscFnLMXv.png";
+
   return (
-    <div dir={ar?"rtl":"ltr"} style={{minHeight:"100vh",display:"flex",flexDirection:isMobile?"column":"row",fontFamily:"'DM Sans',system-ui,sans-serif",background:"#0f1117"}}>
-      {/* ── Features (hidden on mobile) ── */}
+    <div dir={ar?"rtl":"ltr"} style={{minHeight:"100vh",display:"flex",flexDirection:isMobile?"column":"row",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif",background:"#0B2341",position:"relative"}}>
+      {/* ── Left: Hero with Waterfront Image ── */}
       {!isMobile && (
-      <div style={{flex:1,padding:"48px 40px",display:"flex",flexDirection:"column",justifyContent:"center",overflowY:"auto"}}>
-        <div style={{maxWidth:600}}>
-          <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Destination Development</div>
-          <div style={{fontSize:32,fontWeight:800,color:"#fff",lineHeight:1.2,marginBottom:8}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
-          <div style={{fontSize:14,color:"#6b7080",marginBottom:32,lineHeight:1.6}}>{ar?"منصة نمذجة مالية احترافية لمشاريع التطوير العقاري. صُممت للسوق السعودي.":"Professional financial modeling platform for real estate development projects. Built for the Saudi market."}</div>
-          <FeaturesGrid lang={lang} />
-          <div style={{marginTop:32,display:"flex",gap:16,fontSize:11,color:"#4b5060"}}>
-            <span>📐 {ar?"5 مراحل نمذجة":"5 modeling phases"}</span>
-            <span>🔢 {ar?"50+ سنة افتراضات":"50+ year projections"}</span>
-            <span>🤖 {ar?"مساعد AI مدمج":"Built-in AI assistant"}</span>
+      <div style={{flex:1,position:"relative",overflow:"hidden",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+        {/* Background Image */}
+        <img src={WATERFRONT_IMG} alt="ZAN Waterfront" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} />
+        {/* Overlay */}
+        <div style={{position:"absolute",inset:0,background:ar?"linear-gradient(to left, #0B2341 0%, rgba(11,35,65,0.85) 40%, rgba(11,35,65,0.5) 100%)":"linear-gradient(to right, #0B2341 0%, rgba(11,35,65,0.85) 40%, rgba(11,35,65,0.5) 100%)"}} />
+        {/* Dot pattern overlay */}
+        <div style={{position:"absolute",inset:0,opacity:0.04,backgroundImage:"radial-gradient(circle at 2px 2px, white 1px, transparent 0)",backgroundSize:"40px 40px"}} />
+        {/* Content */}
+        <div style={{position:"relative",zIndex:1,padding:"48px 48px"}}>
+          <div style={{maxWidth:560}}>
+            {/* Badge */}
+            <div style={{display:"inline-block",padding:"6px 16px",background:"rgba(46,196,182,0.12)",border:"1px solid rgba(46,196,182,0.25)",borderRadius:20,marginBottom:20}}>
+              <span style={{fontSize:12,color:"#2EC4B6",fontWeight:500}}>{ar?"شركة زان لتطوير الوجهات":"Zan Destination Development"}</span>
+            </div>
+            {/* Logo */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+              <span style={{fontSize:48,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",letterSpacing:-1}}>زان</span>
+              <span style={{width:1,height:32,background:"rgba(46,196,182,0.4)"}} />
+              <span style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.4,fontWeight:300}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+            </div>
+            {/* Title */}
+            <h1 style={{fontSize:36,fontWeight:900,color:"#fff",lineHeight:1.15,marginBottom:10,fontFamily:"'Tajawal',sans-serif"}}>
+              {ar?"منصة النمذجة المالية":"Financial Modeling"}<br/>
+              <span style={{color:"#C8A96E"}}>{ar?"للتطوير العقاري":"for Real Estate"}</span>
+            </h1>
+            <p style={{fontSize:15,color:"rgba(255,255,255,0.55)",lineHeight:1.7,marginBottom:28,maxWidth:440}}>
+              {ar?"صُممت للسوق السعودي. نمذجة مالية متقدمة لمشاريع التطوير العقاري بجميع أنواعها.":"Built for the Saudi market. Advanced financial modeling for all types of real estate development projects."}
+            </p>
+            {/* Feature badges */}
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {[
+                {icon:"📐",text:ar?"5 محركات نمذجة":"5 Engine Modules"},
+                {icon:"📊",text:ar?"50+ سنة افتراضات":"50+ Year Projections"},
+                {icon:"🤖",text:ar?"مساعد AI مدمج":"Built-in AI"},
+              ].map((f,i) => (
+                <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:"rgba(255,255,255,0.06)",backdropFilter:"blur(8px)",borderRadius:20,border:"1px solid rgba(255,255,255,0.08)"}}>
+                  <span style={{fontSize:12}}>{f.icon}</span>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontWeight:500}}>{f.text}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
       )}
-      {/* ── Auth ── */}
-      <div style={{width:isMobile?"100%":420,minWidth:isMobile?"auto":380,flex:isMobile?1:"none",background:isMobile?"#0f1117":"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:isMobile?"32px 24px":"48px 36px",borderInlineStart:isMobile?"none":(ar?"none":"1px solid #1e2230"),borderInlineEnd:isMobile?"none":(ar?"1px solid #1e2230":"none")}}>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:28,fontWeight:700,color:"#5fbfbf",letterSpacing:2,marginBottom:4}}>ZAN</div>
-          {isMobile && <div style={{fontSize:13,color:"#6b7080",marginBottom:4}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>}
-          <div style={{fontSize:12,color:"#6b7080"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
+      {/* ── Right: Auth Form ── */}
+      <div style={{width:isMobile?"100%":420,minWidth:isMobile?"auto":380,flex:isMobile?1:"none",background:isMobile?"#0B2341":"#071829",display:"flex",flexDirection:"column",justifyContent:"center",padding:isMobile?"32px 24px":"48px 36px",borderInlineStart:isMobile?"none":(ar?"none":"1px solid rgba(46,196,182,0.1)"),borderInlineEnd:isMobile?"none":(ar?"1px solid rgba(46,196,182,0.1)":"none")}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
+            <span style={{fontSize:32,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>زان</span>
+            <span style={{width:1,height:22,background:"rgba(46,196,182,0.4)"}} />
+            <span style={{fontSize:11,color:"#2EC4B6",lineHeight:1.3,fontWeight:300,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+          </div>
+          {isMobile && <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:4}}>{ar?"شركة زان لتطوير الوجهات":"Zan Destination Development"}</div>}
+          <div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
         </div>
         {/* Pending share invite banner */}
         {pendingShare && (
-          <div style={{background:"#0c1a3a",border:"1px solid #1e3a5f",borderRadius:10,padding:"14px 16px",marginBottom:18,textAlign:"center"}}>
+          <div style={{background:"rgba(46,196,182,0.08)",border:"1px solid rgba(46,196,182,0.2)",borderRadius:10,padding:"14px 16px",marginBottom:18,textAlign:"center"}}>
             <div style={{fontSize:14,marginBottom:6}}>📬</div>
-            <div style={{fontSize:13,fontWeight:600,color:"#60a5fa",marginBottom:4}}>{ar?"تمت دعوتك لمشروع مشترك":"You've been invited to a shared project"}</div>
-            <div style={{fontSize:11,color:"#9ca3af",lineHeight:1.5}}>{ar?"سجّل دخول أو أنشئ حساب جديد عشان تشوف المشروع":"Sign in or create an account to access the project"}</div>
+            <div style={{fontSize:13,fontWeight:600,color:"#2EC4B6",marginBottom:4}}>{ar?"تمت دعوتك لمشروع مشترك":"You've been invited to a shared project"}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>{ar?"سجّل دخول أو أنشئ حساب جديد عشان تشوف المشروع":"Sign in or create an account to access the project"}</div>
           </div>
         )}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <div>
-            <label style={{fontSize:11,color:"#6b7080",marginBottom:4,display:"block"}}>{ar?"البريد الإلكتروني":"Email"}</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #282d3a",background:"#0f1117",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+            <label style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:4,display:"block"}}>{ar?"البريد الإلكتروني":"Email"}</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #163050",background:"rgba(11,35,65,0.6)",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           <div>
-            <label style={{fontSize:11,color:"#6b7080",marginBottom:4,display:"block"}}>{ar?"كلمة المرور":"Password"}</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #282d3a",background:"#0f1117",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+            <label style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:4,display:"block"}}>{ar?"كلمة المرور":"Password"}</label>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #163050",background:"rgba(11,35,65,0.6)",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
-          {error && <div style={{fontSize:11,color:"#f87171",background:"#2a0a0a",padding:"8px 12px",borderRadius:6}}>{error}</div>}
-          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"#2563eb",color:"#fff",fontSize:14,fontWeight:600,cursor:loading?"wait":"pointer",fontFamily:"inherit",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#1d4ed8"} onMouseLeave={e=>e.currentTarget.style.background="#2563eb"}>
+          {error && <div style={{fontSize:11,color:"#f87171",background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",padding:"8px 12px",borderRadius:6}}>{error}</div>}
+          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:8,border:"none",background:"#2EC4B6",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"wait":"pointer",fontFamily:"'Tajawal',sans-serif",transition:"all 0.2s",letterSpacing:0.3}} onMouseEnter={e=>e.currentTarget.style.background="#26a89c"} onMouseLeave={e=>e.currentTarget.style.background="#2EC4B6"}>
             {loading?"...":(mode==="signin"?(ar?"دخول":"Sign In"):(ar?"إنشاء حساب":"Create Account"))}
           </button>
-          <div style={{textAlign:"center",fontSize:11,color:"#6b7080"}}>
+          <div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.4)"}}>
             {mode==="signin"?(
-              <span>{ar?"ما عندك حساب؟":"Don't have an account?"} <button onClick={()=>setMode("signup")} style={{color:"#5fbfbf",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"سجّل الآن":"Sign up"}</button></span>
+              <span>{ar?"ما عندك حساب؟":"Don't have an account?"} <button onClick={()=>setMode("signup")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"سجّل الآن":"Sign up"}</button></span>
             ):(
-              <span>{ar?"عندك حساب؟":"Already have an account?"} <button onClick={()=>setMode("signin")} style={{color:"#5fbfbf",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"دخول":"Sign in"}</button></span>
+              <span>{ar?"عندك حساب؟":"Already have an account?"} <button onClick={()=>setMode("signin")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"دخول":"Sign in"}</button></span>
             )}
           </div>
         </div>
         <div style={{marginTop:32,textAlign:"center"}}>
-          <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"6px 16px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
+          <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#163050",color:"rgba(255,255,255,0.5)",padding:"6px 16px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
         </div>
+        {/* Powered by */}
+        <div style={{marginTop:24,textAlign:"center",fontSize:10,color:"rgba(255,255,255,0.2)"}}>{ar?"شركة زان لتطوير الوجهات":"Zan Destination Development"}</div>
       </div>
     </div>
   );
@@ -4370,29 +4409,33 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
   const sorted = [...index].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
   const ar = lang === "ar";
   return (
-    <div style={{minHeight:"100vh",background:"#0f1117",fontFamily:"'DM Sans',system-ui,sans-serif",color:"#d0d4dc"}}>
+    <div style={{minHeight:"100vh",background:"#0B2341",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif",color:"#d0d4dc"}}>
       <div style={{maxWidth:900,margin:"0 auto",padding:isMobile?"20px 14px":"48px 24px"}}>
         <div style={{display:"flex",flexDirection:isMobile?"column":"row",justifyContent:"space-between",alignItems:isMobile?"stretch":"flex-start",gap:isMobile?14:0,marginBottom:isMobile?20:32}}>
           <div>
-            <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Destination Development</div>
-            <div style={{fontSize:isMobile?22:28,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
-            <div style={{fontSize:isMobile?11:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+              <span style={{fontSize:32,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>زان</span>
+              <span style={{width:1,height:24,background:"rgba(46,196,182,0.4)"}} />
+              <span style={{fontSize:11,color:"#2EC4B6",lineHeight:1.3,fontWeight:300}}>{ar?"شركة زان":"Zan"}<br/>{ar?"لتطوير الوجهات":"Destination Development"}</span>
+            </div>
+            <div style={{fontSize:isMobile?22:28,fontWeight:900,color:"#fff",letterSpacing:-0.5,fontFamily:"'Tajawal',sans-serif"}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
+            <div style={{fontSize:isMobile?11:13,color:"rgba(255,255,255,0.4)",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#1e2230",color:"#5fbfbf",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid #2e3340"}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
+            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#163050",color:"#2EC4B6",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid #2e3340"}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
             {!isMobile && user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} style={{...btnSm,background:"#2a0a0a",color:"#f87171",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
-            <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
+            <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#163050",color:"#9ca3af",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>
 
         {/* Features Modal Overlay */}
         {showFeatures && (
           <><div onClick={()=>setShowFeatures(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9998}} />
-          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:800,maxWidth:"94vw",maxHeight:"85vh",background:"#0f1117",borderRadius:16,border:"1px solid #1e2230",boxShadow:"0 24px 80px rgba(0,0,0,0.5)",zIndex:9999,overflow:"auto",padding:"28px 32px"}}>
+          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:800,maxWidth:"94vw",maxHeight:"85vh",background:"#0B2341",borderRadius:16,border:"1px solid #163050",boxShadow:"0 24px 80px rgba(0,0,0,0.5)",zIndex:9999,overflow:"auto",padding:"28px 32px"}}>
             <div style={{display:"flex",alignItems:"center",marginBottom:20}}>
               <div style={{flex:1,fontSize:18,fontWeight:700,color:"#fff"}}>{ar?"مزايا المنصة":"Platform Features"}</div>
-              <button onClick={()=>setShowFeatures(false)} style={{...btnS,background:"#1e2230",color:"#9ca3af",padding:"6px 12px",fontSize:14,lineHeight:1}}>✕</button>
+              <button onClick={()=>setShowFeatures(false)} style={{...btnS,background:"#163050",color:"#9ca3af",padding:"6px 12px",fontSize:14,lineHeight:1}}>✕</button>
             </div>
             <FeaturesGrid lang={lang} />
           </div></>
@@ -4411,9 +4454,9 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <div style={{fontSize:11,color:"#4b5060",textTransform:"uppercase",letterSpacing:1,marginBottom:16,fontWeight:600}}>{lang==="ar"?"اختر قالب":"Choose a Template"}</div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(180px, 1fr))",gap:12,maxWidth:700,margin:"0 auto"}}>
               {PROJECT_TEMPLATES.map((tmpl)=>(
-                <div key={tmpl.id} onClick={()=>onCreate(tmpl.id)} style={{background:"#161a24",border:"1px solid #1e2230",borderRadius:10,padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center"}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.background="#1a1f2e";}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="#1e2230";e.currentTarget.style.background="#161a24";}}>
+                <div key={tmpl.id} onClick={()=>onCreate(tmpl.id)} style={{background:"#0F2D4F",border:"1px solid #163050",borderRadius:10,padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center"}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.background="#1a1f2e";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="#163050";e.currentTarget.style.background="#0F2D4F";}}>
                   <div style={{fontSize:28,marginBottom:8}}>{tmpl.icon}</div>
                   <div style={{fontSize:13,fontWeight:600,color:"#fff",marginBottom:4}}>{ar?tmpl.ar:tmpl.en}</div>
                   <div style={{fontSize:10,color:"#6b7080"}}>{ar?tmpl.desc_ar:tmpl.desc_en}</div>
@@ -4424,25 +4467,25 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {sorted.map(p=>(
-              <div key={p.id} style={{background:p._shared?"#0f1520":"#161a24",borderRadius:8,padding:isMobile?"10px 12px":"14px 18px",display:"flex",alignItems:"center",gap:isMobile?10:14,border:p._shared?"1px solid #1e3a5f":"1px solid #1e2230",cursor:"pointer",transition:"border-color 0.15s"}}
-                onMouseEnter={e=>e.currentTarget.style.borderColor=p._shared?"#2563eb":"#2e3340"} onMouseLeave={e=>e.currentTarget.style.borderColor=p._shared?"#1e3a5f":"#1e2230"} onClick={()=>onOpen(p.id)}>
-                <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:6,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",display:"flex",alignItems:"center",justifyContent:"center",fontSize:isMobile?13:15,flexShrink:0}}>
+              <div key={p.id} style={{background:p._shared?"#0f1520":"#0F2D4F",borderRadius:8,padding:isMobile?"10px 12px":"14px 18px",display:"flex",alignItems:"center",gap:isMobile?10:14,border:p._shared?"1px solid #1e3a5f":"1px solid #163050",cursor:"pointer",transition:"border-color 0.15s"}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor=p._shared?"#2563eb":"#2e3340"} onMouseLeave={e=>e.currentTarget.style.borderColor=p._shared?"#1e3a5f":"#163050"} onClick={()=>onOpen(p.id)}>
+                <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:6,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#163050",display:"flex",alignItems:"center",justifyContent:"center",fontSize:isMobile?13:15,flexShrink:0}}>
                   {p._shared?"👤":p.status==="Complete"?"✓":p.status==="In Progress"?"▶":"◇"}
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:isMobile?13:14,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}{p._shared?<span style={{fontSize:10,color:"#60a5fa",marginInlineStart:8,fontWeight:500}}>{lang==="ar"?"(مشارك)":"(Shared)"}</span>:null}</div>
                   <div style={{fontSize:isMobile?10:11,color:"#6b7080",marginTop:2}}>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",...(!isMobile?{year:"numeric",hour:"2-digit",minute:"2-digit"}:{})})}</div>
                 </div>
-                <span style={{fontSize:isMobile?9:10,padding:"3px 8px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#1e2230",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af",flexShrink:0}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة":"View"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
-                {!isMobile && !p._shared && <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#1e2230",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>}
+                <span style={{fontSize:isMobile?9:10,padding:"3px 8px",borderRadius:4,fontWeight:500,background:p._shared?"#0a1a3a":p.status==="Complete"?"#0a2a1a":p.status==="In Progress"?"#0a1a2a":"#163050",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af",flexShrink:0}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة":"View"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
+                {!isMobile && !p._shared && <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#163050",color:"#9ca3af",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>}
                 {!p._shared && <button onClick={e=>{e.stopPropagation();const url=`${window.location.origin}?s=${p.id}&o=${user?.id||""}`;navigator.clipboard?.writeText(url).then(()=>{e.currentTarget.textContent="✓";setTimeout(()=>{e.currentTarget.textContent="🔗";},1500);});}} style={{...btnSm,background:"#0a1a3a",color:"#60a5fa",padding:"4px 10px",fontSize:13}} title={lang==="ar"?"نسخ رابط المشاركة":"Copy share link"}>🔗</button>}
                 {!p._shared && (confirmDel===p.id ? (
                   <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>{onDel(p.id);setConfirmDel(null);}} style={{...btnSm,background:"#7f1d1d",color:"#fca5a5"}}>Yes</button>
-                    <button onClick={()=>setConfirmDel(null)} style={{...btnSm,background:"#1e2230",color:"#9ca3af"}}>No</button>
+                    <button onClick={()=>setConfirmDel(null)} style={{...btnSm,background:"#163050",color:"#9ca3af"}}>No</button>
                   </div>
                 ) : (
-                  <button onClick={e=>{e.stopPropagation();setConfirmDel(p.id);}} style={{...btnSm,background:"#1e2230",color:"#6b7080"}} title="Delete">✕</button>
+                  <button onClick={e=>{e.stopPropagation();setConfirmDel(p.id);}} style={{...btnSm,background:"#163050",color:"#6b7080"}} title="Delete">✕</button>
                 ))}
               </div>
             ))}
@@ -4611,7 +4654,7 @@ function StatusBadge({status,onChange}) {
 // ── Sidebar helper components (defined OUTSIDE ControlPanel to prevent re-creation) ──
 function Sec({title,children,def=false,filled,summary}) {
   const [open,setOpen]=useState(def);
-  return (<div style={{borderBottom:"1px solid #1e2230"}}>
+  return (<div style={{borderBottom:"1px solid #163050"}}>
     <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:open?"#d0d4dc":"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"start",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"color 0.15s"}}>
       {filled!==undefined&&<span style={{width:7,height:7,borderRadius:4,background:filled?"#16a34a":"#3b4050",flexShrink:0}} />}
       <span style={{flex:1}}>{title}</span>
@@ -4798,7 +4841,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
   }
 
   return (
-    <div style={{ borderTop: "1px solid #1e2230", background: "#0a0c10" }}>
+    <div style={{ borderTop: "1px solid #163050", background: "#0a0c10" }}>
       {/* ── Header ── */}
       <button onClick={() => setOpen(!open)} style={{ width: "100%", background: "none", border: "none", padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontFamily: "inherit" }}>
         <div style={{ width: 24, height: 24, borderRadius: 12, background: hCfg.bg, border: `1px solid ${hCfg.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: hCfg.color, flexShrink: 0 }}>{hCfg.icon}</div>
@@ -4819,13 +4862,13 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
           {/* ── Phase Tabs ── */}
           {phaseNames.length > 1 && (
             <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
-              <button onClick={() => setAdvPhase("all")} style={{ ...btnS, padding: "4px 10px", fontSize: 9, fontWeight: 600, borderRadius: 10, background: advPhase === "all" ? "#5fbfbf20" : "#1e2230", color: advPhase === "all" ? "#5fbfbf" : "#6b7080", border: advPhase === "all" ? "1px solid #5fbfbf40" : "1px solid #282d3a" }}>
+              <button onClick={() => setAdvPhase("all")} style={{ ...btnS, padding: "4px 10px", fontSize: 9, fontWeight: 600, borderRadius: 10, background: advPhase === "all" ? "#2EC4B620" : "#163050", color: advPhase === "all" ? "#2EC4B6" : "#6b7080", border: advPhase === "all" ? "1px solid #2EC4B640" : "1px solid #1a3a5a" }}>
                 {ar ? "الكل" : "All"}
               </button>
               {phaseNames.map(pn => {
                 const pWarns = (project.assets || []).filter(a => a.phase === pn).some(a => benchmarkColor("costPerSqm", a.costPerSqm, a.category).color === "#ef4444");
                 return (
-                  <button key={pn} onClick={() => setAdvPhase(pn)} style={{ ...btnS, padding: "4px 10px", fontSize: 9, fontWeight: 600, borderRadius: 10, background: advPhase === pn ? "#2563eb20" : "#1e2230", color: advPhase === pn ? "#60a5fa" : "#6b7080", border: advPhase === pn ? "1px solid #2563eb40" : "1px solid #282d3a" }}>
+                  <button key={pn} onClick={() => setAdvPhase(pn)} style={{ ...btnS, padding: "4px 10px", fontSize: 9, fontWeight: 600, borderRadius: 10, background: advPhase === pn ? "#2563eb20" : "#163050", color: advPhase === pn ? "#60a5fa" : "#6b7080", border: advPhase === pn ? "1px solid #2563eb40" : "1px solid #1a3a5a" }}>
                     {pn} {pWarns && <span style={{ color: "#f87171" }}>!</span>}
                   </button>
                 );
@@ -4840,7 +4883,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
               { label: isPhase ? "NPV" : (minDscr !== null ? "DSCR" : "NPV"), value: isPhase ? (npvVal >= 1e6 ? fmtM(npvVal) : "—") : (minDscr !== null ? minDscr.toFixed(2) + "x" : (npvVal >= 1e6 ? fmtM(npvVal) : npvVal > 0 ? "+" : "—")), ok: isPhase ? npvOk : (minDscr !== null ? dscrOk : npvOk) },
               { label: ar ? "الاسترداد" : "Payback", value: payback ? payback + (ar ? " سنة" : "yr") : "—", ok: payback && payback <= 7 ? 2 : payback && payback <= 12 ? 1 : 0 },
             ].map((m, i) => (
-              <div key={i} style={{ background: "#161a24", borderRadius: 6, padding: "8px 10px", border: "1px solid #1e2230" }}>
+              <div key={i} style={{ background: "#0F2D4F", borderRadius: 6, padding: "8px 10px", border: "1px solid #163050" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
                   <Dot ok={m.ok} />
                   <span style={{ fontSize: 9, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.3 }}>{m.label}</span>
@@ -4886,7 +4929,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
                 const aYoc = a.totalCapex > 0 ? ((a.totalRevenue / Math.max(1, h)) / a.totalCapex * 100).toFixed(1) : "0.0";
                 const viable = Number(aYoc) > 8 ? "#4ade80" : Number(aYoc) > 4 ? "#fbbf24" : a.totalRevenue > 0 ? "#f87171" : "#4b5060";
                 return (
-                  <div key={i} style={{ background: "#161a24", borderRadius: 6, padding: "6px 10px", marginBottom: 4, border: "1px solid #1e2230" }}>
+                  <div key={i} style={{ background: "#0F2D4F", borderRadius: 6, padding: "6px 10px", marginBottom: 4, border: "1px solid #163050" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <span style={{ fontSize: 10, fontWeight: 600, color: "#d0d4dc" }}>{a.name || "—"}</span>
@@ -5237,7 +5280,7 @@ function ScoreCell({ sc, name, ar }) {
       <span style={{fontSize:9,padding:"1px 5px",borderRadius:3,background:vCfg.bg,color:vCfg.color,fontWeight:700}}>{vCfg.label}{yocPct>0?` ${yocPct}%`:""}</span>
       <span style={{fontSize:9,color:iCfg.color,fontWeight:600}}>{iCfg.label}{wPct}%</span>
       {show && <div style={{position:"fixed",top:pos.top,left:Math.max(10, Math.min(pos.left - 150, (typeof window!=="undefined"?window.innerWidth:800) - 310)),transform:"translateY(-100%)",width:300,background:"#1a1d23",color:"#e5e7ec",padding:"14px 16px",borderRadius:10,fontSize:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"start",pointerEvents:"none"}}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#5fbfbf",borderBottom:"1px solid #282d3a",paddingBottom:6}}>{name || (ar?"أصل":"Asset")}</div>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#2EC4B6",borderBottom:"1px solid #1a3a5a",paddingBottom:6}}>{name || (ar?"أصل":"Asset")}</div>
         <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",marginBottom:8}}>
           <span style={{color:"#6b7080"}}>{ar?"الجدوى":"Viability"}</span>
           <span style={{fontWeight:600,color:vCfg.color}}>{vCfg.t}</span>
@@ -5248,13 +5291,13 @@ function ScoreCell({ sc, name, ar }) {
           <span style={{color:"#6b7080"}}>CAPEX</span>
           <span style={{fontWeight:600}}>{fmtM(sc.capex)}</span>
         </div>
-        <div style={{borderTop:"1px solid #282d3a",paddingTop:6,display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",marginBottom:8}}>
+        <div style={{borderTop:"1px solid #1a3a5a",paddingTop:6,display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",marginBottom:8}}>
           <span style={{color:"#6b7080"}}>{ar?"الأثر":"Impact"}</span>
           <span style={{fontWeight:600,color:iCfg.color}}>{iCfg.t}</span>
           <span style={{color:"#6b7080"}}>{ar?"وزن CAPEX":"CAPEX Weight"}</span>
           <span style={{fontWeight:600}}>{wPct}% {ar?"من المشروع":"of project"}</span>
         </div>
-        <div style={{borderTop:"1px solid #282d3a",paddingTop:6,fontSize:10,color:"#9ca3af",fontStyle:"italic"}}>
+        <div style={{borderTop:"1px solid #1a3a5a",paddingTop:6,fontSize:10,color:"#9ca3af",fontStyle:"italic"}}>
           {sc.impact==="low"?(ar?"نقل هذا الأصل بين المراحل لن يؤثر كثيراً على المشروع":"Moving this asset between phases won't significantly affect the project"):sc.impact==="high"?(ar?"أصل محوري — أي تغيير في موقعه أو توقيته يؤثر بشكل كبير":"Key asset — any change in timing significantly affects the project"):(ar?"أثر متوسط — يجب مراعاة التوقيت":"Moderate impact — timing matters")}
         </div>
       </div>}
@@ -7892,11 +7935,11 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
   return (
     <div style={{maxWidth:1100,margin:"0 auto",paddingBottom:120}}>
       {/* ── Executive Summary Card ── */}
-      <div style={{background:"linear-gradient(135deg,#0f1117 0%,#1a1d2e 100%)",borderRadius:16,padding:"28px 32px",marginBottom:24,color:"#fff",position:"relative",overflow:"hidden"}}>
+      <div style={{background:"linear-gradient(135deg,#0B2341 0%,#1a1d2e 100%)",borderRadius:16,padding:"28px 32px",marginBottom:24,color:"#fff",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",top:0,right:0,width:200,height:200,background:"radial-gradient(circle,rgba(95,191,191,0.08) 0%,transparent 70%)",pointerEvents:"none"}} />
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
           <div>
-            <div style={{fontSize:10,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:6}}>ZAN Financial Modeler</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>زان</span><span style={{width:1,height:14,background:"rgba(46,196,182,0.4)"}} /><span style={{fontSize:9,color:"#2EC4B6",fontWeight:300}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</span></div>
             <div style={{fontSize:24,fontWeight:700,letterSpacing:-0.5}}>{project.name || "Untitled"}</div>
             {project.location && <div style={{fontSize:12,color:"#8b90a0",marginTop:4}}>{project.location}</div>}
           </div>
@@ -8160,26 +8203,26 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
       </Section>
 
       {/* ── Live Scenario Sliders ── */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(15,17,23,0.95)",backdropFilter:"blur(8px)",borderTop:"1px solid #282d3a",padding:"12px 24px",display:"flex",alignItems:"center",gap:24,justifyContent:"center",zIndex:9000,flexWrap:"wrap"}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(15,17,23,0.95)",backdropFilter:"blur(8px)",borderTop:"1px solid #1a3a5a",padding:"12px 24px",display:"flex",alignItems:"center",gap:24,justifyContent:"center",zIndex:9000,flexWrap:"wrap"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>CAPEX</span>
+          <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>CAPEX</span>
           <input type="range" min={80} max={120} value={liveSliders.capex} onChange={e=>setLiveSliders(s=>({...s,capex:+e.target.value}))} style={{width:120,accentColor:"#2563eb"}} />
           <span style={{fontSize:11,color:liveSliders.capex!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.capex}%</span>
         </div>
-        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <div style={{width:1,height:24,background:"#1a3a5a"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>{ar?"الإيجار":"Rent"}</span>
+          <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>{ar?"الإيجار":"Rent"}</span>
           <input type="range" min={80} max={120} value={liveSliders.rent} onChange={e=>setLiveSliders(s=>({...s,rent:+e.target.value}))} style={{width:120,accentColor:"#16a34a"}} />
           <span style={{fontSize:11,color:liveSliders.rent!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.rent}%</span>
         </div>
-        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <div style={{width:1,height:24,background:"#1a3a5a"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>{ar?"المضاعف":"Exit ×"}</span>
+          <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>{ar?"المضاعف":"Exit ×"}</span>
           <input type="range" min={6} max={15} step={0.5} value={liveSliders.exitMult} onChange={e=>setLiveSliders(s=>({...s,exitMult:+e.target.value}))} style={{width:120,accentColor:"#f59e0b"}} />
           <span style={{fontSize:11,color:liveSliders.exitMult!==(project.exitMultiple||10)?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.exitMult}x</span>
         </div>
-        <div style={{width:1,height:24,background:"#282d3a"}} />
-        <button onClick={()=>setLiveSliders({capex:100,rent:100,exitMult:project.exitMultiple||10})} style={{...btnS,background:slidersDefault?"#1e2230":"#fbbf2430",color:slidersDefault?"#4b5060":"#fbbf24",padding:"6px 14px",fontSize:10,fontWeight:600,border:slidersDefault?"1px solid #282d3a":"1px solid #fbbf2440"}}>{ar?"إعادة تعيين":"Reset"}</button>
+        <div style={{width:1,height:24,background:"#1a3a5a"}} />
+        <button onClick={()=>setLiveSliders({capex:100,rent:100,exitMult:project.exitMultiple||10})} style={{...btnS,background:slidersDefault?"#163050":"#fbbf2430",color:slidersDefault?"#4b5060":"#fbbf24",padding:"6px 14px",fontSize:10,fontWeight:600,border:slidersDefault?"1px solid #1a3a5a":"1px solid #fbbf2440"}}>{ar?"إعادة تعيين":"Reset"}</button>
       </div>
     </div>
   );
@@ -8191,7 +8234,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
 const btnS={border:"none",borderRadius:5,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"};
 const btnPrim={...btnS,background:"#2563eb",color:"#fff",fontWeight:600};
 const btnSm={...btnS,padding:"4px 8px",fontSize:11,fontWeight:500,borderRadius:4};
-const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:5,border:"1px solid #282d3a",background:"#161a24",color:"#d0d4dc",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:5,border:"1px solid #1a3a5a",background:"#0F2D4F",color:"#d0d4dc",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 const cellInputStyle={padding:"4px 6px",borderRadius:3,border:"1px solid transparent",background:"transparent",color:"#1a1d23",fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",width:"100%"};
 const tblStyle={width:"100%",borderCollapse:"collapse"};
 const thSt={padding:"7px 8px",textAlign:"start",fontSize:10,fontWeight:600,color:"#6b7080",background:"#f8f9fb",borderBottom:"1px solid #e5e7ec",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
