@@ -1983,10 +1983,17 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   let cumPrefPaid = 0;
   let cumPrefAccrued = 0;
   let cumGPCatchup = 0; // C5: Track cumulative GP catch-up
+  let cumFeesCalled = 0; // H14: Track fee portion of equity calls for expense treatment
 
   for (let y = 0; y < h; y++) {
     cumEquityCalled += equityCalls[y];
-    const unreturned = cumEquityCalled - cumReturned;
+    cumFeesCalled += unfundedFees[y]; // Track cumulative fees funded from equity
+    // H14: In "expense" mode, fees are NOT part of capital base (don't earn ROC + Pref)
+    // In "capital" mode (default), fees ARE invested capital (earn ROC + Pref)
+    const capitalBase = feeTreatment === "expense"
+      ? cumEquityCalled - cumFeesCalled  // Exclude fees from capital base
+      : cumEquityCalled;                 // Include fees (default ZAN behavior)
+    const unreturned = capitalBase - cumReturned;
     unreturnedOpen[y] = unreturned;
 
     // Pref accrual on unreturned capital
@@ -2061,7 +2068,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
       gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
     }
 
-    unreturnedClose[y] = cumEquityCalled - cumReturned;
+    unreturnedClose[y] = capitalBase - cumReturned;
   }
 
   // LP Net Cash Flow: -equity calls (LP share) + distributions - land rent obligation
