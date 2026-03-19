@@ -912,11 +912,12 @@ function computeProjectCashFlows(project) {
   Object.values(phaseResults).forEach(pr => { for (let y=0;y<horizon;y++) { ci[y]+=pr.income[y]; cc[y]+=pr.capex[y]; cl[y]+=pr.landRent[y]; cn[y]+=pr.netCF[y]; }});
 
   // Payback + Peak Negative
-  let cumCF = 0, paybackYear = null, peakNegative = 0, peakNegativeYear = 0;
+  let cumCF = 0, paybackYear = null, peakNegative = 0, peakNegativeYear = 0, _pbWasNeg = false;
   for (let y = 0; y < horizon; y++) {
     cumCF += cn[y];
     if (cumCF < peakNegative) { peakNegative = cumCF; peakNegativeYear = y; }
-    if (paybackYear === null && cumCF >= 0 && y > 0) { paybackYear = y; }
+    if (cumCF < -1) _pbWasNeg = true;
+    if (paybackYear === null && _pbWasNeg && cumCF >= 0) { paybackYear = y; }
   }
 
   return {
@@ -2631,8 +2632,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing;
 
   // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
-  const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
-  const gpPayback = (() => { if ((w.gpTotalInvested||0) <= 0) return null; let cum = 0; for (let y = 0; y < h; y++) { cum += w.gpNetCF[y] || 0; if (cum >= 0 && y > 0) return y + 1; } return null; })();
+  const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0, wasNeg = false; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum < -1) wasNeg = true; if (wasNeg && cum >= 0) return y + 1; } return null; })();
+  const gpPayback = (() => { if ((w.gpTotalInvested||0) <= 0) return null; let cum = 0, wasNeg = false; for (let y = 0; y < h; y++) { cum += w.gpNetCF[y] || 0; if (cum < -1) wasNeg = true; if (wasNeg && cum >= 0) return y + 1; } return null; })();
 
   // Exit details
   const exitProc = (w.exitProceeds || []).reduce((a, b) => a + b, 0);
@@ -4672,7 +4673,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
   const npvVal = isPhase ? calcNPV(netCF, 0.10) : ((ir && ir.totalIncentiveValue > 0) ? ir.adjustedNPV10 : (c.npv10 || 0));
   const dscrVals = !isPhase && f && f.dscr ? f.dscr.filter(d => d !== null) : [];
   const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
-  const payback = netCF ? netCF.reduce((acc, v, i) => { acc.cum += v; if (acc.yr === null && acc.cum > 0) acc.yr = i + 1; return acc; }, { cum: 0, yr: null }).yr : null;
+  const payback = netCF ? netCF.reduce((acc, v, i) => { acc.cum += v; if (acc.cum < -1) acc.neg = true; if (acc.yr === null && acc.neg && acc.cum > 0) acc.yr = i + 1; return acc; }, { cum: 0, yr: null, neg: false }).yr : null;
   const yoc = totalCapex > 0 ? (totalIncome / Math.max(1, h)) / totalCapex : 0;
   const incomeCapexRatio = totalCapex > 0 ? totalIncome / totalCapex : 0;
 
@@ -5715,8 +5716,8 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const displayNPV10 = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedNPV10 : c.npv10;
   const displayTotalNetCF = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedTotalNetCF : c.totalNetCF;
 
-  let cumCF = 0, paybackYr = null;
-  for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF > 0 && paybackYr === null) paybackYr = y + 1; }
+  let cumCF = 0, paybackYr = null, _pbNeg = false;
+  for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF < -1) _pbNeg = true; if (cumCF > 0 && _pbNeg && paybackYr === null) paybackYr = y + 1; }
   const stabYear = Math.min(10, h - 1);
   const cashYield = f && f.totalEquity > 0 ? (c.income[stabYear] / f.totalEquity * 100) : null;
 
@@ -7860,7 +7861,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
   const healthLabelAr = { Strong: "قوي", Good: "جيد", Moderate: "متوسط", Weak: "ضعيف" }[healthLabel];
 
   // Payback year
-  const paybackYr = c.netCF ? c.netCF.reduce((acc, v, i) => { acc.cum += v; if (acc.yr === null && acc.cum > 0) acc.yr = i + 1; return acc; }, { cum: 0, yr: null }).yr : null;
+  const paybackYr = c.netCF ? c.netCF.reduce((acc, v, i) => { acc.cum += v; if (acc.cum < -1) acc.neg = true; if (acc.yr === null && acc.neg && acc.cum > 0) acc.yr = i + 1; return acc; }, { cum: 0, yr: null, neg: false }).yr : null;
 
   // Phase-specific data
   const isPhase = activePhase !== "consolidated";
