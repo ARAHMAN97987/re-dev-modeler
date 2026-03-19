@@ -566,13 +566,18 @@ const defaultProject = () => ({
   lpEquityManual: 0, // 0 = auto (remainder)
   // Fund Fees (only when vehicleType = fund)
   subscriptionFeePct: 2,
-  annualMgmtFeePct: 0.9,
-  custodyFeeAnnual: 130000,
-  mgmtFeeBase: "deployed", // deployed (ZAN: cumCAPEX) | devCost | equity
+  annualMgmtFeePct: 1.5,
+  mgmtFeeCapAnnual: 2000000, // Max annual mgmt fee (0 = no cap)
+  custodyFeeAnnual: 100000,
+  mgmtFeeBase: "nav", // nav (net asset value) | deployed (ZAN: cumCAPEX) | devCost | equity
   feeTreatment: "capital", // H14: capital (ROC+Pref) | rocOnly (ROC, no Pref) | expense (no ROC, no Pref)
   graceBasis: "cod", // H10: cod | firstDraw
   developerFeePct: 10,
-  structuringFeePct: 0.1,
+  structuringFeePct: 1,
+  structuringFeeCap: 300000, // Max structuring fee (0 = no cap)
+  preEstablishmentFee: 200000, // One-time pre-establishment fee
+  spvFee: 20000, // One-time SPV setup fee
+  auditorFeeAnnual: 50000, // Annual auditor fee
   // Exit
   exitStrategy: "sale", // sale | hold | caprate
   exitYear: 0, // 0 = auto
@@ -1831,11 +1836,16 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   // Fee calculations (only Fund type gets full fees)
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
   const devFeeTotal = c.totalCapex * (project.developerFeePct || 0) / 100;
-  const structFee = isFund ? c.totalCapex * (project.structuringFeePct || 0) / 100 : 0;
-  // ZAN: mgmt fee = cumulative CAPEX deployed × rate (progressive, not fixed)
-  const mgmtFeeBase = project.mgmtFeeBase || "deployed";
+  let structFee = isFund ? totalEquity * (project.structuringFeePct || 0) / 100 : 0;
+  const structFeeCap = project.structuringFeeCap || 0;
+  if (structFeeCap > 0 && structFee > structFeeCap) structFee = structFeeCap;
+  const mgmtFeeBase = project.mgmtFeeBase || "nav";
   const mgmtFeeRate = (project.annualMgmtFeePct || 0) / 100;
+  const mgmtFeeCap = project.mgmtFeeCapAnnual || 0;
   const annualCustody = isFund ? (project.custodyFeeAnnual || 0) : 0;
+  const preEstFee = isFund ? (project.preEstablishmentFee || 0) : 0;
+  const spvSetupFee = isFund ? (project.spvFee || 0) : 0;
+  const auditorAnnual = isFund ? (project.auditorFeeAnnual || 0) : 0;
 
   // Fee schedule
   const fees = new Array(h).fill(0);
@@ -1844,6 +1854,9 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const feeCustody = new Array(h).fill(0);
   const feeDev = new Array(h).fill(0);
   const feeStruct = new Array(h).fill(0);
+  const feePreEst = new Array(h).fill(0);
+  const feeSpv = new Array(h).fill(0);
+  const feeAuditor = new Array(h).fill(0);
 
   // Find construction period
   let constrStart = h, constrEnd = 0;
@@ -1857,41 +1870,48 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : constrEnd + (project.debtGrace ?? 3) + 2);
   const operYears = exitYr - constrStart + 1;
 
-  // Fee period end: fund has a defined life even in hold strategy
-  // For sale: fees run until exit year
-  // For hold: fees run until constrEnd + grace + 2 (same auto logic as sale)
-  // This prevents fees from running 50 years in hold mode
+  // Fee period end
   const feeEndYr = exitStrategy === "hold"
     ? constrEnd + (project.debtGrace ?? 3) + 2
     : exitYr;
 
-  // Subscription fee at fund start (not construction start)
-  if (fundStartIdx < h) feeSub[fundStartIdx] = subFee;
-  // Structuring fee at fund start
-  if (fundStartIdx < h) feeStruct[fundStartIdx] = structFee;
+  // One-time fees at fund start
+  if (fundStartIdx < h) {
+    feeSub[fundStartIdx] = subFee;
+    feeStruct[fundStartIdx] = structFee;
+    feePreEst[fundStartIdx] = preEstFee;
+    feeSpv[fundStartIdx] = spvSetupFee;
+  }
   // Developer fee spread over construction
-  const constrYears = constrEnd - constrStart + 1;
   for (let y = constrStart; y <= constrEnd && y < h; y++) {
     if (c.totalCapex > 0) feeDev[y] = devFeeTotal * (c.capex[y] / c.totalCapex);
   }
-  // Management + custody fees from fund start to fee period end
-  // ZAN formula: mgmtFee[y] = ABS(cumCAPEX from fund start to y) × rate
-  let cumCapex = 0;
+  // Management + custody + auditor fees from fund start to fee period end
+  // NAV = totalEquity - cumCapex + cumIncome (simplified NAV proxy)
+  let cumCapex = 0, cumIncome = 0;
   for (let y = fundStartIdx; y <= feeEndYr && y < h; y++) {
     cumCapex += Math.abs(c.capex[y] || 0);
+    cumIncome += (c.income[y] || 0);
     if (isFund) {
+      let mgmtBase = 0;
       if (mgmtFeeBase === "equity") {
-        feeMgmt[y] = totalEquity * mgmtFeeRate;
+        mgmtBase = totalEquity;
       } else if (mgmtFeeBase === "devCost") {
-        feeMgmt[y] = f.devCostInclLand * mgmtFeeRate;
+        mgmtBase = f.devCostInclLand;
+      } else if (mgmtFeeBase === "nav") {
+        // NAV proxy: equity + cumulative net income - cumulative capex (floor at equity)
+        mgmtBase = Math.max(totalEquity, totalEquity + cumIncome - cumCapex);
       } else {
-        // "deployed" (default, ZAN method): cumulative CAPEX deployed × rate
-        feeMgmt[y] = cumCapex * mgmtFeeRate;
+        // "deployed": cumulative CAPEX deployed
+        mgmtBase = cumCapex;
       }
+      feeMgmt[y] = mgmtBase * mgmtFeeRate;
+      if (mgmtFeeCap > 0 && feeMgmt[y] > mgmtFeeCap) feeMgmt[y] = mgmtFeeCap;
     }
     feeCustody[y] = annualCustody;
+    feeAuditor[y] = auditorAnnual;
   }
-  for (let y = 0; y < h; y++) fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] + feeStruct[y];
+  for (let y = 0; y < h; y++) fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] + feeStruct[y] + feePreEst[y] + feeSpv[y] + feeAuditor[y];
 
   const totalFees = fees.reduce((a, b) => a + b, 0);
 
@@ -2134,7 +2154,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 
   return {
     gpEquity, lpEquity, totalEquity, gpPct, lpPct,
-    fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, totalFees, unfundedFees,
+    fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, feePreEst, feeSpv, feeAuditor, totalFees, unfundedFees,
     equityCalls, exitProceeds, cashAvail,
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
@@ -2165,8 +2185,9 @@ const FINANCING_FIELDS = [
   'islamicMode','gpEquityManual','lpEquityManual',
   'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
-  'feeTreatment','prefAllocation','catchupMethod','subscriptionFeePct','annualMgmtFeePct','custodyFeeAnnual',
-  'developerFeePct','structuringFeePct','mgmtFeeBase',
+  'feeTreatment','prefAllocation','catchupMethod','subscriptionFeePct','annualMgmtFeePct','mgmtFeeCapAnnual','custodyFeeAnnual',
+  'developerFeePct','structuringFeePct','structuringFeeCap','mgmtFeeBase',
+  'preEstablishmentFee','spvFee','auditorFeeAnnual',
   'fundStartYear','fundName','gpIsFundManager','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
 ];
 
@@ -2343,6 +2364,7 @@ function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     equityCalls: sumArr('equityCalls'), fees: sumArr('fees'),
     feeSub: sumArr('feeSub'), feeMgmt: sumArr('feeMgmt'), feeCustody: sumArr('feeCustody'),
     feeDev: sumArr('feeDev'), feeStruct: sumArr('feeStruct'),
+    feePreEst: sumArr('feePreEst'), feeSpv: sumArr('feeSpv'), feeAuditor: sumArr('feeAuditor'),
     totalFees: sum('totalFees'), unfundedFees: sumArr('unfundedFees'),
     gpLandRentTotal: sum('gpLandRentTotal'),
     exitProceeds: sumArr('exitProceeds'), exitYear: Math.max(...names.map(n => phaseWaterfalls[n]?.exitYear || 0)),
@@ -2590,7 +2612,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const w = _pw ? {
     ..._pw,
     feeSub: _pw.feeSub || h0, feeMgmt: _pw.feeMgmt || h0, feeCustody: _pw.feeCustody || h0,
-    feeDev: _pw.feeDev || h0, feeStruct: _pw.feeStruct || h0, fees: _pw.fees || h0,
+    feeDev: _pw.feeDev || h0, feeStruct: _pw.feeStruct || h0,
+    feePreEst: _pw.feePreEst || h0, feeSpv: _pw.feeSpv || h0, feeAuditor: _pw.feeAuditor || h0, fees: _pw.fees || h0,
     totalFees: _pw.totalFees ?? 0,
     totalEquity: _pw.totalEquity || _pw.equity || 0,
     exitYear: _pw.exitYear || waterfall.exitYear || 0,
@@ -3004,6 +3027,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               {label:ar?"حفظ":"Custody", val:(w.feeCustody||[]).reduce((a,b)=>a+b,0)},
               {label:ar?"تطوير":"Developer", val:(w.feeDev||[]).reduce((a,b)=>a+b,0)},
               {label:ar?"هيكلة":"Structuring", val:(w.feeStruct||[]).reduce((a,b)=>a+b,0)},
+              {label:ar?"ما قبل التأسيس":"Pre-Establishment", val:(w.feePreEst||[]).reduce((a,b)=>a+b,0)},
+              {label:ar?"إنشاء SPV":"SPV Setup", val:(w.feeSpv||[]).reduce((a,b)=>a+b,0)},
+              {label:ar?"مراجع حسابات":"Auditor", val:(w.feeAuditor||[]).reduce((a,b)=>a+b,0)},
             ].map((f,i) => f.val > 0 ? [<span key={i+'l'} style={{color:"#6b7080"}}>{f.label}</span>,<span key={i+'v'} style={{textAlign:"right",fontWeight:500}}>{fmt(f.val)}</span>] : null)}
             <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700,color:"#ef4444"}}>{ar?"الإجمالي":"Total"}</span>
             <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700,color:"#ef4444"}}>{fmt(w.totalFees)}</span>
@@ -3519,20 +3545,26 @@ After LP receives pref, GP takes a larger temporary share until agreed economics
                   <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}} />
                   <div style={{fontSize:10,fontWeight:700,color:"#6b7080",marginBottom:8}}>{ar?"الرسوم":"Fees"}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    <FL label={ar?"اكتتاب %":"Sub %"} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر
-One-time entry fee at subscription. Usually 1-2% of invested capital"><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
-                    <FL label={ar?"إدارة %":"Mgmt %"} tip="رسوم إدارة سنوية مقابل متابعة الاستثمار والتقارير. عادة 1.5-2.5% سنوياً
-Annual management fee for oversight and reporting. Usually 1.5-2.5% per year"><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
+                    <FL label={ar?"اكتتاب %":"Sub %"} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر\nOne-time entry fee at subscription. Usually 1-2% of invested capital" hint={ar?"مرة واحدة · عند الاكتتاب":"One-time · at subscription"}><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
+                    <FL label={ar?"إدارة %":"Mgmt %"} tip="أتعاب إدارية سنوية من صافي أصول الصندوق (NAV). تُستحق وتسدد بشكل ربع سنوي\nAnnual management fee based on fund NAV. Paid quarterly" hint={ar?"سنوي · من صافي الأصول":"Annual · based on NAV"}><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
                   </div>
-                  <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="أساس حساب رسوم الإدارة: تراكمي على CAPEX المنفذ (ZAN)، أو تكلفة التطوير الكاملة، أو رأس المال\nMgmt fee base: cumulative deployed CAPEX (ZAN), full dev cost, or equity"><Drp lang={lang} value={cfg.mgmtFeeBase||"deployed"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"deployed",en:"Deployed CAPEX (ZAN)",ar:"CAPEX المنفذ (ZAN)"},{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                    <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور لإدارة التنفيذ خلال البناء. عادة 3-7% من CAPEX
-Developer fee for managing construction execution. Usually 3-7% of CAPEX"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
-                    <FL label={ar?"هيكلة %":"Struct %"} tip="رسوم لمرة واحدة لتأسيس الصندوق قانونياً ومالياً. عادة 0.5-2%
-One-time fee for legal and financial fund setup. Usually 0.5-2%"><Inp type="number" value={cfg.structuringFeePct} onChange={v=>upCfg({structuringFeePct:v})} /></FL>
+                    <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="أساس حساب رسوم الإدارة:\n- صافي الأصول (NAV): القيمة الصافية للصندوق\n- CAPEX تراكمي: المبالغ المنفذة فعلياً\n- تكلفة التطوير: إجمالي التكلفة\n- رأس المال: الملكية الإجمالية"><Drp lang={lang} value={cfg.mgmtFeeBase||"nav"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"nav",en:"Fund NAV",ar:"صافي أصول الصندوق"},{value:"deployed",en:"Deployed CAPEX",ar:"CAPEX المنفذ"},{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
+                    <FL label={ar?"سقف الإدارة/سنة":"Mgmt Cap/yr"} tip="الحد الأقصى لرسوم الإدارة سنوياً. 0 = بدون سقف\nMax annual management fee. 0 = no cap" hint={ar?"حد أقصى سنوي · 0 = بدون سقف":"Max annual · 0 = no cap"}><Inp type="number" value={cfg.mgmtFeeCapAnnual} onChange={v=>upCfg({mgmtFeeCapAnnual:v})} /></FL>
                   </div>
-                  <FL label={ar?"رسوم الحفظ السنوية":"Custody/yr"} tip="رسوم سنوية لأمين الحفظ والإدارة النظامية. مبلغ ثابت يتغير حسب حجم الصندوق
-Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="number" value={cfg.custodyFeeAnnual} onChange={v=>upCfg({custodyFeeAnnual:v})} /></FL>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                    <FL label={ar?"هيكلة %":"Struct %"} tip="نسبة من حجم الصندوق تُدفع لمرة واحدة لمدير الصندوق مقابل ترتيب الفرصة ودراسات الجدوى\nOne-time fee for deal sourcing, due diligence, and fund setup" hint={ar?"مرة واحدة · من حجم الصندوق":"One-time · % of fund size"}><Inp type="number" value={cfg.structuringFeePct} onChange={v=>upCfg({structuringFeePct:v})} /></FL>
+                    <FL label={ar?"سقف الهيكلة":"Struct Cap"} tip="الحد الأقصى لرسوم الهيكلة. 0 = بدون سقف\nMax structuring fee amount. 0 = no cap" hint={ar?"حد أقصى · 0 = بدون سقف":"Max amount · 0 = no cap"}><Inp type="number" value={cfg.structuringFeeCap} onChange={v=>upCfg({structuringFeeCap:v})} /></FL>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                    <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={ar?"مع مستخلصات البناء":"With construction draws"}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
+                    <FL label={ar?"رسوم الحفظ/سنة":"Custody/yr"} tip="رسوم سنوية لأمين الحفظ. تُدفع نصف سنوي\nAnnual custody fee. Paid semi-annually" hint={ar?"سنوي · نصف سنوي":"Annual · semi-annual"}><Inp type="number" value={cfg.custodyFeeAnnual} onChange={v=>upCfg({custodyFeeAnnual:v})} /></FL>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                    <FL label={ar?"ما قبل التأسيس":"Pre-Estab."} tip="مصاريف إعداد مستندات الصندوق وتقديمها لهيئة السوق المالية. تُدفع مرة واحدة بعد الإقفال الأولي\nFund document preparation and CMA filing. One-time after initial closing" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.preEstablishmentFee} onChange={v=>upCfg({preEstablishmentFee:v})} /></FL>
+                    <FL label={ar?"إنشاء SPV":"SPV Fee"} tip="رسوم تأسيس الشركة ذات الغرض الخاص. تُدفع مرة واحدة عند بدء التأسيس\nSPV incorporation fee. One-time at setup" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.spvFee} onChange={v=>upCfg({spvFee:v})} /></FL>
+                    <FL label={ar?"مراجع حسابات/سنة":"Auditor/yr"} tip="أتعاب سنوية لمراجع الحسابات. تُدفع نصف سنوي بعد كل تقييم\nAnnual auditor fee. Paid semi-annually after each valuation" hint={ar?"سنوي":"Annual"}><Inp type="number" value={cfg.auditorFeeAnnual} onChange={v=>upCfg({auditorFeeAnnual:v})} /></FL>
+                  </div>
                 </>}
               </> : cfg.finMode !== "self" && cfg.finMode !== "bank100" ? <>
                 <div style={{fontSize:10,fontWeight:700,color:"#6b7080",letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,paddingBottom:6,borderBottom:"2px solid #e5e7ec"}}>{ar?"الرسوم":"Fees"}</div>
@@ -3577,6 +3609,9 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
         custody: (w.feeCustody||[]).reduce((a,b)=>a+b,0),
         dev: (w.feeDev||[]).reduce((a,b)=>a+b,0),
         struct: (w.feeStruct||[]).reduce((a,b)=>a+b,0),
+        preEst: (w.feePreEst||[]).reduce((a,b)=>a+b,0),
+        spv: (w.feeSpv||[]).reduce((a,b)=>a+b,0),
+        auditor: (w.feeAuditor||[]).reduce((a,b)=>a+b,0),
         total: w.totalFees || 0,
         unfunded: (w.unfundedFees||[]).reduce((a,b)=>a+b,0),
       } : null;
@@ -3670,13 +3705,16 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
             <div style={{fontSize:11,fontWeight:700,color:"#f59e0b",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fde68a"}}>{ar?"رسوم الصندوق":"FUND FEES"}</div>
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               {[
-                {l:ar?"اكتتاب":"Subscription",v:feeData.sub,pct:cfg.subscriptionFeePct},
-                {l:ar?"إدارة (سنوي)":"Management (annual)",v:feeData.mgmt,pct:cfg.annualMgmtFeePct},
-                {l:ar?"حفظ":"Custody",v:feeData.custody},
-                {l:ar?"تطوير":"Developer Fee",v:feeData.dev,pct:cfg.developerFeePct},
-                {l:ar?"هيكلة":"Structuring",v:feeData.struct,pct:cfg.structuringFeePct},
+                {l:ar?"اكتتاب":"Subscription",v:feeData.sub,pct:cfg.subscriptionFeePct,hint:ar?"مرة واحدة":"one-time"},
+                {l:ar?"إدارة":"Management",v:feeData.mgmt,pct:cfg.annualMgmtFeePct,hint:ar?"سنوي":"annual"},
+                {l:ar?"حفظ":"Custody",v:feeData.custody,hint:ar?"سنوي":"annual"},
+                {l:ar?"تطوير":"Developer Fee",v:feeData.dev,pct:cfg.developerFeePct,hint:ar?"مع البناء":"with constr."},
+                {l:ar?"هيكلة":"Structuring",v:feeData.struct,pct:cfg.structuringFeePct,hint:ar?"مرة واحدة":"one-time"},
+                {l:ar?"ما قبل التأسيس":"Pre-Establishment",v:feeData.preEst,hint:ar?"مرة واحدة":"one-time"},
+                {l:ar?"إنشاء SPV":"SPV Setup",v:feeData.spv,hint:ar?"مرة واحدة":"one-time"},
+                {l:ar?"مراجع حسابات":"Auditor",v:feeData.auditor,hint:ar?"سنوي":"annual"},
               ].filter(x=>x.v>0).map((x,i)=>[
-                <span key={i+"l"} style={{color:"#6b7080"}}>{x.l}</span>,
+                <span key={i+"l"} style={{color:"#6b7080"}}>{x.l} <span style={{fontSize:9,color:"#b0b5c0"}}>{x.hint}</span></span>,
                 <span key={i+"v"} style={{textAlign:"right",fontWeight:500}}>{fmt(x.v)} {x.pct?<span style={{fontSize:10,color:"#9ca3af"}}>{x.pct}%</span>:""}</span>
               ])}
               <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700,color:"#f59e0b"}}>{ar?"إجمالي الرسوم":"Total Fees"}</span>
@@ -3769,6 +3807,9 @@ Annual custody and admin fee. Fixed amount varying by fund size"><Inp type="numb
               {(w.feeCustody||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) حفظ":"(-) Custody"} values={w.feeCustody} total={(w.feeCustody||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
               {(w.feeDev||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) تطوير":"(-) Developer Fee"} values={w.feeDev} total={(w.feeDev||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
               {(w.feeStruct||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) هيكلة":"(-) Structuring"} values={w.feeStruct} total={(w.feeStruct||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+              {(w.feePreEst||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) ما قبل التأسيس":"(-) Pre-Establishment"} values={w.feePreEst} total={(w.feePreEst||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+              {(w.feeSpv||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) إنشاء SPV":"(-) SPV Setup"} values={w.feeSpv} total={(w.feeSpv||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+              {(w.feeAuditor||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) مراجع حسابات":"(-) Auditor"} values={w.feeAuditor} total={(w.feeAuditor||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
               <CFRow label={ar?"= إجمالي الرسوم":"= Total Fees"} values={w.fees||[]} total={w.totalFees||0} color="#f59e0b" negate bold />
               {(w.unfundedFees||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"رسوم ممولة من Equity":"Unfunded Fees (Equity)"} values={w.unfundedFees} total={(w.unfundedFees||[]).reduce((a,b)=>a+b,0)} color="#92400e" />}
             </>}
