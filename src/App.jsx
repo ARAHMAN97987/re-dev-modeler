@@ -1610,21 +1610,81 @@ function computeFinancing(project, projectResults, incentivesResult) {
   }
   // else: graceStartIdx = constrEnd (COD default)
   const repayStart = graceStartIdx + grace;
-  const annualRepay = repayYears > 0 ? totalDrawn / repayYears : 0;
 
-  for (let y = 0; y < h; y++) {
-    debtBalOpen[y] = y === 0 ? 0 : debtBalClose[y - 1];
-    let bal = debtBalOpen[y] + drawdown[y];
-    if (y >= repayStart && bal > 0 && project.repaymentType === "amortizing") {
-      repay[y] = Math.min(annualRepay, bal);
-    } else if (project.repaymentType === "bullet" && y === repayStart + repayYears - 1 && bal > 0) {
-      repay[y] = bal;
+  // ── Tranche mode: 'single' (default/ZAN) vs 'perDraw' (each drawdown = independent loan) ──
+  const trancheMode = project.debtTrancheMode || "single";
+  let tranches = null; // Only populated for perDraw mode (for reporting)
+
+  if (trancheMode === "perDraw" && repayYears > 0) {
+    // ═══ PER-DRAW TRANCHE MODE ═══
+    // Each drawdown becomes an independent loan with its own grace + repayment schedule.
+    // Grace starts from the draw year (each tranche's own disbursement date).
+    // This matches Saudi bank practice where each facility disbursement starts its own clock.
+    tranches = [];
+    for (let y = 0; y < h; y++) {
+      if (drawdown[y] > 0) {
+        tranches.push({
+          drawYear: y,
+          amount: drawdown[y],
+          repayStart: y + grace,
+          annualRepay: drawdown[y] / repayYears,
+          balOpen: new Array(h).fill(0),
+          balClose: new Array(h).fill(0),
+          repay: new Array(h).fill(0),
+          interest: new Array(h).fill(0),
+        });
+      }
     }
-    debtBalClose[y] = bal - repay[y];
-    // ZAN interest: average of opening and closing balance × rate + per-draw upfront fee
-    interest[y] = (debtBalOpen[y] + debtBalClose[y]) / 2 * rate + drawdown[y] * upfrontFeePct;
-    if (interest[y] < 0) interest[y] = 0;
-    debtService[y] = repay[y] + interest[y];
+
+    // Compute each tranche independently
+    for (const tr of tranches) {
+      for (let y = 0; y < h; y++) {
+        tr.balOpen[y] = y === 0 ? 0 : tr.balClose[y - 1];
+        let bal = tr.balOpen[y] + (y === tr.drawYear ? tr.amount : 0);
+
+        if (y >= tr.repayStart && bal > 0 && project.repaymentType === "amortizing") {
+          tr.repay[y] = Math.min(tr.annualRepay, bal);
+        } else if (project.repaymentType === "bullet") {
+          const bulletYear = tr.repayStart + repayYears - 1;
+          if (y === bulletYear && bal > 0) tr.repay[y] = bal;
+        }
+
+        tr.balClose[y] = bal - tr.repay[y];
+        // Interest: average balance × rate + upfront fee on draw year
+        tr.interest[y] = (tr.balOpen[y] + tr.balClose[y]) / 2 * rate
+          + (y === tr.drawYear ? tr.amount * upfrontFeePct : 0);
+        if (tr.interest[y] < 0) tr.interest[y] = 0;
+      }
+    }
+
+    // Aggregate all tranches
+    for (let y = 0; y < h; y++) {
+      for (const tr of tranches) {
+        debtBalOpen[y] += tr.balOpen[y];
+        debtBalClose[y] += tr.balClose[y];
+        repay[y] += tr.repay[y];
+        interest[y] += tr.interest[y];
+      }
+      debtService[y] = repay[y] + interest[y];
+    }
+  } else {
+    // ═══ SINGLE BLOCK MODE (default, matches ZAN) ═══
+    const annualRepay = repayYears > 0 ? totalDrawn / repayYears : 0;
+
+    for (let y = 0; y < h; y++) {
+      debtBalOpen[y] = y === 0 ? 0 : debtBalClose[y - 1];
+      let bal = debtBalOpen[y] + drawdown[y];
+      if (y >= repayStart && bal > 0 && project.repaymentType === "amortizing") {
+        repay[y] = Math.min(annualRepay, bal);
+      } else if (project.repaymentType === "bullet" && y === repayStart + repayYears - 1 && bal > 0) {
+        repay[y] = bal;
+      }
+      debtBalClose[y] = bal - repay[y];
+      // ZAN interest: average of opening and closing balance × rate + per-draw upfront fee
+      interest[y] = (debtBalOpen[y] + debtBalClose[y]) / 2 * rate + drawdown[y] * upfrontFeePct;
+      if (interest[y] < 0) interest[y] = 0;
+      debtService[y] = repay[y] + interest[y];
+    }
   }
 
   // Total upfront fee = sum of per-draw fees (for reporting)
@@ -1698,6 +1758,14 @@ function computeFinancing(project, projectResults, incentivesResult) {
       debtBalClose[y] = 0;
       debtService[y] = 0;
     }
+    // Also clean up individual tranches post-exit (for reporting)
+    if (tranches) {
+      for (const tr of tranches) {
+        for (let y = exitYr + 1; y < h; y++) {
+          tr.balOpen[y] = 0; tr.balClose[y] = 0; tr.repay[y] = 0; tr.interest[y] = 0;
+        }
+      }
+    }
   }
 
   // ── Apply interest subsidy ──
@@ -1735,6 +1803,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
     interestSubsidyTotal: intSub.total, interestSubsidySchedule: intSub.savings,
     upfrontFee, maxDebt, rate, tenor, grace, repayYears, graceStartIdx,
     leveredIRR: calcIRR(leveredCF), constrEnd, repayStart, exitYear: exitYr + startYear,
+    trancheMode, tranches,
   };
 }
 
@@ -2067,7 +2136,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
 // All financing fields that can be set per-phase
 const FINANCING_FIELDS = [
   'finMode','vehicleType','debtAllowed','maxLtvPct','financeRate',
-  'loanTenor','debtGrace','graceBasis','upfrontFeePct','repaymentType',
+  'loanTenor','debtGrace','graceBasis','upfrontFeePct','repaymentType','debtTrancheMode',
   'islamicMode','gpEquityManual','lpEquityManual',
   'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
@@ -2258,10 +2327,22 @@ function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     lpTotalDist: sum('lpTotalDist'), gpTotalDist: sum('gpTotalDist'),
     lpMOIC: lpEquity > 0 ? sum('lpTotalDist') / lpEquity : 0,
     gpMOIC: gpEquity > 0 ? sum('gpTotalDist') / gpEquity : 0,
+    // Committed MOIC = same as lpMOIC/gpMOIC here (using original equity)
+    lpCommittedMOIC: lpEquity > 0 ? sum('lpTotalDist') / lpEquity : 0,
+    gpCommittedMOIC: gpEquity > 0 ? sum('gpTotalDist') / gpEquity : 0,
+    // Net distributions (after land rent obligations)
+    lpNetDist: sum('lpNetDist') || sum('lpTotalDist'),
+    gpNetDist: sum('gpNetDist') || sum('gpTotalDist'),
+    // Total called (actual cash contributed)
+    lpTotalCalled: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)),
+    gpTotalCalled: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)),
+    lpTotalInvested: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)),
+    gpTotalInvested: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)),
     lpDPI: sum('lpTotalDist') / Math.max(1, sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity))),
     gpDPI: sum('gpTotalDist') / Math.max(1, sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity))),
     lpNPV10: calcNPV(lpNetCF, 0.10), lpNPV12: calcNPV(lpNetCF, 0.12), lpNPV14: calcNPV(lpNetCF, 0.14),
     gpNPV10: calcNPV(gpNetCF, 0.10), gpNPV12: calcNPV(gpNetCF, 0.12), gpNPV14: calcNPV(gpNetCF, 0.14),
+    isFund: true,
   };
 }
 
@@ -2345,20 +2426,24 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
     const phaseIncomeAtExit = pr.income[exitYr] || 0;
     const exitPct = totalIncomeAtExit > 0 ? phaseIncomeAtExit / totalIncomeAtExit : capexPct;
 
-    // Phase cash available
+    // Phase cash available - ZAN formula: MAX(0, UnlevCF + DS - Fees + UF + Exit)
     const pCashAvail = new Array(h).fill(0);
     const pEquityCalls = new Array(h).fill(0);
-    let pCumDeficit = 0;
+    const pUnfundedFees = new Array(h).fill(0);
     for (let y = 0; y < h; y++) {
       pEquityCalls[y] = (wc.equityCalls[y] || 0) * capexPct;
-      const noi = pr.income[y] - pr.landRent[y];
+      const unlevCF = pr.netCF[y] || 0; // income - landRent - capex
       const debtSvc = (f.debtService[y] || 0) * capexPct;
       const fees = (wc.fees[y] || 0) * capexPct;
       const exitP = (wc.exitProceeds[y] || 0) * exitPct;
-      let raw = (y <= exitYr ? (noi - debtSvc - fees) : 0) + exitP;
-      if (raw > 0 && pCumDeficit > 0) { const cover = Math.min(raw, pCumDeficit); raw -= cover; pCumDeficit -= cover; }
-      else if (raw < 0) { pCumDeficit += Math.abs(raw); raw = 0; }
-      pCashAvail[y] = raw;
+      // Unfunded fees for this phase
+      if (fees > 0) {
+        const operCF = unlevCF - debtSvc + exitP;
+        pUnfundedFees[y] = Math.max(0, fees - Math.max(0, operCF));
+      }
+      const exitYrIdx = wc.exitYear - sy;
+      const inPeriod = y <= exitYrIdx;
+      pCashAvail[y] = Math.max(0, (inPeriod ? unlevCF : 0) - debtSvc - fees + pUnfundedFees[y] + exitP);
     }
 
     // Run 4-tier waterfall for this phase
@@ -2367,6 +2452,9 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
     const lpSplitPct = (project.lpProfitSplitPct ?? 70) / 100;
     const gpPct = wc.gpPct;
     const lpPct = wc.lpPct;
+
+    const catchMethod = project.catchupMethod || "perYear";
+    const prefAlloc = project.prefAllocation || "proRata";
 
     const tier1=[],tier2=[],tier3=[],tier4LP=[],tier4GP=[],lpDist=[],gpDist=[];
     for(let i=0;i<h;i++){tier1.push(0);tier2.push(0);tier3.push(0);tier4LP.push(0);tier4GP.push(0);lpDist.push(0);gpDist.push(0);}
@@ -2382,10 +2470,26 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
       if(unreturned>0&&rem>0){const t1=Math.min(rem,unreturned);tier1[y]=t1;rem-=t1;cumReturned+=t1;}
       const prefOwed=cumPrefAccrued-cumPrefPaid;
       if(prefOwed>0&&rem>0){const t2=Math.min(rem,prefOwed);tier2[y]=t2;rem-=t2;cumPrefPaid+=t2;}
-      if(project.gpCatchup&&rem>0&&carryPct>0){const gpFromPref=cumPrefPaid*gpPct;const targetCU=Math.max(0,(carryPct*cumPrefPaid-gpFromPref)/(1-carryPct));const needed=Math.max(0,targetCU-cumGPCatchup);const catchup=Math.min(rem,needed);tier3[y]=catchup;rem-=catchup;cumGPCatchup+=catchup;}
+      if(project.gpCatchup&&rem>0&&carryPct>0){
+        if(catchMethod==="perYear"){
+          // ZAN method: based on this year's T2 only
+          const catchup=Math.min(rem,tier2[y]*carryPct/(1-carryPct));
+          tier3[y]=catchup;rem-=catchup;
+        }else{
+          const gpFromPref=prefAlloc==="proRata"?cumPrefPaid*gpPct:0;
+          const targetCU=Math.max(0,(carryPct*cumPrefPaid-gpFromPref)/(1-carryPct));
+          const needed=Math.max(0,targetCU-cumGPCatchup);
+          const catchup=Math.min(rem,needed);tier3[y]=catchup;rem-=catchup;cumGPCatchup+=catchup;
+        }
+      }
       if(rem>0){tier4LP[y]=rem*lpSplitPct;tier4GP[y]=rem*(1-lpSplitPct);}
-      lpDist[y]=(tier1[y]+tier2[y])*lpPct+tier4LP[y];
-      gpDist[y]=(tier1[y]+tier2[y])*gpPct+tier3[y]+tier4GP[y];
+      if(prefAlloc==="lpOnly"){
+        lpDist[y]=tier1[y]*lpPct+tier2[y]+tier4LP[y];
+        gpDist[y]=tier1[y]*gpPct+tier3[y]+tier4GP[y];
+      }else{
+        lpDist[y]=(tier1[y]+tier2[y])*lpPct+tier4LP[y];
+        gpDist[y]=(tier1[y]+tier2[y])*gpPct+tier3[y]+tier4GP[y];
+      }
     }
 
     const lpNetCF=new Array(h).fill(0),gpNetCF=new Array(h).fill(0);
@@ -2398,13 +2502,17 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
 
     result[pName] = {
       debt: pDebt, equity: pEquity, gpEquity: pGpEquity, lpEquity: pLpEquity,
-      fees: pFees, capexPct, exitPct,
+      fees: pFees, capexPct, exitPct, unfundedFees: pUnfundedFees,
       cashAvail: pCashAvail, equityCalls: pEquityCalls,
       tier1, tier2, tier3, tier4LP, tier4GP, lpDist, gpDist, lpNetCF, gpNetCF,
       lpIRR: calcIRR(lpNetCF), gpIRR: calcIRR(gpNetCF), projIRR: pr.irr,
       lpMOIC: lpInv > 0 ? lpTotalDist / lpInv : 0,
       gpMOIC: gpInv > 0 ? gpTotalDist / gpInv : 0,
+      lpCommittedMOIC: pLpEquity > 0 ? lpTotalDist / pLpEquity : 0,
+      gpCommittedMOIC: pGpEquity > 0 ? gpTotalDist / pGpEquity : 0,
       lpTotalDist, gpTotalDist, lpTotalInvested: lpInv, gpTotalInvested: gpInv,
+      lpTotalCalled: lpInv, gpTotalCalled: gpInv,
+      lpNetDist: lpTotalDist, gpNetDist: gpTotalDist,
       lpNPV10: calcNPV(lpNetCF, 0.10), gpNPV10: calcNPV(gpNetCF, 0.10),
       totalCashAvail: pCashAvail.reduce((a,b)=>a+b,0),
     };
