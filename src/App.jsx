@@ -2520,14 +2520,26 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
 
   return result;
 }
-function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, t, lang }) {
+function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, t, lang, up }) {
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhase, setSelectedPhase] = useState("all");
+  const [showTerms, setShowTerms] = useState(false);
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
     <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
   </div>;
+
+  // Per-phase config proxy (same pattern as FinancingView)
+  const isPhaseView = selectedPhase !== "all";
+  const cfg = isPhaseView ? getPhaseFinancing(project, selectedPhase) : project;
+  const upCfg = up ? (isPhaseView
+    ? (fields) => up(prev => ({
+        phases: (prev.phases||[]).map(p => p.name === selectedPhase
+          ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
+          : p)
+      }))
+    : up) : null;
 
   const h = results.horizon;
   const sy = results.startYear;
@@ -2576,6 +2588,58 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             {p}{irr !== null && irr !== undefined ? <span style={{fontSize:10,opacity:0.8}}>{` LP ${(irr*100).toFixed(1)}%`}</span> : ""}
           </button>;
         })}
+      </div>
+    )}
+
+    {/* ═══ QUICK EDIT: Fund & Waterfall Terms ═══ */}
+    {upCfg && cfg.finMode === "fund" && (
+      <div style={{background:showTerms?"#fff":"#f8f9fb",borderRadius:10,border:showTerms?"2px solid #8b5cf6":"1px solid #e5e7ec",marginBottom:14,overflow:"hidden",transition:"all 0.2s"}}>
+        <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
+          <span style={{fontSize:13}}>⚡</span>
+          <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تعديل سريع - شروط الصندوق":"Quick Edit - Fund Terms"}</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · Carry {cfg.carryPct||20}% · LP {cfg.lpProfitSplitPct||75}%</span>
+          <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
+        </div>
+        {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe"}}>
+          {/* Row 1: Waterfall Terms */}
+          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"شروط الشلال":"WATERFALL TERMS"}</div>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
+            {[
+              {l:ar?"العائد التفضيلي %":"Pref Return %",k:"prefReturnPct",v:cfg.prefReturnPct},
+              {l:ar?"حافز الأداء %":"Carry %",k:"carryPct",v:cfg.carryPct},
+              {l:ar?"حصة LP %":"LP Split %",k:"lpProfitSplitPct",v:cfg.lpProfitSplitPct},
+            ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{f.l}</span>
+              <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>)}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"GP Catch-up":"Catch-up"}</span>
+              <select value={cfg.gpCatchup?"Y":"N"} onChange={e=>upCfg({gpCatchup:e.target.value==="Y"})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="Y">{ar?"نعم":"Yes"}</option><option value="N">{ar?"لا":"No"}</option>
+              </select>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"معاملة الرسوم":"Fee Treatment"}</span>
+              <select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="capital">{ar?"رأسمال":"Capital"}</option><option value="expense">{ar?"مصروف":"Expense"}</option>
+              </select>
+            </div>
+          </div>
+          {/* Row 2: Fund Fees */}
+          <div style={{fontSize:10,fontWeight:700,color:"#f59e0b",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"رسوم الصندوق":"FUND FEES"}</div>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+            {[
+              {l:ar?"اكتتاب %":"Sub %",k:"subscriptionFeePct",v:cfg.subscriptionFeePct},
+              {l:ar?"إدارة %":"Mgmt %",k:"annualMgmtFeePct",v:cfg.annualMgmtFeePct},
+              {l:ar?"تطوير %":"Dev Fee %",k:"developerFeePct",v:cfg.developerFeePct},
+              {l:ar?"هيكلة %":"Struct %",k:"structuringFeePct",v:cfg.structuringFeePct},
+              {l:ar?"حفظ/سنة":"Custody/yr",k:"custodyFeeAnnual",v:cfg.custodyFeeAnnual,wide:true},
+            ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:f.wide?70:65}}>{f.l}</span>
+              <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:f.wide?80:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>)}
+          </div>
+        </div>}
       </div>
     )}
 
@@ -3818,7 +3882,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
           {activeTab==="dashboard"&&<ProjectDash project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />}
           {activeTab==="assets"&&<AssetTable project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />}
           {activeTab==="financing"&&<FinancingView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} up={up} lang={lang} />}
-          {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} />}
+          {activeTab==="waterfall"&&<WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />}
           {activeTab==="reports"&&<ReportsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />}
           {activeTab==="scenarios"&&<ScenariosView project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />}
           {activeTab==="market"&&<MarketView project={project} results={results} lang={lang} up={up} />}
