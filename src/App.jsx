@@ -2578,6 +2578,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [selectedPhase, setSelectedPhase] = useState("all");
   const [showTerms, setShowTerms] = useState(false);
   const [wSec, setWSec] = useState({});  // chart toggle state
+  const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false}); // expandable KPI cards
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
@@ -2740,48 +2741,162 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </div>
     )}
 
-    {/* ═══ KPI STRIP: GP | LP | Fund ═══ */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
-      {/* GP */}
-      <div style={{background:"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:"1px solid #bfdbfe",padding:"12px 16px"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#1e40af",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-          <span style={{width:22,height:22,borderRadius:5,background:"#3b82f6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>GP</span>
-          {ar?"المطور":"Developer"}
+    {/* ═══ EXPANDABLE KPI CARDS: GP | LP | Fund ═══ */}
+    {(() => {
+      const gpIsManager = cfg.gpIsFundManager !== false;
+      const _feeDev = (w.feeDev||[]).reduce((a,b)=>a+b,0);
+      const _feeMgmt = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
+      const _feeSub = (w.feeSub||[]).reduce((a,b)=>a+b,0);
+      const _feeStruct = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
+      const _feeCustody = (w.feeCustody||[]).reduce((a,b)=>a+b,0);
+      const _feePreEst = (w.feePreEst||[]).reduce((a,b)=>a+b,0);
+      const _feeSpv = (w.feeSpv||[]).reduce((a,b)=>a+b,0);
+      const _feeAuditor = (w.feeAuditor||[]).reduce((a,b)=>a+b,0);
+      const gpFeesTotal = gpIsManager ? _feeDev+_feeMgmt+_feeStruct+_feeCustody+_feePreEst+_feeSpv+_feeAuditor : _feeDev;
+      const gpNetCash = (w.gpTotalDist||0) + gpFeesTotal - (w.gpLandRentTotal||0);
+      const gpNetProfit = gpNetCash - (w.gpTotalInvested||0);
+      const gpPctVal = w.gpPct||0;
+      const lpPctVal = w.lpPct||0;
+      const isLpOnlyPref = (w.prefAllocation||cfg.prefAllocation) === "lpOnly";
+      const gpT1 = t1Total * gpPctVal;
+      const gpT2 = isLpOnlyPref ? 0 : t2Total * gpPctVal;
+      const lpT1 = t1Total * lpPctVal;
+      const lpT2 = isLpOnlyPref ? t2Total : t2Total * lpPctVal;
+      const lpNetCash = (w.lpTotalDist||0) - (w.lpTotalInvested||0);
+      const lpStabYieldVal = lpCashYield.length > 0 && exitYr > 2 ? lpCashYield[Math.min(exitYr - 2, lpCashYield.length - 1)] : 0;
+      const cardHd = {cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"};
+      const badge = (label, value, color) => <span style={{display:"inline-flex",alignItems:"center",gap:4,background:color+"18",color,borderRadius:5,padding:"3px 8px",fontSize:10,fontWeight:700}}>{label} <strong>{value}</strong></span>;
+      const KR = ({l,v,c,bold}) => <><span style={{color:"#6b7080",fontSize:11}}>{l}</span><span style={{textAlign:"right",fontWeight:bold?700:500,fontSize:11,color:c||"#1a1d23"}}>{v}</span></>;
+      const SecHd = ({text}) => <div style={{gridColumn:"1/-1",fontSize:9,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:"#9ca3af",paddingTop:6,borderTop:"1px solid #f0f1f5",marginTop:2}}>{text}</div>;
+      return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+        {/* ── GP (Developer) Card ── */}
+        <div style={{background:kpiOpen.gp?"#fff":"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:kpiOpen.gp?"2px solid #3b82f6":"1px solid #bfdbfe",padding:"12px 16px",transition:"all 0.2s"}}>
+          <div onClick={()=>setKpiOpen(p=>({...p,gp:!p.gp}))} style={cardHd}>
+            <span style={{width:22,height:22,borderRadius:5,background:"#3b82f6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>GP</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#1e40af",flex:1}}>{ar?"المطور":"Developer"}</span>
+            <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.gp?"▲":"▼"}</span>
+          </div>
+          {!kpiOpen.gp ? (
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+              {badge(ar?"صافي":"Net", fmtM(gpNetCash), "#16a34a")}
+              {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", "#3b82f6")}
+              {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", w.gpIRR>0.001?"#16a34a":"#6b7080")}
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+              <SecHd text={ar?"كمستثمر":"AS INVESTOR"} />
+              <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(gpT1)} />
+              <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={isLpOnlyPref?"—":fmt(gpT2)} />
+              <SecHd text={ar?"كمطور":"AS DEVELOPER"} />
+              <KR l={ar?"تعويض (T3)":"Catch-up (T3)"} v={fmt(t3Total)} c="#f59e0b" />
+              <KR l={ar?"توزيع أرباح (T4)":"Profit Split (T4)"} v={fmt(t4GPTotal)} c="#16a34a" />
+              <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(_feeDev)} c="#a16207" />
+              {gpIsManager && <>
+                <KR l={ar?"رسوم إدارة":"Mgmt Fee"} v={fmt(_feeMgmt)} c="#a16207" />
+                <KR l={ar?"رسوم هيكلة":"Struct Fee"} v={fmt(_feeStruct)} c="#a16207" />
+                <KR l={ar?"ما قبل التأسيس":"Pre-Est"} v={fmt(_feePreEst)} c="#a16207" />
+                <KR l="SPV" v={fmt(_feeSpv)} c="#a16207" />
+                <KR l={ar?"مراجع":"Auditor"} v={fmt(_feeAuditor)} c="#a16207" />
+              </>}
+              {(w.gpLandRentTotal||0)>0 && <KR l={ar?"إيجار أرض":"Land Rent"} v={`(${fmt(w.gpLandRentTotal)})`} c="#ef4444" />}
+              <SecHd text={ar?"الملخص":"NET SUMMARY"} />
+              <KR l={ar?"حصة GP":"GP Equity"} v={fmt(w.gpTotalInvested)} bold />
+              <KR l={ar?"توزيعات الشلال":"Waterfall Dist"} v={fmt(w.gpTotalDist)} />
+              <KR l={ar?"رسوم مستلمة":"Fees Received"} v={fmt(gpFeesTotal)} c="#a16207" />
+              {(w.gpLandRentTotal||0)>0 && <KR l={ar?"إيجار أرض":"Land Rent"} v={`(${fmt(w.gpLandRentTotal)})`} c="#ef4444" />}
+              <KR l={ar?"صافي النقد":"Net Cash"} v={fmtM(gpNetCash)} c="#16a34a" bold />
+              <KR l={ar?"صافي الربح":"Net Profit"} v={fmtM(gpNetProfit)} c={gpNetProfit>=0?"#16a34a":"#ef4444"} bold />
+              <SecHd text={ar?"المؤشرات":"METRICS"} />
+              <div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap",paddingTop:4}}>
+                {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", "#3b82f6")}
+                {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", w.gpIRR>0.001?"#16a34a":"#6b7080")}
+                {badge(ar?"استرداد":"Payback", gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—", "#6366f1")}
+              </div>
+            </div>
+          )}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 12px",fontSize:11}}>
-          <span style={{color:"#6b7080"}}>{ar?"صافي النقد":"Net Cash"}</span><span style={{textAlign:"right",fontWeight:700,color:"#16a34a"}}>{fmtM((() => { const gm=cfg.gpIsFundManager!==false; const df=(w.feeDev||[]).reduce((a,b)=>a+b,0); const mf=(w.feeMgmt||[]).reduce((a,b)=>a+b,0); const sf=(w.feeStruct||[]).reduce((a,b)=>a+b,0); const pf=(w.feePreEst||[]).reduce((a,b)=>a+b,0); const sv=(w.feeSpv||[]).reduce((a,b)=>a+b,0); const af=(w.feeAuditor||[]).reduce((a,b)=>a+b,0); const gf=gm?df+mf+sf+pf+sv+af:df; return (w.gpTotalDist||0)+gf-(w.gpLandRentTotal||0); })())}</span>
-          <span style={{color:"#6b7080"}}>IRR</span><span style={{textAlign:"right",fontWeight:700,color:w.gpIRR>0.001?"#16a34a":"#6b7080"}}>{w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"}</span>
-          <span style={{color:"#6b7080"}}>MOIC</span><span style={{textAlign:"right",fontWeight:600}}>{w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—"}</span>
-          <span style={{color:"#6b7080"}}>{ar?"استرداد":"Payback"}</span><span style={{textAlign:"right",fontWeight:600}}>{gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—"}</span>
+
+        {/* ── LP (Investor) Card ── */}
+        <div style={{background:kpiOpen.lp?"#fff":"linear-gradient(135deg, #faf5ff, #f5f3ff)",borderRadius:10,border:kpiOpen.lp?"2px solid #8b5cf6":"1px solid #e9d5ff",padding:"12px 16px",transition:"all 0.2s"}}>
+          <div onClick={()=>setKpiOpen(p=>({...p,lp:!p.lp}))} style={cardHd}>
+            <span style={{width:22,height:22,borderRadius:5,background:"#8b5cf6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>LP</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#5b21b6",flex:1}}>{ar?"المستثمر":"Investor"}</span>
+            <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.lp?"▲":"▼"}</span>
+          </div>
+          {!kpiOpen.lp ? (
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+              {badge("IRR", w.lpIRR!==null?fmtPct(w.lpIRR*100):"—", w.lpIRR>0?"#16a34a":"#6b7080")}
+              {badge("MOIC", w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—", "#8b5cf6")}
+              {badge(ar?"استرداد":"Payback", lpPayback?`Yr ${lpPayback}`:"—", "#6366f1")}
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+              <SecHd text={ar?"مصادر التوزيعات":"DISTRIBUTION SOURCES"} />
+              <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(lpT1)} />
+              <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={fmt(lpT2)} c="#8b5cf6" />
+              <KR l={ar?"توزيع أرباح (T4)":"Profit Split (T4)"} v={fmt(t4LPTotal)} c="#16a34a" />
+              <SecHd text={ar?"الصافي":"NET"} />
+              <KR l={ar?"حصة LP":"LP Equity"} v={fmt(w.lpTotalInvested)} bold />
+              <KR l={ar?"إجمالي التوزيعات":"Total Distributions"} v={fmt(w.lpTotalDist)} c="#8b5cf6" />
+              <KR l={ar?"صافي النقد":"Net Cash"} v={fmtM(lpNetCash)} c={lpNetCash>=0?"#16a34a":"#ef4444"} bold />
+              <SecHd text={ar?"المؤشرات":"METRICS"} />
+              <KR l="IRR" v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={w.lpIRR>0?"#16a34a":"#6b7080"} bold />
+              <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c="#8b5cf6" bold />
+              <KR l="DPI" v={w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"} />
+              <KR l={ar?"استرداد":"Payback"} v={lpPayback?`${lpPayback} ${ar?"سنة":"yr"}`:"—"} />
+              <KR l={ar?"عائد نقدي":"Cash Yield"} v={lpStabYieldVal>0?fmtPct(lpStabYieldVal*100):"—"} />
+              <SecHd text="NPV" />
+              <KR l="@10%" v={fmtM(w.lpNPV10)} />
+              <KR l="@12%" v={fmtM(w.lpNPV12)} c="#8b5cf6" bold />
+              <KR l="@14%" v={fmtM(w.lpNPV14)} />
+            </div>
+          )}
         </div>
-      </div>
-      {/* LP */}
-      <div style={{background:"linear-gradient(135deg, #faf5ff, #f5f3ff)",borderRadius:10,border:"1px solid #e9d5ff",padding:"12px 16px"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#5b21b6",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-          <span style={{width:22,height:22,borderRadius:5,background:"#8b5cf6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>LP</span>
-          {ar?"المستثمر":"Investor"}
+
+        {/* ── Fund Manager Card ── */}
+        <div style={{background:kpiOpen.fund?"#fff":"linear-gradient(135deg, #fefce8, #fff7ed)",borderRadius:10,border:kpiOpen.fund?"2px solid #f59e0b":"1px solid #fde68a",padding:"12px 16px",transition:"all 0.2s"}}>
+          <div onClick={()=>setKpiOpen(p=>({...p,fund:!p.fund}))} style={cardHd}>
+            <span style={{width:22,height:22,borderRadius:5,background:"#f59e0b",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10}}>📊</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#92400e",flex:1}}>{ar?"الصندوق":"Fund"}</span>
+            <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.fund?"▲":"▼"}</span>
+          </div>
+          {!kpiOpen.fund ? (
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+              {badge(ar?"رسوم":"Fees", fmtM(w.totalFees), "#f59e0b")}
+              {badge(ar?"ملكية":"Equity", fmtM(w.totalEquity), "#3b82f6")}
+              {exitProc>0 && badge(ar?"تخارج":"Exit", `${fmtM(exitProc)} Yr${exitYr}`, "#16a34a")}
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+              <SecHd text={ar?"الرسوم":"FEES"} />
+              <KR l={`${ar?"اكتتاب":"Subscription"} (${ar?"مرة":"once"})`} v={fmt(_feeSub)} c="#f59e0b" />
+              <KR l={`${ar?"إدارة":"Management"} (${ar?"سنوي":"annual"})`} v={fmt(_feeMgmt)} c="#f59e0b" />
+              <KR l={`${ar?"حفظ":"Custody"} (${ar?"سنوي":"annual"})`} v={fmt(_feeCustody)} c="#f59e0b" />
+              <KR l={`${ar?"تطوير":"Developer"} (${ar?"مرة":"once"})`} v={fmt(_feeDev)} c="#f59e0b" />
+              <KR l={`${ar?"هيكلة":"Structuring"} (${ar?"مرة+سقف":"once+cap"})`} v={fmt(_feeStruct)} c="#f59e0b" />
+              <KR l={`${ar?"ما قبل التأسيس":"Pre-Est"} (${ar?"مرة":"once"})`} v={fmt(_feePreEst)} c="#f59e0b" />
+              <KR l={`SPV (${ar?"مرة":"once"})`} v={fmt(_feeSpv)} c="#f59e0b" />
+              <KR l={`${ar?"مراجع":"Auditor"} (${ar?"سنوي":"annual"})`} v={fmt(_feeAuditor)} c="#f59e0b" />
+              <div style={{gridColumn:"1/-1",borderTop:"1px solid #fde68a",paddingTop:4,marginTop:2,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px"}}>
+                <KR l={ar?"إجمالي الرسوم":"Total Fees"} v={fmtM(w.totalFees)} c="#f59e0b" bold />
+              </div>
+              <SecHd text={ar?"رأس المال":"CAPITAL"} />
+              <KR l={ar?"إجمالي الملكية":"Total Equity"} v={fmtM(w.totalEquity)} bold />
+              <KR l="LP / GP" v={`${fmtPct(lpPctVal*100)} / ${fmtPct(gpPctVal*100)}`} />
+              <KR l={ar?"دين":"Debt"} v={f?.totalDebt?fmtM(f.totalDebt):"—"} c="#ef4444" />
+              <SecHd text={ar?"التخارج":"EXIT"} />
+              <KR l={ar?"السنة":"Year"} v={exitYr>0?`${exitYr} (${sy+exitYr-1})`:"—"} />
+              <KR l={ar?"المضاعف":"Multiple"} v={exitMult>0?exitMult+"x":"—"} />
+              <KR l={ar?"العائد":"Proceeds"} v={exitProc>0?fmtM(exitProc):"—"} c="#16a34a" />
+              <KR l={ar?"تكاليف %":"Cost %"} v={exitCostPct>0?fmtPct(exitCostPct)+"%":"—"} />
+              <SecHd text={ar?"إعدادات":"CONFIG"} />
+              <KR l={ar?"معاملة الرسوم":"Fee Treatment"} v={({capital:ar?"رأسمالية":"Capital",expense:ar?"مصروفات":"Expense"})[cfg.feeTreatment||"capital"]||cfg.feeTreatment||"Capital"} />
+              <KR l={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} v={({equity:ar?"ملكية":"Equity",nav:ar?"صافي الأصول":"NAV",commitment:ar?"الالتزام":"Commitment"})[cfg.mgmtFeeBase||"equity"]||cfg.mgmtFeeBase||"Equity"} />
+            </div>
+          )}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 12px",fontSize:11}}>
-          <span style={{color:"#6b7080"}}>IRR</span><span style={{textAlign:"right",fontWeight:700,color:w.lpIRR>0?"#16a34a":"#6b7080"}}>{w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"}</span>
-          <span style={{color:"#6b7080"}}>MOIC</span><span style={{textAlign:"right",fontWeight:700}}>{w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}</span>
-          <span style={{color:"#6b7080"}}>{ar?"استرداد":"Payback"}</span><span style={{textAlign:"right",fontWeight:600}}>{lpPayback?`${lpPayback} ${ar?"سنة":"yr"}`:"—"}</span>
-          <span style={{color:"#6b7080"}}>NPV @12%</span><span style={{textAlign:"right",fontWeight:600}}>{fmtM(w.lpNPV12)}</span>
-        </div>
-      </div>
-      {/* Fund */}
-      <div style={{background:"linear-gradient(135deg, #fefce8, #fff7ed)",borderRadius:10,border:"1px solid #fde68a",padding:"12px 16px"}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#92400e",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-          <span style={{width:22,height:22,borderRadius:5,background:"#f59e0b",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10}}>📊</span>
-          {ar?"الصندوق":"Fund"}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 12px",fontSize:11}}>
-          <span style={{color:"#6b7080"}}>{ar?"الرسوم":"Fees"}</span><span style={{textAlign:"right",fontWeight:700,color:"#f59e0b"}}>{fmtM(w.totalFees)}</span>
-          <span style={{color:"#6b7080"}}>{ar?"التخارج":"Exit"}</span><span style={{textAlign:"right",fontWeight:600}}>{exitProc>0?fmtM(exitProc):"—"} {exitYr>0?`Yr${exitYr}`:""}</span>
-          <span style={{color:"#6b7080"}}>{ar?"ملكية":"Equity"}</span><span style={{textAlign:"right",fontWeight:600}}>{fmtM(w.totalEquity)}</span>
-          <span style={{color:"#6b7080"}}>{ar?"دين":"Debt"}</span><span style={{textAlign:"right",fontWeight:600}}>{financing?.totalDebt?fmtM(financing.totalDebt):"—"}</span>
-        </div>
-      </div>
-    </div>
+      </div>;
+    })()}
 
     {/* ═══ CHART TOGGLE ═══ */}
     {cfChartData.length > 2 && (
