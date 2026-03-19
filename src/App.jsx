@@ -2883,7 +2883,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"رأس المال":"CAPITAL"} />
               <KR l={ar?"إجمالي الملكية":"Total Equity"} v={fmtM(w.totalEquity)} bold />
               <KR l="LP / GP" v={`${fmtPct(lpPctVal*100)} / ${fmtPct(gpPctVal*100)}`} />
-              <KR l={ar?"دين":"Debt"} v={f?.totalDebt?fmtM(f.totalDebt):"—"} c="#ef4444" />
+              <KR l={ar?"دين":"Debt"} v={(() => { const _f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing; return _f?.totalDebt ? fmtM(_f.totalDebt) : "—"; })()} c="#ef4444" />
               <SecHd text={ar?"التخارج":"EXIT"} />
               <KR l={ar?"السنة":"Year"} v={exitYr>0?`${exitYr} (${sy+exitYr-1})`:"—"} />
               <KR l={ar?"المضاعف":"Multiple"} v={exitMult>0?exitMult+"x":"—"} />
