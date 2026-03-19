@@ -933,6 +933,9 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
         ["Custody Fee  رسوم الحفظ", w.feeCustody],
         ["Developer Fee  رسوم التطوير", w.feeDev],
         ["Structuring Fee  رسوم الهيكلة", w.feeStruct],
+        ["Pre-Establishment  ما قبل التأسيس", w.feePreEst],
+        ["SPV Setup  إنشاء SPV", w.feeSpv],
+        ["Auditor Fee  مراجع الحسابات", w.feeAuditor],
         ["Total Fees  إجمالي الرسوم", w.totalFees],
       ];
       feeRows.forEach(([label, total]) => {

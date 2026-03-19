@@ -120,10 +120,15 @@ export async function generateFormulaExcel(project, results, financing, waterfal
 
   sec("Fees / الرسوم");
   const rSUB = inp("Subscription Fee %", p.subscriptionFeePct || 2, PCT, true);
-  const rMGM = inp("Annual Mgmt Fee %", p.annualMgmtFeePct || 0.9, PCT, true);
-  const rCUST = inp("Annual Custody Fee (fixed)", p.annualCustodyFee || 0, NUM);
+  const rMGM = inp("Annual Mgmt Fee %", p.annualMgmtFeePct || 1.5, PCT, true);
+  const rMGMCAP = inp("Mgmt Fee Cap/yr", p.mgmtFeeCapAnnual || 0, NUM);
+  const rCUST = inp("Annual Custody Fee (fixed)", p.custodyFeeAnnual || 0, NUM);
   const rDEV = inp("Developer Fee % (of CAPEX)", p.developerFeePct || 10, PCT, true);
-  const rSTR = inp("Structuring Fee %", p.structuringFeePct || 0, PCT, true);
+  const rSTR = inp("Structuring Fee %", p.structuringFeePct || 1, PCT, true);
+  const rSTRCAP = inp("Structuring Fee Cap", p.structuringFeeCap || 0, NUM);
+  const rPRE = inp("Pre-Establishment Fee", p.preEstablishmentFee || 0, NUM);
+  const rSPV = inp("SPV Setup Fee", p.spvFee || 0, NUM);
+  const rAUD = inp("Annual Auditor Fee", p.auditorFeeAnnual || 0, NUM);
 
   sec("Phase Allocation / التوزيع");
   const rPA = R;
@@ -359,13 +364,31 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   fr++;
   const fSTRF=fr;sc(ws5,fr,1,"  Structuring Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
   for (let yi = 0; yi < h; yi++) {
-    sc(ws5,fr,YC(yi),yi===0?`=-C${fDC}*Inputs!B${rSTR}`:0,FNS,null,NUMN);
+    // One-time at fund start, % of equity, with optional cap
+    const raw = `C${fEQ}*Inputs!B${rSTR}`;
+    const capped = `IF(Inputs!B${rSTRCAP}>0,MIN(${raw},Inputs!B${rSTRCAP}),${raw})`;
+    sc(ws5,fr,YC(yi),yi===0?`=-${capped}`:0,FNS,null,NUMN);
+  }
+  fr++;
+  const fPREF=fr;sc(ws5,fr,1,"  Pre-Establishment Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    sc(ws5,fr,YC(yi),yi===0?`=-Inputs!B${rPRE}`:0,FNS,null,NUMN);
+  }
+  fr++;
+  const fSPVF=fr;sc(ws5,fr,1,"  SPV Setup Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    sc(ws5,fr,YC(yi),yi===0?`=-Inputs!B${rSPV}`:0,FNS,null,NUMN);
+  }
+  fr++;
+  const fAUDF=fr;sc(ws5,fr,1,"  Auditor Fee (annual)",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    sc(ws5,fr,YC(yi),`=IF(${yi+1}<=C${fEXY},-Inputs!B${rAUD},0)`,FNS,null,NUMN);
   }
   fr++;
   const fTOTFEE=fr;sc(ws5,fr,1,"  Total Fees",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUMN);
   for (let yi = 0; yi < h; yi++) {
     const c = YC(yi);
-    sc(ws5,fr,c,`=${CL(c)}${fSUBF}+${CL(c)}${fMGMF}+${CL(c)}${fCUSTF}+${CL(c)}${fDEVF}+${CL(c)}${fSTRF}`,FBS,null,NUMN,BB);
+    sc(ws5,fr,c,`=${CL(c)}${fSUBF}+${CL(c)}${fMGMF}+${CL(c)}${fCUSTF}+${CL(c)}${fDEVF}+${CL(c)}${fSTRF}+${CL(c)}${fPREF}+${CL(c)}${fSPVF}+${CL(c)}${fAUDF}`,FBS,null,NUMN,BB);
   }
   fr += 2;
   secr(ws5,fr,1,LC,"EXIT PROCEEDS"); fr++;

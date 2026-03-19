@@ -2770,16 +2770,21 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </div>
           {/* Row 2: Fund Fees */}
           <div style={{fontSize:10,fontWeight:700,color:"#f59e0b",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"رسوم الصندوق":"FUND FEES"}</div>
-          <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {[
               {l:ar?"اكتتاب %":"Sub %",k:"subscriptionFeePct",v:cfg.subscriptionFeePct},
               {l:ar?"إدارة %":"Mgmt %",k:"annualMgmtFeePct",v:cfg.annualMgmtFeePct},
-              {l:ar?"تطوير %":"Dev Fee %",k:"developerFeePct",v:cfg.developerFeePct},
+              {l:ar?"سقف إدارة":"Mgmt Cap",k:"mgmtFeeCapAnnual",v:cfg.mgmtFeeCapAnnual,wide:true},
+              {l:ar?"تطوير %":"Dev %",k:"developerFeePct",v:cfg.developerFeePct},
               {l:ar?"هيكلة %":"Struct %",k:"structuringFeePct",v:cfg.structuringFeePct},
-              {l:ar?"حفظ/سنة":"Custody/yr",k:"custodyFeeAnnual",v:cfg.custodyFeeAnnual,wide:true},
-            ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080",minWidth:f.wide?70:65}}>{f.l}</span>
-              <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:f.wide?80:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              {l:ar?"سقف هيكلة":"Struct Cap",k:"structuringFeeCap",v:cfg.structuringFeeCap,wide:true},
+              {l:ar?"حفظ/سنة":"Custody",k:"custodyFeeAnnual",v:cfg.custodyFeeAnnual,wide:true},
+              {l:ar?"ما قبل التأسيس":"Pre-Est.",k:"preEstablishmentFee",v:cfg.preEstablishmentFee,wide:true},
+              {l:ar?"SPV":"SPV",k:"spvFee",v:cfg.spvFee},
+              {l:ar?"مراجع/سنة":"Auditor",k:"auditorFeeAnnual",v:cfg.auditorFeeAnnual,wide:true},
+            ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:5}}>
+              <span style={{fontSize:10,color:"#6b7080",minWidth:f.wide?68:52}}>{f.l}</span>
+              <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:f.wide?80:55,padding:"4px 6px",border:"1px solid #e5e7ec",borderRadius:5,fontSize:11,textAlign:"center",background:"#fff"}} />
             </div>)}
           </div>
         </div>}
@@ -2857,7 +2862,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
           const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
           const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
-          const totalFeeToGP = gpManagesFund ? devFee + mgmtFee + structFee : devFee;
+          const preEstFee = (w.feePreEst||[]).reduce((a,b)=>a+b,0);
+          const spvFee = (w.feeSpv||[]).reduce((a,b)=>a+b,0);
+          const auditorFee = (w.feeAuditor||[]).reduce((a,b)=>a+b,0);
+          const totalFeeToGP = gpManagesFund ? devFee + mgmtFee + structFee + preEstFee + spvFee + auditorFee : devFee;
           const gpPrefIncome = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
           const landRentPaid = w.gpLandRentTotal || 0;
           const hasExtra = totalFeeToGP > 0 || gpPrefIncome > 0 || landRentPaid > 0;
@@ -3010,7 +3018,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
       const subFee = (w.feeSub||[]).reduce((a,b)=>a+b,0);
       const custodyFee = (w.feeCustody||[]).reduce((a,b)=>a+b,0);
-      const fmFees = gpManagesFund ? 0 : mgmtFee + structFee + subFee + custodyFee;
+      const preEstFee = (w.feePreEst||[]).reduce((a,b)=>a+b,0);
+      const spvFee = (w.feeSpv||[]).reduce((a,b)=>a+b,0);
+      const auditorFee = (w.feeAuditor||[]).reduce((a,b)=>a+b,0);
+      const fmFees = gpManagesFund ? 0 : mgmtFee + structFee + subFee + custodyFee + preEstFee + spvFee + auditorFee;
       const colCount = fmFees > 0 ? 3 : 2;
 
       return <>
@@ -3057,6 +3068,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               {subFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"اكتتاب":"Subscription"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(subFee)}</span></>}
               {structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"هيكلة":"Structuring"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(structFee)}</span></>}
               {custodyFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"حفظ":"Custody"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(custodyFee)}</span></>}
+              {preEstFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"ما قبل التأسيس":"Pre-Estab."}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(preEstFee)}</span></>}
+              {spvFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"SPV":"SPV"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(spvFee)}</span></>}
+              {auditorFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"مراجع حسابات":"Auditor"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(auditorFee)}</span></>}
               <span style={{borderTop:"2px solid #f59e0b",paddingTop:5,marginTop:3,fontWeight:700,color:"#92400e"}}>{ar?"الإجمالي":"Total"}</span>
               <span style={{borderTop:"2px solid #f59e0b",paddingTop:5,marginTop:3,textAlign:"right",fontWeight:800,fontSize:13,color:"#f59e0b"}}>{fmtM(fmFees)}</span>
             </div>
@@ -3076,7 +3090,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
       const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
       const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
-      const gpFees = gpManagesFund ? devFee + mgmtFee + structFee : devFee;
+      const preEstFee = (w.feePreEst||[]).reduce((a,b)=>a+b,0);
+      const spvFee = (w.feeSpv||[]).reduce((a,b)=>a+b,0);
+      const auditorFee = (w.feeAuditor||[]).reduce((a,b)=>a+b,0);
+      const gpFees = gpManagesFund ? devFee + mgmtFee + structFee + preEstFee + spvFee + auditorFee : devFee;
       const landRentPaid = w.gpLandRentTotal || 0;
       const totalGPCash = gpDist + gpFees - landRentPaid;
       const gpInvested = w.gpEquity || 0;
@@ -3115,6 +3132,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <span style={{color:"#6b7080"}}>{ar?"رسوم التطوير":"Developer Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(devFee)}</span>
             {gpManagesFund && mgmtFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(mgmtFee)}</span></>}
             {gpManagesFund && structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الهيكلة":"Structuring Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(structFee)}</span></>}
+            {gpManagesFund && preEstFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"ما قبل التأسيس":"Pre-Establishment"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(preEstFee)}</span></>}
+            {gpManagesFund && spvFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"SPV":"SPV Setup"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(spvFee)}</span></>}
+            {gpManagesFund && auditorFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"مراجع حسابات":"Auditor"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(auditorFee)}</span></>}
             {landRentPaid > 0 && <><span style={{color:"#ef4444",fontWeight:500}}>{ar?"إيجار الأرض (يدفعه GP)":"Land Rent (paid by GP)"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
           </div>
 
