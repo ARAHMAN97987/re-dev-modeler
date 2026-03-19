@@ -3099,7 +3099,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {ar?"شلال التوزيعات":"Waterfall Distributions"}
       </div>
       <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:180}}>Line Item</th>
+        <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:180}}>{ar?"البند":"Line Item"}</th>
         <th style={{...thSt,textAlign:"right"}}>Total</th>
         {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
       </tr></thead><tbody>
@@ -3150,6 +3150,18 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #16a34a"}}>{ar?"صافي التوزيعات":"NET DISTRIBUTIONS"}</td></tr>
         <CFRow label={ar?"توزيعات الممول (LP)":"LP Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
         <CFRow label={ar?"توزيعات المطور (GP)":"GP Distributions"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
+
+        {/* ── Cash-on-Cash Yield ── */}
+        {w.lpTotalInvested > 0 && <tr style={{background:"#fefce8"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fefce8",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",paddingInlineStart:16}}>{ar?"عائد نقدي LP %":"LP Cash Yield %"}</td>
+          <td style={tdN}></td>
+          {years.map(y=>{const v=lpCashYield[y]||0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#9ca3af"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
+        </tr>}
+        {w.gpTotalInvested > 0 && <tr style={{background:"#eff6ff"}}>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:600,fontSize:10,color:"#1e40af",paddingInlineStart:16}}>{ar?"عائد نقدي GP %":"GP Cash Yield %"}</td>
+          <td style={tdN}></td>
+          {years.map(y=>{const v=gpCashYield[y]||0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#9ca3af"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
+        </tr>}
 
         {/* ── Net Cash Flow + Cumulative ── */}
         <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#fefce8",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f"}}>{ar?"صافي التدفق النقدي":"NET CASH FLOW"}</td></tr>
