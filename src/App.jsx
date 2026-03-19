@@ -2573,7 +2573,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           const pw = phaseWaterfalls?.[p];
           const irr = pw?.lpIRR;
           return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-            {p}{irr !== null && irr !== undefined ? ` (LP ${(irr*100).toFixed(1)}%)` : ""}
+            {p}{irr !== null && irr !== undefined ? <span style={{fontSize:10,opacity:0.8}}>{` LP ${(irr*100).toFixed(1)}%`}</span> : ""}
           </button>;
         })}
       </div>
@@ -2982,7 +2982,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           const pf = phaseFinancings?.[p];
           const irr = pf?.leveredIRR;
           return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"7px 16px",fontSize:12,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:8}}>
-            {p}{irr !== null && irr !== undefined ? ` (${(irr*100).toFixed(1)}%)` : ""}
+            {p}{irr !== null && irr !== undefined ? <span style={{fontSize:10,opacity:0.8}}>{` Levered ${(irr*100).toFixed(1)}%`}</span> : ""}
           </button>;
         })}
         {isPhaseView && (
@@ -5719,7 +5719,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
     {phases.map(([name,pr])=>(
       <div key={name} style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:14}}>
         <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600,display:"flex",justifyContent:"space-between"}}>
-          <span>{name}</span><span style={{color:"#6b7080",fontWeight:400,fontSize:11}}>IRR: <strong style={{color:pr.irr!==null?"#2563eb":"#9ca3af"}}>{pr.irr!==null?fmtPct(pr.irr*100):"—"}</strong></span>
+          <span>{name}</span><span style={{color:"#6b7080",fontWeight:400,fontSize:11}}>{ar?"IRR قبل التمويل":"Unlevered IRR"}: <strong style={{color:pr.irr!==null?"#2563eb":"#9ca3af"}}>{pr.irr!==null?fmtPct(pr.irr*100):"—"}</strong></span>
         </div>
         <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
           <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:150}}>{t.lineItem}</th>
@@ -5741,7 +5741,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
     ))}
     <div style={{background:"#fff",borderRadius:8,border:"2px solid #2563eb",overflow:"hidden"}}>
       <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,background:"#f0f4ff",display:"flex",justifyContent:"space-between"}}>
-        <span>{t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>IRR: <strong style={{color:"#2563eb"}}>{(incentivesResult&&incentivesResult.totalIncentiveValue>0&&incentivesResult.adjustedIRR!==null)?fmtPct(incentivesResult.adjustedIRR*100):c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
+        <span>{t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>{ar?"IRR قبل التمويل":"Unlevered IRR"}: <strong style={{color:"#2563eb"}}>{(incentivesResult&&incentivesResult.totalIncentiveValue>0&&incentivesResult.adjustedIRR!==null)?fmtPct(incentivesResult.adjustedIRR*100):c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
       </div>
       <div style={{overflowX:"auto"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
         <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:150}}>{t.lineItem}</th>
