@@ -2968,37 +2968,26 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     </div>}
     </div>
 
-    {/* ═══ SECTION 3+4: Fees, Capital, Developer, Fund Manager (4 columns) ═══ */}
+    {/* ═══ SECTION 3: Fees + Capital + Fund Manager (3 columns) ═══ */}
     <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
     {(() => {
       const gpManagesFund = cfg.gpIsFundManager !== false;
-      const gpDist = w.gpTotalDist || 0;
       const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
       const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
       const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
       const subFee = (w.feeSub||[]).reduce((a,b)=>a+b,0);
       const custodyFee = (w.feeCustody||[]).reduce((a,b)=>a+b,0);
-      const gpFees = gpManagesFund ? devFee + mgmtFee + structFee : devFee;
       const fmFees = gpManagesFund ? 0 : mgmtFee + structFee + subFee + custodyFee;
-      const landRentPaid = w.gpLandRentTotal || 0;
-      const totalGPCash = gpDist + gpFees - landRentPaid;
-      const gpInvested = w.gpEquity || 0;
-      const netProfit = totalGPCash - gpInvested;
-      const totalMult = gpInvested > 0 ? totalGPCash / gpInvested : 0;
-      const gpFromROC = (w.tier1||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
-      const gpFromPref = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
-      const gpFromCatchup = (w.tier3||[]).reduce((a,b)=>a+b,0);
-      const gpFromSplit = (w.tier4GP||[]).reduce((a,b)=>a+b,0);
-      const colCount = fmFees > 0 ? 4 : 3;
+      const colCount = fmFees > 0 ? 3 : 2;
 
       return <>
-      <WSecHeader id="economics" icon="💰" title={ar?"الرسوم وهيكل رأس المال وعوائد المطور":"Economics & Capital Structure"} summary={`${fmtM(totalGPCash)} · ${totalMult.toFixed(2)}x`} />
-      {wOpen("economics") && <div style={{display:"grid",gridTemplateColumns:`repeat(${colCount}, 1fr)`,gap:0}}>
+      <WSecHeader id="fees" icon="💰" title={ar?"الرسوم وهيكل رأس المال":"Fees & Capital Structure"} summary={`${fmtM(w.totalFees)} ${ar?"رسوم":"fees"}`} />
+      {wOpen("fees") && <div style={{display:"grid",gridTemplateColumns:`repeat(${colCount}, 1fr)`,gap:0}}>
 
         {/* COL 1: Fees */}
-        <div style={{padding:"16px 18px",borderRight:"1px solid #e5e7ec"}}>
-          <div style={{fontSize:12,fontWeight:700,color:"#1a1d23",marginBottom:10}}>{ar?"الرسوم":"Fees"}</div>
-          <div style={{fontSize:11,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 12px",rowGap:5}}>
+        <div style={{padding:"14px 18px",borderRight:"1px solid #e5e7ec"}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#1a1d23",marginBottom:8}}>{ar?"الرسوم":"Fees"}</div>
+          <div style={{fontSize:11,display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",rowGap:5}}>
             {[
               {label:ar?"اكتتاب":"Subscription", val:(w.feeSub||[]).reduce((a,b)=>a+b,0)},
               {label:ar?"إدارة":"Management", val:(w.feeMgmt||[]).reduce((a,b)=>a+b,0)},
@@ -3012,9 +3001,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         </div>
 
         {/* COL 2: Capital Structure */}
-        <div style={{padding:"16px 18px",borderRight:"1px solid #e5e7ec"}}>
-          <div style={{fontSize:12,fontWeight:700,color:"#1a1d23",marginBottom:10}}>{ar?"هيكل رأس المال":"Capital Structure"}</div>
-          <div style={{fontSize:11,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 12px",rowGap:5}}>
+        <div style={{padding:"14px 18px",borderRight:fmFees>0?"1px solid #e5e7ec":"none"}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#1a1d23",marginBottom:8}}>{ar?"هيكل رأس المال":"Capital Structure"}</div>
+          <div style={{fontSize:11,display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",rowGap:5}}>
             <span style={{color:"#6b7080"}}>{ar?"إجمالي الملكية":"Total Equity"}</span><span style={{textAlign:"right",fontWeight:700}}>{fmt(w.totalEquity)}</span>
             <span style={{color:"#8b5cf6"}}>LP ({fmtPct(w.lpPct*100)})</span><span style={{textAlign:"right"}}>{fmt(w.lpEquity)}</span>
             <span style={{color:"#3b82f6"}}>GP ({fmtPct(w.gpPct*100)})</span><span style={{textAlign:"right"}}>{fmt(w.gpEquity)}</span>
@@ -3023,52 +3012,147 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </div>
         </div>
 
-        {/* COL 3: Developer (GP) */}
-        <div style={{padding:"16px 18px",background:"linear-gradient(180deg, #f0f7ff 0%, #f0fdf4 100%)",borderRight:fmFees>0?"1px solid #e5e7ec":"none"}}>
-          <div style={{fontSize:12,fontWeight:700,color:"#1e40af",marginBottom:10}}>{ar?"عوائد المطور (GP)":"Developer (GP)"}</div>
-
-          <div style={{fontSize:10,fontWeight:600,color:"#8b5cf6",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"كمستثمر":"AS INVESTOR"}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",rowGap:4,fontSize:11,marginBottom:10}}>
-            <span style={{color:"#6b7080"}}>{ar?"رد رأس المال":"Capital Return"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromROC)}</span>
-            <span style={{color:"#6b7080"}}>{ar?"عائد تفضيلي":"Pref Return"}</span><span style={{textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM(gpFromPref)}</span>
-          </div>
-
-          <div style={{fontSize:10,fontWeight:600,color:"#3b82f6",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"كمطور":"AS DEVELOPER"}</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",rowGap:4,fontSize:11,marginBottom:10}}>
-            <span style={{color:"#6b7080"}}>{ar?"Catch-up":"Catch-up (T3)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromCatchup)}</span>
-            <span style={{color:"#6b7080"}}>{ar?"حصة الأرباح":"Profit Split"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromSplit)}</span>
-            <span style={{color:"#6b7080"}}>{ar?"رسوم التطوير":"Dev Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(devFee)}</span>
-            {gpManagesFund && mgmtFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Mgmt Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(mgmtFee)}</span></>}
-            {landRentPaid > 0 && <><span style={{color:"#ef4444"}}>{ar?"إيجار الأرض":"Land Rent"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
-          </div>
-
-          <div style={{borderTop:"2px solid #1e40af22",paddingTop:8}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",fontSize:11}}>
-              <span style={{fontWeight:700}}>{ar?"صافي النقد":"Net Cash"}</span><span style={{textAlign:"right",fontWeight:800,fontSize:15,color:totalGPCash>=0?"#16a34a":"#ef4444"}}>{fmtM(totalGPCash)}</span>
-              <span style={{color:"#6b7080"}}>{ar?"صافي الربح":"Net Profit"}</span><span style={{textAlign:"right",fontWeight:600,color:netProfit>=0?"#16a34a":"#ef4444"}}>{fmtM(netProfit)}</span>
-            </div>
-            <div style={{marginTop:8,display:"inline-flex",alignItems:"center",gap:6,background:"#fff",borderRadius:6,padding:"4px 10px",border:"1px solid #bfdbfe"}}>
-              <span style={{fontSize:10,color:"#6b7080"}}>{ar?"المضاعف":"Multiple"}</span>
-              <span style={{fontSize:15,fontWeight:800,color:totalMult>=1.5?"#16a34a":totalMult>=1?"#ca8a04":"#ef4444"}}>{totalMult.toFixed(2)}x</span>
-            </div>
-          </div>
-        </div>
-
-        {/* COL 4: Fund Manager (only when GP ≠ Fund Manager) */}
+        {/* COL 3: Fund Manager (only when GP ≠ Fund Manager) */}
         {fmFees > 0 && (
-          <div style={{padding:"16px 18px",background:"linear-gradient(180deg, #fefce8 0%, #fff7ed 100%)"}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#92400e",marginBottom:10}}>{ar?"الشركة المالية":"Fund Manager"}</div>
+          <div style={{padding:"14px 18px",background:"linear-gradient(180deg, #fefce8, #fff7ed)"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#92400e",marginBottom:8}}>{ar?"الشركة المالية":"Fund Manager"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",rowGap:5,fontSize:11}}>
-              {mgmtFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(mgmtFee)}</span></>}
+              {mgmtFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"إدارة":"Management"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(mgmtFee)}</span></>}
               {subFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"اكتتاب":"Subscription"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(subFee)}</span></>}
               {structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"هيكلة":"Structuring"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(structFee)}</span></>}
               {custodyFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"حفظ":"Custody"}</span><span style={{textAlign:"right",fontWeight:500,color:"#f59e0b"}}>{fmtM(custodyFee)}</span></>}
               <span style={{borderTop:"2px solid #f59e0b",paddingTop:5,marginTop:3,fontWeight:700,color:"#92400e"}}>{ar?"الإجمالي":"Total"}</span>
-              <span style={{borderTop:"2px solid #f59e0b",paddingTop:5,marginTop:3,textAlign:"right",fontWeight:800,fontSize:14,color:"#f59e0b"}}>{fmtM(fmFees)}</span>
+              <span style={{borderTop:"2px solid #f59e0b",paddingTop:5,marginTop:3,textAlign:"right",fontWeight:800,fontSize:13,color:"#f59e0b"}}>{fmtM(fmFees)}</span>
             </div>
-            <div style={{marginTop:10,fontSize:9,color:"#a16207",background:"#fffbeb",borderRadius:5,padding:"6px 8px",border:"1px solid #fde68a"}}>{ar?"تُدفع من الصندوق للشركة المالية":"Paid by fund to financial co."}</div>
+            <div style={{marginTop:8,fontSize:9,color:"#a16207",background:"#fffbeb",borderRadius:5,padding:"5px 8px",border:"1px solid #fde68a"}}>{ar?"تُدفع من الصندوق للشركة المالية":"Paid by fund to financial co."}</div>
           </div>
         )}
+      </div>}
+      </>;
+    })()}
+    </div>
+
+    {/* ═══ SECTION 4: GP Returns + LP Returns (2 columns) ═══ */}
+    <div style={{borderRadius:10,border:"1px solid #e5e7ec",marginBottom:18,overflow:"hidden"}}>
+    {(() => {
+      const gpManagesFund = cfg.gpIsFundManager !== false;
+      const gpDist = w.gpTotalDist || 0;
+      const devFee = (w.feeDev||[]).reduce((a,b)=>a+b,0);
+      const mgmtFee = (w.feeMgmt||[]).reduce((a,b)=>a+b,0);
+      const structFee = (w.feeStruct||[]).reduce((a,b)=>a+b,0);
+      const gpFees = gpManagesFund ? devFee + mgmtFee + structFee : devFee;
+      const landRentPaid = w.gpLandRentTotal || 0;
+      const totalGPCash = gpDist + gpFees - landRentPaid;
+      const gpInvested = w.gpEquity || 0;
+      const netProfit = totalGPCash - gpInvested;
+      const totalMult = gpInvested > 0 ? totalGPCash / gpInvested : 0;
+      const gpFromROC = (w.tier1||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
+      const gpFromPref = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.gpPct||0);
+      const gpFromCatchup = (w.tier3||[]).reduce((a,b)=>a+b,0);
+      const gpFromSplit = (w.tier4GP||[]).reduce((a,b)=>a+b,0);
+      const lpFromROC = (w.tier1||[]).reduce((a,b)=>a+b,0) * (w.lpPct||0);
+      const lpFromPref = (w.tier2||[]).reduce((a,b)=>a+b,0) * (w.lpPct||0);
+      const lpFromSplit = (w.tier4LP||[]).reduce((a,b)=>a+b,0);
+
+      return <>
+      <WSecHeader id="returns" icon="📊" title={ar?"عوائد المطور والمستثمر":"GP & LP Returns"} summary={`GP ${fmtM(totalGPCash)} · LP ${w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"}`} />
+      {wOpen("returns") && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:0}}>
+
+        {/* LEFT: Developer (GP) Full Economics */}
+        <div style={{padding:"16px 20px",background:"linear-gradient(180deg, #f0f7ff 0%, #f0fdf4 100%)",borderRight:"2px solid #e5e7ec"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+            <div style={{width:30,height:30,borderRadius:7,background:"#3b82f6",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700}}>GP</div>
+            <div><div style={{fontSize:13,fontWeight:700,color:"#1e40af"}}>{ar?"عوائد المطور":"Developer Returns"}</div>
+            <div style={{fontSize:10,color:"#3b82f6"}}>{fmtPct(w.gpPct*100)} {ar?"من رأس المال":"of equity"} · {fmtM(gpInvested)} {ar?"مستثمر":"invested"}</div></div>
+          </div>
+
+          <div style={{fontSize:10,fontWeight:600,color:"#8b5cf6",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{ar?"كمستثمر":"AS INVESTOR"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:4,fontSize:12,marginBottom:12}}>
+            <span style={{color:"#6b7080"}}>{ar?"رد رأس المال (T1 × GP%)":"Capital Return (T1 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromROC)}</span>
+            <span style={{color:"#6b7080"}}>{ar?"عائد تفضيلي (T2 × GP%)":"Pref Return (T2 × GP%)"}</span><span style={{textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM(gpFromPref)}</span>
+          </div>
+
+          <div style={{fontSize:10,fontWeight:600,color:"#3b82f6",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{ar?"كمطور":"AS DEVELOPER"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:4,fontSize:12,marginBottom:12}}>
+            <span style={{color:"#6b7080"}}>{ar?"تعويض المطور (T3)":"GP Catch-up (T3)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromCatchup)}</span>
+            <span style={{color:"#6b7080"}}>{ar?"حصة الأرباح (T4)":"Profit Split (T4)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(gpFromSplit)}</span>
+            <span style={{color:"#6b7080"}}>{ar?"رسوم التطوير":"Developer Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(devFee)}</span>
+            {gpManagesFund && mgmtFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الإدارة":"Management Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(mgmtFee)}</span></>}
+            {gpManagesFund && structFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم الهيكلة":"Structuring Fee"}</span><span style={{textAlign:"right",fontWeight:500,color:"#2563eb"}}>{fmtM(structFee)}</span></>}
+            {landRentPaid > 0 && <><span style={{color:"#ef4444",fontWeight:500}}>{ar?"إيجار الأرض (يدفعه GP)":"Land Rent (paid by GP)"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
+          </div>
+
+          <div style={{borderTop:"2px solid #1e40af22",paddingTop:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:4,fontSize:12}}>
+              <span style={{color:"#6b7080"}}>{ar?"رأس مال المطور":"GP Equity"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(gpInvested)})</span>
+              <span style={{color:"#6b7080"}}>{ar?"توزيعات الشلال":"Waterfall Dist."}</span><span style={{textAlign:"right",fontWeight:600,color:"#16a34a"}}>{fmtM(gpDist)}</span>
+              <span style={{color:"#6b7080"}}>{ar?"رسوم مستلمة":"Fees Received"}</span><span style={{textAlign:"right",fontWeight:600,color:"#2563eb"}}>{fmtM(gpFees)}</span>
+              {landRentPaid > 0 && <><span style={{color:"#6b7080"}}>{ar?"إيجار الأرض":"Land Rent"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(landRentPaid)})</span></>}
+              <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,fontWeight:700,fontSize:13}}>{ar?"صافي النقد":"Net Cash"}</span>
+              <span style={{borderTop:"2px solid #1e40af",paddingTop:6,marginTop:4,textAlign:"right",fontWeight:800,fontSize:18,color:totalGPCash>=0?"#16a34a":"#ef4444"}}>{fmtM(totalGPCash)}</span>
+              <span style={{fontWeight:600}}>{ar?"صافي الربح":"Net Profit"}</span><span style={{textAlign:"right",fontWeight:700,color:netProfit>=0?"#16a34a":"#ef4444"}}>{fmtM(netProfit)}</span>
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:10}}>
+              <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",borderRadius:6,padding:"4px 10px",border:"1px solid #bfdbfe"}}>
+                <span style={{fontSize:10,color:"#6b7080"}}>{ar?"المضاعف":"Multiple"}</span>
+                <span style={{fontSize:15,fontWeight:800,color:totalMult>=1.5?"#16a34a":totalMult>=1?"#ca8a04":"#ef4444"}}>{totalMult.toFixed(2)}x</span>
+              </div>
+              <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",borderRadius:6,padding:"4px 10px",border:"1px solid #bfdbfe"}}>
+                <span style={{fontSize:10,color:"#6b7080"}}>IRR</span>
+                <span style={{fontSize:15,fontWeight:800,color:w.gpIRR>0.001?"#16a34a":"#6b7080"}}>{w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"}</span>
+              </div>
+              {gpPayback && <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",borderRadius:6,padding:"4px 10px",border:"1px solid #bfdbfe"}}>
+                <span style={{fontSize:10,color:"#6b7080"}}>{ar?"استرداد":"Payback"}</span>
+                <span style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>{gpPayback} {ar?"سنة":"yr"}</span>
+              </div>}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: Investor (LP) Full Economics */}
+        <div style={{padding:"16px 20px",background:"linear-gradient(180deg, #faf5ff 0%, #f5f3ff 100%)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+            <div style={{width:30,height:30,borderRadius:7,background:"#8b5cf6",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700}}>LP</div>
+            <div><div style={{fontSize:13,fontWeight:700,color:"#5b21b6"}}>{ar?"عوائد المستثمر":"Investor Returns"}</div>
+            <div style={{fontSize:10,color:"#7c3aed"}}>{fmtPct(w.lpPct*100)} {ar?"من رأس المال":"of equity"} · {fmtM(w.lpTotalInvested)} {ar?"مستثمر":"invested"}</div></div>
+          </div>
+
+          <div style={{fontSize:10,fontWeight:600,color:"#8b5cf6",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{ar?"مصادر التوزيعات":"DISTRIBUTION SOURCES"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:4,fontSize:12,marginBottom:12}}>
+            <span style={{color:"#6b7080"}}>{ar?"رد رأس المال (T1 × LP%)":"Capital Return (T1 × LP%)"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(lpFromROC)}</span>
+            <span style={{color:"#6b7080"}}>{ar?"عائد تفضيلي (T2 × LP%)":"Pref Return (T2 × LP%)"}</span><span style={{textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM(lpFromPref)}</span>
+            <span style={{color:"#6b7080"}}>{ar?"توزيع أرباح (T4)":"Profit Split (T4)"}</span><span style={{textAlign:"right",fontWeight:500,color:"#16a34a"}}>{fmtM(lpFromSplit)}</span>
+          </div>
+
+          <div style={{borderTop:"2px solid #7c3aed22",paddingTop:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:4,fontSize:12}}>
+              <span style={{color:"#6b7080"}}>{ar?"رأس مال مستثمر":"LP Equity"}</span><span style={{textAlign:"right",fontWeight:600,color:"#ef4444"}}>({fmtM(w.lpTotalInvested)})</span>
+              <span style={{color:"#6b7080"}}>{ar?"إجمالي التوزيعات":"Total Distributions"}</span><span style={{textAlign:"right",fontWeight:600,color:"#16a34a"}}>{fmtM(w.lpTotalDist)}</span>
+              <span style={{borderTop:"2px solid #7c3aed",paddingTop:6,marginTop:4,fontWeight:700,fontSize:13}}>{ar?"صافي النقد":"Net Cash"}</span>
+              <span style={{borderTop:"2px solid #7c3aed",paddingTop:6,marginTop:4,textAlign:"right",fontWeight:800,fontSize:18,color:w.lpTotalDist-w.lpTotalInvested>=0?"#16a34a":"#ef4444"}}>{fmtM(w.lpTotalDist - w.lpTotalInvested)}</span>
+            </div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:10}}>
+              <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",borderRadius:6,padding:"4px 10px",border:"1px solid #e9d5ff"}}>
+                <span style={{fontSize:10,color:"#6b7080"}}>IRR</span>
+                <span style={{fontSize:15,fontWeight:800,color:w.lpIRR>0?"#16a34a":"#6b7080"}}>{w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"}</span>
+              </div>
+              <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",borderRadius:6,padding:"4px 10px",border:"1px solid #e9d5ff"}}>
+                <span style={{fontSize:10,color:"#6b7080"}}>MOIC</span>
+                <span style={{fontSize:15,fontWeight:800,color:w.lpMOIC>1?"#16a34a":"#6b7080"}}>{w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}</span>
+              </div>
+              {lpPayback && <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",borderRadius:6,padding:"4px 10px",border:"1px solid #e9d5ff"}}>
+                <span style={{fontSize:10,color:"#6b7080"}}>{ar?"استرداد":"Payback"}</span>
+                <span style={{fontSize:12,fontWeight:700,color:"#16a34a"}}>{lpPayback} {ar?"سنة":"yr"}</span>
+              </div>}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:12,fontSize:10}}>
+              <div style={{background:"#fff",borderRadius:6,padding:"6px 8px",border:"1px solid #e9d5ff"}}><span style={{color:"#6b7080"}}>NPV @10%</span><br/><span style={{fontWeight:600}}>{fmtM(w.lpNPV10)}</span></div>
+              <div style={{background:"#fff",borderRadius:6,padding:"6px 8px",border:"1px solid #e9d5ff"}}><span style={{color:"#6b7080"}}>NPV @12%</span><br/><span style={{fontWeight:600}}>{fmtM(w.lpNPV12)}</span></div>
+              <div style={{background:"#fff",borderRadius:6,padding:"6px 8px",border:"1px solid #e9d5ff"}}><span style={{color:"#6b7080"}}>NPV @14%</span><br/><span style={{fontWeight:600}}>{fmtM(w.lpNPV14)}</span></div>
+            </div>
+            {lpStabYield > 0 && <div style={{marginTop:8,fontSize:11,color:"#6b7080"}}>{ar?"عائد نقدي مستقر:":"Stabilized Cash Yield:"} <span style={{fontWeight:700,color:"#16a34a"}}>{fmtPct(lpStabYield*100)}</span></div>}
+          </div>
+        </div>
 
       </div>}
       </>;
