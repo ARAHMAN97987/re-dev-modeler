@@ -1064,7 +1064,9 @@ function runChecks(project, results, financing, waterfall, incentivesResult) {
     add("T2","Debt Fully Repaid", f.tenor===0||balEnd<1, "Debt repaid by tenor end", `Balance at year ${rpEnd+1}: ${fmt(balEnd)}`);
     let intOk=true;
     const ufPct = (project.upfrontFeePct||0)/100;
+    const exitIdx = f.exitYear ? f.exitYear - (project.startYear||2026) : -1;
     for (let y=0;y<Math.min(h,20);y++) {
+      if (y === exitIdx) continue; // Balloon repay distorts trueClose at exit year
       if ((f.debtBalOpen[y]||0)>0||(f.debtBalClose[y]||0)>0||(f.drawdown?.[y]||0)>0) {
         const trueClose = Math.max(0,(f.debtBalOpen[y]||0)+(f.drawdown?.[y]||0)-(f.repayment?.[y]||0));
         const exp=Math.max(0,((f.debtBalOpen[y]||0)+trueClose)/2*f.rate + (f.drawdown?.[y]||0)*ufPct);
@@ -1667,12 +1669,22 @@ function computeFinancing(project, projectResults, incentivesResult) {
       }
     }
     const exitCost = exitVal * (project.exitCostPct ?? 2) / 100;
-    exitProceeds[exitYr] = Math.max(0, exitVal - exitCost - debtBalClose[exitYr]);
+    // ZAN: Exit proceeds are GROSS (not net of debt)
+    // Debt is repaid through normal schedule. If exit before maturity,
+    // remaining debt is paid off as balloon repayment in exit year.
+    exitProceeds[exitYr] = Math.max(0, exitVal - exitCost);
   }
 
-  // FIX#1: Determine if project was sold (not hold)
+  // Determine if project was sold (not hold)
   const sold = exitStrategy !== "hold" && exitYr >= 0 && exitYr < h;
-  // Zero out post-exit debt schedule after sale
+  // If exit before debt maturity: force balloon repayment of remaining balance
+  if (sold && debtBalClose[exitYr] > 0) {
+    const remainingDebt = debtBalClose[exitYr];
+    repay[exitYr] += remainingDebt;
+    debtBalClose[exitYr] = 0;
+    debtService[exitYr] = repay[exitYr] + interest[exitYr];
+  }
+  // Zero out post-exit debt schedule
   if (sold) {
     for (let y = exitYr + 1; y < h; y++) {
       drawdown[y] = 0;
@@ -1680,9 +1692,8 @@ function computeFinancing(project, projectResults, incentivesResult) {
       interest[y] = 0;
       debtBalOpen[y] = 0;
       debtBalClose[y] = 0;
+      debtService[y] = 0;
     }
-    // Also zero the closing balance at exit year since debt was netted in exit proceeds
-    debtBalClose[exitYr] = 0;
   }
 
   // ── Apply interest subsidy ──

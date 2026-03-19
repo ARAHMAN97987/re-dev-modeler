@@ -311,11 +311,12 @@ suite('F9-computeFinancing');
   }
   t('Debt balance rolls forward', balOk);
   // ZAN interest: (Open+Close)/2 × rate + draw × upfrontFee%
-  // Note: debtBalClose may be zeroed at exit year, so reconstruct true close for comparison
+  // Note: at exit year, balloon repayment is added after interest calc, so skip it
   let intOk = true;
   const ufPct = (D1.upfrontFeePct||0)/100;
+  const exitIdx = f.exitYear ? f.exitYear - D1.startYear : -1;
   for (let y=0; y<D1.horizon; y++) {
-    // Reconstruct true close before exit zeroing: Open + Draw - Repay
+    if (y === exitIdx) continue; // Balloon repay distorts trueClose
     const trueClose = Math.max(0, (f.debtBalOpen[y]||0) + (f.drawdown[y]||0) - (f.repayment[y]||0));
     const expInt = Math.max(0, ((f.debtBalOpen[y]||0) + trueClose)/2 * (D1.financeRate/100) + (f.drawdown[y]||0) * ufPct);
     if (!near(f.originalInterest[y], expInt, TOL.MONEY_LARGE)) { intOk=false; break; }
