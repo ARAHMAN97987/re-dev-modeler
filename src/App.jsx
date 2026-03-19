@@ -2341,13 +2341,18 @@ function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     gpPct: totalEquity > 0 ? gpEquity / totalEquity : 0,
     lpPct: totalEquity > 0 ? lpEquity / totalEquity : 0,
     equityCalls: sumArr('equityCalls'), fees: sumArr('fees'),
+    feeSub: sumArr('feeSub'), feeMgmt: sumArr('feeMgmt'), feeCustody: sumArr('feeCustody'),
+    feeDev: sumArr('feeDev'), feeStruct: sumArr('feeStruct'),
     totalFees: sum('totalFees'), unfundedFees: sumArr('unfundedFees'),
+    gpLandRentTotal: sum('gpLandRentTotal'),
     exitProceeds: sumArr('exitProceeds'), exitYear: Math.max(...names.map(n => phaseWaterfalls[n]?.exitYear || 0)),
     cashAvail: sumArr('cashAvail'),
     tier1: sumArr('tier1'), tier2: sumArr('tier2'),
     tier3: sumArr('tier3'), tier4LP: sumArr('tier4LP'), tier4GP: sumArr('tier4GP'),
     lpDist: sumArr('lpDist'), gpDist: sumArr('gpDist'),
     lpNetCF, gpNetCF,
+    unreturnedOpen: sumArr('unreturnedOpen'), unreturnedClose: sumArr('unreturnedClose'),
+    prefAccrual: sumArr('prefAccrual'), prefAccumulated: sumArr('prefAccumulated'),
     lpIRR: calcIRR(lpNetCF), gpIRR: calcIRR(gpNetCF),
     lpTotalDist: sum('lpTotalDist'), gpTotalDist: sum('gpTotalDist'),
     lpMOIC: lpEquity > 0 ? sum('lpTotalDist') / lpEquity : 0,
@@ -3956,14 +3961,16 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const incentivesResult = useMemo(() => { try { return project && results ? computeIncentives(project, results) : null; } catch(e) { console.error("computeIncentives error:", e); return null; } }, [project, results]);
   // Consolidated financing & waterfall (legacy - full field set for UI)
   const financing = useMemo(() => { try { return project && results ? computeFinancing(project, results, incentivesResult) : null; } catch(e) { console.error("computeFinancing error:", e); return null; } }, [project, results, incentivesResult]);
-  const waterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing, incentivesResult) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing, incentivesResult]);
+  const _legacyWaterfall = useMemo(() => { try { return project && results && financing ? computeWaterfall(project, results, financing, incentivesResult) : null; } catch(e) { console.error("computeWaterfall error:", e); return null; } }, [project, results, financing, incentivesResult]);
   // Per-phase independent financing & waterfall (new architecture - for phase tabs)
   const independentPhaseResults = useMemo(() => { try { return project && results ? computeIndependentPhaseResults(project, results, incentivesResult) : null; } catch(e) { console.error("independentPhaseResults error:", e); return null; } }, [project, results, incentivesResult]);
+  // Consolidated waterfall: prefer aggregated sum of per-phase waterfalls (ensures Consolidated = ZAN1+ZAN2+ZAN3)
+  const waterfall = useMemo(() => independentPhaseResults?.consolidatedWaterfall || _legacyWaterfall, [independentPhaseResults, _legacyWaterfall]);
   // Phase waterfalls: prefer independent results for phase tabs
   const phaseWaterfalls = useMemo(() => { try { if (independentPhaseResults?.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0) return independentPhaseResults.phaseWaterfalls; return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall, independentPhaseResults]);
   // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
-  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
+  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, _legacyWaterfall || waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, _legacyWaterfall, waterfall, incentivesResult]);
 
   const createProject = async (templateId) => {
     const p = defaultProject();
