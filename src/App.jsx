@@ -3843,13 +3843,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         };
         const AB = ({id, children, visible}) => {
           if (visible === false || !cfgOpen(id)) return null;
-          return <div style={{padding:"10px 18px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6}}>{children}</div>;
+          return <div style={{padding:"10px 14px 12px",display:"grid",gridTemplateColumns:"1fr",gap:6}}>{children}</div>;
         };
-        const g2 = {display:"contents"};
-        const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
-        return <div>
+        const g2 = {display:"grid",gridTemplateColumns:"1fr 1fr",gap:6};
+        const g3 = {display:"grid",gridTemplateColumns:"1fr 1fr",gap:6};
+        return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:0}}>
         {/* ── SECTION: FINANCING MODE (always visible, not collapsible) ── */}
-        <div style={{padding:"12px 18px",borderBottom:"1px solid #eef0f4",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6}}>
+        <div style={{padding:"12px 14px",borderBottom:"1px solid #eef0f4",gridColumn:"1/-1"}}>
           <FL label={ar?"آلية التمويل":"Financing Mode"} tip="يحدد طريقة تمويل المشروع: ذاتي، بنكي، أو عبر صندوق استثماري\nChoose how the project will be funded: self, bank, or fund structure">
             <Drp lang={lang} value={cfg.finMode} onChange={v=>upCfg({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
               {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
@@ -3861,6 +3861,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </div>
 
         {/* ── SECTION: DEBT TERMS ── */}
+        <div style={{borderRight:isMobile?"none":"1px solid #eef0f4",borderBottom:"1px solid #eef0f4"}}>
         <AH id="debt" color="#2563eb" label={ar?"شروط القرض":"Debt Terms"} summary={hasDbt && (cfg.debtAllowed || cfg.finMode==="bank100") ? `${cfg.finMode!=="bank100"?(cfg.maxLtvPct||70)+"% LTV · ":""}${cfg.financeRate||6.5}% · ${cfg.loanTenor||12}yr` : ""} visible={hasDbt} />
         <AB id="debt" visible={hasDbt}>{(() => {
           const showDebtFields = cfg.debtAllowed || cfg.finMode === "bank100";
@@ -3894,6 +3895,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         })()}</AB>
 
         {/* ── SECTION: EXIT STRATEGY ── */}
+        </div>
+        <div style={{borderBottom:"1px solid #eef0f4"}}>
         <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={hasDbt ? `${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ":"Hold"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`  : ""} visible={hasDbt} />
         <AB id="exit" visible={hasDbt}>
           <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع\nAsset Sale = exit at a set year. Hold for Income = no sale event">
@@ -3910,6 +3913,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: LAND & EQUITY ── */}
+        </div>
+        <div style={{borderRight:isMobile?"none":"1px solid #eef0f4",borderBottom:"1px solid #eef0f4"}}>
         <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · GP ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
         <AB id="land" visible={hasEq}>
           <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض إلى حصة Equity في الحسابات التمويلية\nConvert leasehold land value to equity in financing calculations">
@@ -3929,6 +3934,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: FUND STRUCTURE ── */}
+        </div>
+        <div style={{borderBottom:"1px solid #eef0f4"}}>
         <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"GP = Mgr")}` : ""} visible={isFundMode} />
         <AB id="fund" visible={isFundMode}>
           <div style={g2}>
@@ -3944,6 +3951,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: WATERFALL ── */}
+        </div>
+        <div style={{borderRight:isMobile?"none":"1px solid #eef0f4",borderBottom:"1px solid #eef0f4"}}>
         <AH id="wf" color="#16a34a" label={ar?"الشلال":"Waterfall"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||10}% · Carry ${cfg.carryPct||20}%` : ""} visible={isFundMode} />
         <AB id="wf" visible={isFundMode}>
           <div style={g2}>
@@ -3958,6 +3967,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: FEES ── */}
+        </div>
+        <div style={{borderBottom:"1px solid #eef0f4"}}>
         <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : hasEq ? (ar?"رسوم التطوير":"Dev Fee") : ""} visible={hasEq || isFundMode} />
         <AB id="fees" visible={hasEq || isFundMode}>{(() => {
           if (isFundMode && cfg.vehicleType==="fund") return <>
@@ -3993,7 +4004,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         })()}</AB>
 
         {/* Self-funded message */}
-        {cfg.finMode === "self" && <div style={{padding:"20px 18px",textAlign:"center",color:"#9ca3af",fontSize:12}}>{ar?"لا يوجد تمويل خارجي":"No external financing"}</div>}
+        </div>
+        {cfg.finMode === "self" && <div style={{padding:"20px 18px",textAlign:"center",color:"#9ca3af",fontSize:12,gridColumn:"1/-1"}}>{ar?"لا يوجد تمويل خارجي":"No external financing"}</div>}
         </div>;
       })()}
     </div>
