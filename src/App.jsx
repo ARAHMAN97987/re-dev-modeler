@@ -3644,6 +3644,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const chartData = years.map(y => ({
     year: sy+y, yr: `Yr ${y+1}`,
     balance: pf.debtBalClose?.[y] || 0,
+    noi: (pc.income[y]||0) - (pc.landRent[y]||0),
+    ds: pf.debtService?.[y] || 0,
   }));
 
   // CFRow (same as WaterfallView)
@@ -3850,26 +3852,34 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     {/* ═══ INCENTIVES IMPACT ═══ */}
     <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
 
-    {/* ═══ CHART TOGGLE ═══ */}
+    {/* ═══ CHART TOGGLE (Debt Balance + NOI) ═══ */}
     {chartData.length > 2 && (
       <div style={{marginBottom:14}}>
         <button onClick={()=>setShowChart(!showChart)} style={{...btnS,fontSize:11,padding:"6px 14px",background:showChart?"#eff6ff":"#f8f9fb",color:showChart?"#2563eb":"#6b7080",border:"1px solid "+(showChart?"#93c5fd":"#e5e7ec"),borderRadius:6,fontWeight:600}}>
-          📈 {ar?"رسم بياني - رصيد الدين":"Debt Balance Chart"} {showChart?"▲":"▼"}
+          📈 {ar?"رسم بياني - الدين vs الدخل":"Debt vs Income Chart"} {showChart?"▲":"▼"}
         </button>
         {showChart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{top:5,right:10,left:10,bottom:5}}>
               <defs>
                 <linearGradient id="debtBG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.15}/><stop offset="95%" stopColor="#ef4444" stopOpacity={0}/></linearGradient>
+                <linearGradient id="noiBG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#16a34a" stopOpacity={0.1}/><stop offset="95%" stopColor="#16a34a" stopOpacity={0}/></linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f1f5" />
               <XAxis dataKey="year" tick={{fontSize:10,fill:"#6b7080"}} />
               <YAxis tick={{fontSize:10,fill:"#6b7080"}} tickFormatter={v => v>=1e6?`${(v/1e6).toFixed(0)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:v} />
-              <Tooltip formatter={(v) => fmt(v)} />
-              <ReferenceLine y={0} stroke="#16a34a" strokeDasharray="4 4" strokeWidth={1.5} />
+              <Tooltip formatter={(v) => fmt(Math.abs(v))} />
+              <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="4 4" strokeWidth={1} />
               <Area type="monotone" dataKey="balance" stroke="#ef4444" strokeWidth={2.5} fill="url(#debtBG)" name={ar?"رصيد الدين":"Debt Balance"} dot={false} />
+              <Area type="monotone" dataKey="noi" stroke="#16a34a" strokeWidth={2} fill="url(#noiBG)" name="NOI" dot={false} />
+              <Area type="monotone" dataKey="ds" stroke="#f59e0b" strokeWidth={1.5} fill="none" strokeDasharray="4 4" name={ar?"خدمة الدين":"Debt Service"} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
+          <div style={{display:"flex",gap:14,justifyContent:"center",marginTop:6,fontSize:10}}>
+            <span><span style={{display:"inline-block",width:12,height:3,background:"#ef4444",borderRadius:2,marginInlineEnd:4}} />{ar?"رصيد الدين":"Debt Balance"}</span>
+            <span><span style={{display:"inline-block",width:12,height:3,background:"#16a34a",borderRadius:2,marginInlineEnd:4}} />NOI</span>
+            <span><span style={{display:"inline-block",width:12,height:3,background:"#f59e0b",borderRadius:2,marginInlineEnd:4,borderTop:"1px dashed #f59e0b"}} />{ar?"خدمة الدين":"Debt Service"}</span>
+          </div>
         </div>}
       </div>
     )}
@@ -3893,9 +3903,11 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <tr onClick={()=>setSecOpen(p=>({...p,s1:!p.s1}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",userSelect:"none"}}>{secOpen.s1?"▶":"▼"} {ar?"1. تدفقات المشروع (قبل التمويل)":"1. PROJECT CASH FLOWS (Unlevered)"}</td></tr>
       {!secOpen.s1 && <>
       <CFRow label={ar?"الإيرادات":"Rental Income"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
-      <CFRow label={ar?"إيجار الأرض":"Land Rent"} values={pc.landRent} total={pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
-      <CFRow label={ar?"تكلفة التطوير (CAPEX)":"Development CAPEX"} values={pc.capex} total={pc.totalCapex} negate color="#ef4444" />
-      <CFRow label={ar?"صافي التدفق النقدي (قبل التمويل)":"Net Project CF (Unlevered)"} values={pc.netCF} total={pc.netCF.reduce((a,b)=>a+b,0)} bold />
+      <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
+      {/* NOI */}
+      {(() => { const noi=new Array(h).fill(0); for(let y=0;y<h;y++) noi[y]=(pc.income[y]||0)-(pc.landRent[y]||0); return <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noi} total={noi.reduce((a,b)=>a+b,0)} bold />; })()}
+      <CFRow label={ar?"(-) تكلفة التطوير (CAPEX)":"(-) Development CAPEX"} values={pc.capex} total={pc.totalCapex} negate color="#ef4444" />
+      <CFRow label={ar?"= صافي التدفق (قبل التمويل)":"= Net Project CF (Unlevered)"} values={pc.netCF} total={pc.netCF.reduce((a,b)=>a+b,0)} bold />
       </>}
 
       {/* ═══ § 2. BANK FINANCING ═══ */}
@@ -3904,24 +3916,51 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       {!isBank100 && pf.equityCalls && <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={pf.equityCalls} total={pf.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" negate />}
       <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={pf.drawdown} total={pf.drawdown?.reduce((a,b)=>a+b,0)||0} />
       <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={pf.debtBalOpen} total={null} />
-      <CFRow label={ar?"سداد أصل الدين":"Debt Repayment"} values={pf.repayment} total={pf.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
+      <CFRow label={ar?"(-) سداد أصل الدين":"(-) Principal Repayment"} values={pf.repayment} total={pf.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
       <CFRow label={ar?"رصيد الدين (نهاية)":"Debt Balance (Close)"} values={pf.debtBalClose} total={null} />
-      <CFRow label={ar?"تكلفة التمويل (فائدة)":"Interest/Profit"} values={pf.interest} total={pf.totalInterest||0} negate color="#ef4444" />
-      <CFRow label={ar?"إجمالي خدمة الدين":"Total Debt Service"} values={pf.debtService} total={totalDS} negate bold color="#ef4444" />
-      {/* DSCR */}
-      {pf.dscr && <tr>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:600,minWidth:200,fontSize:10,color:"#2563eb",paddingInlineStart:20}}>DSCR</td>
-        <td style={tdN}></td>
-        {years.map(y=>{const v=pf.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.25?700:500,color:v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.25?"#f59e0b":"#16a34a"}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
-      </tr>}
+      <CFRow label={ar?"(-) تكلفة التمويل (فائدة)":"(-) Interest / Profit Cost"} values={pf.interest} total={pf.totalInterest||0} negate color="#ef4444" />
+      <CFRow label={ar?"= إجمالي خدمة الدين":"= Total Debt Service"} values={pf.debtService} total={totalDS} negate bold color="#ef4444" />
       {/* Exit */}
-      {exitProc > 0 && <CFRow label={ar?"حصيلة التخارج":"Exit Proceeds"} values={pf.exitProceeds} total={exitProc} color="#16a34a" />}
+      {exitProc > 0 && <CFRow label={ar?"(+) حصيلة التخارج":"(+) Exit Proceeds"} values={pf.exitProceeds} total={exitProc} color="#16a34a" />}
       </>}
 
-      {/* ═══ § 3. NET CASH FLOW (After Financing) ═══ */}
-      <tr onClick={()=>setSecOpen(p=>({...p,s3:!p.s3}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s3?"▶":"▼"} {ar?"3. صافي التدفق النقدي (بعد التمويل)":"3. NET CASH FLOW (After Financing)"}</td></tr>
+      {/* ═══ § 3. DSCR & DEBT COVERAGE ═══ */}
+      <tr onClick={()=>setSecOpen(p=>({...p,s3:!p.s3}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e40af",background:"#dbeafe",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #2563eb",userSelect:"none"}}>{secOpen.s3?"▶":"▼"} {ar?"3. تغطية خدمة الدين (DSCR)":"3. DEBT SERVICE COVERAGE (DSCR)"}</td></tr>
       {!secOpen.s3 && <>
-      <CFRow label={ar?"صافي التدفق النقدي (بعد التمويل)":"Levered Net Cash Flow"} values={pf.leveredCF} total={devNetCF} bold />
+      {/* NOI row */}
+      {(() => { const noi=new Array(h).fill(0); for(let y=0;y<h;y++) noi[y]=(pc.income[y]||0)-(pc.landRent[y]||0); return <CFRow label={ar?"صافي الدخل التشغيلي (NOI)":"Net Operating Income (NOI)"} values={noi} total={noi.reduce((a,b)=>a+b,0)} color="#16a34a" />; })()}
+      {/* DS row */}
+      <CFRow label={ar?"(÷) خدمة الدين":"(÷) Debt Service"} values={pf.debtService} total={totalDS} color="#ef4444" />
+      {/* DSCR = NOI / DS (highlighted) */}
+      {pf.dscr && <tr style={{background:"#eff6ff"}}>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:700,minWidth:200,fontSize:11,color:"#1e40af",paddingInlineStart:10}}>= DSCR (NOI ÷ DS)</td>
+        <td style={{...tdN,fontWeight:700,color:"#1e40af"}}>{dscrAvg!==null?dscrAvg.toFixed(2)+"x":""}</td>
+        {years.map(y=>{const v=pf.dscr?.[y];const bg=v===null||v===undefined?"#eff6ff":v<1?"#fef2f2":v<1.25?"#fefce8":"#f0fdf4";const fg=v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.25?"#f59e0b":"#16a34a";return <td key={y} style={{...tdN,fontSize:11,fontWeight:700,color:fg,background:bg}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
+      </tr>}
+      {/* Min DSCR indicator */}
+      <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:10,color:dscrMin>=1.25?"#16a34a":"#ef4444",background:dscrMin>=1.25?"#f0fdf4":"#fef2f2"}}>
+        {dscrMin>=1.25?"✅":"⚠️"} {ar?"الحد الأدنى":"Minimum"}: <strong>{dscrMin!==null?dscrMin.toFixed(2)+"x":"N/A"}</strong> | {ar?"المتوسط":"Average"}: <strong>{dscrAvg!==null?dscrAvg.toFixed(2)+"x":"N/A"}</strong> | {ar?"حد البنك":"Bank Req"}: <strong>1.25x</strong>
+      </td></tr>
+      </>}
+
+      {/* ═══ § 4. FINANCING COST ═══ */}
+      <tr onClick={()=>setSecOpen(p=>({...p,s4:!p.s4}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#dc2626",background:"#fef2f2",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #ef4444",userSelect:"none"}}>{secOpen.s4?"▶":"▼"} {ar?"4. تكلفة التمويل":"4. FINANCING COST"}</td></tr>
+      {!secOpen.s4 && <>
+      <CFRow label={ar?"إجمالي الفوائد":"Total Interest Paid"} values={pf.interest} total={pf.totalInterest||0} color="#ef4444" />
+      {(pf.upfrontFee||0) > 0 && (() => { const uf=new Array(h).fill(0); uf[0]=pf.upfrontFee; return <CFRow label={ar?"رسوم القرض المقدمة":"Upfront Loan Fee"} values={uf} total={pf.upfrontFee} color="#ef4444" />; })()}
+      {(() => { const tc=(pf.totalInterest||0)+(pf.upfrontFee||0); const tcArr=new Array(h).fill(0); for(let y=0;y<h;y++) tcArr[y]=(pf.interest[y]||0)+(y===0?(pf.upfrontFee||0):0); return <CFRow label={ar?"= إجمالي تكلفة التمويل":"= Total Financing Cost"} values={tcArr} total={tc} bold color="#dc2626" />; })()}
+      {/* As % of dev cost */}
+      <tr style={{background:"#fef2f2"}}>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fef2f2",zIndex:1,fontSize:10,color:"#dc2626",fontWeight:600,paddingInlineStart:10}}>{ar?"كنسبة من تكلفة التطوير":"As % of Dev Cost"}</td>
+        <td style={{...tdN,fontWeight:700,color:"#dc2626"}}>{pf.devCostInclLand>0?fmtPct(totalFinCost/pf.devCostInclLand*100):""}</td>
+        <td colSpan={years.length}></td>
+      </tr>
+      </>}
+
+      {/* ═══ § 5. NET CASH FLOW & DEVELOPER RETURNS ═══ */}
+      <tr onClick={()=>setSecOpen(p=>({...p,s5:!p.s5}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s5?"▶":"▼"} {ar?"5. صافي التدفق وعوائد المطور":"5. NET CASH FLOW & DEVELOPER RETURNS"}</td></tr>
+      {!secOpen.s5 && <>
+      <CFRow label={ar?"= صافي التدفق (بعد التمويل)":"= Levered Net Cash Flow"} values={pf.leveredCF} total={devNetCF} bold />
       {/* Cumulative */}
       {(() => { let cum=0; const cumArr=pf.leveredCF.map(v=>{cum+=v;return cum;}); return <tr style={{background:"#fffbeb"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:200}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
@@ -3934,6 +3973,19 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         <td style={tdN}></td>
         {years.map(y=>{const inc=pc.income[y]||0;const eq=pf.totalEquity;const v=eq>0&&inc>0?inc/eq:0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#d0d4dc"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
       </tr>}
+      {/* IRR / NPV summary row */}
+      <tr style={{background:"#e0e7ff"}}>
+        <td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11}}>
+          <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
+            <span>IRR <strong style={{color:pf.leveredIRR>0.12?"#16a34a":"#f59e0b"}}>{pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"}</strong></span>
+            <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
+            <span>NPV@10% <strong>{fmtM(calcNPV(pf.leveredCF,0.10))}</strong></span>
+            <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(pf.leveredCF,0.12))}</strong></span>
+            <span>NPV@14% <strong>{fmtM(calcNPV(pf.leveredCF,0.14))}</strong></span>
+          </div>
+        </td>
+      </tr>
       </>}
 
     </tbody></table></div>
