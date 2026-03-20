@@ -2700,7 +2700,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · Carry {cfg.carryPct||20}% · LP {cfg.lpProfitSplitPct||75}%</span>
           <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
         </div>
-        {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe"}}>
+        {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe",animation:"zanSlide 0.15s ease"}}>
           {/* Row 1: Waterfall Terms */}
           <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"شروط الشلال":"WATERFALL TERMS"}</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
@@ -2790,13 +2790,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.gp?"▲":"▼"}</span>
           </div>
           {!kpiOpen.gp ? (
-            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
               {badge(ar?"صافي":"Net", fmtM(gpNetCash), "#16a34a")}
               {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", "#3b82f6")}
               {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", w.gpIRR>0.001?"#16a34a":"#6b7080")}
             </div>
           ) : (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"كمستثمر":"AS INVESTOR"} />
               <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(gpT1)} />
               <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={isLpOnlyPref?"—":fmt(gpT2)} />
@@ -2837,13 +2837,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.lp?"▲":"▼"}</span>
           </div>
           {!kpiOpen.lp ? (
-            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
               {badge("IRR", w.lpIRR!==null?fmtPct(w.lpIRR*100):"—", w.lpIRR>0?"#16a34a":"#6b7080")}
               {badge("MOIC", w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—", "#8b5cf6")}
               {badge(ar?"استرداد":"Payback", lpPayback?`Yr ${lpPayback}`:"—", "#6366f1")}
             </div>
           ) : (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"مصادر التوزيعات":"DISTRIBUTION SOURCES"} />
               <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(lpT1)} />
               <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={fmt(lpT2)} c="#8b5cf6" />
@@ -2874,13 +2874,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.fund?"▲":"▼"}</span>
           </div>
           {!kpiOpen.fund ? (
-            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
               {badge(ar?"رسوم":"Fees", fmtM(w.totalFees), "#f59e0b")}
               {badge(ar?"ملكية":"Equity", fmtM(w.totalEquity), "#3b82f6")}
               {exitProc>0 && badge(ar?"تخارج":"Exit", `${fmtM(exitProc)} Yr${exitYr}`, "#16a34a")}
             </div>
           ) : (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"الرسوم":"FEES"} />
               <KR l={`${ar?"اكتتاب":"Subscription"} (${ar?"مرة":"once"})`} v={fmt(_feeSub)} c="#f59e0b" />
               <KR l={`${ar?"إدارة":"Management"} (${ar?"سنوي":"annual"})`} v={fmt(_feeMgmt)} c="#f59e0b" />
@@ -2923,7 +2923,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <button onClick={()=>setWSec(p=>({...p,chart:!p.chart}))} style={{...btnS,fontSize:11,padding:"6px 14px",background:wSec.chart?"#f0f4ff":"#f8f9fb",color:wSec.chart?"#2563eb":"#6b7080",border:"1px solid "+(wSec.chart?"#93c5fd":"#e5e7ec"),borderRadius:6,fontWeight:600}}>
           📈 {ar?"عرض الشارت":"Show Chart"} {wSec.chart?"▲":"▼"}
         </button>
-        {wSec.chart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
+        {wSec.chart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px",animation:"zanSlide 0.15s ease"}}>
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={cfChartData} margin={{top:5,right:10,left:10,bottom:5}}>
               <defs>
@@ -3166,7 +3166,7 @@ function ExitAnalysisPanel({ project, results, financing, waterfall, lang }) {
         </span>
         <span style={{fontSize:10,color:"#9ca3af"}}>{open?"▼":"▶"}</span>
       </div>
-      {open && <div style={{padding:"14px 16px"}}>
+      {open && <div style={{padding:"14px 16px",animation:"zanSlide 0.15s ease"}}>
         {/* Row 1: Strategy + Valuation */}
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)",gap:10,marginBottom:14}}>
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}>
@@ -3278,7 +3278,7 @@ function IncentivesImpact({ project, results, financing, incentivesResult, lang 
         <span style={{fontSize:10,fontWeight:600,color:"#059669",background:"#05966918",padding:"2px 8px",borderRadius:10}}>{fmtM(total)} {cur}</span>
         <span style={{fontSize:10,color:"#9ca3af"}}>{open?"▼":"▶"}</span>
       </div>
-      {open && <div style={{padding:"14px 16px"}}>
+      {open && <div style={{padding:"14px 16px",animation:"zanSlide 0.15s ease"}}>
         {/* Active incentives */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
           {items.map((it,i) => (
@@ -3438,13 +3438,13 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
           <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.proj?"▲":"▼"}</span>
         </div>
         {!kpiOpen.proj ? (
-          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge(ar?"تكلفة":"Cost", fmtM(devCost), "#1a1d23")}
             {badge(ar?"إيرادات":"Revenue", fmtM(totalIncome), "#16a34a")}
             {badge("NOI", fmtM(totalNOI), "#059669")}
           </div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
             <SecHd text={ar?"التكاليف":"COSTS"} />
             <KR l={ar?"تكلفة التطوير":"Dev Cost"} v={fmtM(devCost)} bold />
             <KR l="CAPEX" v={fmtM(totalCapex)} />
@@ -3468,13 +3468,13 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
           <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.cap?"▲":"▼"}</span>
         </div>
         {!kpiOpen.cap ? (
-          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge(ar?"مطلوب":"Required", fmtM(devCost), "#2563eb")}
             {badge(ar?"ذروة":"Peak", fmtM(peakCap), "#dc2626")}
             {badge(ar?"استرداد":"Payback", payback?`Yr ${payback}`:"—", "#6366f1")}
           </div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
             <SecHd text={ar?"الحاجة الرأسمالية":"CAPITAL NEEDS"} />
             <KR l={ar?"إجمالي مطلوب":"Total Required"} v={fmtM(devCost)} c="#2563eb" bold />
             <KR l={ar?"ذروة رأس المال المجمد":"Peak Capital Locked"} v={fmtM(peakCap)} c="#dc2626" bold />
@@ -3498,13 +3498,13 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
           <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.ret?"▲":"▼"}</span>
         </div>
         {!kpiOpen.ret ? (
-          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge("IRR", levIRR!==null?fmtPct(levIRR*100):"—", levIRR>0.12?"#16a34a":"#f59e0b")}
             {badge(ar?"صافي":"Net", fmtM(totalLevCF), totalLevCF>0?"#16a34a":"#ef4444")}
             {exitProc>0 && badge(ar?"تخارج":"Exit", fmtM(exitProc), "#f59e0b")}
           </div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
             <SecHd text={ar?"المؤشرات":"METRICS"} />
             <KR l="IRR" v={levIRR!==null?fmtPct(levIRR*100):"N/A"} c={levIRR>0.12?"#16a34a":"#f59e0b"} bold />
             <KR l={ar?"عائد على التكلفة":"Yield on Cost"} v={yieldOnCost>0?fmtPct(yieldOnCost*100):"—"} c={yieldOnCost>0.08?"#16a34a":"#6b7080"} />
@@ -3536,7 +3536,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
         <button onClick={()=>setShowChart(!showChart)} style={{...btnS,fontSize:11,padding:"6px 14px",background:showChart?"#f0fdf4":"#f8f9fb",color:showChart?"#16a34a":"#6b7080",border:"1px solid "+(showChart?"#86efac":"#e5e7ec"),borderRadius:6,fontWeight:600}}>
           📈 {ar?"رسم بياني":"Cash Flow Chart"} {showChart?"▲":"▼"}
         </button>
-        {showChart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
+        {showChart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px",animation:"zanSlide 0.15s ease"}}>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{top:5,right:10,left:10,bottom:5}}>
               <defs>
@@ -3744,7 +3744,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
           <span style={{fontSize:10,color:"#6b7080"}}>{!isBank100?`${cfg.maxLtvPct||70}% LTV · `:""}{cfg.financeRate||6.5}% · {cfg.loanTenor||7} {ar?"سنة":"yrs"} ({cfg.debtGrace||3} {ar?"سماح":"grace"})</span>
           <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
         </div>
-        {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #bfdbfe"}}>
+        {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #bfdbfe",animation:"zanSlide 0.15s ease"}}>
           <div style={{fontSize:10,fontWeight:700,color:"#2563eb",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"شروط القرض":"LOAN TERMS"}</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
             {!isBank100 && <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -3800,13 +3800,13 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
           <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.bank?"▲":"▼"}</span>
         </div>
         {!kpiOpen.bank ? (
-          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge(ar?"دين":"Debt", fmtM(pf.totalDebt), "#2563eb")}
             {badge("DSCR", dscrMin!==null?dscrMin.toFixed(2)+"x":"—", dscrMin>=1.25?"#16a34a":"#ef4444")}
             {badge(ar?"فوائد":"Interest", fmtM(pf.totalInterest), "#ef4444")}
           </div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
             <SecHd text={ar?"هيكل القرض":"LOAN STRUCTURE"} />
             <KR l={ar?"إجمالي القرض":"Total Facility"} v={fmtM(pf.totalDebt)} c="#2563eb" bold />
             <KR l="LTV" v={isBank100?"100%":fmtPct((pf.totalDebt/(pf.devCostInclLand||1))*100)} />
@@ -3836,13 +3836,13 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
           <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.dev?"▲":"▼"}</span>
         </div>
         {!kpiOpen.dev ? (
-          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge("IRR", pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—", pf.leveredIRR>0.12?"#16a34a":"#f59e0b")}
             {badge(ar?"صافي":"Net CF", fmtM(devNetCF), devNetCF>0?"#16a34a":"#ef4444")}
             {badge(ar?"استرداد":"Payback", paybackLev?`Yr ${paybackLev}`:"—", "#6366f1")}
           </div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
             <SecHd text={ar?"رأس المال":"CAPITAL"} />
             <KR l={ar?"ملكية المطور":"Developer Equity"} v={fmtM(pf.gpEquity||pf.totalEquity)} c="#3b82f6" bold />
             {pf.lpEquity>0 && <KR l={ar?"ملكية أخرى":"Other Equity"} v={fmtM(pf.lpEquity)} c="#8b5cf6" />}
@@ -3878,13 +3878,13 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
           <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.proj?"▲":"▼"}</span>
         </div>
         {!kpiOpen.proj ? (
-          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge(ar?"تكلفة":"Cost", fmtM(pf.devCostInclLand), "#1a1d23")}
             {badge(ar?"إيرادات":"Revenue", fmtM(pc.totalIncome), "#16a34a")}
             {exitProc>0 && badge(ar?"تخارج":"Exit", `${fmtM(exitProc)} Yr${(pf.exitYear||0)}`, "#f59e0b")}
           </div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
             <SecHd text={ar?"المصادر والاستخدامات":"SOURCES & USES"} />
             <KR l={ar?"دين بنكي":"Bank Debt"} v={fmtM(pf.totalDebt)} c="#ef4444" />
             <KR l={ar?"ملكية":"Equity"} v={fmtM(pf.totalEquity)} c="#3b82f6" />
@@ -3930,7 +3930,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         <button onClick={()=>setShowChart(!showChart)} style={{...btnS,fontSize:11,padding:"6px 14px",background:showChart?"#eff6ff":"#f8f9fb",color:showChart?"#2563eb":"#6b7080",border:"1px solid "+(showChart?"#93c5fd":"#e5e7ec"),borderRadius:6,fontWeight:600}}>
           📈 {ar?"رسم بياني - الدين vs الدخل":"Debt vs Income Chart"} {showChart?"▲":"▼"}
         </button>
-        {showChart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
+        {showChart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px",animation:"zanSlide 0.15s ease"}}>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{top:5,right:10,left:10,bottom:5}}>
               <defs>
@@ -4207,7 +4207,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         };
         const AB = ({id, children, visible}) => {
           if (visible === false || !cfgOpen(id)) return null;
-          return <div style={{padding:"8px 14px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6,background:"#fff",borderTop:"1px solid #f0f1f5",animation:"cfgSlideDown 0.2s ease"}}>{children}</div>;
+          return <div style={{padding:"8px 14px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6,background:"#fff",borderTop:"1px solid #f0f1f5",animation:"zanSlide 0.15s ease"}}>{children}</div>;
         };
         const g2 = {display:"contents"};
         const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
@@ -4216,12 +4216,6 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           if (visible === false) return null;
           return <div style={{borderRadius:8,border:`1px solid ${color||"#e5e7ec"}40`,borderTop:`3px solid ${color||"#e5e7ec"}`,overflow:"hidden",background:"#fafbfc",transition:"border-color 0.2s"}}>{children}</div>;
         };
-        // Inject animation keyframes once
-        if (typeof document !== "undefined" && !document.getElementById("cfgAnim")) {
-          const s = document.createElement("style"); s.id = "cfgAnim";
-          s.textContent = "@keyframes cfgSlideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}";
-          document.head.appendChild(s);
-        }
         return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff"}}>
@@ -4401,7 +4395,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             {badge && <span style={{fontSize:10,fontWeight:600,color:color,background:color+"18",padding:"2px 8px",borderRadius:10}}>{badge}</span>}
             {!alwaysOpen && <span style={{fontSize:11,color:"#9ca3af",transition:"transform 0.2s",transform:open?"rotate(0)":"rotate(-90deg)"}}>{open?"▼":"▶"}</span>}
           </div>
-          {open && <div style={{padding:"12px 16px"}}>{children}</div>}
+          {open && <div style={{padding:"12px 16px",animation:"zanSlide 0.15s ease"}}>{children}</div>}
         </div>;
       };
 
