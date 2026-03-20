@@ -4960,7 +4960,8 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>زان</span><span style={{width:1,height:30,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:12,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div></div></div>;
-  if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
+  if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); window.scrollTo(0,0); }} />;
+  if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} onOpenAcademy={() => { setView("academy"); window.scrollTo(0,0); }} />;
   if (!project) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#f87171",letterSpacing:2}}>!</div><div style={{fontSize:14,color:"#d0d4dc",marginTop:8}}>{lang==="ar"?"لم يتم تحميل المشروع":"Project failed to load"}</div><button onClick={goBack} style={{marginTop:16,padding:"8px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{lang==="ar"?"رجوع":"Go Back"}</button></div></div>;
 
   const dir = lang === "ar" ? "rtl" : "ltr";
@@ -5110,6 +5111,10 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
                     {/* Language */}
                     <button onClick={()=>{setLang(lang==="en"?"ar":"en");setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>{lang==="en"?"🌐":"🌐"}</span> {lang==="en"?"العربية (Arabic)":"English"}
+                    </button>
+                    {/* Academy */}
+                    <button onClick={()=>{setView("academy");setMenuOpen(false);window.scrollTo(0,0);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
+                      <span style={{fontSize:14}}>📚</span> {lang==="ar"?"أكاديمية زان":"ZAN Academy"}
                     </button>
                     {/* Divider */}
                     <div style={{height:1,background:"#f0f1f5",margin:"4px 0"}} />
@@ -5456,7 +5461,7 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
   );
 }
 
-function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut }) {
+function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut, onOpenAcademy }) {
   const [confirmDel, setConfirmDel] = useState(null);
   const [showFeatures, setShowFeatures] = useState(false);
   const isMobile = useIsMobile();
@@ -5477,6 +5482,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#5fbfbf",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:600,border:"none",borderRadius:6}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
+            {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:6}} title={ar?"أكاديمية زان":"ZAN Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
             {!isMobile && user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} style={{...btnSm,background:"#fef2f2",color:"#ef4444",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#e8e5e0",color:"#4b5060",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
@@ -9296,6 +9302,457 @@ function EducationalModal({ contentKey, lang, onClose }) {
       )}
     </div>
   </>);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ZAN ACADEMY — أكاديمية زان المالية
+// Consolidated Learning Center — reads from EDUCATIONAL_CONTENT
+// ═══════════════════════════════════════════════════════════════
+
+const ACADEMY_TERM_REGISTRY = {
+  "IRR": { key: "financialMetrics", tab: 0 },
+  "NPV": { key: "financialMetrics", tab: 1 },
+  "MOIC": { key: "financialMetrics", tab: 2 },
+  "DSCR": { key: "financialMetrics", tab: 3 },
+  "Leverage": { key: "financialMetrics", tab: 4 },
+  "الرافعة المالية": { key: "financialMetrics", tab: 4 },
+  "المرابحة": { key: "islamicFinance", tab: 0 },
+  "Murabaha": { key: "islamicFinance", tab: 0 },
+  "الإجارة": { key: "islamicFinance", tab: 1 },
+  "Ijara": { key: "islamicFinance", tab: 1 },
+  "Cap Rate": { key: "exitStrategy", tab: 1 },
+  "معدل الرسملة": { key: "exitStrategy", tab: 1 },
+  "شلال التوزيعات": { key: "waterfallConcepts", tab: 0 },
+  "Waterfall": { key: "waterfallConcepts", tab: 0 },
+  "العائد المفضل": { key: "waterfallConcepts", tab: 1 },
+  "Preferred Return": { key: "waterfallConcepts", tab: 1 },
+  "GP Catch-up": { key: "waterfallConcepts", tab: 2 },
+  "Profit Split": { key: "waterfallConcepts", tab: 3 },
+  "SAIBOR": { key: "islamicFinance", tab: 0 },
+  "LTV": { key: "financingMode", tab: 2 },
+};
+
+const ACADEMY_PATHS = [
+  {
+    id: "foundations",
+    icon: "🧱",
+    title: { ar: "أساسيات النمذجة المالية", en: "Financial Modeling Foundations" },
+    desc: { ar: "ابدأ هنا: المفاهيم الأساسية التي تحتاجها لفهم أي نموذج مالي عقاري", en: "Start here: core concepts needed to understand any RE financial model" },
+    sections: ["financialMetrics", "landType", "scenarioAnalysis"],
+    color: "#2563eb",
+  },
+  {
+    id: "structuring",
+    icon: "🏗",
+    title: { ar: "هيكلة التمويل والاستثمار", en: "Financing & Investment Structuring" },
+    desc: { ar: "كيف تموّل مشروعك؟ خيارات التمويل البنكي، الإسلامي، الصناديق، والحوافز الحكومية", en: "How to finance your project? Bank debt, Islamic finance, fund structures, and government incentives" },
+    sections: ["financingMode", "islamicFinance", "govIncentives", "waterfallConcepts"],
+    color: "#8b5cf6",
+  },
+  {
+    id: "exits",
+    icon: "🎯",
+    title: { ar: "التخارج والعوائد", en: "Exit & Returns" },
+    desc: { ar: "استراتيجيات التخارج، حساب العوائد، وتوزيع الأرباح بين المستثمرين", en: "Exit strategies, return calculations, and profit distribution among investors" },
+    sections: ["exitStrategy", "waterfallConcepts", "financialMetrics"],
+    color: "#16a34a",
+  },
+];
+
+const ACADEMY_RELATED = {
+  financingMode: ["islamicFinance", "financialMetrics", "waterfallConcepts"],
+  landType: ["financingMode", "exitStrategy", "scenarioAnalysis"],
+  exitStrategy: ["financialMetrics", "waterfallConcepts", "financingMode"],
+  waterfallConcepts: ["financingMode", "exitStrategy", "financialMetrics"],
+  islamicFinance: ["financingMode", "govIncentives", "financialMetrics"],
+  govIncentives: ["financingMode", "islamicFinance", "scenarioAnalysis"],
+  financialMetrics: ["exitStrategy", "waterfallConcepts", "scenarioAnalysis"],
+  scenarioAnalysis: ["financialMetrics", "financingMode", "exitStrategy"],
+};
+
+const ACADEMY_SECTION_ICONS = {
+  financingMode: "🏦",
+  landType: "🏗",
+  exitStrategy: "🚪",
+  waterfallConcepts: "🌊",
+  islamicFinance: "☪️",
+  govIncentives: "🏛",
+  financialMetrics: "📊",
+  scenarioAnalysis: "🔄",
+};
+
+function LearningCenterView({ lang, onBack }) {
+  const ar = lang === "ar";
+  const isMobile = useIsMobile();
+  const [activeSection, setActiveSection] = useState(null);
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  const [navStack, setNavStack] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const dir = ar ? "rtl" : "ltr";
+
+  const navigateTo = (contentKey, tabIndex = 0) => {
+    if (activeSection) {
+      setNavStack(prev => [...prev, { key: activeSection, tab: activeTabIdx }]);
+    }
+    setActiveSection(contentKey);
+    setActiveTabIdx(tabIndex);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const goBackInStack = () => {
+    if (navStack.length > 0) {
+      const prev = navStack[navStack.length - 1];
+      setNavStack(s => s.slice(0, -1));
+      setActiveSection(prev.key);
+      setActiveTabIdx(prev.tab);
+    } else {
+      setActiveSection(null);
+      setActiveTabIdx(0);
+    }
+  };
+
+  const goHome = () => {
+    setActiveSection(null);
+    setActiveTabIdx(0);
+    setNavStack([]);
+    setSearchQuery("");
+  };
+
+  // Cross-link text renderer
+  const renderWithLinks = (text) => {
+    if (!text || typeof text !== "string") return text;
+    const terms = Object.keys(ACADEMY_TERM_REGISTRY).sort((a, b) => b.length - a.length);
+    const regex = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+    const parts = text.split(regex);
+    return parts.map((part, i) => {
+      const entry = ACADEMY_TERM_REGISTRY[part];
+      if (entry && entry.key !== activeSection) {
+        return (
+          <span key={i} onClick={(e) => { e.stopPropagation(); navigateTo(entry.key, entry.tab); }}
+            style={{ color: "#2563eb", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3, cursor: "pointer", fontWeight: 600 }}
+          >{part}</span>
+        );
+      }
+      return part;
+    });
+  };
+
+  const renderBlock = (block, i) => {
+    if (block.type === "heading") {
+      return <div key={i} style={{ fontSize: 15, fontWeight: 700, color: "#0B2341", marginTop: i === 0 ? 0 : 22, marginBottom: 8, fontFamily: "'Tajawal',sans-serif" }}>{renderWithLinks(block.text)}</div>;
+    }
+    if (block.type === "text") {
+      return <div key={i} style={{ fontSize: 13.5, color: "#374151", lineHeight: 1.85, marginBottom: 8 }}>{renderWithLinks(block.text)}</div>;
+    }
+    if (block.type === "list") {
+      return (
+        <div key={i} style={{ marginBottom: 10 }}>
+          {block.items.map((item, j) => (
+            <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 6, fontSize: 13.5, color: "#374151", lineHeight: 1.75 }}>
+              <span style={{ color: "#2EC4B6", fontSize: 8, marginTop: 8, flexShrink: 0 }}>●</span>
+              <span>{renderWithLinks(item)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Search
+  const searchResults = (() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.trim().toLowerCase();
+    const results = [];
+    const langKey = ar ? "ar" : "en";
+    Object.keys(EDUCATIONAL_CONTENT).forEach(key => {
+      const sec = EDUCATIONAL_CONTENT[key]?.[langKey];
+      if (!sec) return;
+      const titleMatch = sec.title?.toLowerCase().includes(q);
+      const introMatch = sec.intro?.toLowerCase().includes(q);
+      sec.tabs?.forEach((tab, tabIdx) => {
+        const labelMatch = tab.label?.toLowerCase().includes(q);
+        const contentMatch = tab.content?.some(b =>
+          (b.text && b.text.toLowerCase().includes(q)) ||
+          (b.items && b.items.some(it => it.toLowerCase().includes(q)))
+        );
+        if (titleMatch || introMatch || labelMatch || contentMatch) {
+          if (!results.find(r => r.key === key && r.tabIdx === tabIdx)) {
+            results.push({ key, tabIdx, title: sec.title, tabLabel: sec.tabs?.[tabIdx]?.label, icon: ACADEMY_SECTION_ICONS[key] });
+          }
+        }
+      });
+    });
+    return results;
+  })();
+
+  const allSectionKeys = Object.keys(EDUCATIONAL_CONTENT);
+
+  // ── ARTICLE VIEW ──
+  if (activeSection) {
+    const content = EDUCATIONAL_CONTENT[activeSection]?.[ar ? "ar" : "en"];
+    if (!content) { setActiveSection(null); return null; }
+    const tab = content.tabs[activeTabIdx];
+    const related = ACADEMY_RELATED[activeSection] || [];
+    const parentStack = navStack.length > 0 ? navStack[navStack.length - 1] : null;
+
+    return (
+      <div dir={dir} style={{ minHeight: "100vh", background: "#f8f9fb", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
+        {/* Top Bar */}
+        <div style={{ background: "#0B2341", padding: isMobile ? "14px 16px" : "16px 32px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
+          <button onClick={goBackInStack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: "7px 14px", color: "#2EC4B6", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 14 }}>{ar ? "→" : "←"}</span>
+            {parentStack ? (ar ? "ارجع" : "Back") : (ar ? "الأكاديمية" : "Academy")}
+          </button>
+          {parentStack && (
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {ar ? "من:" : "from:"} {EDUCATIONAL_CONTENT[parentStack.key]?.[ar ? "ar" : "en"]?.title}
+            </span>
+          )}
+          <div style={{ flex: 1 }} />
+          <button onClick={goHome} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>📚 {ar ? "الرئيسية" : "Home"}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>✕ {ar ? "إغلاق" : "Close"}</button>
+        </div>
+
+        {/* Breadcrumbs */}
+        {navStack.length > 0 && (
+          <div style={{ background: "#fff", borderBottom: "1px solid #e5e7ec", padding: isMobile ? "8px 16px" : "8px 32px", display: "flex", alignItems: "center", gap: 6, overflowX: "auto", flexWrap: "nowrap" }}>
+            <span onClick={goHome} style={{ fontSize: 11, color: "#2563eb", cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>📚 {ar ? "الأكاديمية" : "Academy"}</span>
+            {navStack.map((item, i) => (
+              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                <span style={{ color: "#d1d5db", fontSize: 10 }}>{ar ? "←" : "→"}</span>
+                <span onClick={() => { setNavStack(s => s.slice(0, i)); setActiveSection(item.key); setActiveTabIdx(item.tab); }}
+                  style={{ fontSize: 11, color: "#2563eb", cursor: "pointer", fontWeight: 500 }}>
+                  {EDUCATIONAL_CONTENT[item.key]?.[ar ? "ar" : "en"]?.title}
+                </span>
+              </span>
+            ))}
+            <span style={{ color: "#d1d5db", fontSize: 10 }}>{ar ? "←" : "→"}</span>
+            <span style={{ fontSize: 11, color: "#6b7080", fontWeight: 600, whiteSpace: "nowrap" }}>{content.title}</span>
+          </div>
+        )}
+
+        <div style={{ maxWidth: 780, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 24px" }}>
+          {/* Article Header */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <span style={{ fontSize: 28 }}>{ACADEMY_SECTION_ICONS[activeSection] || "📘"}</span>
+              <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 900, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", margin: 0 }}>{content.title}</h1>
+            </div>
+            <p style={{ fontSize: 14, color: "#6b7080", lineHeight: 1.7, margin: 0 }}>{content.intro}</p>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7ec", marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            {content.tabs.map((t, i) => {
+              const isAct = i === activeTabIdx;
+              return (
+                <button key={t.id} onClick={() => setActiveTabIdx(i)} style={{
+                  padding: isMobile ? "12px 14px" : "14px 22px",
+                  background: "none", border: "none",
+                  borderBottom: isAct ? "3px solid #2EC4B6" : "3px solid transparent",
+                  fontSize: isMobile ? 12 : 13, fontWeight: isAct ? 700 : 500,
+                  color: isAct ? "#0B2341" : "#6b7080",
+                  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                  transition: "all 0.15s", flexShrink: 0, marginBottom: -2,
+                }}>
+                  <span style={{ marginInlineEnd: 6 }}>{t.icon}</span>{t.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab Content */}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7ec", padding: isMobile ? "20px 18px" : "28px 32px", marginBottom: 32, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            {tab && tab.content.map(renderBlock)}
+          </div>
+
+          {/* Related Topics */}
+          {related.length > 0 && (
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0B2341", marginBottom: 12, fontFamily: "'Tajawal',sans-serif" }}>
+                {ar ? "📎 مواضيع ذات صلة" : "📎 Related Topics"}
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {related.filter(k => EDUCATIONAL_CONTENT[k]).map(k => {
+                  const s2 = EDUCATIONAL_CONTENT[k][ar ? "ar" : "en"];
+                  return (
+                    <button key={k} onClick={() => navigateTo(k, 0)} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "10px 16px", background: "#fff", border: "1px solid #e5e7ec",
+                      borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                      transition: "all 0.15s", fontSize: 12, fontWeight: 500, color: "#374151",
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#2EC4B6"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(46,196,182,0.12)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7ec"; e.currentTarget.style.boxShadow = "none"; }}
+                    >
+                      <span>{ACADEMY_SECTION_ICONS[k]}</span>
+                      <span>{s2?.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── PATHS OVERVIEW (HOME) ──
+  return (
+    <div dir={dir} style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0B2341 0%, #0B2341 340px, #f8f9fb 340px)", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
+      {/* Hero Header */}
+      <div style={{ padding: isMobile ? "20px 16px 60px" : "24px 32px 80px", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+        {/* Top bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isMobile ? 28 : 40, position: "relative", zIndex: 1 }}>
+          <button onClick={onBack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: "7px 14px", color: "#2EC4B6", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            {ar ? "→ المشاريع" : "← Projects"}
+          </button>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>زان</span>
+            <span style={{ width: 1, height: 18, background: "rgba(46,196,182,0.35)" }} />
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{ar ? "النمذجة" : "Financial"}<br />{ar ? "المالية" : "Modeler"}</span>
+          </div>
+        </div>
+        {/* Title */}
+        <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
+          <div style={{ display: "inline-block", padding: "6px 18px", background: "rgba(46,196,182,0.1)", border: "1px solid rgba(46,196,182,0.2)", borderRadius: 20, marginBottom: 16 }}>
+            <span style={{ fontSize: 12, color: "#2EC4B6", fontWeight: 600 }}>📚 {ar ? "أكاديمية زان المالية" : "ZAN Academy"}</span>
+          </div>
+          <h1 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 900, color: "#fff", lineHeight: 1.2, marginBottom: 12, fontFamily: "'Tajawal',sans-serif" }}>
+            {ar ? "تعلّم النمذجة المالية العقارية" : "Learn Real Estate Financial Modeling"}
+          </h1>
+          <p style={{ fontSize: isMobile ? 13 : 15, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
+            {ar ? "محتوى عملي مصمم للسوق السعودي. من الأساسيات إلى هيكلة الصفقات المعقدة." : "Practical content designed for the Saudi market. From basics to complex deal structuring."}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ maxWidth: 900, margin: "-40px auto 0", padding: isMobile ? "0 16px 40px" : "0 24px 60px", position: "relative", zIndex: 1 }}>
+        {/* Search */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7ec", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: "4px 4px 4px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 16, color: "#9ca3af" }}>🔍</span>
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder={ar ? "ابحث عن مفهوم... مثال: IRR, المرابحة, شلال التوزيعات" : "Search concepts... e.g. IRR, Murabaha, Waterfall"}
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#374151", fontFamily: "inherit", padding: "12px 0", background: "transparent" }} />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} style={{ background: "#f0f1f5", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 11, color: "#6b7080", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>✕</button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Results */}
+        {searchResults && searchResults.length > 0 && (
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7080", marginBottom: 12 }}>{ar ? `${searchResults.length} نتيجة` : `${searchResults.length} results`}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {searchResults.map((r, i) => (
+                <button key={i} onClick={() => navigateTo(r.key, r.tabIdx)} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "14px 18px", background: "#fff", border: "1px solid #e5e7ec",
+                  borderRadius: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "start",
+                  transition: "all 0.15s", width: "100%",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "#2EC4B6"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(46,196,182,0.1)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7ec"; e.currentTarget.style.boxShadow = "none"; }}
+                >
+                  <span style={{ fontSize: 20 }}>{r.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#0B2341" }}>{r.title}</div>
+                    {r.tabLabel && <div style={{ fontSize: 11, color: "#6b7080", marginTop: 2 }}>{r.tabLabel}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {searchResults && searchResults.length === 0 && (
+          <div style={{ textAlign: "center", padding: 32, color: "#9ca3af", fontSize: 13 }}>{ar ? "لا توجد نتائج. جرّب كلمات مختلفة." : "No results. Try different keywords."}</div>
+        )}
+
+        {/* Learning Paths */}
+        {!searchQuery && ACADEMY_PATHS.map((path) => (
+          <div key={path.id} style={{ marginBottom: 36 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <span style={{ fontSize: 22 }}>{path.icon}</span>
+              <div>
+                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? path.title.ar : path.title.en}</div>
+                <div style={{ fontSize: 12, color: "#6b7080", marginTop: 2 }}>{ar ? path.desc.ar : path.desc.en}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${Math.min(path.sections.length, 3)}, 1fr)`, gap: 12 }}>
+              {path.sections.filter(k => EDUCATIONAL_CONTENT[k]).map((sectionKey, idx) => {
+                const sec = EDUCATIONAL_CONTENT[sectionKey][ar ? "ar" : "en"];
+                if (!sec) return null;
+                const tabCount = sec.tabs?.length || 0;
+                return (
+                  <button key={sectionKey + "-" + idx} onClick={() => navigateTo(sectionKey, 0)} style={{
+                    background: "#fff", border: "1px solid #e5e7ec", borderRadius: 12,
+                    padding: isMobile ? "18px 16px" : "22px 20px",
+                    cursor: "pointer", fontFamily: "inherit", textAlign: "start",
+                    transition: "all 0.2s", display: "flex", flexDirection: "column", gap: 8,
+                    borderTop: `3px solid ${path.color}`,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.08)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateY(0)"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 22 }}>{ACADEMY_SECTION_ICONS[sectionKey]}</span>
+                      <span style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{sec.title}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#6b7080", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{sec.intro}</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                      {sec.tabs?.slice(0, 4).map(t2 => (
+                        <span key={t2.id} style={{ fontSize: 10, padding: "3px 8px", background: "#f0f1f5", borderRadius: 4, color: "#4b5060", fontWeight: 500 }}>{t2.icon} {t2.label}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 10, color: path.color, fontWeight: 600, marginTop: 4 }}>{tabCount} {ar ? "مواضيع" : "topics"} {ar ? "←" : "→"}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* All Topics */}
+        {!searchQuery && (
+          <div style={{ marginTop: 16, padding: "24px", background: "#fff", borderRadius: 12, border: "1px solid #e5e7ec" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#0B2341", marginBottom: 14, fontFamily: "'Tajawal',sans-serif" }}>{ar ? "📖 جميع المواضيع" : "📖 All Topics"}</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {allSectionKeys.map(k => {
+                const s3 = EDUCATIONAL_CONTENT[k][ar ? "ar" : "en"];
+                if (!s3) return null;
+                return (
+                  <button key={k} onClick={() => navigateTo(k, 0)} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "8px 14px", background: "#f8f9fb", border: "1px solid #e5e7ec",
+                    borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 12, fontWeight: 500, color: "#374151", transition: "all 0.15s",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#2EC4B6"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "#2EC4B6"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "#f8f9fb"; e.currentTarget.style.color = "#374151"; e.currentTarget.style.borderColor = "#e5e7ec"; }}
+                  >
+                    <span>{ACADEMY_SECTION_ICONS[k]}</span> {s3.title}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ textAlign: "center", marginTop: 40, fontSize: 11, color: "#9ca3af" }}>
+          {ar ? "أكاديمية زان المالية - محتوى تعليمي مصمم للسوق السعودي" : "ZAN Academy - Educational content designed for the Saudi market"}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function KPI({label,value,sub,color,tip}) {
