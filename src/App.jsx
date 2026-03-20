@@ -6805,6 +6805,51 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </tbody>
           </table>
 
+          <div style={{...zanSec,marginTop:24}}>{ar?"التدفقات النقدية (10 سنوات)":"Cash Flow Overview (10 Years)"}</div>
+          {(() => {
+            const yrs = Math.min(10, h);
+            const maxVal = Math.max(...Array.from({length:yrs},(_,y)=>Math.max(Math.abs(fc.income[y]||0),Math.abs(fc.capex[y]||0),Math.abs(fc.netCF[y]||0))),1);
+            return <div style={{display:"grid",gap:4}}>
+              {Array.from({length:yrs},(_,y)=>{
+                const inc=fc.income[y]||0, cap=Math.abs(fc.capex[y]||0), net=fc.netCF[y]||0;
+                return <div key={y} style={{display:"grid",gridTemplateColumns:"50px 1fr",gap:6,alignItems:"center",fontSize:10}}>
+                  <div style={{fontWeight:600,color:"#6b7080",textAlign:"right"}}>{sy+y}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                    {cap>0&&<div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <div style={{width:Math.max(2,cap/maxVal*100)+"%",height:6,background:"#fca5a5",borderRadius:3}} />
+                      <span style={{fontSize:8,color:"#ef4444",whiteSpace:"nowrap"}}>{fmtM(cap)}</span>
+                    </div>}
+                    {inc>0&&<div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <div style={{width:Math.max(2,inc/maxVal*100)+"%",height:6,background:"#86efac",borderRadius:3}} />
+                      <span style={{fontSize:8,color:"#16a34a",whiteSpace:"nowrap"}}>{fmtM(inc)}</span>
+                    </div>}
+                    <div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <div style={{width:Math.max(2,Math.abs(net)/maxVal*100)+"%",height:6,background:net>=0?"#0f766e":"#dc2626",borderRadius:3}} />
+                      <span style={{fontSize:8,color:net>=0?"#0f766e":"#dc2626",fontWeight:600,whiteSpace:"nowrap"}}>{fmtM(net)}</span>
+                    </div>
+                  </div>
+                </div>;
+              })}
+              <div style={{display:"flex",gap:16,marginTop:6,fontSize:9,color:"#6b7080"}}>
+                <span><span style={{display:"inline-block",width:10,height:6,background:"#fca5a5",borderRadius:2,marginRight:3}} />{ar?"التكاليف":"CAPEX"}</span>
+                <span><span style={{display:"inline-block",width:10,height:6,background:"#86efac",borderRadius:2,marginRight:3}} />{ar?"الإيرادات":"Income"}</span>
+                <span><span style={{display:"inline-block",width:10,height:6,background:"#0f766e",borderRadius:2,marginRight:3}} />{ar?"صافي التدفق":"Net CF"}</span>
+              </div>
+            </div>;
+          })()}
+
+          {incentivesResult && incentivesResult.totalIncentiveValue > 0 && <>
+            <div style={{...zanSec,marginTop:24}}>{ar?"الحوافز الحكومية":"Government Incentives"}</div>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:8,marginBottom:8}}>
+              {incentivesResult.capexGrantTotal>0&&<div style={zanKpi("#0f766e")}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"منحة CAPEX":"CAPEX Grant"}</div><div style={{fontSize:16,fontWeight:700,color:"#0f766e",marginTop:3}}>{fmtM(incentivesResult.capexGrantTotal)}</div></div>}
+              {incentivesResult.landRentSavingTotal>0&&<div style={zanKpi("#0f766e")}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"توفير إيجار الأرض":"Land Rent Savings"}</div><div style={{fontSize:16,fontWeight:700,color:"#0f766e",marginTop:3}}>{fmtM(incentivesResult.landRentSavingTotal)}</div></div>}
+              {incentivesResult.feeRebateTotal>0&&<div style={zanKpi("#0f766e")}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"خصومات الرسوم":"Fee Rebates"}</div><div style={{fontSize:16,fontWeight:700,color:"#0f766e",marginTop:3}}>{fmtM(incentivesResult.feeRebateTotal)}</div></div>}
+            </div>
+            <div style={{fontSize:11,padding:"8px 12px",background:"#f0fdf4",borderRadius:6,border:"1px solid #bbf7d0"}}>
+              {ar?"إجمالي قيمة الحوافز":"Total Incentive Value"}: <strong style={{color:"#0f766e"}}>{fmtM(incentivesResult.totalIncentiveValue)}</strong>
+            </div>
+          </>}
+
           <div style={{...zanSec,marginTop:24}}>{ar?"سلامة النموذج":"Model Integrity"}</div>
           <div style={{fontSize:12,padding:"8px 12px",background:failCount===0?"#f0fdf4":"#fef2f2",borderRadius:6,border:failCount===0?"1px solid #bbf7d0":"1px solid #fecaca"}}>
             {failCount === 0 ? (ar?"✅ جميع الفحوصات ناجحة":"✅ All checks passed") : `⚠️ ${failCount} ${ar?"فحص فشل":"check(s) failed"}`}
@@ -6906,6 +6951,68 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               ))}
             </tbody>
           </table>
+
+          <div style={zanSec}>{ar?"5. تحليل الضغط":"5. Stress Analysis"}</div>
+          {(() => {
+            const scenarios = [
+              {l:ar?"الحالة الأساسية":"Base Case",capM:1,rentM:1,bg:"#f0fdf4",bd:"#bbf7d0",cl:"#16a34a"},
+              {l:ar?"CAPEX +10%":"CAPEX +10%",capM:1.1,rentM:1,bg:"#fef2f2",bd:"#fecaca",cl:"#ef4444"},
+              {l:ar?"إيرادات -15%":"Revenue -15%",capM:1,rentM:0.85,bg:"#fef2f2",bd:"#fecaca",cl:"#ef4444"},
+              {l:ar?"CAPEX +10% وإيرادات -10%":"CAPEX +10% & Revenue -10%",capM:1.1,rentM:0.9,bg:"#fffbeb",bd:"#fde68a",cl:"#d97706"},
+            ];
+            const stressResults = scenarios.map(sc => {
+              try {
+                const p = {...project, customCapexMult:sc.capM, customRentMult:sc.rentM, activeScenario:"Custom"};
+                const r = computeProjectCashFlows(p); const ir = computeIncentives(p,r); const sf = computeFinancing(p,r,ir);
+                const minDscr = sf?.dscr ? sf.dscr.filter(d=>d!==null&&d!==Infinity).reduce((m,v)=>Math.min(m,v),999) : null;
+                return {irr:r.consolidated.irr,npv:r.consolidated.npv10,dscr:minDscr===999?null:minDscr,levIrr:sf?.leveredIRR};
+              } catch(e){ return {irr:null,npv:null,dscr:null,levIrr:null}; }
+            });
+            return <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:12}}>
+              <thead><tr style={{background:"#0f1117"}}>
+                {(ar?["السيناريو","IRR المشروع","IRR بعد التمويل","أقل DSCR","NPV @10%"]:["Scenario","Project IRR","Levered IRR","Min DSCR","NPV @10%"]).map(h=><th key={h} style={zanTh}>{h}</th>)}
+              </tr></thead>
+              <tbody>{scenarios.map((sc,i)=>(
+                <tr key={i} style={{background:sc.bg}}>
+                  <td style={{...zanTd,fontWeight:600,color:sc.cl}}>{sc.l}</td>
+                  <td style={{...zanTd,textAlign:"right"}}>{stressResults[i].irr?fmtPct(stressResults[i].irr*100):"—"}</td>
+                  <td style={{...zanTd,textAlign:"right"}}>{stressResults[i].levIrr?fmtPct(stressResults[i].levIrr*100):"—"}</td>
+                  <td style={{...zanTd,textAlign:"right",fontWeight:700,color:stressResults[i].dscr===null?"#9ca3af":stressResults[i].dscr>=1.2?"#16a34a":"#ef4444"}}>{stressResults[i].dscr!==null?stressResults[i].dscr.toFixed(2)+"x":"—"}</td>
+                  <td style={{...zanTd,textAlign:"right",color:(stressResults[i].npv||0)>=0?"#16a34a":"#ef4444"}}>{stressResults[i].npv?fmtM(stressResults[i].npv):"—"}</td>
+                </tr>
+              ))}</tbody>
+            </table>;
+          })()}
+
+          <div style={zanSec}>{ar?"6. المؤشرات الرئيسية":"6. Key Metrics"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12}}>
+            {[
+              {l:"Project IRR",v:fc.irr?fmtPct(fc.irr*100):"—",ac:fc.irr>=0.10?"#16a34a":"#ef4444"},
+              {l:"Levered IRR",v:f?.leveredIRR?fmtPct(f.leveredIRR*100):"—",ac:f?.leveredIRR>=0.10?"#16a34a":"#ef4444"},
+              {l:ar?"فترة الاسترداد":"Payback Period",v:(() => {let cum=0,wasNeg=false; for(let y=0;y<h;y++){cum+=(f&&f.mode!=="self"?f.leveredCF[y]:fc.netCF[y])||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"yr");} return "—";})(),ac:"#2563eb"},
+              {l:ar?"إجمالي خدمة الدين":"Total Debt Service",v:f?fmtM((f.debtService||[]).reduce((a,b)=>a+b,0)):"—",ac:"#f59e0b"},
+              {l:ar?"متوسط DSCR":"Avg DSCR",v:(() => {if(!f?.dscr)return "—";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);return vals.length?((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x"):"—";})(),ac:(() => {if(!f?.dscr)return "#9ca3af";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;return avg>=1.25?"#16a34a":"#ef4444";})()},
+              {l:"NPV @12%",v:fmtM(fc.npv12),ac:(fc.npv12||0)>=0?"#16a34a":"#ef4444"},
+            ].map((k,i) => (
+              <div key={i} style={zanKpi(k.ac)}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{k.l}</div><div style={{fontSize:16,fontWeight:700,color:k.ac,marginTop:3}}>{k.v}</div></div>
+            ))}
+          </div>
+
+          {incentivesResult && incentivesResult.totalIncentiveValue > 0 && <>
+            <div style={zanSec}>{ar?"7. الحوافز الحكومية":"7. Government Incentives"}</div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:8}}>
+              <thead><tr style={{background:"#0f1117"}}>
+                {(ar?["نوع الحافز","القيمة","الوصف"]:["Incentive Type","Value","Description"]).map(h=><th key={h} style={zanTh}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {incentivesResult.capexGrantTotal>0&&<tr><td style={zanTd}>{ar?"منحة CAPEX":"CAPEX Grant"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.capexGrantTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"خصم على تكاليف التطوير":"Reduction in development costs"}</td></tr>}
+                {incentivesResult.landRentSavingTotal>0&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"خصم إيجار الأرض":"Land Rent Rebate"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.landRentSavingTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"توفير في إيجار الأرض":"Savings on land lease payments"}</td></tr>}
+                {f?.interestSubsidyTotal>0&&<tr><td style={zanTd}>{ar?"دعم الفائدة":"Interest Subsidy"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(f.interestSubsidyTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"دعم على تكلفة التمويل":"Subsidy on financing cost"}</td></tr>}
+                {incentivesResult.feeRebateTotal>0&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"خصم رسوم":"Fee Rebates"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.feeRebateTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"إعفاءات من الرسوم الحكومية":"Government fee waivers"}</td></tr>}
+                <tr style={{fontWeight:700,background:"#f0fdf4"}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"الإجمالي":"Total"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right",color:"#0f766e"}}>{fmt(incentivesResult.totalIncentiveValue+(f?.interestSubsidyTotal||0))}</td><td style={{...zanTd,borderTop:"2px solid #0f1117"}}></td></tr>
+              </tbody>
+            </table>
+          </>}
         </div>
       )}
 
@@ -6994,6 +7101,73 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 ))}
               </tbody>
             </table>
+
+            <div style={zanSec}>{ar?"التوزيعات التراكمية":"Cumulative Distributions"}</div>
+            {(() => {
+              const yrs = Math.min(h, 20);
+              let lpCum=0, gpCum=0;
+              const data = Array.from({length:yrs},(_,y)=>{lpCum+=fw.lpDist[y]||0;gpCum+=fw.gpDist[y]||0;return{y,lp:lpCum,gp:gpCum};});
+              const maxCum = Math.max(data[data.length-1]?.lp||1, data[data.length-1]?.gp||1);
+              return <div style={{marginBottom:16}}>
+                {data.filter(d=>d.lp>0||d.gp>0).map(d=>(
+                  <div key={d.y} style={{display:"grid",gridTemplateColumns:"50px 1fr",gap:6,marginBottom:3,alignItems:"center",fontSize:10}}>
+                    <div style={{fontWeight:600,color:"#6b7080",textAlign:"right"}}>{sy+d.y}</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}>
+                        <div style={{width:Math.max(2,d.lp/maxCum*100)+"%",height:7,background:"linear-gradient(90deg,#8b5cf6,#a78bfa)",borderRadius:3}} />
+                        <span style={{fontSize:8,color:"#8b5cf6",whiteSpace:"nowrap"}}>{fmtM(d.lp)}</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}>
+                        <div style={{width:Math.max(2,d.gp/maxCum*100)+"%",height:7,background:"linear-gradient(90deg,#0f766e,#5fbfbf)",borderRadius:3}} />
+                        <span style={{fontSize:8,color:"#0f766e",whiteSpace:"nowrap"}}>{fmtM(d.gp)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div style={{display:"flex",gap:16,marginTop:6,fontSize:9,color:"#6b7080"}}>
+                  <span><span style={{display:"inline-block",width:10,height:6,background:"#8b5cf6",borderRadius:2,marginRight:3}} />LP {ar?"التراكمي":"Cumulative"}</span>
+                  <span><span style={{display:"inline-block",width:10,height:6,background:"#0f766e",borderRadius:2,marginRight:3}} />GP {ar?"التراكمي":"Cumulative"}</span>
+                </div>
+              </div>;
+            })()}
+
+            <div style={zanSec}>{ar?"ملخص الرسوم":"Fee Summary"}</div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:12}}>
+              <thead><tr style={{background:"#0f1117"}}>
+                {(ar?["الرسم","النسبة/المبلغ","الإجمالي","التوقيت"]:["Fee","Rate/Amount","Total","Timing"]).map(hh=><th key={hh} style={zanTh}>{hh}</th>)}
+              </tr></thead>
+              <tbody>
+                {[
+                  [ar?"رسوم الاشتراك":"Subscription",(project.subscriptionFeePct||2)+"%",fmt(fw.feeSubscription||0),ar?"مرة واحدة":"One-time"],
+                  [ar?"رسوم الإدارة":"Management",(project.annualMgmtFeePct||0.9)+"%",fmt(fw.feeMgmtTotal||fw.fees||0),ar?"سنوي":"Annual"],
+                  [ar?"رسوم المطور":"Developer",(project.developerFeePct||10)+"% "+(ar?"من CAPEX":"of CAPEX"),fmt(fw.feeDeveloper||0),ar?"خلال البناء":"During construction"],
+                  [ar?"رسوم الهيكلة":"Structuring",(project.structuringFeePct||1)+"%",fmt(fw.feeStructuring||0),ar?"مرة واحدة":"One-time"],
+                  [ar?"رسوم الحفظ":"Custody",fmt(project.custodyFeeAnnual||50000)+"/"+(ar?"سنة":"yr"),fmt(fw.feeCustodyTotal||0),ar?"سنوي":"Annual"],
+                ].map(([ff,r,t,ti],i)=>(
+                  <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
+                    <td style={{...zanTd,fontWeight:600}}>{ff}</td>
+                    <td style={{...zanTd,color:"#6b7080"}}>{r}</td>
+                    <td style={{...zanTd,textAlign:"right",fontWeight:600}}>{t}</td>
+                    <td style={{...zanTd,color:"#6b7080"}}>{ti}</td>
+                  </tr>
+                ))}
+                <tr style={{fontWeight:700,background:"#f8f9fb"}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}} colSpan={2}>{ar?"الإجمالي":"Total Fees"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right",color:"#0f766e"}}>{fmt(fw.totalFees||fw.fees||0)}</td><td style={{...zanTd,borderTop:"2px solid #0f1117"}}></td></tr>
+              </tbody>
+            </table>
+          </>}
+
+          {incentivesResult && incentivesResult.totalIncentiveValue > 0 && <>
+            <div style={zanSec}>{ar?"الحوافز الحكومية":"Government Incentives"}</div>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,1fr)",gap:8,marginBottom:8}}>
+              {incentivesResult.capexGrantTotal>0&&<div style={zanKpi("#0f766e")}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"منحة CAPEX":"CAPEX Grant"}</div><div style={{fontSize:16,fontWeight:700,color:"#0f766e",marginTop:3}}>{fmtM(incentivesResult.capexGrantTotal)}</div></div>}
+              {incentivesResult.landRentSavingTotal>0&&<div style={zanKpi("#0f766e")}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"خصم إيجار الأرض":"Land Rent Savings"}</div><div style={{fontSize:16,fontWeight:700,color:"#0f766e",marginTop:3}}>{fmtM(incentivesResult.landRentSavingTotal)}</div></div>}
+              {f?.interestSubsidyTotal>0&&<div style={zanKpi("#0f766e")}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"دعم الفائدة":"Interest Subsidy"}</div><div style={{fontSize:16,fontWeight:700,color:"#0f766e",marginTop:3}}>{fmtM(f.interestSubsidyTotal)}</div></div>}
+              {incentivesResult.feeRebateTotal>0&&<div style={zanKpi("#0f766e")}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{ar?"خصم رسوم":"Fee Rebates"}</div><div style={{fontSize:16,fontWeight:700,color:"#0f766e",marginTop:3}}>{fmtM(incentivesResult.feeRebateTotal)}</div></div>}
+            </div>
+            <div style={{fontSize:11,padding:"8px 12px",background:"#f0fdf4",borderRadius:6,border:"1px solid #bbf7d0"}}>
+              {ar?"إجمالي قيمة الحوافز":"Total Incentive Value"}: <strong style={{color:"#0f766e"}}>{fmtM(incentivesResult.totalIncentiveValue+(f?.interestSubsidyTotal||0))}</strong>
+              {" "}<span style={{color:"#6b7080",fontSize:10}}>({ar?"تعزز عائد المستثمر":"enhances investor returns"})</span>
+            </div>
           </>}
         </div>
       )}
