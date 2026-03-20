@@ -3081,6 +3081,98 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 }
 
 // ═══════════════════════════════════════════════════════════════
+// INCENTIVES IMPACT PANEL (shared by all Results views)
+// ═══════════════════════════════════════════════════════════════
+function IncentivesImpact({ project, results, financing, incentivesResult, lang }) {
+  const ar = lang === "ar";
+  const ir = incentivesResult;
+  if (!ir || !financing) return null;
+  const hasAny = (ir.capexGrantTotal||0) > 0 || (ir.interestSubsidyTotal||0) > 0 || (ir.landRentSavingTotal||0) > 0 || (ir.feeRebateTotal||0) > 0;
+  if (!hasAny) return null;
+
+  const cur = project.currency || "SAR";
+  const c = results.consolidated;
+  const f = financing;
+  const h = results.horizon;
+
+  // Compute base IRR (WITHOUT incentives) using original CF
+  const baseCF = new Array(h).fill(0);
+  if (f.mode === "self") {
+    // Self: base = raw netCF (no incentive adjustments)
+    for (let y = 0; y < h; y++) baseCF[y] = c.income[y] - c.landRent[y] - c.capex[y];
+    // Add exit if present
+    if (f.exitProceeds) for (let y = 0; y < h; y++) baseCF[y] += f.exitProceeds[y] || 0;
+  } else {
+    // Debt/Fund: levered base using original (non-adjusted) values
+    for (let y = 0; y < h; y++) baseCF[y] = c.income[y] - c.landRent[y] - c.capex[y] - (f.debtService[y]||0) + (f.drawdown[y]||0) + (f.exitProceeds?.[y]||0);
+  }
+  const baseIRR = calcIRR(baseCF);
+  const baseNPV = calcNPV(baseCF, 0.12);
+  const withIRR = f.leveredIRR;
+  const withNPV = f.leveredCF ? calcNPV(f.leveredCF, 0.12) : null;
+  const irrDelta = (withIRR !== null && baseIRR !== null) ? (withIRR - baseIRR) * 100 : null;
+  const npvDelta = (withNPV !== null && baseNPV !== null) ? withNPV - baseNPV : null;
+  const total = ir.totalIncentiveValue || ((ir.capexGrantTotal||0) + (ir.interestSubsidyTotal||0) + (ir.landRentSavingTotal||0) + (ir.feeRebateTotal||0));
+
+  const items = [
+    ir.capexGrantTotal > 0 && { icon: "🏗", label: ar?"منحة CAPEX":"CAPEX Grant", value: ir.capexGrantTotal, color: "#059669" },
+    ir.interestSubsidyTotal > 0 && { icon: "🏦", label: ar?"دعم الفوائد":"Interest Subsidy", value: ir.interestSubsidyTotal, color: "#2563eb" },
+    ir.landRentSavingTotal > 0 && { icon: "🏠", label: ar?"وفر إيجار الأرض":"Land Rent Savings", value: ir.landRentSavingTotal, color: "#7c3aed" },
+    ir.feeRebateTotal > 0 && { icon: "📋", label: ar?"إعفاء رسوم":"Fee Rebates", value: ir.feeRebateTotal, color: "#f59e0b" },
+  ].filter(Boolean);
+
+  return (
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966933",marginBottom:16,overflow:"hidden"}}>
+      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#05966908",borderBottom:"1px solid #05966918"}}>
+        <span style={{fontSize:14}}>🏛</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"أثر الحوافز الحكومية":"Government Incentives Impact"}</span>
+        <span style={{fontSize:10,fontWeight:600,color:"#059669",background:"#05966918",padding:"2px 8px",borderRadius:10}}>{fmtM(total)} {cur}</span>
+      </div>
+      <div style={{padding:"14px 16px"}}>
+        {/* Active incentives */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+          {items.map((it,i) => (
+            <div key={i} style={{display:"inline-flex",alignItems:"center",gap:6,background:it.color+"12",border:`1px solid ${it.color}33`,borderRadius:6,padding:"5px 10px"}}>
+              <span style={{fontSize:12}}>{it.icon}</span>
+              <span style={{fontSize:11,fontWeight:600,color:it.color}}>{it.label}</span>
+              <span style={{fontSize:11,fontWeight:700,color:"#1a1d23"}}>{fmtM(it.value)}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Before/After comparison */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:12,alignItems:"center"}}>
+          {/* Without */}
+          <div style={{background:"#fef2f2",borderRadius:8,padding:"10px 14px",textAlign:"center"}}>
+            <div style={{fontSize:9,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:4}}>{ar?"بدون حوافز":"WITHOUT INCENTIVES"}</div>
+            <div style={{fontSize:11,color:"#6b7080",marginBottom:2}}>IRR</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#ef4444"}}>{baseIRR!==null?fmtPct(baseIRR*100):"N/A"}</div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:4}}>NPV@12%</div>
+            <div style={{fontSize:12,fontWeight:600,color:"#6b7080"}}>{fmtM(baseNPV)}</div>
+          </div>
+
+          {/* Arrow + Delta */}
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:18,color:"#059669"}}>→</div>
+            {irrDelta !== null && <div style={{fontSize:11,fontWeight:700,color:"#059669",marginTop:4}}>+{irrDelta.toFixed(2)}%</div>}
+            {npvDelta !== null && npvDelta > 0 && <div style={{fontSize:10,color:"#059669"}}>+{fmtM(npvDelta)}</div>}
+          </div>
+
+          {/* With */}
+          <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 14px",textAlign:"center"}}>
+            <div style={{fontSize:9,fontWeight:700,color:"#059669",letterSpacing:0.5,textTransform:"uppercase",marginBottom:4}}>{ar?"مع حوافز":"WITH INCENTIVES"}</div>
+            <div style={{fontSize:11,color:"#6b7080",marginBottom:2}}>IRR</div>
+            <div style={{fontSize:16,fontWeight:800,color:"#16a34a"}}>{withIRR!==null?fmtPct(withIRR*100):"N/A"}</div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:4}}>NPV@12%</div>
+            <div style={{fontSize:12,fontWeight:600,color:"#16a34a"}}>{withNPV!==null?fmtM(withNPV):""}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // RESULTS VIEW - Dynamic smart results page based on financing mode
 // ═══════════════════════════════════════════════════════════════
 function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up }) {
@@ -3089,9 +3181,12 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   const mode = project.finMode || financing?.mode || "self";
 
-  // ── FUND MODE: Render full WaterfallView (exact copy) ──
+  // ── FUND MODE: WaterfallView + Incentives impact ──
   if (mode === "fund") {
-    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />;
+    return <>
+      <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />
+      <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />
+    </>;
   }
 
   // ── BANK DEBT / BANK 100%: Full bank results ──
@@ -3297,6 +3392,9 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
 
     </tbody></table></div>
     </div>
+
+    {/* ═══ INCENTIVES IMPACT ═══ */}
+    <div style={{marginTop:16}}><IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} /></div>
 
     {/* ═══ NPV ═══ */}
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966922",marginTop:16,overflow:"hidden"}}>
@@ -3703,6 +3801,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
     </tbody></table></div>
     </div>
+
+    {/* ═══ INCENTIVES IMPACT ═══ */}
+    <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
   </div>);
 }
 
@@ -4738,8 +4839,8 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
               {key:"cashflow",label:t.cashFlow,group:"project"},
               {key:"financing",label:lang==="ar"?"التمويل":"Financing",group:"finance"},
               {key:"waterfall",label:lang==="ar"?"الشلال":"Waterfall",group:"finance"},
-              {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
+              {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
               ...(project?.market?.enabled ? [{key:"market",label:lang==="ar"?"السوق":"Market",group:"analysis"}] : []),
               {key:"checks",label:lang==="ar"?"الفحوصات":"Checks",group:"analysis"},
