@@ -3375,6 +3375,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
   const [showChart, setShowChart] = useState(false);
   const [secOpen, setSecOpen] = useState({});
   const [kpiOpen, setKpiOpen] = useState({proj:false,cap:false,ret:false});
+  const [eduModal, setEduModal] = useState(null);
 
   const f = financing;
   const c = results.consolidated;
@@ -3543,6 +3544,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
         )}
       </div>
     </div>
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
     <ExitAnalysisPanel project={project} results={results} financing={financing} lang={lang} />
@@ -3650,6 +3652,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
 
     </tbody></table></div>
     </div>
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
 
@@ -3662,6 +3665,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhase, setSelectedPhase] = useState("all");
   const [showTerms, setShowTerms] = useState(false);
+  const [eduModal, setEduModal] = useState(null);
   const [secOpen, setSecOpen] = useState({});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
@@ -3937,9 +3941,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         )}
       </div>
     </div>
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و DSCR؟":"What do IRR, NPV, DSCR mean?"} /></div>
 
-    {/* ═══ EXIT ANALYSIS ═══ */}
-    <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} />
+    {/* ═══ EXIT ANALYSIS ═══ */}    <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} />
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
     <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
@@ -4088,6 +4092,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
     </tbody></table></div>
     </div>
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
 
@@ -6793,6 +6798,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
 function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang, incentivesResult, setActiveTab }) {
   if (!project || !results) return null;
   const isMobile = useIsMobile();
+  const [eduModal, setEduModal] = useState(null);
   const c = results.consolidated;
   const cur = project.currency || "SAR";
   const phases = Object.entries(results.phaseResults);
@@ -6906,6 +6912,9 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </div>
       </div>
     </div>
+
+    {/* ═══ SECTION 1.5: Financial Metrics Help ═══ */}
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ SECTION 2: Sources & Uses + Key Metrics ═══ */}
     <div style={{display:"grid",gridTemplateColumns:f&&f.mode!=="self"?(isMobile?"1fr":"1fr 1fr"):"1fr",gap:14,marginBottom:20}}>
@@ -7135,6 +7144,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </tr>)}
       </tbody></table></div>
     </div>}
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
 
@@ -8551,6 +8561,335 @@ const EDUCATIONAL_CONTENT = {
               "Reduces upfront (CAPEX) or operating costs",
               "May be small in absolute terms but impactful for smaller projects",
               "Must verify if waiver is temporary or permanent"
+            ]}
+          ]
+        }
+      ]
+    }
+  },
+  financialMetrics: {
+    ar: {
+      title: "المقاييس المالية الأساسية",
+      intro: "هذه المقاييس هي اللغة المشتركة بين المطورين والبنوك والمستثمرين. فهمها ضروري لتقييم أي مشروع عقاري.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "irr",
+          label: "IRR",
+          icon: "📈",
+          content: [
+            { type: "heading", text: "ما هو IRR (معدل العائد الداخلي)؟" },
+            { type: "text", text: "النسبة المئوية السنوية اللي تخلي صافي القيمة الحالية (NPV) للتدفقات النقدية تساوي صفر. ببساطة: كم نسبة العائد السنوي اللي يحققه المشروع فعلياً." },
+            { type: "heading", text: "لماذا IRR مهم؟" },
+            { type: "list", items: [
+              "المقياس الأول اللي يسأل عنه أي مستثمر أو بنك",
+              "يأخذ توقيت التدفقات النقدية في الاعتبار (فلوس اليوم أهم من فلوس بكرة)",
+              "يسمح بمقارنة مشاريع مختلفة الحجم والمدة",
+              "IRR أعلى = المشروع يعيد الفلوس أسرع وبعائد أكبر"
+            ]},
+            { type: "heading", text: "Unlevered IRR vs Levered IRR" },
+            { type: "list", items: [
+              "Unlevered (قبل التمويل): عائد المشروع نفسه بدون أي دين. يعكس جودة المشروع المجردة",
+              "Levered (بعد التمويل): عائد المشروع بعد خصم خدمة الدين. يعكس العائد الفعلي على رأس المال",
+              "عادة Levered > Unlevered بسبب الرافعة المالية (لو المشروع ناجح)",
+              "لو Levered < Unlevered: تكلفة الدين تأكل العائد (الرافعة سلبية)"
+            ]},
+            { type: "heading", text: "معدلات شائعة في السوق السعودي" },
+            { type: "list", items: [
+              "مشروع عقاري تجاري ناجح: Unlevered 12%-18%",
+              "صندوق عقاري (LP): 15%-25%",
+              "مشروع فندقي/سياحي: 10%-20% (أعلى مخاطرة)",
+              "أقل من 8% عادة غير جاذب للمستثمرين"
+            ]},
+            { type: "heading", text: "محددات IRR" },
+            { type: "list", items: [
+              "لا يعكس حجم الربح الفعلي (مشروع صغير ممكن يكون IRR عالي لكن الربح قليل)",
+              "يفترض إعادة استثمار التدفقات بنفس النسبة (قد لا يكون واقعي)",
+              "حساس جداً لتوقيت التدفقات (تأخير 6 أشهر يغير IRR بشكل كبير)",
+              "لذلك نستخدمه مع NPV و MOIC معاً وليس وحده"
+            ]}
+          ]
+        },
+        {
+          id: "npv",
+          label: "NPV",
+          icon: "💵",
+          content: [
+            { type: "heading", text: "ما هو NPV (صافي القيمة الحالية)؟" },
+            { type: "text", text: "مجموع كل التدفقات النقدية المستقبلية بعد خصمها بمعدل محدد لتحويلها لقيمتها اليوم. لو NPV موجب = المشروع يحقق عائد أعلى من معدل الخصم." },
+            { type: "heading", text: "المعادلة" },
+            { type: "text", text: "NPV = مجموع (التدفق النقدي في السنة y ÷ (1 + معدل الخصم) أس y) لكل سنة من 0 إلى نهاية الأفق" },
+            { type: "heading", text: "ليش نحسب NPV بـ 10% و 12% و 14%؟" },
+            { type: "list", items: [
+              "كل معدل خصم يمثل توقع مختلف لتكلفة رأس المال أو العائد المطلوب",
+              "10%: تكلفة رأس مال متحفظة — لو NPV موجب، المشروع يتجاوز الحد الأدنى",
+              "12%: عائد مطلوب متوسط — المعيار الأكثر استخداماً في السوق السعودي",
+              "14%: عائد مطلوب مرتفع — يعكس مشاريع عالية المخاطرة أو مستثمرين يطلبون عائد عالي",
+              "لو NPV موجب عند 14%: المشروع ممتاز حتى بأعلى توقعات",
+              "لو NPV سالب عند 10%: المشروع ما يحقق الحد الأدنى"
+            ]},
+            { type: "heading", text: "كيف نقرأ NPV؟" },
+            { type: "list", items: [
+              "NPV > 0: المشروع يخلق قيمة — يحقق أكثر من معدل الخصم",
+              "NPV = 0: المشروع يحقق بالضبط معدل الخصم (IRR = معدل الخصم)",
+              "NPV < 0: المشروع يخسر قيمة مقارنة بالبديل",
+              "NPV يُقاس بالريال — يعطيك حجم القيمة المضافة وليس فقط النسبة"
+            ]},
+            { type: "heading", text: "الفرق بين NPV و IRR" },
+            { type: "list", items: [
+              "IRR يعطي النسبة (%) — NPV يعطي المبلغ (ريال)",
+              "IRR أفضل للمقارنة بين مشاريع — NPV أفضل لقرار استثماري واحد",
+              "مشروعان بنفس IRR ممكن يكون NPV مختلف جداً (حجم مختلف)",
+              "القاعدة: استخدم الاثنين معاً. لا تعتمد على مقياس واحد فقط"
+            ]}
+          ]
+        },
+        {
+          id: "moic",
+          label: "MOIC",
+          icon: "✖",
+          content: [
+            { type: "heading", text: "ما هو MOIC (مضاعف رأس المال)؟" },
+            { type: "text", text: "كم مرة ضاعف المستثمر فلوسه. MOIC = إجمالي التوزيعات المستلمة ÷ رأس المال المستثمر. لو MOIC = 2.5x يعني حصل 2.5 ريال لكل ريال استثمره." },
+            { type: "heading", text: "نوعان من MOIC" },
+            { type: "list", items: [
+              "Paid-In MOIC: التوزيعات ÷ رأس المال المدفوع فعلياً (equity calls)",
+              "Committed MOIC: التوزيعات ÷ رأس المال الملتزم (equity المتفق عليه)",
+              "Paid-In أعلى لأن المدفوع عادة أقل من الملتزم (لو ما تم سحب كل الـ equity)",
+              "Committed هو المعيار الأكثر استخداماً في تقارير الصناديق"
+            ]},
+            { type: "heading", text: "لماذا MOIC مهم مع IRR؟" },
+            { type: "list", items: [
+              "IRR ممكن يكون عالي لكن MOIC منخفض (مشروع سريع لكن ربح قليل)",
+              "MOIC ممكن يكون عالي لكن IRR منخفض (مشروع بطيء لكن ربح كبير)",
+              "المستثمر المؤسسي يبحث عن IRR > 15% مع MOIC > 2x كحد أدنى",
+              "في الصناديق: GP يهتم بـ IRR (يحدد الأداء)، LP يهتم بـ MOIC (يحدد الربح الفعلي)"
+            ]},
+            { type: "heading", text: "مثال" },
+            { type: "text", text: "استثمرت 10 مليون. بعد 7 سنوات حصلت 35 مليون إجمالي. MOIC = 35 ÷ 10 = 3.5x. يعني 3.5 أضعاف رأس المال. الربح الصافي = 25 مليون (250%)." }
+          ]
+        },
+        {
+          id: "dscr",
+          label: "DSCR",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "ما هو DSCR (نسبة تغطية خدمة الدين)؟" },
+            { type: "text", text: "كم مرة يغطي دخل المشروع أقساط البنك. DSCR = صافي الدخل التشغيلي ÷ خدمة الدين (أقساط + أرباح). DSCR = 1.5x يعني الدخل يغطي القسط مرة ونصف." },
+            { type: "heading", text: "لماذا البنك يهتم بـ DSCR؟" },
+            { type: "list", items: [
+              "DSCR هو المقياس رقم 1 اللي يحدد هل البنك يوافق على التمويل أو لا",
+              "يقيس قدرة المشروع على سداد التزاماته من دخله التشغيلي",
+              "DSCR < 1.0x يعني المشروع ما يقدر يسدد أقساطه — إفلاس تقني",
+              "DSCR بين 1.0x و 1.2x: خطر — أي انخفاض بسيط يسبب تعثر"
+            ]},
+            { type: "heading", text: "المعادلة في النموذج" },
+            { type: "text", text: "DSCR[y] = (الإيرادات[y] - إيجار الأرض[y]) ÷ خدمة الدين[y]. يُحسب فقط في السنوات اللي فيها خدمة دين (أقساط > 0)." },
+            { type: "heading", text: "الحدود المطلوبة في السعودية" },
+            { type: "list", items: [
+              "الحد الأدنى المقبول: 1.2x (معظم البنوك السعودية)",
+              "مريح: 1.5x وأكثر",
+              "ممتاز: 2.0x+",
+              "البنك قد يشترط DSCR أدنى كـ covenant (شرط تعاقدي)",
+              "لو نزل تحت الحد: البنك يقدر يمنع توزيعات أو يطلب سداد مبكر"
+            ]},
+            { type: "heading", text: "كيف ترفع DSCR؟" },
+            { type: "list", items: [
+              "زيادة الإيرادات: إشغال أعلى، إيجارات أعلى",
+              "تقليل خدمة الدين: تمويل أقل (LTV أقل)، فترة سداد أطول",
+              "خفض المصاريف التشغيلية: تحسين كفاءة التشغيل",
+              "الحوافز الحكومية: دعم الفائدة يقلل خدمة الدين مباشرة"
+            ]}
+          ]
+        },
+        {
+          id: "leverage",
+          label: "الرافعة المالية",
+          icon: "⚖",
+          content: [
+            { type: "heading", text: "ما هي الرافعة المالية (Leverage)؟" },
+            { type: "text", text: "استخدام أموال البنك (دين) لتمويل جزء من المشروع. الفكرة: لو عائد المشروع أعلى من تكلفة الدين، الفرق يذهب كاملاً لصاحب رأس المال." },
+            { type: "heading", text: "مثال عملي" },
+            { type: "list", items: [
+              "مشروع 100M يحقق 15% عائد = 15M ربح",
+              "بدون رافعة: استثمرت 100M، عائد 15M = 15% على رأس المال",
+              "مع رافعة 70%: استثمرت 30M فقط، البنك 70M بتكلفة 7% = 4.9M",
+              "ربحك = 15M - 4.9M = 10.1M على 30M = 33.7% على رأس المال!",
+              "الرافعة حولت 15% إلى 33.7% — أكثر من ضعف العائد"
+            ]},
+            { type: "heading", text: "LTV (نسبة القرض للقيمة)" },
+            { type: "list", items: [
+              "LTV = حجم الدين ÷ قيمة المشروع",
+              "LTV 70% = البنك يموّل 70% والمطور 30%",
+              "في السعودية: 50%-70% هو المعتاد للتطوير العقاري",
+              "LTV أعلى = رافعة أكبر = عائد أعلى + مخاطرة أعلى",
+              "بعض البرامج الحكومية تسمح بـ LTV أعلى (80%-100%)"
+            ]},
+            { type: "heading", text: "Unlevered vs Levered في النموذج" },
+            { type: "list", items: [
+              "صافي التدفق غير الممول (Unlevered): إيرادات - إيجار أرض - CAPEX",
+              "صافي التدفق الممول (Levered): Unlevered - خدمة الدين + عائدات التخارج",
+              "Unlevered IRR = جودة المشروع نفسه (ما علاقته بالتمويل)",
+              "Levered IRR = العائد الفعلي على رأس مال المطور/المستثمر"
+            ]},
+            { type: "heading", text: "متى تكون الرافعة سلبية؟" },
+            { type: "list", items: [
+              "لو تكلفة الدين أعلى من عائد المشروع",
+              "مثال: مشروع عائده 6% وتكلفة الدين 7% = الرافعة تقلل العائد",
+              "في هذه الحالة Levered IRR < Unlevered IRR (إشارة خطر)",
+              "لذلك: لا تفترض دائماً أن الدين يحسّن العائد"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Core Financial Metrics",
+      intro: "These metrics are the common language between developers, banks, and investors. Understanding them is essential for evaluating any real estate project.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "irr",
+          label: "IRR",
+          icon: "📈",
+          content: [
+            { type: "heading", text: "What is IRR (Internal Rate of Return)?" },
+            { type: "text", text: "The annual percentage rate that makes the NPV of all cash flows equal to zero. Simply: the actual annualized return the project delivers." },
+            { type: "heading", text: "Why IRR matters" },
+            { type: "list", items: [
+              "First metric any investor or bank asks for",
+              "Accounts for timing of cash flows (money today > money tomorrow)",
+              "Allows comparison across projects of different sizes and durations",
+              "Higher IRR = project returns money faster with greater yield"
+            ]},
+            { type: "heading", text: "Unlevered IRR vs Levered IRR" },
+            { type: "list", items: [
+              "Unlevered (pre-financing): project return with no debt. Reflects pure project quality",
+              "Levered (post-financing): return after debt service. Reflects actual return on equity",
+              "Usually Levered > Unlevered due to leverage (if project is successful)",
+              "If Levered < Unlevered: debt cost is destroying returns (negative leverage)"
+            ]},
+            { type: "heading", text: "Saudi market ranges" },
+            { type: "list", items: [
+              "Successful commercial project: Unlevered 12%-18%",
+              "RE Fund (LP): 15%-25%",
+              "Hospitality/tourism: 10%-20% (higher risk)",
+              "Below 8% usually not attractive to investors"
+            ]},
+            { type: "heading", text: "IRR limitations" },
+            { type: "list", items: [
+              "Doesn't reflect absolute profit size",
+              "Assumes reinvestment at same rate (may not be realistic)",
+              "Very sensitive to cash flow timing",
+              "Use together with NPV and MOIC, never alone"
+            ]}
+          ]
+        },
+        {
+          id: "npv",
+          label: "NPV",
+          icon: "💵",
+          content: [
+            { type: "heading", text: "What is NPV (Net Present Value)?" },
+            { type: "text", text: "Sum of all future cash flows discounted to today's value. If NPV > 0, the project earns more than the discount rate." },
+            { type: "heading", text: "Why calculate NPV at 10%, 12%, and 14%?" },
+            { type: "list", items: [
+              "Each discount rate represents a different cost of capital expectation",
+              "10%: conservative cost of capital — NPV > 0 means project exceeds minimum threshold",
+              "12%: mid-range required return — most common benchmark in Saudi market",
+              "14%: high required return — reflects higher risk or demanding investors",
+              "NPV positive at 14%: excellent project even at highest expectations",
+              "NPV negative at 10%: project fails minimum threshold"
+            ]},
+            { type: "heading", text: "How to read NPV" },
+            { type: "list", items: [
+              "NPV > 0: project creates value above discount rate",
+              "NPV = 0: project earns exactly the discount rate (IRR = discount rate)",
+              "NPV < 0: project destroys value vs alternative investment",
+              "NPV measured in SAR — gives you the size of value created, not just percentage"
+            ]},
+            { type: "heading", text: "NPV vs IRR" },
+            { type: "list", items: [
+              "IRR gives percentage (%) — NPV gives amount (SAR)",
+              "IRR better for comparing projects — NPV better for single investment decisions",
+              "Two projects with same IRR can have very different NPV (different scales)",
+              "Rule: use both together. Never rely on one metric alone"
+            ]}
+          ]
+        },
+        {
+          id: "moic",
+          label: "MOIC",
+          icon: "✖",
+          content: [
+            { type: "heading", text: "What is MOIC (Multiple on Invested Capital)?" },
+            { type: "text", text: "How many times the investor multiplied their money. MOIC = Total Distributions / Capital Invested. MOIC of 2.5x means SAR 2.50 received for every SAR 1 invested." },
+            { type: "heading", text: "Paid-In vs Committed MOIC" },
+            { type: "list", items: [
+              "Paid-In: distributions / actual cash contributed (equity calls)",
+              "Committed: distributions / originally committed equity",
+              "Paid-In is higher because actual calls may be less than commitment",
+              "Committed is the more common standard in fund reporting"
+            ]},
+            { type: "heading", text: "Why MOIC matters alongside IRR" },
+            { type: "list", items: [
+              "High IRR + low MOIC = fast but small return",
+              "Low IRR + high MOIC = slow but large return",
+              "Institutional investors typically target IRR > 15% with MOIC > 2x minimum",
+              "In funds: GP focuses on IRR (performance), LP focuses on MOIC (actual profit)"
+            ]}
+          ]
+        },
+        {
+          id: "dscr",
+          label: "DSCR",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "What is DSCR (Debt Service Coverage Ratio)?" },
+            { type: "text", text: "How many times project income covers bank payments. DSCR = NOI / Debt Service. DSCR of 1.5x means income covers payments 1.5 times." },
+            { type: "heading", text: "Why banks care about DSCR" },
+            { type: "list", items: [
+              "Primary metric determining loan approval",
+              "Measures project's ability to service debt from operations",
+              "DSCR < 1.0x means project cannot pay its obligations — technical default",
+              "Between 1.0x-1.2x: danger zone — any dip causes default"
+            ]},
+            { type: "heading", text: "Saudi bank requirements" },
+            { type: "list", items: [
+              "Minimum acceptable: 1.2x (most Saudi banks)",
+              "Comfortable: 1.5x+",
+              "Excellent: 2.0x+",
+              "Bank may set DSCR floor as covenant",
+              "Below floor: bank can block distributions or demand early repayment"
+            ]}
+          ]
+        },
+        {
+          id: "leverage",
+          label: "Leverage",
+          icon: "⚖",
+          content: [
+            { type: "heading", text: "What is Financial Leverage?" },
+            { type: "text", text: "Using bank debt to finance part of the project. If project return exceeds debt cost, the difference goes entirely to equity holders, amplifying their return." },
+            { type: "heading", text: "LTV (Loan-to-Value)" },
+            { type: "list", items: [
+              "LTV = Debt / Project Value",
+              "LTV 70% = bank funds 70%, developer 30%",
+              "Saudi standard: 50%-70% for RE development",
+              "Higher LTV = more leverage = higher return + higher risk"
+            ]},
+            { type: "heading", text: "Unlevered vs Levered in the model" },
+            { type: "list", items: [
+              "Unlevered CF: income - land rent - CAPEX",
+              "Levered CF: Unlevered - debt service + exit proceeds",
+              "Unlevered IRR = pure project quality",
+              "Levered IRR = actual return on equity invested"
+            ]},
+            { type: "heading", text: "When leverage is negative" },
+            { type: "list", items: [
+              "If debt cost exceeds project return",
+              "Example: 6% project return with 7% debt cost = leverage reduces return",
+              "Signal: Levered IRR < Unlevered IRR (red flag)"
             ]}
           ]
         }
