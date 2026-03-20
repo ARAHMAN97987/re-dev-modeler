@@ -3914,7 +3914,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
 
-  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
+  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>زان</span><span style={{width:1,height:30,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:12,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div></div></div>;
   if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
   if (!project) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#f87171",letterSpacing:2}}>!</div><div style={{fontSize:14,color:"#d0d4dc",marginTop:8}}>{lang==="ar"?"لم يتم تحميل المشروع":"Project failed to load"}</div><button onClick={goBack} style={{marginTop:16,padding:"8px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{lang==="ar"?"رجوع":"Go Back"}</button></div></div>;
 
@@ -6635,7 +6635,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     const reportTitle = reportLabels[activeReport]?.label || "Report";
     const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
     const htmlContent = `<!DOCTYPE html><html dir="${ar?'rtl':'ltr'}" lang="${ar?'ar':'en'}"><head><meta charset="utf-8"><title>${project.name} - ${reportTitle}</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Tajawal:wght@300;400;700;800;900&display=swap" rel="stylesheet">
 <style>
   @page { size: A4; margin: 12mm 15mm; }
   * { box-sizing: border-box; }
@@ -6647,17 +6647,26 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   .zan-cover { page-break-after: always; min-height: 100vh; background: #0f1117; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 60px 40px; position: relative; overflow: hidden; }
   .zan-cover::before { content: ''; position: absolute; top: -120px; right: -120px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(95,191,191,0.15) 0%, transparent 60%); }
   .zan-cover::after { content: ''; position: absolute; bottom: -100px; left: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(15,118,110,0.12) 0%, transparent 60%); }
-  .zan-cover .logo { font-size: 56px; font-weight: 800; color: #5fbfbf; letter-spacing: 8px; margin-bottom: 4px; position: relative; z-index: 1; }
+  .zan-cover .logo-group { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; margin-bottom: 4px; justify-content: center; }
+  .zan-cover .logo-name { font-size: 48px; font-weight: 900; color: #fff; font-family: 'Tajawal',sans-serif; letter-spacing: -0.5px; }
+  .zan-cover .logo-div { width: 1px; height: 40px; background: rgba(95,191,191,0.4); }
+  .zan-cover .logo-sub { font-size: 14px; color: #5fbfbf; font-weight: 300; line-height: 1.3; text-align: ${ar?'right':'left'}; }
   .zan-cover .sub { font-size: 12px; color: #5fbfbf; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; opacity: 0.7; margin-bottom: 56px; position: relative; z-index: 1; }
   .zan-cover .rtype { font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 14px; position: relative; z-index: 1; letter-spacing: -0.3px; }
   .zan-cover .pname { font-size: 20px; color: #d0d4dc; font-weight: 500; margin-bottom: 6px; position: relative; z-index: 1; }
   .zan-cover .ploc { font-size: 13px; color: #6b7080; position: relative; z-index: 1; margin-bottom: 56px; }
   .zan-cover .conf { display: inline-block; padding: 8px 28px; border: 1px solid rgba(95,191,191,0.25); border-radius: 4px; color: #5fbfbf; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; font-weight: 600; position: relative; z-index: 1; }
   .zan-hdr { background: linear-gradient(135deg, #0f766e, #5fbfbf); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-radius: 0; }
-  .zan-hdr .logo { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 3px; }
+  .zan-hdr .logo-group { display: flex; align-items: center; gap: 8px; }
+  .zan-hdr .logo-name { font-size: 22px; font-weight: 900; color: #fff; font-family: 'Tajawal',sans-serif; }
+  .zan-hdr .logo-div { width: 1px; height: 20px; background: rgba(255,255,255,0.4); }
+  .zan-hdr .logo-sub { font-size: 9px; color: rgba(255,255,255,0.85); font-weight: 300; line-height: 1.3; }
   .zan-hdr .title { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 500; letter-spacing: 0.3px; }
   .zan-ftr { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e5e7ec; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #9ca3af; }
-  .zan-ftr .logo { font-size: 14px; font-weight: 800; color: #5fbfbf; letter-spacing: 2px; }
+  .zan-ftr .logo-group { display: flex; align-items: center; gap: 6px; }
+  .zan-ftr .logo-name { font-size: 16px; font-weight: 900; color: #0f1117; font-family: 'Tajawal',sans-serif; }
+  .zan-ftr .logo-div { width: 1px; height: 14px; background: rgba(95,191,191,0.4); }
+  .zan-ftr .logo-sub { font-size: 8px; color: #5fbfbf; font-weight: 300; line-height: 1.3; }
   .report-body { padding: 0 20px 20px 20px; }
   h2.zan-sec { font-size: 14px; font-weight: 700; color: #0f1117; margin: 22px 0 10px 0; padding: 0 0 6px 10px; border-left: 3px solid #5fbfbf; border-bottom: 1px solid #e5e7ec; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
@@ -6675,16 +6684,16 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   @media print { .no-print { display: none !important; } }
 </style></head><body>
 <div class="zan-cover">
-  <div class="logo">ZAN</div>
+  <div class="logo-group"><span class="logo-name">${ar?'زان':'Zan'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'شركة زان':'Zan'}<br>${ar?'لتطوير الوجهات':'Destination Development'}</span></div>
   <div class="sub">Financial Modeler</div>
   <div class="rtype">${reportTitle}</div>
   <div class="pname">${project.name}</div>
   <div class="ploc">${project.location||""} &middot; ${cur} &middot; ${dateStr}</div>
-  <div class="conf">CONFIDENTIAL</div>
+  <div class="conf">${ar?'سري':'CONFIDENTIAL'}</div>
 </div>
-<div class="zan-hdr"><div class="logo">ZAN</div><div class="title">${reportTitle} &mdash; ${project.name}</div></div>
+<div class="zan-hdr"><div class="logo-group"><span class="logo-name">${ar?'زان':'Zan'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div class="title">${reportTitle} &mdash; ${project.name}</div></div>
 <div class="report-body">${el.innerHTML}</div>
-<div class="zan-ftr"><div class="logo">ZAN</div><div>${dateStr} &middot; Confidential &middot; ZAN Financial Modeler</div></div>
+<div class="zan-ftr"><div class="logo-group"><span class="logo-name">${ar?'زان':'Zan'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div>${dateStr} &middot; ${ar?'سري':'Confidential'}</div></div>
 </body></html>`;
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -6747,9 +6756,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     <div ref={reportRef} dir={ar?"rtl":"ltr"} style={{textAlign:ar?"right":"left"}}>
       {activeReport === "exec" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-            <span style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</span>
-            <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"Zan"}</span>
+            <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
+            <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4,borderBottom:"none"}}>{project.name}</h1>
           <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.location} | {cur} | {sy} - {sy + h} ({h} {ar?"سنة":"years"}) | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
@@ -6915,9 +6925,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
       {activeReport === "bank" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-            <span style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</span>
-            <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"Zan"}</span>
+            <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
+            <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"حزمة تقديم البنك":"Bank Submission Pack"}</h1>
           <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.name} | {project.location} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
@@ -7143,9 +7154,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
       {activeReport === "investor" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-            <span style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</span>
-            <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"Zan"}</span>
+            <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
+            <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"مذكرة المستثمر":"Investor Memo"} - {project.name}</h1>
           <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.location} | {cur} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})} | {ar?"سري":"CONFIDENTIAL"}</div>
@@ -7346,8 +7358,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
     {!activeReport && (
       <div style={{textAlign:"center",padding:"56px 24px",background:"#0f1117",borderRadius:12,border:"1px solid #1e2230"}}>
-        <div style={{fontSize:40,fontWeight:800,color:"#5fbfbf",letterSpacing:4,marginBottom:4}}>ZAN</div>
-        <div style={{fontSize:11,color:"#6b7080",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:20}}>Financial Modeler</div>
+        <div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:16}}>
+          <span style={{fontSize:40,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>{ar?"زان":"Zan"}</span>
+          <span style={{width:1,height:36,background:"#5fbfbf",opacity:0.4}} />
+          <span style={{fontSize:13,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+        </div>
         <div style={{fontSize:13,color:"#4b5060"}}>
           {ar?"اختر تقريراً من الأعلى":"Select a report above to preview and download"}
         </div>
