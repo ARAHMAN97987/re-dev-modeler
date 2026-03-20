@@ -4816,6 +4816,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
+  useEffect(() => { window.__zanOpenAcademy = () => { setView("academy"); window.scrollTo(0,0); }; return () => { delete window.__zanOpenAcademy; }; }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
   const [aiOpen, setAiOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
@@ -5543,6 +5544,21 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                 </div>
               ))}
             </div>
+            {/* Academy Banner for New Users */}
+            {onOpenAcademy && (
+              <div onClick={onOpenAcademy} style={{marginTop:32,maxWidth:700,margin:"32px auto 0",background:"linear-gradient(135deg, #0B2341 0%, #163050 100%)",borderRadius:12,padding:"24px 28px",cursor:"pointer",transition:"all 0.2s",border:"1px solid rgba(46,196,182,0.15)"}}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 8px 24px rgba(11,35,65,0.3)";e.currentTarget.style.transform="translateY(-2px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
+                <div style={{display:"flex",alignItems:"center",gap:14}}>
+                  <span style={{fontSize:32}}>📚</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:16,fontWeight:700,color:"#C8A96E",fontFamily:"'Tajawal',sans-serif",marginBottom:4}}>{ar?"أكاديمية زان المالية":"ZAN Academy"}</div>
+                    <div style={{fontSize:12,color:"rgba(255,255,255,0.55)",lineHeight:1.6}}>{ar?"جديد على النمذجة المالية؟ ابدأ بالتعلم أولاً - محتوى عملي + نماذج تفاعلية جاهزة":"New to financial modeling? Start learning first - practical content + ready interactive demos"}</div>
+                  </div>
+                  <span style={{fontSize:14,color:"#2EC4B6",fontWeight:600,flexShrink:0}}>{ar?"ادخل ←":"Enter →"}</span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -9537,7 +9553,13 @@ function EducationalModal({ contentKey, lang, onClose }) {
 
       {/* Footer CTA */}
       {content.cta && (
-        <div style={{ padding: "12px 22px", borderTop: "1px solid #e5e7ec", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+        <div style={{ padding: "12px 22px", borderTop: "1px solid #e5e7ec", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+          {window.__zanOpenAcademy ? (
+            <button onClick={() => { onClose(); window.__zanOpenAcademy(contentKey); }} style={{
+              background: "none", border: "none", color: "#C8A96E", fontSize: 11, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4,
+            }}>📚 {ar ? "اقرأ المزيد في الأكاديمية" : "Read more in Academy"}</button>
+          ) : <span />}
           <button onClick={onClose} style={{
             padding: "9px 28px", borderRadius: 8, border: "none",
             background: "#2563eb", color: "#fff", fontSize: 13, fontWeight: 600,

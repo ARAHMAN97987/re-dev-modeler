@@ -135,22 +135,35 @@ export function AuthGate({ children }) {
                 <span style={{fontSize:16}}>📚</span>
                 <span style={{fontSize:14,fontWeight:700,color:'#C8A96E',fontFamily:"'Tajawal',sans-serif"}}>{ar?'أكاديمية زان المالية':'ZAN Academy'}</span>
               </div>
-              <p style={{fontSize:12,color:'rgba(255,255,255,0.45)',lineHeight:1.7,marginBottom:16,margin:'0 0 16px'}}>
+              <p style={{fontSize:12,color:'rgba(255,255,255,0.45)',lineHeight:1.7,marginBottom:14,margin:'0 0 14px'}}>
                 {ar?'تعلّم أساسيات النمذجة المالية العقارية مجاناً - محتوى عملي مصمم للسوق السعودي':'Learn real estate financial modeling basics for free - practical content designed for the Saudi market'}
               </p>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <div style={{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}>
                 {[
+                  {n:'11',l:ar?'موضوع':'topics'},
+                  {n:'40+',l:ar?'درس':'lessons'},
+                  {n:'5',l:ar?'نماذج تفاعلية':'demo projects'},
+                ].map((s,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'baseline',gap:4,padding:'4px 10px',background:'rgba(46,196,182,0.08)',borderRadius:6,border:'1px solid rgba(46,196,182,0.12)'}}>
+                    <span style={{fontSize:14,fontWeight:800,color:'#2EC4B6'}}>{s.n}</span>
+                    <span style={{fontSize:9,color:'rgba(255,255,255,0.4)',fontWeight:500}}>{s.l}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                {[
+                  {icon:'🚀',ar:'دليل البداية السريعة - 10 دقائق',en:'Quick Start Guide - 10 minutes'},
                   {icon:'📊',ar:'ما معنى IRR و NPV و DSCR؟',en:'What do IRR, NPV, DSCR mean?'},
                   {icon:'☪️',ar:'الفرق بين المرابحة والإجارة',en:'Murabaha vs Ijara explained'},
                   {icon:'🌊',ar:'كيف يعمل شلال توزيع الأرباح؟',en:'How does profit waterfall work?'},
                 ].map((item,i) => (
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'rgba(255,255,255,0.04)',borderRadius:8,border:'1px solid rgba(255,255,255,0.06)'}}>
-                    <span style={{fontSize:13}}>{item.icon}</span>
-                    <span style={{fontSize:11,color:'rgba(255,255,255,0.55)',fontWeight:500}}>{ar?item.ar:item.en}</span>
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 12px',background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid rgba(255,255,255,0.05)'}}>
+                    <span style={{fontSize:12}}>{item.icon}</span>
+                    <span style={{fontSize:11,color:'rgba(255,255,255,0.5)',fontWeight:500}}>{ar?item.ar:item.en}</span>
                   </div>
                 ))}
               </div>
-              <div style={{marginTop:12,fontSize:11,color:'#C8A96E',fontWeight:600,textAlign:'center'}}>
+              <div style={{marginTop:14,fontSize:11,color:'#C8A96E',fontWeight:600,textAlign:'center'}}>
                 {ar?'سجّل مجاناً للوصول الكامل ←':'Sign up free for full access →'}
               </div>
             </div>
