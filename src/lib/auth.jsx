@@ -1,243 +1,112 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
-const WATERFRONT_IMG = "https://files.manuscdn.com/user_upload_by_module/session_file/310419663027980795/PfUcTsRAscFnLMXv.png";
+const C = {
+  navy: "#0B2341", deep: "#071829", teal: "#2EC4B6", gold: "#C8A96E",
+  tealDim: "rgba(46,196,182,0.12)", tealBorder: "rgba(46,196,182,0.25)",
+  goldDim: "rgba(200,169,110,0.12)", goldBorder: "rgba(200,169,110,0.25)",
+  w05: "rgba(255,255,255,0.05)", w10: "rgba(255,255,255,0.10)",
+  w15: "rgba(255,255,255,0.15)", w25: "rgba(255,255,255,0.25)",
+  w30: "rgba(255,255,255,0.30)", w40: "rgba(255,255,255,0.40)",
+  w50: "rgba(255,255,255,0.50)", w70: "rgba(255,255,255,0.70)",
+};
 
-function useIsMobile(bp = 768) {
-  const [m, setM] = useState(typeof window !== "undefined" ? window.innerWidth < bp : false);
-  useEffect(() => { const r = () => setM(window.innerWidth < bp); window.addEventListener("resize", r); return () => window.removeEventListener("resize", r); }, [bp]);
-  return m;
-}
+const TX = {
+  tagline:{en:"Destination Development",ar:"\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0648\u062c\u0647\u0627\u062a"},
+  fm:{en:"Financial Modeler",ar:"\u0627\u0644\u0646\u0645\u0630\u062c\u0629 \u0627\u0644\u0645\u0627\u0644\u064a\u0629"},
+  signIn:{en:"Sign In",ar:"\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644"},
+  signUp:{en:"Sign Up",ar:"\u0625\u0646\u0634\u0627\u0621 \u062d\u0633\u0627\u0628"},
+  email:{en:"Email",ar:"\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a"},
+  password:{en:"Password",ar:"\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"},
+  confirmPw:{en:"Confirm Password",ar:"\u062a\u0623\u0643\u064a\u062f \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631"},
+  forgot:{en:"Forgot password?",ar:"\u0646\u0633\u064a\u062a \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\u061f"},
+  backToLogin:{en:"\u2190 Back to Sign In",ar:"\u2190 \u0631\u062c\u0648\u0639 \u0644\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644"},
+  or:{en:"or",ar:"\u0623\u0648"},
+  noAcc:{en:"Don't have an account?",ar:"\u0644\u064a\u0633 \u0644\u062f\u064a\u0643 \u062d\u0633\u0627\u0628\u061f"},
+  hasAcc:{en:"Already have an account?",ar:"\u0644\u062f\u064a\u0643 \u062d\u0633\u0627\u0628 \u0628\u0627\u0644\u0641\u0639\u0644\u061f"},
+  cr:{en:"Zan Destination Development",ar:"\u0634\u0631\u0643\u0629 \u0632\u0627\u0646 \u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0648\u062c\u0647\u0627\u062a"},
+  heroT1:{en:"Model Smarter.",ar:"\u0646\u0645\u0630\u062c\u0629 \u0623\u0630\u0643\u0649."},
+  heroT2:{en:"Build Faster.",ar:"\u0628\u0646\u0627\u0621 \u0623\u0633\u0631\u0639."},
+  heroP:{en:"The all-in-one financial modeling platform for real estate development. From feasibility to bank pack, in one place.",ar:"\u0645\u0646\u0635\u0629 \u0627\u0644\u0646\u0645\u0630\u062c\u0629 \u0627\u0644\u0645\u0627\u0644\u064a\u0629 \u0627\u0644\u0645\u062a\u0643\u0627\u0645\u0644\u0629 \u0644\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a. \u0645\u0646 \u062f\u0631\u0627\u0633\u0629 \u0627\u0644\u062c\u062f\u0648\u0649 \u062d\u062a\u0649 \u0645\u0644\u0641 \u0627\u0644\u0628\u0646\u0643\u060c \u0641\u064a \u0645\u0643\u0627\u0646 \u0648\u0627\u062d\u062f."},
+  academy:{en:"ZAN Academy",ar:"\u0623\u0643\u0627\u062f\u064a\u0645\u064a\u0629 \u0632\u0627\u0646"},
+  academyP:{en:"Learn real estate financial modeling with interactive lessons and demo projects. No account required.",ar:"\u062a\u0639\u0644\u0645 \u0627\u0644\u0646\u0645\u0630\u062c\u0629 \u0627\u0644\u0645\u0627\u0644\u064a\u0629 \u0627\u0644\u0639\u0642\u0627\u0631\u064a\u0629 \u0645\u0639 \u062f\u0631\u0648\u0633 \u062a\u0641\u0627\u0639\u0644\u064a\u0629 \u0648\u0645\u0634\u0627\u0631\u064a\u0639 \u062a\u062c\u0631\u064a\u0628\u064a\u0629. \u0628\u062f\u0648\u0646 \u062d\u0633\u0627\u0628."},
+  academyCta:{en:"Enter Academy Free",ar:"\u0627\u062f\u062e\u0644 \u0627\u0644\u0623\u0643\u0627\u062f\u064a\u0645\u064a\u0629 \u0645\u062c\u0627\u0646\u0627\u064b"},
+  free:{en:"FREE",ar:"\u0645\u062c\u0627\u0646\u064a"},
+  emailPh:{en:"you@example.com",ar:"you@example.com"},
+  pwPh:{en:"6+ characters",ar:"6 \u0623\u062d\u0631\u0641 \u0623\u0648 \u0623\u0643\u062b\u0631"},
+  loading:{en:"Loading...",ar:"\u062c\u0627\u0631\u064a..."},
+  sendLink:{en:"Send Recovery Link",ar:"\u0625\u0631\u0633\u0627\u0644 \u0631\u0627\u0628\u0637 \u0627\u0644\u0627\u0633\u062a\u0639\u0627\u062f\u0629"},
+  createAcc:{en:"Create Account",ar:"\u0625\u0646\u0634\u0627\u0621 \u062d\u0633\u0627\u0628"},
+  poweredBy:{en:"Built for the Saudi real estate market",ar:"\u0645\u0635\u0645\u0645 \u0644\u0644\u0633\u0648\u0642 \u0627\u0644\u0639\u0642\u0627\u0631\u064a \u0627\u0644\u0633\u0639\u0648\u062f\u064a"},
+  features:[
+    {icon:"chart",t:{en:"Project Engine",ar:"\u0645\u062d\u0631\u0643 \u0627\u0644\u0645\u0634\u0627\u0631\u064a\u0639"},d:{en:"Multi-asset CAPEX, revenue & unlevered IRR/NPV",ar:"\u0631\u0623\u0633 \u0627\u0644\u0645\u0627\u0644 \u0627\u0644\u0645\u062a\u0639\u062f\u062f\u060c \u0627\u0644\u0625\u064a\u0631\u0627\u062f\u0627\u062a \u0648\u0627\u0644\u0639\u0627\u0626\u062f \u063a\u064a\u0631 \u0627\u0644\u0645\u0631\u0641\u0648\u0639"}},
+    {icon:"bank",t:{en:"Financing & Debt",ar:"\u0627\u0644\u062a\u0645\u0648\u064a\u0644 \u0648\u0627\u0644\u062f\u064a\u0646"},d:{en:"Bank debt, Islamic finance & DSCR analysis",ar:"\u062a\u0645\u0648\u064a\u0644 \u0628\u0646\u0643\u064a\u060c \u062a\u0645\u0648\u064a\u0644 \u0625\u0633\u0644\u0627\u0645\u064a \u0648\u062a\u062d\u0644\u064a\u0644 DSCR"}},
+    {icon:"waterfall",t:{en:"Waterfall Engine",ar:"\u0645\u062d\u0631\u0643 \u0627\u0644\u062a\u0648\u0632\u064a\u0639\u0627\u062a"},d:{en:"4-tier GP/LP distribution with preferred return",ar:"\u062a\u0648\u0632\u064a\u0639\u0627\u062a GP/LP \u0628\u0623\u0631\u0628\u0639 \u0645\u0631\u0627\u062d\u0644 \u0645\u0639 \u0639\u0627\u0626\u062f \u0645\u0641\u0636\u0644"}},
+    {icon:"file",t:{en:"Bank Pack & Reports",ar:"\u0645\u0644\u0641 \u0627\u0644\u0628\u0646\u0643 \u0648\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631"},d:{en:"Auto-generated bank packs & investor memos",ar:"\u0645\u0644\u0641\u0627\u062a \u0627\u0644\u0628\u0646\u0643 \u0627\u0644\u062a\u0644\u0642\u0627\u0626\u064a\u0629 \u0648\u0645\u0630\u0643\u0631\u0627\u062a \u0627\u0644\u0645\u0633\u062a\u062b\u0645\u0631\u064a\u0646"}},
+    {icon:"grid",t:{en:"Scenario Analysis",ar:"\u062a\u062d\u0644\u064a\u0644 \u0627\u0644\u0633\u064a\u0646\u0627\u0631\u064a\u0648\u0647\u0627\u062a"},d:{en:"Compare 8 scenarios with sensitivity & break-even",ar:"\u0645\u0642\u0627\u0631\u0646\u0629 8 \u0633\u064a\u0646\u0627\u0631\u064a\u0648\u0647\u0627\u062a \u0645\u0639 \u062c\u062f\u0627\u0648\u0644 \u0627\u0644\u062d\u0633\u0627\u0633\u064a\u0629"}},
+    {icon:"layers",t:{en:"Gov. Incentives",ar:"\u0627\u0644\u062d\u0648\u0627\u0641\u0632 \u0627\u0644\u062d\u0643\u0648\u0645\u064a\u0629"},d:{en:"CAPEX grants, subsidies & land rent rebates",ar:"\u0645\u0646\u062d \u0631\u0623\u0633 \u0627\u0644\u0645\u0627\u0644\u060c \u062f\u0639\u0645 \u0627\u0644\u0641\u0627\u0626\u062f\u0629 \u0648\u062d\u0633\u0648\u0645\u0627\u062a \u0627\u0644\u0625\u064a\u062c\u0627\u0631"}},
+  ],
+  stats:[
+    {v:"50+",l:{en:"Year Projections",ar:"\u0633\u0646\u0629 \u062a\u0648\u0642\u0639\u0627\u062a"}},
+    {v:"8",l:{en:"Scenarios",ar:"\u0633\u064a\u0646\u0627\u0631\u064a\u0648\u0647\u0627\u062a"}},
+    {v:"633",l:{en:"Tests Pass",ar:"\u0627\u062e\u062a\u0628\u0627\u0631 \u0646\u0627\u062c\u062d"}},
+    {v:"5",l:{en:"Core Modules",ar:"\u0648\u062d\u062f\u0627\u062a \u0623\u0633\u0627\u0633\u064a\u0629"}},
+  ],
+};
+const tt=(o,l)=>o[l]||o.en;
 
-function LoadingScreen() {
-  return (
-    <div style={{position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#0B2341',zIndex:1000}}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{width:36,height:36,border:'3px solid rgba(46,196,182,0.2)',borderTop:'3px solid #2EC4B6',borderRadius:'50%',animation:'spin 0.8s linear infinite',marginBottom:14}} />
-      <div style={{fontSize:32,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>زان</div>
-      <p style={{color:'rgba(255,255,255,0.4)',fontSize:12,marginTop:6}}>Financial Modeler</p>
-    </div>
-  )
-}
+const IC={
+  chart:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>,
+  bank:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M12 3l9 7H3z"/><path d="M5 10v11"/><path d="M19 10v11"/><path d="M9 10v11"/><path d="M14 10v11"/></svg>,
+  waterfall:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="14" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="18" y="3" width="4" height="18" rx="1"/></svg>,
+  file:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/></svg>,
+  grid:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6"/><path d="M12 17v6"/><path d="M4.22 4.22l4.24 4.24"/><path d="M15.54 15.54l4.24 4.24"/><path d="M1 12h6"/><path d="M17 12h6"/></svg>,
+  layers:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>,
+  eye:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  eyeOff:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>,
+  book:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+  globe:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  arrow:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>,
+  check:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>,
+  sparkle:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 8.41L23 12L14.59 15.59L12 24L9.41 15.59L1 12L9.41 8.41Z"/></svg>,
+};
 
-function PasswordStrength({ strength }) {
-  const labels = ['','Short','OK','Good','Strong']
-  const colors = ['','#ef4444','#f59e0b','#22c55e','#16a34a']
-  return (
-    <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}>
-      <div style={{display:'flex',gap:3,flex:1}}>
-        {[0,1,2,3].map(i=>(<div key={i} style={{height:4,flex:1,borderRadius:2,background:i<strength?colors[strength]:'#163050',transition:'background 0.2s'}} />))}
-      </div>
-      {strength > 0 && <span style={{fontSize:10,fontWeight:600,color:colors[strength]}}>{labels[strength]}</span>}
-    </div>
-  )
-}
+function useWidth(){const[w,setW]=useState(typeof window!=="undefined"?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h)},[]);return w}
 
-export function AuthGate({ children }) {
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [mode, setMode] = useState('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [pwdStr, setPwdStr] = useState(0)
-  const [lang, setLang] = useState('ar')
-  const [showPublicAcademy, setShowPublicAcademy] = useState(false)
-  const ar = lang === 'ar'
-  const isMobile = useIsMobile()
+function LoadingScreen(){return(<div style={{position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:C.navy,zIndex:1000}}><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style><div style={{width:36,height:36,border:`3px solid ${C.tealDim}`,borderTop:`3px solid ${C.teal}`,borderRadius:'50%',animation:'spin 0.8s linear infinite',marginBottom:14}}/><div style={{fontSize:32,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>زان</div><p style={{color:C.w40,fontSize:12,marginTop:6}}>Financial Modeler</p></div>)}
 
-  useEffect(() => {
-    if (!supabase) { setLoading(false); return }
-    supabase.auth.getSession().then(({ data: { session: s } }) => { setSession(s); setLoading(false); window.scrollTo(0,0); })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); window.scrollTo(0,0); })
-    return () => subscription?.unsubscribe()
-  }, [])
+function PasswordStrength({strength}){const labels=['','Short','OK','Good','Strong'];const colors=['','#ef4444','#f59e0b','#22c55e','#16a34a'];return(<div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}><div style={{display:'flex',gap:3,flex:1}}>{[0,1,2,3].map(i=>(<div key={i} style={{height:4,flex:1,borderRadius:2,background:i<strength?colors[strength]:'#163050',transition:'background 0.2s'}}/>))}</div>{strength>0&&<span style={{fontSize:10,fontWeight:600,color:colors[strength]}}>{labels[strength]}</span>}</div>)}
 
-  if (!supabase) return children({ user: null, userId: 'anonymous', signOut: () => {} })
-  if (loading) return <LoadingScreen />
-  if (session) return children({ user: session.user, userId: session.user.id, signOut: () => supabase.auth.signOut() })
-  if (showPublicAcademy) return children({ user: null, userId: 'anonymous', signOut: null, publicAcademy: true, exitAcademy: () => setShowPublicAcademy(false) })
+function Orbs(){return(<div style={{position:'fixed',inset:0,overflow:'hidden',pointerEvents:'none',zIndex:0}}>{[{w:500,top:"-10%",left:"-8%",c:C.teal,dur:25,o:0.07},{w:400,top:"50%",right:"-5%",c:C.gold,dur:30,o:0.06},{w:350,bottom:"-5%",left:"30%",c:C.teal,dur:22,o:0.05}].map((orb,i)=>(<div key={i} style={{position:"absolute",width:orb.w,height:orb.w,borderRadius:"50%",background:`radial-gradient(circle,${orb.c} 0%,transparent 70%)`,opacity:orb.o,top:orb.top,left:orb.left,right:orb.right,bottom:orb.bottom,animation:`orb${i} ${orb.dur}s ease-in-out infinite`}}/>))}<style>{`@keyframes orb0{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,-30px)}}@keyframes orb1{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,40px)}}@keyframes orb2{0%,100%{transform:translate(0,0)}50%{transform:translate(25px,20px)}}`}</style></div>)}
 
-  const calcPwd = (p) => { let s=0; if(p.length>=4)s++; if(p.length>=6)s++; if(p.length>=8)s++; if(p.length>=10)s++; setPwdStr(s) }
-  const switchMode = (m) => { setMode(m); setError(''); setMessage(''); setConfirm(''); setPwdStr(0) }
+function FeatCard({icon,title,desc,idx,rtl,compact}){const isTeal=idx%2===0;const ac=isTeal?C.teal:C.gold;const bg=isTeal?C.tealDim:C.goldDim;const bd=isTeal?C.tealBorder:C.goldBorder;const[hov,setHov]=useState(false);return(<div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{background:hov?`${ac}18`:bg,border:`1px solid ${hov?ac:bd}`,borderRadius:14,padding:compact?"14px 16px":"18px 20px",display:"flex",alignItems:"flex-start",gap:compact?12:14,direction:rtl?"rtl":"ltr",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",transform:hov?"translateY(-3px)":"translateY(0)",boxShadow:hov?`0 8px 30px ${ac}20`:"none",cursor:"default"}}><div style={{width:compact?36:42,height:compact?36:42,borderRadius:10,background:`${ac}20`,color:ac,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"transform 0.3s",transform:hov?"scale(1.1)":"scale(1)"}}>{IC[icon]}</div><div style={{minWidth:0}}><div style={{color:"#fff",fontSize:compact?13:14.5,fontWeight:700,marginBottom:3,fontFamily:"'Tajawal',sans-serif"}}>{title}</div><div style={{color:C.w40,fontSize:compact?11.5:12.5,lineHeight:1.55}}>{desc}</div></div></div>)}
 
-  const go = async () => {
-    setError(''); setMessage(''); setBusy(true)
-    try {
-      if (mode === 'forgot') {
-        const { error: e } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
-        e ? setError(e.message) : setMessage(ar?'تم إرسال رابط الاستعادة! تحقق من بريدك.':'Recovery link sent! Check your email.')
-        setBusy(false); return
-      }
-      if (mode === 'signup') {
-        if (password !== confirm) { setError(ar?'كلمات المرور غير متطابقة.':'Passwords don\'t match.'); setBusy(false); return }
-        if (password.length < 6) { setError(ar?'كلمة المرور قصيرة (6 أحرف على الأقل).':'Password too short (min 6 characters).'); setBusy(false); return }
-        const { error: e } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } })
-        if (e) setError(e.message)
-        else setMessage(ar?'تم إنشاء حسابك! تحقق من بريدك لتأكيد الحساب.':'Account created! Check email to confirm.')
-      } else {
-        const { error: e } = await supabase.auth.signInWithPassword({ email, password })
-        if (e) setError(ar?'بيانات الدخول غير صحيحة.':'Invalid credentials.')
-      }
-    } catch (e) { setError(e.message) }
-    setBusy(false)
-  }
+function AcademyCard({lang,isRTL,isMobile,onEnter}){const[hov,setHov]=useState(false);return(<div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{background:hov?`linear-gradient(135deg,rgba(200,169,110,0.18),rgba(200,169,110,0.06))`:`linear-gradient(135deg,${C.goldDim},rgba(200,169,110,0.03))`,border:`1px solid ${hov?C.gold:C.goldBorder}`,borderRadius:16,padding:isMobile?"20px":"24px 28px",display:"flex",alignItems:isMobile?"flex-start":"center",gap:isMobile?14:20,cursor:"pointer",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",transform:hov?"translateY(-2px)":"translateY(0)",boxShadow:hov?"0 12px 40px rgba(200,169,110,0.15)":"none",flexDirection:isMobile?"column":"row"}}><div style={{display:"flex",alignItems:"center",gap:14,width:"100%"}}><div style={{width:48,height:48,borderRadius:14,background:`${C.gold}20`,color:C.gold,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"transform 0.3s",transform:hov?"scale(1.08)":"scale(1)"}}>{IC.book}</div><div style={{flex:1,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}><span style={{color:"#fff",fontSize:15,fontWeight:800,fontFamily:"'Tajawal',sans-serif"}}>{tt(TX.academy,lang)}</span><span style={{padding:"2px 10px",borderRadius:20,background:`linear-gradient(135deg,${C.gold},#d4b87a)`,color:C.deep,fontSize:10,fontWeight:800,letterSpacing:"0.5px"}}>{tt(TX.free,lang)}</span></div><p style={{color:C.w40,fontSize:12.5,lineHeight:1.5,margin:0}}>{tt(TX.academyP,lang)}</p></div></div><button onClick={onEnter} style={{display:"flex",alignItems:"center",gap:6,padding:"10px 20px",borderRadius:10,background:hov?`${C.gold}35`:`${C.gold}25`,border:`1px solid ${C.goldBorder}`,color:C.gold,fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"'Tajawal',sans-serif",transition:"all 0.3s",alignSelf:isMobile?"stretch":"center",justifyContent:"center"}}>{tt(TX.academyCta,lang)}<span style={{transform:isRTL?"rotate(180deg)":"none",display:"flex"}}>{IC.arrow}</span></button></div>)}
 
-  const inputStyle = {width:'100%',padding:'13px 16px',borderRadius:10,border:'1px solid #163050',background:'rgba(11,35,65,0.5)',color:'#e0e5ec',fontSize:14,fontFamily:"'IBM Plex Sans Arabic','Tajawal',sans-serif",outline:'none',boxSizing:'border-box',transition:'border-color 0.2s',minHeight:48}
+export function AuthGate({children}){
+  const[session,setSession]=useState(null);const[loading,setLoading]=useState(true);const[mode,setMode]=useState('login');const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[confirm,setConfirm]=useState('');const[error,setError]=useState('');const[message,setMessage]=useState('');const[busy,setBusy]=useState(false);const[pwdStr,setPwdStr]=useState(0);const[lang,setLang]=useState('ar');const[showPublicAcademy,setShowPublicAcademy]=useState(false);const[showPw,setShowPw]=useState(false);const[showConfirmPw,setShowConfirmPw]=useState(false);const[mounted,setMounted]=useState(false);const width=useWidth();const ar=lang==='ar';const isRTL=ar;const dir=ar?'rtl':'ltr';const isMobile=width<900;
 
-  return (
-    <div dir={ar?'rtl':'ltr'} style={{minHeight:'100vh',display:'flex',flexDirection:isMobile?'column':'row',fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif",background:'#0B2341'}}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
-        input::placeholder{color:rgba(255,255,255,0.25)}
-        input:focus{border-color:#2EC4B6 !important;box-shadow:0 0 0 3px rgba(46,196,182,0.12) !important}
-      `}</style>
+  useEffect(()=>{setTimeout(()=>setMounted(true),50)},[])
+  useEffect(()=>{if(!supabase){setLoading(false);return}supabase.auth.getSession().then(({data:{session:s}})=>{setSession(s);setLoading(false);window.scrollTo(0,0)});const{data:{subscription}}=supabase.auth.onAuthStateChange((_e,s)=>{setSession(s);window.scrollTo(0,0)});return()=>subscription?.unsubscribe()},[])
 
-      {/* ── Left: Hero with Waterfront Image ── */}
-      {!isMobile && (
-      <div style={{flex:1,position:'relative',overflow:'hidden',display:'flex',flexDirection:'column',justifyContent:'center'}}>
-        <img src={WATERFRONT_IMG} alt="ZAN Waterfront" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} />
-        <div style={{position:'absolute',inset:0,background:ar
-          ?'linear-gradient(to left, #0B2341 5%, rgba(11,35,65,0.88) 45%, rgba(11,35,65,0.4) 100%)'
-          :'linear-gradient(to right, #0B2341 5%, rgba(11,35,65,0.88) 45%, rgba(11,35,65,0.4) 100%)'}} />
-        <div style={{position:'absolute',inset:0,opacity:0.035,backgroundImage:'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',backgroundSize:'40px 40px'}} />
+  if(!supabase)return children({user:null,userId:'anonymous',signOut:()=>{}})
+  if(loading)return <LoadingScreen/>
+  if(session)return children({user:session.user,userId:session.user.id,signOut:()=>supabase.auth.signOut()})
+  if(showPublicAcademy)return children({user:null,userId:'anonymous',signOut:null,publicAcademy:true,exitAcademy:()=>setShowPublicAcademy(false)})
 
-        <div style={{position:'relative',zIndex:1,padding:'48px 52px'}}>
-          <div style={{maxWidth:520}}>
-            <div style={{display:'inline-flex',alignItems:'center',gap:8,padding:'7px 18px',background:'rgba(46,196,182,0.1)',border:'1px solid rgba(46,196,182,0.2)',borderRadius:24,marginBottom:24}}>
-              <span style={{fontSize:12,color:'#2EC4B6',fontWeight:500}}>{ar?'شركة زان لتطوير الوجهات':'Zan Destination Development'}</span>
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:24}}>
-              <span style={{fontSize:56,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif",letterSpacing:-1}}>زان</span>
-              <span style={{width:2,height:36,background:'rgba(46,196,182,0.35)',borderRadius:1}} />
-              <span style={{fontSize:15,color:'rgba(255,255,255,0.45)',lineHeight:1.4,fontWeight:300}}>{ar?'النمذجة':'Financial'}<br/>{ar?'المالية':'Modeler'}</span>
-            </div>
-            <h1 style={{fontSize:38,fontWeight:900,color:'#fff',lineHeight:1.15,marginBottom:14,fontFamily:"'Tajawal',sans-serif"}}>
-              {ar?'منصة النمذجة المالية':'Financial Modeling'}<br/>
-              <span style={{color:'#C8A96E'}}>{ar?'للتطوير العقاري':'for Real Estate'}</span>
-            </h1>
-            <p style={{fontSize:15,color:'rgba(255,255,255,0.5)',lineHeight:1.8,marginBottom:32,maxWidth:420}}>
-              {ar?'حوّل جداول Excel المعقدة إلى نموذج مالي تفاعلي. صمم، حلل، وصدّر تقارير احترافية بدقائق.':'Transform complex Excel spreadsheets into interactive financial models. Design, analyze, and export professional reports in minutes.'}
-            </p>
-            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-              {[{icon:'📐',t:ar?'5 محركات':'5 Engines'},{icon:'📊',t:ar?'50+ سنة':'50+ Years'},{icon:'🤖',t:ar?'مساعد AI':'AI Assistant'}].map((f,i) => (
-                <div key={i} style={{display:'flex',alignItems:'center',gap:7,padding:'8px 14px',background:'rgba(255,255,255,0.06)',backdropFilter:'blur(8px)',borderRadius:24,border:'1px solid rgba(255,255,255,0.08)'}}>
-                  <span style={{fontSize:13}}>{f.icon}</span>
-                  <span style={{fontSize:12,color:'rgba(255,255,255,0.55)',fontWeight:500}}>{f.t}</span>
-                </div>
-              ))}
-            </div>
+  const calcPwd=(p)=>{let s=0;if(p.length>=4)s++;if(p.length>=6)s++;if(p.length>=8)s++;if(p.length>=10)s++;setPwdStr(s)}
+  const switchMode=(m)=>{setMode(m);setError('');setMessage('');setConfirm('');setPwdStr(0);setShowPw(false);setShowConfirmPw(false)}
+  const go=async()=>{setError('');setMessage('');setBusy(true);try{if(mode==='forgot'){const{error:e}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});e?setError(e.message):setMessage(ar?'تم إرسال رابط الاستعادة! تحقق من بريدك.':'Recovery link sent! Check your email.');setBusy(false);return}if(mode==='signup'){if(password!==confirm){setError(ar?'كلمات المرور غير متطابقة.':'Passwords don\'t match.');setBusy(false);return}if(password.length<6){setError(ar?'كلمة المرور قصيرة (6 أحرف على الأقل).':'Password too short (min 6 characters).');setBusy(false);return}const{error:e}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}});if(e)setError(e.message);else setMessage(ar?'تم إنشاء حسابك! تحقق من بريدك لتأكيد الحساب.':'Account created! Check email to confirm.')}else{const{error:e}=await supabase.auth.signInWithPassword({email,password});if(e)setError(ar?'بيانات الدخول غير صحيحة.':'Invalid credentials.')}}catch(e){setError(e.message)}setBusy(false)}
 
-            {/* ── ZAN Academy Teaser ── */}
-            <div style={{marginTop:36,padding:'20px 22px',background:'rgba(200,169,110,0.06)',border:'1px solid rgba(200,169,110,0.15)',borderRadius:14}}>
-              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-                <span style={{fontSize:16}}>📚</span>
-                <span style={{fontSize:14,fontWeight:700,color:'#C8A96E',fontFamily:"'Tajawal',sans-serif"}}>{ar?'أكاديمية زان المالية':'ZAN Academy'}</span>
-              </div>
-              <p style={{fontSize:12,color:'rgba(255,255,255,0.45)',lineHeight:1.7,marginBottom:14,margin:'0 0 14px'}}>
-                {ar?'تعلّم أساسيات النمذجة المالية العقارية مجاناً - محتوى عملي مصمم للسوق السعودي':'Learn real estate financial modeling basics for free - practical content designed for the Saudi market'}
-              </p>
-              <div style={{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}>
-                {[
-                  {n:'11',l:ar?'موضوع':'topics'},
-                  {n:'40+',l:ar?'درس':'lessons'},
-                  {n:'5',l:ar?'نماذج تفاعلية':'demo projects'},
-                ].map((s,i)=>(
-                  <div key={i} style={{display:'flex',alignItems:'baseline',gap:4,padding:'4px 10px',background:'rgba(46,196,182,0.08)',borderRadius:6,border:'1px solid rgba(46,196,182,0.12)'}}>
-                    <span style={{fontSize:14,fontWeight:800,color:'#2EC4B6'}}>{s.n}</span>
-                    <span style={{fontSize:9,color:'rgba(255,255,255,0.4)',fontWeight:500}}>{s.l}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                {[
-                  {icon:'🚀',ar:'دليل البداية السريعة - 10 دقائق',en:'Quick Start Guide - 10 minutes'},
-                  {icon:'📊',ar:'ما معنى IRR و NPV و DSCR؟',en:'What do IRR, NPV, DSCR mean?'},
-                  {icon:'☪️',ar:'الفرق بين المرابحة والإجارة',en:'Murabaha vs Ijara explained'},
-                  {icon:'🌊',ar:'كيف يعمل شلال توزيع الأرباح؟',en:'How does profit waterfall work?'},
-                ].map((item,i) => (
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 12px',background:'rgba(255,255,255,0.03)',borderRadius:8,border:'1px solid rgba(255,255,255,0.05)'}}>
-                    <span style={{fontSize:12}}>{item.icon}</span>
-                    <span style={{fontSize:11,color:'rgba(255,255,255,0.5)',fontWeight:500}}>{ar?item.ar:item.en}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{marginTop:14,display:'flex',gap:10,justifyContent:'center',alignItems:'center'}}>
-                <button onClick={()=>setShowPublicAcademy(true)} style={{padding:'10px 24px',background:'#C8A96E',color:'#0B2341',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",transition:'all 0.2s'}}
-                  onMouseEnter={e=>{e.currentTarget.style.background='#d4b87e';e.currentTarget.style.boxShadow='0 4px 12px rgba(200,169,110,0.3)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.background='#C8A96E';e.currentTarget.style.boxShadow='none';}}>
-                  📚 {ar?'ادخل الأكاديمية مجاناً':'Enter Academy Free'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      )}
+  const inp={width:'100%',padding:'13px 16px',background:C.w05,border:`1px solid ${C.w15}`,borderRadius:10,color:'#fff',fontSize:14,outline:'none',transition:'border-color 0.3s, box-shadow 0.3s',fontFamily:"'Tajawal',sans-serif",direction:dir,boxSizing:'border-box'}
+  const lbl={display:'block',color:C.w50,fontSize:12.5,marginBottom:6,fontFamily:"'Tajawal',sans-serif",textAlign:isRTL?'right':'left'}
+  const focusIn=(e)=>{e.target.style.borderColor=C.teal;e.target.style.boxShadow=`0 0 0 3px ${C.tealDim}`}
+  const blurIn=(e)=>{e.target.style.borderColor=C.w15;e.target.style.boxShadow='none'}
+  const btnLabel=busy?tt(TX.loading,lang):mode==='login'?tt(TX.signIn,lang):mode==='signup'?tt(TX.createAcc,lang):tt(TX.sendLink,lang)
 
-      {/* ── Auth Form ── */}
-      <div style={{width:isMobile?'100%':440,minWidth:isMobile?'auto':400,flex:isMobile?1:'none',background:'#071829',display:'flex',flexDirection:'column',justifyContent:'center',padding:isMobile?'36px 24px':'48px 40px'}}>
-        <div style={{textAlign:'center',marginBottom:28}}>
-          <div style={{display:'inline-flex',alignItems:'center',gap:10,marginBottom:8}}>
-            <span style={{fontSize:36,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>زان</span>
-            <span style={{width:1,height:24,background:'rgba(46,196,182,0.35)'}} />
-            <span style={{fontSize:12,color:'#2EC4B6',lineHeight:1.3,fontWeight:300,textAlign:'start'}}>{ar?'النمذجة':'Financial'}<br/>{ar?'المالية':'Modeler'}</span>
-          </div>
-          {isMobile && <div style={{fontSize:12,color:'rgba(255,255,255,0.35)',marginTop:4}}>{ar?'شركة زان لتطوير الوجهات':'Zan Destination Development'}</div>}
-        </div>
+  const Showcase=()=>(<div style={{display:'flex',flexDirection:'column',gap:isMobile?20:28,opacity:mounted?1:0,transform:mounted?'translateY(0)':'translateY(30px)',transition:'all 0.8s cubic-bezier(0.4,0,0.2,1) 0.1s'}}><div><div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 14px',borderRadius:20,background:C.tealDim,border:`1px solid ${C.tealBorder}`,color:C.teal,fontSize:12,fontWeight:600,marginBottom:16,fontFamily:"'Tajawal',sans-serif"}}>{IC.sparkle} {tt(TX.poweredBy,lang)}</div><h1 style={{fontSize:isMobile?30:'clamp(32px,3.5vw,50px)',fontWeight:900,color:'#fff',lineHeight:1.15,margin:'0 0 14px 0',fontFamily:"'Tajawal',sans-serif"}}>{tt(TX.heroT1,lang)}{' '}<span style={{color:C.teal}}>{tt(TX.heroT2,lang)}</span></h1><p style={{color:C.w50,fontSize:isMobile?14:16,lineHeight:1.7,maxWidth:520,margin:0}}>{tt(TX.heroP,lang)}</p></div><div style={{display:'flex',background:C.w05,borderRadius:14,border:`1px solid ${C.w10}`,overflow:'hidden'}}>{TX.stats.map((s,i)=>(<div key={i} style={{flex:'1 1 0',minWidth:0,padding:isMobile?'12px 6px':'16px 10px',textAlign:'center',borderRight:i<TX.stats.length-1?`1px solid ${C.w10}`:'none'}}><div style={{color:C.teal,fontSize:isMobile?18:22,fontWeight:900,fontFamily:"'Tajawal',sans-serif"}}>{s.v}</div><div style={{color:C.w30,fontSize:isMobile?9.5:11,marginTop:2}}>{tt(s.l,lang)}</div></div>))}</div><div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(2,1fr)',gap:isMobile?10:12}}>{TX.features.map((f,i)=>(<FeatCard key={i} idx={i} icon={f.icon} title={tt(f.t,lang)} desc={tt(f.d,lang)} rtl={isRTL} compact={isMobile}/>))}</div><AcademyCard lang={lang} isRTL={isRTL} isMobile={isMobile} onEnter={()=>setShowPublicAcademy(true)}/></div>)
 
-        <div style={{display:'flex',justifyContent:'center',marginBottom:24}}>
-          <div style={{display:'flex',background:'#0B2341',borderRadius:8,padding:3,border:'1px solid #163050'}}>
-            <button onClick={()=>setLang('ar')} style={{padding:'7px 20px',fontSize:12,fontWeight:600,border:'none',borderRadius:6,cursor:'pointer',background:lang==='ar'?'#2EC4B6':'transparent',color:lang==='ar'?'#071829':'rgba(255,255,255,0.4)',fontFamily:'inherit',transition:'all 0.15s'}}>عربي</button>
-            <button onClick={()=>setLang('en')} style={{padding:'7px 20px',fontSize:12,fontWeight:600,border:'none',borderRadius:6,cursor:'pointer',background:lang==='en'?'#2EC4B6':'transparent',color:lang==='en'?'#071829':'rgba(255,255,255,0.4)',fontFamily:'inherit',transition:'all 0.15s'}}>EN</button>
-          </div>
-        </div>
+  const Auth=()=>(<div style={{opacity:mounted?1:0,transform:mounted?'translateY(0)':'translateY(30px)',transition:'all 0.8s cubic-bezier(0.4,0,0.2,1) 0.25s'}}><div style={{background:'rgba(11,35,65,0.55)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',border:`1px solid ${C.w10}`,borderRadius:22,padding:isMobile?'28px 22px 24px':'36px 32px 30px',boxShadow:'0 24px 64px rgba(0,0,0,0.35)'}}><div style={{display:'flex',background:C.w05,borderRadius:12,padding:3.5,marginBottom:24}}>{['login','signup'].map(m=>(<button key={m} onClick={()=>switchMode(m)} style={{flex:1,padding:'11px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:14,fontWeight:700,fontFamily:"'Tajawal',sans-serif",transition:'all 0.35s cubic-bezier(0.4,0,0.2,1)',background:(mode===m||(mode==='forgot'&&m==='login'))?`linear-gradient(135deg,${C.navy},#0d2d4a)`:'transparent',color:(mode===m||(mode==='forgot'&&m==='login'))?'#fff':C.w40,boxShadow:(mode===m||(mode==='forgot'&&m==='login'))?'0 2px 10px rgba(0,0,0,0.25)':'none'}}>{tt(m==='login'?TX.signIn:TX.signUp,lang)}</button>))}</div><div style={{display:'flex',flexDirection:'column',gap:16}}><div><label style={lbl}>{tt(TX.email,lang)}</label><input type="email" placeholder={tt(TX.emailPh,lang)} value={email} onChange={e=>setEmail(e.target.value)} style={inp} onFocus={focusIn} onBlur={blurIn} onKeyDown={e=>e.key==='Enter'&&go()}/></div>{mode!=='forgot'&&(<div><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><label style={lbl}>{tt(TX.password,lang)}</label>{mode==='login'&&<button onClick={()=>switchMode('forgot')} style={{background:'none',border:'none',color:C.teal,fontSize:11.5,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",fontWeight:600,opacity:0.8}}>{tt(TX.forgot,lang)}</button>}</div><div style={{position:'relative'}}><input type={showPw?'text':'password'} placeholder={tt(TX.pwPh,lang)} value={password} onChange={e=>{setPassword(e.target.value);if(mode==='signup')calcPwd(e.target.value)}} style={{...inp,[isRTL?'paddingLeft':'paddingRight']:44}} onFocus={focusIn} onBlur={blurIn} onKeyDown={e=>e.key==='Enter'&&go()}/><button onClick={()=>setShowPw(p=>!p)} style={{position:'absolute',top:'50%',transform:'translateY(-50%)',...(isRTL?{left:12}:{right:12}),background:'none',border:'none',color:C.w30,cursor:'pointer',display:'flex',alignItems:'center',padding:4}}>{showPw?IC.eyeOff:IC.eye}</button></div>{mode==='signup'&&<PasswordStrength strength={pwdStr}/>}</div>)}{mode==='signup'&&(<div style={{animation:'slideD 0.3s ease-out'}}><label style={lbl}>{tt(TX.confirmPw,lang)}</label><div style={{position:'relative'}}><input type={showConfirmPw?'text':'password'} placeholder="••••••••" value={confirm} onChange={e=>setConfirm(e.target.value)} style={{...inp,[isRTL?'paddingLeft':'paddingRight']:44}} onFocus={focusIn} onBlur={blurIn} onKeyDown={e=>e.key==='Enter'&&go()}/><button onClick={()=>setShowConfirmPw(p=>!p)} style={{position:'absolute',top:'50%',transform:'translateY(-50%)',...(isRTL?{left:12}:{right:12}),background:'none',border:'none',color:C.w30,cursor:'pointer',display:'flex',alignItems:'center',padding:4}}>{showConfirmPw?IC.eyeOff:IC.eye}</button></div></div>)}</div>{error&&<div style={{marginTop:14,padding:'12px 16px',borderRadius:10,background:'rgba(239,68,68,0.08)',color:'#f87171',fontSize:12,border:'1px solid rgba(239,68,68,0.2)'}}>{error}</div>}{message&&<div style={{marginTop:14,padding:'12px 16px',borderRadius:10,background:'rgba(74,222,128,0.08)',color:'#4ade80',fontSize:12,border:'1px solid rgba(74,222,128,0.2)'}}>{message}</div>}<button onClick={go} disabled={busy} style={{marginTop:20,width:'100%',padding:'14px 0',borderRadius:12,border:'none',background:busy?`${C.teal}80`:`linear-gradient(135deg,${C.teal} 0%,#25a89c 100%)`,color:C.deep,fontSize:15,fontWeight:800,fontFamily:"'Tajawal',sans-serif",cursor:busy?'wait':'pointer',transition:'all 0.35s cubic-bezier(0.4,0,0.2,1)',boxShadow:`0 4px 20px ${C.tealDim}`,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{busy&&<div style={{width:18,height:18,borderRadius:'50%',border:`2px solid ${C.deep}40`,borderTopColor:C.deep,animation:'spin 0.7s linear infinite'}}/>}{btnLabel}</button><div style={{textAlign:'center',marginTop:14}}>{mode==='forgot'?(<button onClick={()=>switchMode('login')} style={{background:'none',border:'none',color:C.teal,fontSize:12.5,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",fontWeight:600}}>{tt(TX.backToLogin,lang)}</button>):(<span style={{color:C.w30,fontSize:12.5}}>{tt(mode==='login'?TX.noAcc:TX.hasAcc,lang)}{' '}<button onClick={()=>switchMode(mode==='login'?'signup':'login')} style={{background:'none',border:'none',color:C.teal,cursor:'pointer',fontWeight:700,fontSize:12.5,fontFamily:"'Tajawal',sans-serif"}}>{tt(mode==='login'?TX.signUp:TX.signIn,lang)}</button></span>)}</div><div style={{display:'flex',alignItems:'center',gap:12,margin:'22px 0 18px'}}><div style={{flex:1,height:1,background:C.w10}}/><span style={{color:C.w25,fontSize:11.5}}>{tt(TX.or,lang)}</span><div style={{flex:1,height:1,background:C.w10}}/></div><button onClick={()=>setShowPublicAcademy(true)} style={{width:'100%',padding:'12px 0',borderRadius:11,border:`1px solid ${C.goldBorder}`,background:C.goldDim,color:C.gold,fontSize:13.5,fontWeight:700,fontFamily:"'Tajawal',sans-serif",cursor:'pointer',transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{IC.book} {tt(TX.academy,lang)} <span style={{padding:'1px 8px',borderRadius:20,background:`${C.gold}30`,fontSize:10,fontWeight:800}}>{tt(TX.free,lang)}</span></button>{isMobile&&(<div style={{marginTop:20,display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>{TX.features.map((f,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:8,background:i%2===0?C.tealDim:C.goldDim,border:`1px solid ${i%2===0?C.tealBorder:C.goldBorder}`}}><span style={{color:i%2===0?C.teal:C.gold,display:'flex'}}>{IC.check}</span><span style={{color:C.w70,fontSize:11.5,fontWeight:600,fontFamily:"'Tajawal',sans-serif"}}>{tt(f.t,lang)}</span></div>))}</div>)}</div><div style={{textAlign:'center',color:C.w25,fontSize:11,marginTop:18,opacity:0.8}}>© 2026 {tt(TX.cr,lang)}</div></div>)
 
-        <div style={{display:'flex',gap:0,marginBottom:24,background:'#0B2341',borderRadius:10,padding:3,border:'1px solid #163050'}}>
-          {[{m:'login',l:ar?'تسجيل دخول':'Sign In'},{m:'signup',l:ar?'حساب جديد':'Sign Up'}].map(({m,l})=>(
-            <button key={m} onClick={()=>switchMode(m)} style={{flex:1,padding:'11px',fontSize:13,fontWeight:600,border:'none',borderRadius:8,cursor:'pointer',fontFamily:'inherit',background:mode===m||(mode==='forgot'&&m==='login')?'#163050':'transparent',color:mode===m||(mode==='forgot'&&m==='login')?'#fff':'rgba(255,255,255,0.35)',transition:'all 0.2s'}}>{l}</button>
-          ))}
-        </div>
-
-        <div style={{display:'flex',flexDirection:'column',gap:16}}>
-          <div>
-            <label style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:6,display:'block',fontWeight:500}}>{ar?'البريد الإلكتروني':'Email'}</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" style={inputStyle} onKeyDown={e=>e.key==='Enter'&&go()} />
-          </div>
-          {mode !== 'forgot' && (
-            <div>
-              <label style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:6,display:'block',fontWeight:500}}>{ar?'كلمة المرور':'Password'}</label>
-              <input type="password" value={password} onChange={e=>{setPassword(e.target.value);if(mode==='signup')calcPwd(e.target.value)}} placeholder={ar?'6 أحرف أو أرقام':'6+ characters'} style={inputStyle} onKeyDown={e=>e.key==='Enter'&&go()} />
-              {mode === 'signup' && <PasswordStrength strength={pwdStr} />}
-            </div>
-          )}
-          {mode === 'signup' && (
-            <div>
-              <label style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:6,display:'block',fontWeight:500}}>{ar?'تأكيد كلمة المرور':'Confirm Password'}</label>
-              <input type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="••••••••" style={inputStyle} onKeyDown={e=>e.key==='Enter'&&go()} />
-            </div>
-          )}
-        </div>
-
-        {error && <div style={{marginTop:14,padding:'12px 16px',borderRadius:8,background:'rgba(239,68,68,0.08)',color:'#f87171',fontSize:12,border:'1px solid rgba(239,68,68,0.2)'}}>{error}</div>}
-        {message && <div style={{marginTop:14,padding:'12px 16px',borderRadius:8,background:'rgba(74,222,128,0.08)',color:'#4ade80',fontSize:12,border:'1px solid rgba(74,222,128,0.2)'}}>{message}</div>}
-
-        <button onClick={go} disabled={busy} style={{marginTop:20,width:'100%',padding:'14px',borderRadius:10,border:'none',background:busy?'#163050':'#2EC4B6',color:busy?'rgba(255,255,255,0.4)':'#fff',fontSize:15,fontWeight:700,cursor:busy?'wait':'pointer',fontFamily:"'Tajawal',sans-serif",letterSpacing:0.3,transition:'all 0.2s',minHeight:50}}>
-          {busy ? (ar?'جاري...':'Loading...') : mode==='login' ? (ar?'دخول':'Sign In') : mode==='signup' ? (ar?'إنشاء حساب':'Create Account') : (ar?'إرسال رابط':'Send Link')}
-        </button>
-
-        <div style={{textAlign:'center',marginTop:16}}>
-          {mode === 'login' && <button onClick={()=>switchMode('forgot')} style={{background:'none',border:'none',color:'#2EC4B6',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>{ar?'نسيت كلمة المرور؟':'Forgot password?'}</button>}
-          {mode === 'forgot' && <button onClick={()=>switchMode('login')} style={{background:'none',border:'none',color:'#2EC4B6',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>{ar?'← رجوع':'← Back to Sign In'}</button>}
-        </div>
-
-        <div style={{marginTop:32,textAlign:'center',fontSize:10,color:'rgba(255,255,255,0.15)'}}>
-          {ar?'شركة زان لتطوير الوجهات':'Zan Destination Development'} © 2026
-        </div>
-      </div>
-    </div>
-  )
+  return(<div dir={dir} style={{minHeight:'100vh',background:`linear-gradient(145deg,${C.deep} 0%,${C.navy} 40%,#0e3050 100%)`,fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",direction:dir,overflowX:'hidden',position:'relative'}}><style>{`@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.22)}@keyframes spin{to{transform:rotate(360deg)}}@keyframes slideD{from{opacity:0;max-height:0;transform:translateY(-8px)}to{opacity:1;max-height:200px;transform:translateY(0)}}*{box-sizing:border-box}`}</style><Orbs/><div style={{position:'relative',zIndex:20,display:'flex',alignItems:'center',justifyContent:'space-between',padding:isMobile?'14px 16px':'18px 32px',maxWidth:1400,margin:'0 auto'}}><div style={{display:'flex',alignItems:'center',gap:10}}><span style={{fontSize:isMobile?28:34,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>زان</span><span style={{width:1,height:isMobile?22:28,background:`${C.teal}50`}}/><div style={{lineHeight:1.25}}><div style={{color:C.teal,fontSize:isMobile?11:12.5,fontWeight:700}}>{tt(TX.fm,lang)}</div><div style={{color:C.w30,fontSize:isMobile?9:10}}>{tt(TX.tagline,lang)}</div></div></div><button onClick={()=>setLang(l=>l==='en'?'ar':'en')} style={{display:'flex',alignItems:'center',gap:5,padding:isMobile?'6px 12px':'8px 14px',borderRadius:8,border:`1px solid ${C.w15}`,background:C.w05,color:C.w70,fontSize:isMobile?12:13,cursor:'pointer',transition:'all 0.3s',fontFamily:"'Tajawal',sans-serif"}}>{IC.globe}<span style={{fontWeight:600}}>{lang==='en'?'عربي':'EN'}</span></button></div><div style={{position:'relative',zIndex:10,maxWidth:1400,margin:'0 auto',padding:isMobile?'0 16px 40px':'10px 32px 60px'}}>{isMobile?(<div style={{display:'flex',flexDirection:'column',gap:32}}><Auth/><Showcase/></div>):(<div style={{display:'flex',gap:50,alignItems:'flex-start'}}><div style={{flex:'1 1 560px',minWidth:0,paddingTop:10}}><Showcase/></div><div style={{flex:'0 0 400px',width:400,position:'sticky',top:20}}><Auth/></div></div>)}</div></div>)
 }
