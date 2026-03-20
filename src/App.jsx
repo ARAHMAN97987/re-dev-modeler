@@ -6617,9 +6617,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   };
 
   // ── ZAN Brand Styles ──
-  const zanSec = {fontSize:14,fontWeight:700,color:"#0f1117",marginTop:22,marginBottom:10,paddingBottom:6,paddingLeft:10,borderLeft:"3px solid #5fbfbf",borderBottom:"1px solid #e5e7ec"};
-  const zanTh = {color:"#fff",padding:"6px 8px",textAlign:"start",fontSize:9,textTransform:"uppercase",letterSpacing:0.5};
+  const zanSec = {fontSize:14,fontWeight:700,color:"#0f1117",marginTop:22,marginBottom:10,paddingBottom:6,...(ar?{paddingRight:10,borderRight:"3px solid #5fbfbf"}:{paddingLeft:10,borderLeft:"3px solid #5fbfbf"}),borderBottom:"1px solid #e5e7ec"};
+  const zanTh = {color:"#fff",padding:"6px 8px",textAlign:ar?"right":"left",fontSize:9,textTransform:"uppercase",letterSpacing:0.5};
   const zanTd = {padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:11};
+  const numA = ar ? "left" : "right"; // numbers align opposite to text direction
   const zanKpi = (accent) => ({border:"1px solid #e5e7ec",borderRadius:8,padding:"10px 12px",borderTop:`3px solid ${accent||"#5fbfbf"}`});
 
   const reportLabels = {
@@ -6633,12 +6634,16 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     if (!el) return;
     const reportTitle = reportLabels[activeReport]?.label || "Report";
     const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${project.name} - ${reportTitle}</title>
+    const htmlContent = `<!DOCTYPE html><html dir="${ar?'rtl':'ltr'}" lang="${ar?'ar':'en'}"><head><meta charset="utf-8"><title>${project.name} - ${reportTitle}</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   @page { size: A4; margin: 12mm 15mm; }
   * { box-sizing: border-box; }
-  body { font-family: 'DM Sans','Segoe UI',system-ui,sans-serif; font-size: 11px; color: #1a1d23; line-height: 1.5; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'DM Sans','Segoe UI',system-ui,sans-serif; font-size: 11px; color: #1a1d23; line-height: 1.5; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; direction: ${ar?'rtl':'ltr'}; text-align: ${ar?'right':'left'}; }
+  [dir=rtl] th { text-align: right; }
+  [dir=rtl] .zan-hdr { flex-direction: row-reverse; }
+  [dir=rtl] .zan-ftr { flex-direction: row-reverse; }
+  [dir=rtl] h2.zan-sec { border-left: none; border-right: 3px solid #5fbfbf; padding-left: 0; padding-right: 10px; }
   .zan-cover { page-break-after: always; min-height: 100vh; background: #0f1117; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 60px 40px; position: relative; overflow: hidden; }
   .zan-cover::before { content: ''; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(95,191,191,0.12) 0%, transparent 70%); }
   .zan-cover::after { content: ''; position: absolute; bottom: -80px; left: -80px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(15,118,110,0.1) 0%, transparent 70%); }
@@ -6739,7 +6744,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     </div>
 
     {/* ── Report content ── */}
-    <div ref={reportRef}>
+    <div ref={reportRef} dir={ar?"rtl":"ltr"} style={{textAlign:ar?"right":"left"}}>
       {activeReport === "exec" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
@@ -6774,11 +6779,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               {Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name)).map(([name,pr],ri)=>(
                 <tr key={name} style={{background:ri%2===0?"#fff":"#fafbfc"}}>
                   <td style={{...zanTd,fontWeight:600}}>{name}</td>
-                  <td style={{...zanTd,textAlign:"right"}}>{pr.assetCount}</td>
-                  <td style={{...zanTd,textAlign:"right"}}>{fmt(pr.totalCapex)}</td>
-                  <td style={{...zanTd,textAlign:"right"}}>{fmt(pr.totalIncome)}</td>
-                  <td style={{...zanTd,textAlign:"right",color:pr.totalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(pr.totalNetCF)}</td>
-                  <td style={{...zanTd,textAlign:"right",fontWeight:700}}>{pr.irr?fmtPct(pr.irr*100):"—"}</td>
+                  <td style={{...zanTd,textAlign:numA}}>{pr.assetCount}</td>
+                  <td style={{...zanTd,textAlign:numA}}>{fmt(pr.totalCapex)}</td>
+                  <td style={{...zanTd,textAlign:numA}}>{fmt(pr.totalIncome)}</td>
+                  <td style={{...zanTd,textAlign:numA,color:pr.totalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(pr.totalNetCF)}</td>
+                  <td style={{...zanTd,textAlign:numA,fontWeight:700}}>{pr.irr?fmtPct(pr.irr*100):"—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -6796,9 +6801,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                   <td style={zanTd}>{a.name}</td>
                   <td style={zanTd}>{catL(a.category,ar)}</td>
                   <td style={zanTd}>{a.phase}</td>
-                  <td style={{...zanTd,textAlign:"right"}}>{fmt(a.gfa)}</td>
-                  <td style={{...zanTd,textAlign:"right"}}>{fmt(a.totalCapex)}</td>
-                  <td style={{...zanTd,textAlign:"right",color:"#16a34a"}}>{fmt(a.totalRevenue)}</td>
+                  <td style={{...zanTd,textAlign:numA}}>{fmt(a.gfa)}</td>
+                  <td style={{...zanTd,textAlign:numA}}>{fmt(a.totalCapex)}</td>
+                  <td style={{...zanTd,textAlign:numA,color:"#16a34a"}}>{fmt(a.totalRevenue)}</td>
                   <td style={zanTd}>{revL(a.revType,ar)}</td>
                 </tr>
               ))}
@@ -6813,7 +6818,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               {Array.from({length:yrs},(_,y)=>{
                 const inc=fc.income[y]||0, cap=Math.abs(fc.capex[y]||0), net=fc.netCF[y]||0;
                 return <div key={y} style={{display:"grid",gridTemplateColumns:"50px 1fr",gap:6,alignItems:"center",fontSize:10}}>
-                  <div style={{fontWeight:600,color:"#6b7080",textAlign:"right"}}>{sy+y}</div>
+                  <div style={{fontWeight:600,color:"#6b7080",textAlign:numA}}>{sy+y}</div>
                   <div style={{display:"flex",flexDirection:"column",gap:2}}>
                     {cap>0&&<div style={{display:"flex",alignItems:"center",gap:4}}>
                       <div style={{width:Math.max(2,cap/maxVal*100)+"%",height:6,background:"#fca5a5",borderRadius:3}} />
@@ -6917,6 +6922,24 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"حزمة تقديم البنك":"Bank Submission Pack"}</h1>
           <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.name} | {project.location} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
 
+          {/* ── Bank Hero Strip: What the credit committee sees first ── */}
+          {f && f.mode !== "self" && <div style={{background:"#f8f9fb",borderRadius:10,padding:16,marginBottom:22,border:"1px solid #e5e7ec"}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(4,1fr)",gap:10}}>
+              {[
+                {l:ar?"التسهيل المطلوب":"Facility Requested",v:fmtM(f?.maxDebt||0),sub:cur,ac:"#0f766e",big:true},
+                {l:ar?"نسبة التمويل":"LTV",v:(project.maxLtvPct||70)+"%",sub:ar?"من تكلفة التطوير":"of dev cost",ac:"#2563eb"},
+                {l:ar?"متوسط DSCR":"Avg DSCR",v:(()=>{if(!f?.dscr)return "—";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);return vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x":"—";})(),sub:(()=>{if(!f?.dscr)return "";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;return avg>=1.25?(ar?"آمن":"Safe"):avg>=1.0?(ar?"حدي":"Marginal"):(ar?"ضعيف":"Weak");})(),ac:(()=>{if(!f?.dscr)return "#9ca3af";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;return avg>=1.25?"#16a34a":avg>=1.0?"#f59e0b":"#ef4444";})()},
+                {l:ar?"أقل DSCR":"Min DSCR",v:(()=>{if(!f?.dscr)return "—";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);return vals.length?Math.min(...vals).toFixed(2)+"x":"—";})(),sub:(()=>{if(!f?.dscr)return "";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);if(!vals.length)return "";const yr=f.dscr.indexOf(Math.min(...vals));return yr>=0?(ar?"سنة ":"Year ")+(sy+yr):"";})(),ac:(()=>{if(!f?.dscr)return "#9ca3af";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);const mn=vals.length?Math.min(...vals):0;return mn>=1.2?"#16a34a":mn>=1.0?"#f59e0b":"#ef4444";})()},
+              ].map((k,i)=>(
+                <div key={i} style={{textAlign:"center",padding:"8px 6px"}}>
+                  <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3,marginBottom:4}}>{k.l}</div>
+                  <div style={{fontSize:k.big?24:22,fontWeight:800,color:k.ac}}>{k.v}</div>
+                  <div style={{fontSize:9,color:k.ac,fontWeight:600,marginTop:2}}>{k.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>}
+
           <div style={zanSec}>{ar?"1. دراسة المشروع":"1. Project Study"}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:12}}>
             <tbody>
@@ -6953,9 +6976,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               <div style={{fontSize:12,fontWeight:700,marginBottom:6,color:"#0f766e"}}>{ar?"المصادر":"Sources"}</div>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <tbody>
-                  <tr><td style={zanTd}>{ar?"الدين":"Senior Debt"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(f?.totalDebt||0)}</td></tr>
-                  <tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"حقوق الملكية":"Equity"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(f?.totalEquity||0)}</td></tr>
-                  <tr style={{fontWeight:700}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"إجمالي المصادر":"Total Sources"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right"}}>{fmt((f?.totalDebt||0)+(f?.totalEquity||0))}</td></tr>
+                  <tr><td style={zanTd}>{ar?"الدين":"Senior Debt"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600}}>{fmt(f?.totalDebt||0)}</td></tr>
+                  <tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"حقوق الملكية":"Equity"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600}}>{fmt(f?.totalEquity||0)}</td></tr>
+                  <tr style={{fontWeight:700}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"إجمالي المصادر":"Total Sources"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:numA}}>{fmt((f?.totalDebt||0)+(f?.totalEquity||0))}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -6963,10 +6986,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               <div style={{fontSize:12,fontWeight:700,marginBottom:6,color:"#0f766e"}}>{ar?"الاستخدامات":"Uses"}</div>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <tbody>
-                  <tr><td style={zanTd}>{ar?"تكاليف التطوير":"Development CAPEX"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(fc.totalCapex)}</td></tr>
-                  {project.landType==="purchase"&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"شراء الأرض":"Land Purchase"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(project.landPurchasePrice)}</td></tr>}
-                  <tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"فوائد أثناء البناء":"Interest During Constr."}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(f?.totalInterest||0)}</td></tr>
-                  <tr style={{fontWeight:700}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"إجمالي الاستخدامات":"Total Uses"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right"}}>{fmt(fc.totalCapex+(f?.totalInterest||0))}</td></tr>
+                  <tr><td style={zanTd}>{ar?"تكاليف التطوير":"Development CAPEX"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600}}>{fmt(fc.totalCapex)}</td></tr>
+                  {project.landType==="purchase"&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"شراء الأرض":"Land Purchase"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600}}>{fmt(project.landPurchasePrice)}</td></tr>}
+                  <tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"فوائد أثناء البناء":"Interest During Constr."}</td><td style={{...zanTd,textAlign:numA,fontWeight:600}}>{fmt(f?.totalInterest||0)}</td></tr>
+                  <tr style={{fontWeight:700}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"إجمالي الاستخدامات":"Total Uses"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:numA}}>{fmt(fc.totalCapex+(f?.totalInterest||0))}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -6976,7 +6999,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:9}}>
             <thead><tr style={{background:"#0f1117"}}>
               <th style={{...zanTh,fontSize:8}}>{ar?"البند":"Item"}</th>
-              {bankYears.map(y=><th key={y} style={{...zanTh,textAlign:"right",fontSize:8}}>{sy+y}</th>)}
+              {bankYears.map(y=><th key={y} style={{...zanTh,textAlign:numA,fontSize:8}}>{sy+y}</th>)}
             </tr></thead>
             <tbody>
               {[
@@ -6995,8 +7018,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                   <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",fontSize:9}}>{row.l}</td>
                   {bankYears.map(y=>{
                     const v = Array.isArray(row.v) ? row.v[y] : (row.v?.[y]||0);
-                    if (row.isDscr) return <td key={y} style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right",fontSize:9,fontWeight:700,color:v===null?"#9ca3af":v>=1.2?"#16a34a":"#ef4444"}}>{v===null?"—":v.toFixed(2)+"x"}</td>;
-                    return <td key={y} style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right",fontSize:9,color:row.cl}}>{v===0?"—":fmt(v)}</td>;
+                    if (row.isDscr) return <td key={y} style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:numA,fontSize:9,fontWeight:700,color:v===null?"#9ca3af":v>=1.2?"#16a34a":"#ef4444"}}>{v===null?"—":v.toFixed(2)+"x"}</td>;
+                    return <td key={y} style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:numA,fontSize:9,color:row.cl}}>{v===0?"—":fmt(v)}</td>;
                   })}
                 </tr>
               ))}
@@ -7026,10 +7049,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               <tbody>{scenarios.map((sc,i)=>(
                 <tr key={i} style={{background:sc.bg}}>
                   <td style={{...zanTd,fontWeight:600,color:sc.cl}}>{sc.l}</td>
-                  <td style={{...zanTd,textAlign:"right"}}>{stressResults[i].irr?fmtPct(stressResults[i].irr*100):"—"}</td>
-                  <td style={{...zanTd,textAlign:"right"}}>{stressResults[i].levIrr?fmtPct(stressResults[i].levIrr*100):"—"}</td>
-                  <td style={{...zanTd,textAlign:"right",fontWeight:700,color:stressResults[i].dscr===null?"#9ca3af":stressResults[i].dscr>=1.2?"#16a34a":"#ef4444"}}>{stressResults[i].dscr!==null?stressResults[i].dscr.toFixed(2)+"x":"—"}</td>
-                  <td style={{...zanTd,textAlign:"right",color:(stressResults[i].npv||0)>=0?"#16a34a":"#ef4444"}}>{stressResults[i].npv?fmtM(stressResults[i].npv):"—"}</td>
+                  <td style={{...zanTd,textAlign:numA}}>{stressResults[i].irr?fmtPct(stressResults[i].irr*100):"—"}</td>
+                  <td style={{...zanTd,textAlign:numA}}>{stressResults[i].levIrr?fmtPct(stressResults[i].levIrr*100):"—"}</td>
+                  <td style={{...zanTd,textAlign:numA,fontWeight:700,color:stressResults[i].dscr===null?"#9ca3af":stressResults[i].dscr>=1.2?"#16a34a":"#ef4444"}}>{stressResults[i].dscr!==null?stressResults[i].dscr.toFixed(2)+"x":"—"}</td>
+                  <td style={{...zanTd,textAlign:numA,color:(stressResults[i].npv||0)>=0?"#16a34a":"#ef4444"}}>{stressResults[i].npv?fmtM(stressResults[i].npv):"—"}</td>
                 </tr>
               ))}</tbody>
             </table>;
@@ -7077,19 +7100,28 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </div>
           </>}
 
-          <div style={zanSec}>{ar?"7. المؤشرات الرئيسية":"7. Key Metrics"}</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12}}>
-            {[
-              {l:"Project IRR",v:fc.irr?fmtPct(fc.irr*100):"—",ac:fc.irr>=0.10?"#16a34a":"#ef4444"},
-              {l:"Levered IRR",v:f?.leveredIRR?fmtPct(f.leveredIRR*100):"—",ac:f?.leveredIRR>=0.10?"#16a34a":"#ef4444"},
-              {l:ar?"فترة الاسترداد":"Payback Period",v:(() => {let cum=0,wasNeg=false; for(let y=0;y<h;y++){cum+=(f&&f.mode!=="self"?f.leveredCF[y]:fc.netCF[y])||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"yr");} return "—";})(),ac:"#2563eb"},
-              {l:ar?"إجمالي خدمة الدين":"Total Debt Service",v:f?fmtM((f.debtService||[]).reduce((a,b)=>a+b,0)):"—",ac:"#f59e0b"},
-              {l:ar?"متوسط DSCR":"Avg DSCR",v:(() => {if(!f?.dscr)return "—";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);return vals.length?((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x"):"—";})(),ac:(() => {if(!f?.dscr)return "#9ca3af";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;return avg>=1.25?"#16a34a":"#ef4444";})()},
-              {l:"NPV @12%",v:fmtM(fc.npv12),ac:(fc.npv12||0)>=0?"#16a34a":"#ef4444"},
-            ].map((k,i) => (
-              <div key={i} style={zanKpi(k.ac)}><div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{k.l}</div><div style={{fontSize:16,fontWeight:700,color:k.ac,marginTop:3}}>{k.v}</div></div>
-            ))}
-          </div>
+          <div style={zanSec}>{ar?"7. تغطية الدين":"7. Debt Coverage Summary"}</div>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:12}}>
+            <thead><tr style={{background:"#0f1117"}}>
+              {(ar?["المؤشر","القيمة","الحالة"]:["Metric","Value","Status"]).map(hh=><th key={hh} style={zanTh}>{hh}</th>)}
+            </tr></thead>
+            <tbody>
+              {[
+                [ar?"إجمالي خدمة الدين":"Total Debt Service",f?fmt((f.debtService||[]).reduce((a,b)=>a+b,0))+" "+cur:"—","—",""],
+                [ar?"إجمالي الفوائد":"Total Interest",f?fmt(f.totalInterest||0)+" "+cur:"—","—",""],
+                [ar?"متوسط DSCR":"Average DSCR",(()=>{if(!f?.dscr)return "—";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);return vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x":"—";})(),(()=>{if(!f?.dscr)return {t:"—",c:"#9ca3af"};const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;return avg>=1.25?{t:ar?"آمن":"Safe",c:"#16a34a"}:avg>=1.0?{t:ar?"حدي":"Marginal",c:"#f59e0b"}:{t:ar?"ضعيف":"Weak",c:"#ef4444"};})(),"dscr"],
+                [ar?"أقل DSCR":"Minimum DSCR",(()=>{if(!f?.dscr)return "—";const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);return vals.length?Math.min(...vals).toFixed(2)+"x":"—";})(),(()=>{if(!f?.dscr)return {t:"—",c:"#9ca3af"};const vals=f.dscr.filter(d=>d!==null&&d!==Infinity&&d>0);const mn=vals.length?Math.min(...vals):0;return mn>=1.2?{t:ar?"مقبول":"Acceptable",c:"#16a34a"}:mn>=1.0?{t:ar?"حدي":"Marginal",c:"#f59e0b"}:{t:ar?"غير كافٍ":"Insufficient",c:"#ef4444"};})(),"dscr"],
+                [ar?"فترة استرداد الدين":"Debt Payback",(()=>{let cum=0,wasNeg=false;for(let y=0;y<h;y++){cum+=(f&&f.mode!=="self"?f.leveredCF[y]:fc.netCF[y])||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"years");}return "—";})(),(()=>{let cum=0,wasNeg=false;for(let y=0;y<h;y++){cum+=(f&&f.mode!=="self"?f.leveredCF[y]:fc.netCF[y])||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return y+1<=(project.loanTenor||7)?{t:ar?"ضمن المدة":"Within tenor",c:"#16a34a"}:{t:ar?"يتجاوز المدة":"Exceeds tenor",c:"#f59e0b"};}return {t:"—",c:"#9ca3af"};})(),"dscr"],
+                [ar?"نسبة تغطية الفوائد":"Interest Cover (Yr 1 Op)",(()=>{if(!f?.dscr)return "—";for(let y=0;y<h;y++){if((fc.income[y]||0)>0&&f.interest[y]>0)return((fc.income[y]-Math.abs(fc.landRent[y]||0))/f.interest[y]).toFixed(2)+"x";}return "—";})(),(()=>{if(!f?.dscr)return {t:"—",c:"#9ca3af"};for(let y=0;y<h;y++){if((fc.income[y]||0)>0&&f.interest[y]>0){const icr=(fc.income[y]-Math.abs(fc.landRent[y]||0))/f.interest[y];return icr>=2?{t:ar?"قوي":"Strong",c:"#16a34a"}:icr>=1.5?{t:ar?"مقبول":"Adequate",c:"#f59e0b"}:{t:ar?"ضعيف":"Weak",c:"#ef4444"};}}return {t:"—",c:"#9ca3af"};})(),"dscr"],
+              ].map(([label,val,status,type],i)=>(
+                <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
+                  <td style={{...zanTd,fontWeight:600}}>{label}</td>
+                  <td style={{...zanTd,fontWeight:700,textAlign:numA}}>{val}</td>
+                  {type==="dscr"?<td style={{...zanTd,textAlign:"center"}}><span style={{display:"inline-block",padding:"2px 10px",borderRadius:10,fontSize:10,fontWeight:600,background:status.c+"18",color:status.c}}>{status.t}</span></td>:<td style={{...zanTd,color:"#9ca3af",textAlign:"center"}}></td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
           {incentivesResult && incentivesResult.totalIncentiveValue > 0 && <>
             <div style={zanSec}>{ar?"8. الحوافز الحكومية":"8. Government Incentives"}</div>
@@ -7098,11 +7130,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 {(ar?["نوع الحافز","القيمة","الوصف"]:["Incentive Type","Value","Description"]).map(h=><th key={h} style={zanTh}>{h}</th>)}
               </tr></thead>
               <tbody>
-                {incentivesResult.capexGrantTotal>0&&<tr><td style={zanTd}>{ar?"منحة CAPEX":"CAPEX Grant"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.capexGrantTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"خصم على تكاليف التطوير":"Reduction in development costs"}</td></tr>}
-                {incentivesResult.landRentSavingTotal>0&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"خصم إيجار الأرض":"Land Rent Rebate"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.landRentSavingTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"توفير في إيجار الأرض":"Savings on land lease payments"}</td></tr>}
-                {f?.interestSubsidyTotal>0&&<tr><td style={zanTd}>{ar?"دعم الفائدة":"Interest Subsidy"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(f.interestSubsidyTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"دعم على تكلفة التمويل":"Subsidy on financing cost"}</td></tr>}
-                {incentivesResult.feeRebateTotal>0&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"خصم رسوم":"Fee Rebates"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.feeRebateTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"إعفاءات من الرسوم الحكومية":"Government fee waivers"}</td></tr>}
-                <tr style={{fontWeight:700,background:"#f0fdf4"}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"الإجمالي":"Total"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right",color:"#0f766e"}}>{fmt(incentivesResult.totalIncentiveValue+(f?.interestSubsidyTotal||0))}</td><td style={{...zanTd,borderTop:"2px solid #0f1117"}}></td></tr>
+                {incentivesResult.capexGrantTotal>0&&<tr><td style={zanTd}>{ar?"منحة CAPEX":"CAPEX Grant"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.capexGrantTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"خصم على تكاليف التطوير":"Reduction in development costs"}</td></tr>}
+                {incentivesResult.landRentSavingTotal>0&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"خصم إيجار الأرض":"Land Rent Rebate"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.landRentSavingTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"توفير في إيجار الأرض":"Savings on land lease payments"}</td></tr>}
+                {f?.interestSubsidyTotal>0&&<tr><td style={zanTd}>{ar?"دعم الفائدة":"Interest Subsidy"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600,color:"#0f766e"}}>{fmt(f.interestSubsidyTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"دعم على تكلفة التمويل":"Subsidy on financing cost"}</td></tr>}
+                {incentivesResult.feeRebateTotal>0&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"خصم رسوم":"Fee Rebates"}</td><td style={{...zanTd,textAlign:numA,fontWeight:600,color:"#0f766e"}}>{fmt(incentivesResult.feeRebateTotal)}</td><td style={{...zanTd,color:"#6b7080"}}>{ar?"إعفاءات من الرسوم الحكومية":"Government fee waivers"}</td></tr>}
+                <tr style={{fontWeight:700,background:"#f0fdf4"}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"الإجمالي":"Total"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:numA,color:"#0f766e"}}>{fmt(incentivesResult.totalIncentiveValue+(f?.interestSubsidyTotal||0))}</td><td style={{...zanTd,borderTop:"2px solid #0f1117"}}></td></tr>
               </tbody>
             </table>
           </>}
@@ -7119,16 +7151,30 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.location} | {cur} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})} | {ar?"سري":"CONFIDENTIAL"}</div>
 
           <div style={zanSec}>{ar?"أبرز المؤشرات":"Investment Highlights"}</div>
+          {/* Primary LP metrics - big and prominent */}
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3, 1fr)",gap:10,marginBottom:12}}>
+            {[
+              {l:ar?"عائد LP المستهدف":"Target LP IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#0f766e",big:true},
+              {l:ar?"مضاعف LP":"LP MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e",big:true},
+              {l:ar?"فترة الاسترداد":"LP Payback",v:(()=>{if(!fw?.lpNetCF)return "—";let cum=0,wasNeg=false;for(let y=0;y<h;y++){cum+=fw.lpNetCF[y]||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"yr");}return "—";})(),ac:"#0f766e",big:true},
+            ].map((k,i) => (
+              <div key={i} style={{...zanKpi(k.ac),textAlign:"center",padding:"14px 12px"}}>
+                <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
+                <div style={{fontSize:28,fontWeight:800,color:k.ac,marginTop:6}}>{k.v}</div>
+              </div>
+            ))}
+          </div>
+          {/* Secondary LP metrics */}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4, 1fr)",gap:8,marginBottom:18}}>
             {[
-              {l:ar?"عائد LP المستهدف":"Target LP IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#0f766e"},
-              {l:ar?"مضاعف LP المستهدف":"Target LP MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#5fbfbf"},
               {l:ar?"العائد المفضل":"Preferred Return",v:(project.prefReturnPct||15)+"%",ac:"#2563eb"},
-              {l:ar?"سنة التخارج":"Exit Timeline",v:fw?fw.exitYear:"TBD",ac:"#f59e0b"},
+              {l:ar?"سنة التخارج":"Exit Year",v:fw?.exitYear||"TBD",ac:"#f59e0b"},
+              {l:"DPI",v:fw?.lpTotalInvested>0?(fw.lpTotalDist/fw.lpTotalInvested).toFixed(2)+"x":"—",ac:"#8b5cf6"},
+              {l:ar?"العائد النقدي":"Cash Yield",v:(()=>{if(!fw?.lpDist||!fw?.lpTotalInvested)return "—";const stabYr=Math.min(10,h-1);const dist=fw.lpDist[stabYr]||0;return dist>0&&fw.lpTotalInvested>0?fmtPct(dist/fw.lpTotalInvested*100):"—";})(),ac:"#06b6d4"},
             ].map((k,i) => (
               <div key={i} style={zanKpi(k.ac)}>
                 <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
-                <div style={{fontSize:20,fontWeight:800,color:k.ac,marginTop:4}}>{k.v}</div>
+                <div style={{fontSize:18,fontWeight:800,color:k.ac,marginTop:4}}>{k.v}</div>
               </div>
             ))}
           </div>
@@ -7173,9 +7219,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr style={{background:"#0f1117"}}>
                 <th style={zanTh}>{ar?"المؤشر":"Metric"}</th>
-                <th style={{...zanTh,textAlign:"center"}}>{ar?"المستثمر (LP)":"LP (Investor)"}</th>
-                <th style={{...zanTh,textAlign:"center"}}>{ar?"المطور (GP)":"GP (Sponsor)"}</th>
-                <th style={{...zanTh,textAlign:"center"}}>{ar?"المشروع":"Project"}</th>
+                <th style={{...zanTh,textAlign:"center",background:"#0f766e"}}>{ar?"المستثمر (LP)":"LP (Investor)"}</th>
+                <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المطور (GP)":"GP (Sponsor)"}</th>
+                <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المشروع":"Project"}</th>
               </tr></thead>
               <tbody>
                 {[
@@ -7189,7 +7235,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 ].map(([metric,...vals],i)=>(
                   <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
                     <td style={{...zanTd,fontWeight:700}}>{metric}</td>
-                    {vals.map((v,j)=><td key={j} style={{...zanTd,textAlign:"center"}}>{v}</td>)}
+                    <td style={{...zanTd,textAlign:"center",fontWeight:700,color:"#0f766e",background:i%2===0?"#f0fdf4":"#ecfdf5"}}>{vals[0]}</td>
+                    <td style={{...zanTd,textAlign:"center",color:"#6b7080"}}>{vals[1]}</td>
+                    <td style={{...zanTd,textAlign:"center",color:"#9ca3af"}}>{vals[2]}</td>
                   </tr>
                 ))}
               </tbody>
@@ -7204,7 +7252,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               return <div style={{marginBottom:16}}>
                 {data.filter(d=>d.lp>0||d.gp>0).map(d=>(
                   <div key={d.y} style={{display:"grid",gridTemplateColumns:"50px 1fr",gap:6,marginBottom:3,alignItems:"center",fontSize:10}}>
-                    <div style={{fontWeight:600,color:"#6b7080",textAlign:"right"}}>{sy+d.y}</div>
+                    <div style={{fontWeight:600,color:"#6b7080",textAlign:numA}}>{sy+d.y}</div>
                     <div style={{display:"flex",flexDirection:"column",gap:2}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <div style={{width:Math.max(2,d.lp/maxCum*100)+"%",height:7,background:"linear-gradient(90deg,#8b5cf6,#a78bfa)",borderRadius:3}} />
@@ -7270,11 +7318,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                   <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
                     <td style={{...zanTd,fontWeight:600}}>{ff}</td>
                     <td style={{...zanTd,color:"#6b7080"}}>{r}</td>
-                    <td style={{...zanTd,textAlign:"right",fontWeight:600}}>{t}</td>
+                    <td style={{...zanTd,textAlign:numA,fontWeight:600}}>{t}</td>
                     <td style={{...zanTd,color:"#6b7080"}}>{ti}</td>
                   </tr>
                 ))}
-                <tr style={{fontWeight:700,background:"#f8f9fb"}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}} colSpan={2}>{ar?"الإجمالي":"Total Fees"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right",color:"#0f766e"}}>{fmt(fw.totalFees||fw.fees||0)}</td><td style={{...zanTd,borderTop:"2px solid #0f1117"}}></td></tr>
+                <tr style={{fontWeight:700,background:"#f8f9fb"}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}} colSpan={2}>{ar?"الإجمالي":"Total Fees"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:numA,color:"#0f766e"}}>{fmt(fw.totalFees||fw.fees||0)}</td><td style={{...zanTd,borderTop:"2px solid #0f1117"}}></td></tr>
               </tbody>
             </table>
           </>}
