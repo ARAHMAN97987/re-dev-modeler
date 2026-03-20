@@ -821,6 +821,8 @@ function computeProjectCashFlows(project) {
     // Lease contract start (absolute year). 0 = same as project start.
     const leaseStartAbsolute = (project.landLeaseStartYear || 0) > 0 ? project.landLeaseStartYear : startYear;
     // Grace end in model index (0-based from project startYear)
+    // Note: grace period is contractual (fixed). Construction delay does NOT auto-extend it.
+    // If user wants longer grace, they adjust landRentGrace manually.
     const graceEndIdx = Math.max(0, (leaseStartAbsolute + gr) - startYear);
 
     // First income year (when any asset starts generating revenue)
@@ -1391,19 +1393,22 @@ function applyInterestSubsidy(project, interest, constrEnd, totalDebt, rate) {
     const slTenor = inc.softLoanTenor ?? 10;
     const slGrace = inc.softLoanGrace ?? 3;
     if (slAmt > 0 && rate > 0) {
+      // Find first draw year (soft loan starts from first actual drawdown)
+      let firstDrawYr = 0;
+      for (let y = 0; y < h; y++) { if (interest[y] > 0) { firstDrawYr = y; break; } }
       // Soft loan portion doesn't accrue interest
       // Savings each year = (soft loan outstanding) × commercial rate
       let slBalance = slAmt;
       const slRepayYrs = Math.max(1, slTenor - slGrace);
       const slAnnualRepay = slAmt / slRepayYrs;
-      for (let y = 0; y < h && slBalance > 0; y++) {
+      for (let y = firstDrawYr; y < h && slBalance > 0; y++) {
         // Interest saving = soft loan balance × commercial rate (would have paid this)
         const saving = slBalance * rate;
         savings[y] = Math.min(saving, interest[y]); // Can't save more than actual interest
         adjusted[y] = interest[y] - savings[y];
         total += savings[y];
-        // Repay soft loan after grace
-        if (y >= slGrace) {
+        // Repay soft loan after grace (grace from first draw, not Y0)
+        if (y >= firstDrawYr + slGrace) {
           slBalance = Math.max(0, slBalance - slAnnualRepay);
         }
       }
@@ -1654,7 +1659,7 @@ function computeFinancing(project, projectResults, incentivesResult) {
         if (y >= tr.repayStart && bal > 0 && project.repaymentType === "amortizing") {
           tr.repay[y] = Math.min(tr.annualRepay, bal);
         } else if (project.repaymentType === "bullet") {
-          const bulletYear = tr.repayStart + repayYears - 1;
+          const bulletYear = Math.min(tr.repayStart + repayYears - 1, h - 1);
           if (y === bulletYear && bal > 0) tr.repay[y] = bal;
         }
 
@@ -1676,6 +1681,12 @@ function computeFinancing(project, projectResults, incentivesResult) {
       }
       debtService[y] = repay[y] + interest[y];
     }
+    // Sweep any residual debt at horizon end (per-tranche rounding)
+    if (debtBalClose[h - 1] > 1) {
+      repay[h - 1] += debtBalClose[h - 1];
+      debtService[h - 1] = repay[h - 1] + interest[h - 1];
+      debtBalClose[h - 1] = 0;
+    }
   } else {
     // ═══ SINGLE BLOCK MODE (default, matches ZAN) ═══
     const annualRepay = repayYears > 0 ? totalDrawn / repayYears : 0;
@@ -1685,14 +1696,22 @@ function computeFinancing(project, projectResults, incentivesResult) {
       let bal = debtBalOpen[y] + drawdown[y];
       if (y >= repayStart && bal > 0 && project.repaymentType === "amortizing") {
         repay[y] = Math.min(annualRepay, bal);
-      } else if (project.repaymentType === "bullet" && y === repayStart + repayYears - 1 && bal > 0) {
-        repay[y] = bal;
+      } else if (project.repaymentType === "bullet") {
+        // Cap bullet to last year of horizon if it would exceed
+        const bulletYear = Math.min(repayStart + repayYears - 1, h - 1);
+        if (y === bulletYear && bal > 0) repay[y] = bal;
       }
       debtBalClose[y] = bal - repay[y];
       // ZAN interest: average of opening and closing balance × rate + per-draw upfront fee
       interest[y] = (debtBalOpen[y] + debtBalClose[y]) / 2 * rate + drawdown[y] * upfrontFeePct;
       if (interest[y] < 0) interest[y] = 0;
       debtService[y] = repay[y] + interest[y];
+    }
+    // Sweep any residual debt at horizon end (rounding or tenor > horizon)
+    if (debtBalClose[h - 1] > 1) {
+      repay[h - 1] += debtBalClose[h - 1];
+      debtService[h - 1] = repay[h - 1] + interest[h - 1];
+      debtBalClose[h - 1] = 0;
     }
   }
 
