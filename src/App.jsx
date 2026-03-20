@@ -10640,13 +10640,18 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
   }, [project]);
 
   // ── Section 2: Sensitivity Table ──
+  const avgOcc = Math.round((project.assets||[]).reduce((s,a)=>s+(a.stabilizedOcc||100),0)/Math.max(1,(project.assets||[]).length));
   const sensParams = [
-    { key: "rentEscalation", label: lang==="ar"?"زيادة الإيجار %":"Rent Escalation %", base: project.rentEscalation, steps: [-0.5, -0.25, 0, 0.25, 0.5] },
-    { key: "softCostPct", label: lang==="ar"?"تكاليف غير مباشرة %":"Soft Cost %", base: project.softCostPct, steps: [-3, -1.5, 0, 1.5, 3] },
-    { key: "contingencyPct", label: lang==="ar"?"احتياطي %":"Contingency %", base: project.contingencyPct, steps: [-2, -1, 0, 1, 2] },
-    { key: "financeRate", label: lang==="ar"?"معدل الربح %":"Finance Rate %", base: project.financeRate, steps: [-1.5, -0.75, 0, 0.75, 1.5] },
-    { key: "maxLtvPct", label: "LTV %", base: project.maxLtvPct, steps: [-15, -7.5, 0, 7.5, 15] },
-    { key: "landRentAnnual", label: lang==="ar"?"إيجار الأرض":"Land Rent", base: project.landRentAnnual, steps: [-2000000, -1000000, 0, 1000000, 2000000] },
+    { key: "rentEscalation", label: ar?"زيادة الإيجار %":"Rent Escalation %", base: project.rentEscalation, steps: [-0.5, -0.25, 0, 0.25, 0.5], unit: "%" },
+    { key: "softCostPct", label: ar?"تكاليف غير مباشرة %":"Soft Cost %", base: project.softCostPct, steps: [-3, -1.5, 0, 1.5, 3], unit: "%" },
+    { key: "contingencyPct", label: ar?"احتياطي %":"Contingency %", base: project.contingencyPct, steps: [-2, -1, 0, 1, 2], unit: "%" },
+    { key: "financeRate", label: ar?"معدل الربح %":"Finance Rate %", base: project.financeRate, steps: [-1.5, -0.75, 0, 0.75, 1.5], unit: "%" },
+    { key: "maxLtvPct", label: "LTV %", base: project.maxLtvPct, steps: [-15, -7.5, 0, 7.5, 15], unit: "%" },
+    { key: "landRentAnnual", label: ar?"إيجار الأرض":"Land Rent", base: project.landRentAnnual, steps: [-2000000, -1000000, 0, 1000000, 2000000], unit: ar?"ريال":"SAR" },
+    { key: "_occupancy", label: ar?"الإشغال %":"Occupancy %", base: avgOcc, steps: [-20, -10, 0, 10, 20], unit: "%",
+      apply: (val) => ({ assets: (project.assets||[]).map(a => ({...a, stabilizedOcc: Math.max(0, Math.min(100, val))})) }) },
+    { key: "exitMultiple", label: ar?"مضاعف التخارج":"Exit Multiple", base: project.exitMultiple??10, steps: [-3, -1.5, 0, 1.5, 3], unit: "x" },
+    { key: "exitYear", label: ar?"سنة التخارج":"Exit Year", base: project.exitYear||(project.startYear||2026)+7, steps: [-2, -1, 0, 1, 2], unit: ar?"سنة":"yr", decimals: 0 },
   ];
 
   const rowParam = sensParams.find(p => p.key === sensRow) || sensParams[0];
@@ -10657,11 +10662,16 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
     for (const rStep of rowParam.steps) {
       const row = [];
       for (const cStep of colParam.steps) {
-        const overrides = {
-          activeScenario: "Base Case",
-          [rowParam.key]: rowParam.base + rStep,
-          [colParam.key]: colParam.base + cStep,
-        };
+        // Build overrides: use apply() for asset-level params, direct key for project-level
+        const rVal = rowParam.base + rStep;
+        const cVal = colParam.base + cStep;
+        const rOverride = rowParam.apply ? rowParam.apply(rVal) : { [rowParam.key]: rVal };
+        const cOverride = colParam.apply ? colParam.apply(cVal) : { [colParam.key]: cVal };
+        const overrides = { activeScenario: "Base Case", ...rOverride, ...cOverride };
+        // If both params modify assets, merge them
+        if (rOverride.assets && cOverride.assets) {
+          overrides.assets = cOverride.assets; // column wins (both can't be occupancy since they're different params)
+        }
         const s = runScenario(project, overrides);
         const sd = isFiltered ? (() => {
           const income = new Array(h).fill(0), capex = new Array(h).fill(0), netCF = new Array(h).fill(0);
@@ -10672,8 +10682,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           irr: sd.irr,
           npv: sd.npv10,
           levIrr: s.financing?.leveredIRR || null,
-          rVal: rowParam.base + rStep,
-          cVal: colParam.base + cStep,
+          rVal, cVal,
         });
       }
       table.push(row);
@@ -10847,13 +10856,13 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
             <table style={{...tblStyle,fontSize:11}}>
               <thead><tr>
                 <th style={{...thSt,background:"#1e3a5f",color:"#fff",minWidth:100}}>{rowParam.label} \\ {colParam.label}</th>
-                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"#2563eb":"#1e3a5f",color:"#fff",minWidth:80}}>{(colParam.base + s).toFixed(colParam.base<10?2:0)}</th>)}
+                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"#2563eb":"#1e3a5f",color:"#fff",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
               </tr></thead>
               <tbody>
                 {sensTable.map((row, ri) => (
                   <tr key={ri}>
                     <td style={{...tdSt,fontWeight:600,background:rowParam.steps[ri]===0?"#dbeafe":"#f8f9fb",fontSize:11}}>
-                      {(rowParam.base + rowParam.steps[ri]).toFixed(rowParam.base<10?2:0)}
+                      {(rowParam.base + rowParam.steps[ri]).toFixed(rowParam.decimals??(rowParam.steps.some(st=>st%1!==0)?1:rowParam.base<10?2:0))}
                     </td>
                     {row.map((cell, ci) => {
                       const isBase = rowParam.steps[ri] === 0 && colParam.steps[ci] === 0;
@@ -10883,13 +10892,13 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
             <table style={{...tblStyle,fontSize:11}}>
               <thead><tr>
                 <th style={{...thSt,background:"#1e3a5f",color:"#fff",minWidth:100}}>{rowParam.label} \\ {colParam.label}</th>
-                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"#2563eb":"#1e3a5f",color:"#fff",minWidth:80}}>{(colParam.base + s).toFixed(colParam.base<10?2:0)}</th>)}
+                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"#2563eb":"#1e3a5f",color:"#fff",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
               </tr></thead>
               <tbody>
                 {sensTable.map((row, ri) => (
                   <tr key={ri}>
                     <td style={{...tdSt,fontWeight:600,background:rowParam.steps[ri]===0?"#dbeafe":"#f8f9fb",fontSize:11}}>
-                      {(rowParam.base + rowParam.steps[ri]).toFixed(rowParam.base<10?2:0)}
+                      {(rowParam.base + rowParam.steps[ri]).toFixed(rowParam.decimals??(rowParam.steps.some(st=>st%1!==0)?1:rowParam.base<10?2:0))}
                     </td>
                     {row.map((cell, ci) => {
                       const isBase = rowParam.steps[ri] === 0 && colParam.steps[ci] === 0;
