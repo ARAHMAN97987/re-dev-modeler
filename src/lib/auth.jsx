@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
-// ─── ZAN Design Tokens (from zandestiny.com) ───
+// ─── Haseef Design Tokens (from zandestiny.com) ───
 const C = {
   navy: "#0B2341", deep: "#071829", teal: "#2EC4B6", gold: "#C8A96E",
   tealDim: "rgba(46,196,182,0.12)", tealBorder: "rgba(46,196,182,0.25)",
@@ -25,11 +25,11 @@ const TX = {
   or: { en: "or", ar: "أو" },
   noAcc: { en: "Don't have an account?", ar: "ليس لديك حساب؟" },
   hasAcc: { en: "Already have an account?", ar: "لديك حساب بالفعل؟" },
-  cr: { en: "Zan Destination Development", ar: "شركة زان لتطوير الوجهات" },
+  cr: { en: "Haseef Financial Modeler", ar: "حصيف للنمذجة المالية" },
   heroT1: { en: "Model Smarter.", ar: "نمذجة أذكى." },
   heroT2: { en: "Build Faster.", ar: "بناء أسرع." },
   heroP: { en: "The all-in-one financial modeling platform for real estate development. From feasibility to bank pack, in one place.", ar: "منصة النمذجة المالية المتكاملة لتطوير العقارات. من دراسة الجدوى حتى ملف البنك، في مكان واحد." },
-  academy: { en: "ZAN Academy", ar: "أكاديمية زان" },
+  academy: { en: "Haseef Academy", ar: "أكاديمية حصيف" },
   academyP: { en: "Learn real estate financial modeling with interactive lessons, demo projects, and guided learning paths. No account required.", ar: "تعلم النمذجة المالية العقارية مع دروس تفاعلية، مشاريع تجريبية، ومسارات تعليمية موجهة. بدون حساب." },
   academyCta: { en: "Start Learning", ar: "ابدأ التعلم" },
   free: { en: "FREE", ar: "مجاني" },
@@ -83,7 +83,7 @@ function LoadingScreen() {
     <div style={{position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:C.navy,zIndex:1000}}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div style={{width:36,height:36,border:`3px solid ${C.tealDim}`,borderTop:`3px solid ${C.teal}`,borderRadius:'50%',animation:'spin 0.8s linear infinite',marginBottom:14}} />
-      <div style={{fontSize:32,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>زان</div>
+      <div style={{fontSize:32,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>حصيف</div>
       <p style={{color:C.w40,fontSize:12,marginTop:6}}>Financial Modeler</p>
     </div>
   )
@@ -274,7 +274,7 @@ export function AuthGate({ children }) {
       <Orbs/>
       <div style={{position:'relative',zIndex:20,display:'flex',alignItems:'center',justifyContent:'space-between',padding:isMobile?'14px 16px':'18px 32px',maxWidth:1400,margin:'0 auto'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:isMobile?28:34,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>زان</span>
+          <span style={{fontSize:isMobile?28:34,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>حصيف</span>
           <span style={{width:1,height:isMobile?22:28,background:`${C.teal}50`}}/>
           <div style={{lineHeight:1.25}}><div style={{color:C.teal,fontSize:isMobile?11:12.5,fontWeight:700}}>{t(TX.fm,lang)}</div><div style={{color:C.w30,fontSize:isMobile?9:10}}>{t(TX.tagline,lang)}</div></div>
         </div>
