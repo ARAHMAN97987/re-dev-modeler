@@ -4960,7 +4960,27 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>زان</span><span style={{width:1,height:30,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:12,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div></div></div>;
-  if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); window.scrollTo(0,0); }} />;
+  if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); window.scrollTo(0,0); }} onCreateDemo={async (demo) => {
+    const p = defaultProject();
+    const ar = lang === "ar";
+    const demoName = ar ? demo.title.ar : demo.title.en;
+    p.name = demoName + (ar ? " - نموذج تعليمي" : " - Educational Demo");
+    if (demo.overrides) {
+      const ov = demo.overrides;
+      Object.keys(ov).forEach(k => {
+        if (k === "assets") {
+          p.assets = ov.assets.map(a => ({ ...a, id: crypto.randomUUID(), hotelPL: null, marinaPL: null }));
+        } else if (k === "phases") {
+          p.phases = ov.phases.map(ph => ({ ...ph }));
+        } else if (k === "incentives") {
+          p.incentives = JSON.parse(JSON.stringify(ov.incentives));
+        } else if (k !== "name") {
+          p[k] = ov[k];
+        }
+      });
+    }
+    await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject(p); setView("editor"); setActiveTab("dashboard"); window.scrollTo(0, 0);
+  }} />;
   if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} onOpenAcademy={() => { setView("academy"); window.scrollTo(0,0); }} />;
   if (!project) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#f87171",letterSpacing:2}}>!</div><div style={{fontSize:14,color:"#d0d4dc",marginTop:8}}>{lang==="ar"?"لم يتم تحميل المشروع":"Project failed to load"}</div><button onClick={goBack} style={{marginTop:16,padding:"8px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{lang==="ar"?"رجوع":"Go Back"}</button></div></div>;
 
@@ -9164,8 +9184,236 @@ const EDUCATIONAL_CONTENT = {
         }
       ]
     }
-  }
+  },
   // Future: revenueTypes
+  projectTypes: {
+    ar: {
+      title: "أنواع المشاريع العقارية",
+      intro: "كل نوع مشروع له نموذج إيرادات مختلف وطريقة حساب مختلفة في النموذج المالي. فهم الفرق أساسي قبل بناء النموذج.",
+      cta: "فهمت",
+      tabs: [
+        { id: "residential", label: "سكني", icon: "🏘", content: [
+          { type: "heading", text: "المشاريع السكنية (إيجار)" },
+          { type: "text", text: "مجمعات سكنية، أبراج، فلل - الإيراد من الإيجار الشهري/السنوي للوحدات." },
+          { type: "heading", text: "المدخلات الأساسية" },
+          { type: "list", items: ["سعر الإيجار لكل متر مربع (SAR/sqm/year)", "نسبة الإشغال المستهدفة (عادة 85-95%)", "فترة التأجير التدريجي (Ramp-up) - عادة 2-3 سنوات", "نسبة الكفاءة (المساحة المؤجرة من GFA) - عادة 80-90%", "معدل زيادة الإيجار السنوي (0.5-2%)"] },
+          { type: "heading", text: "أرقام مرجعية - السوق السعودي" },
+          { type: "list", items: ["إيجار الشقق (الرياض): 600-1,200 SAR/sqm/سنة", "إيجار الفلل (الرياض): 400-800 SAR/sqm/سنة", "نسبة الشغور الطبيعية: 5-15%", "تكلفة البناء: 2,500-3,500 SAR/sqm"] },
+          { type: "heading", text: "نصائح للنمذجة" },
+          { type: "list", items: ["ابدأ بإشغال منخفض في السنوات الأولى ثم ارفعه تدريجياً", "احسب مصاريف الصيانة (عادة 5-8% من الإيرادات)", "لا تنسَ فترة البناء - لا إيرادات خلالها"] }
+        ]},
+        { id: "commercial", label: "تجاري", icon: "🏢", content: [
+          { type: "heading", text: "المشاريع التجارية (مولات ومكاتب)" },
+          { type: "text", text: "مراكز تسوق، أبراج مكتبية - الإيراد من إيجار المساحات التجارية. عادة أعلى إيجار من السكني لكن أبطأ في التأجير." },
+          { type: "heading", text: "الفرق عن السكني" },
+          { type: "list", items: ["إيجارات أعلى (1,500-3,000 SAR/sqm لمولات رئيسية)", "فترة تأجير أطول (3-5 سنوات لملء المول)", "عقود إيجار أطول (5-10 سنوات) توفر استقرار", "مساهمة المستأجر في التجهيز (Fit-out Contribution) شائعة", "بعض المولات تأخذ نسبة من مبيعات المستأجر (Turnover Rent)"] },
+          { type: "heading", text: "تصنيف المكاتب" },
+          { type: "list", items: ["Grade A: 900-1,500 SAR/sqm - أبراج رئيسية (KAFD, العليا)", "Grade B: 500-900 SAR/sqm - مباني جيدة في مواقع ثانوية", "Grade C: 300-500 SAR/sqm - مباني قديمة أو مواقع بعيدة"] }
+        ]},
+        { id: "hospitality", label: "فندقي", icon: "🏨", content: [
+          { type: "heading", text: "المشاريع الفندقية" },
+          { type: "text", text: "فنادق ومنتجعات - النموذج الأكثر تعقيداً لأنه يتضمن قائمة أرباح وخسائر تشغيلية كاملة (P&L)." },
+          { type: "heading", text: "مكونات الإيرادات" },
+          { type: "list", items: ["إيرادات الغرف (عادة 65-75% من الإجمالي): عدد الغرف × ADR × الإشغال × 365", "المأكولات والمشروبات F&B (عادة 18-25%)", "المؤتمرات MICE (عادة 3-5%)", "إيرادات أخرى (سبا، مواقف، غسيل) - عادة 2-5%"] },
+          { type: "heading", text: "المصاريف التشغيلية" },
+          { type: "list", items: ["مصاريف الغرف: 20-25% من إيرادات الغرف", "مصاريف F&B: 55-65% من إيرادات F&B", "المصاريف غير الموزعة: 25-30% من الإيرادات", "المصاريف الثابتة: 8-12% من الإيرادات", "رسوم الإدارة: 3-5% من الإيرادات + حوافز"] },
+          { type: "heading", text: "أرقام مرجعية - السعودية" },
+          { type: "list", items: ["ADR فندق 5 نجوم (الرياض): 800-1,500 SAR", "ADR فندق 4 نجوم: 400-700 SAR", "إشغال مستقر: 65-75%", "تكلفة بناء فندق 5 نجوم: 10,000-15,000 SAR/sqm", "هامش EBITDA: 30-40% من الإيرادات"] }
+        ]},
+        { id: "mixeduse", label: "متعدد الاستخدامات", icon: "🌊", content: [
+          { type: "heading", text: "المشاريع متعددة الاستخدامات (Mixed-Use)" },
+          { type: "text", text: "تجمع عدة أنواع أصول في مشروع واحد - مثل واجهة زان البحرية: مول + فندق + مكاتب + سكني + مارينا. كل مكون يُنمذج بشكل مستقل ثم يُجمع." },
+          { type: "heading", text: "لماذا المشاريع المختلطة؟" },
+          { type: "list", items: ["تنويع مصادر الدخل يقلل المخاطر", "المكونات تدعم بعضها (الفندق يخدم المول والمارينا)", "أفضل استغلال للأرض وتعظيم العائد", "جاذبية أعلى للمستثمرين والبنوك"] },
+          { type: "heading", text: "كيف تُنمذج في المنصة" },
+          { type: "list", items: ["كل أصل (Asset) يُضاف كصف مستقل في جدول الأصول", "كل أصل ينتمي لمرحلة (Phase) محددة", "المحرك يحسب CAPEX والإيرادات لكل أصل على حدة", "التدفق النقدي يُجمع على مستوى المرحلة ثم المشروع ككل", "مثال: واجهة زان = 6 أصول × مرحلتين = 12 حساب مستقل"] }
+        ]}
+      ]
+    },
+    en: {
+      title: "Real Estate Project Types",
+      intro: "Each project type has a different revenue model and calculation method. Understanding these differences is essential before building a financial model.",
+      cta: "Got it",
+      tabs: [
+        { id: "residential", label: "Residential", icon: "🏘", content: [
+          { type: "heading", text: "Residential Projects (Rental)" },
+          { type: "text", text: "Compounds, towers, villas - revenue from monthly/annual unit rentals." },
+          { type: "heading", text: "Key Inputs" },
+          { type: "list", items: ["Rent per sqm (SAR/sqm/year)", "Target occupancy (typically 85-95%)", "Ramp-up period - usually 2-3 years", "Efficiency ratio (leasable area from GFA) - typically 80-90%", "Annual rent escalation (0.5-2%)"] },
+          { type: "heading", text: "Saudi Market Benchmarks" },
+          { type: "list", items: ["Apartment rent (Riyadh): 600-1,200 SAR/sqm/year", "Villa rent (Riyadh): 400-800 SAR/sqm/year", "Natural vacancy: 5-15%", "Construction cost: 2,500-3,500 SAR/sqm"] },
+          { type: "heading", text: "Modeling Tips" },
+          { type: "list", items: ["Start with low occupancy in early years, ramp up gradually", "Factor in maintenance costs (typically 5-8% of revenue)", "Remember: no revenue during construction period"] }
+        ]},
+        { id: "commercial", label: "Commercial", icon: "🏢", content: [
+          { type: "heading", text: "Commercial Projects (Malls & Offices)" },
+          { type: "text", text: "Shopping centers, office towers - revenue from commercial space leasing. Typically higher rents than residential but slower to fill." },
+          { type: "heading", text: "Differences from Residential" },
+          { type: "list", items: ["Higher rents (1,500-3,000 SAR/sqm for prime malls)", "Longer lease-up period (3-5 years to fill a mall)", "Longer lease terms (5-10 years) provide stability", "Tenant fit-out contributions are common", "Some malls take turnover rent (% of tenant sales)"] },
+          { type: "heading", text: "Office Classification" },
+          { type: "list", items: ["Grade A: 900-1,500 SAR/sqm - prime towers (KAFD, Olaya)", "Grade B: 500-900 SAR/sqm - good buildings in secondary locations", "Grade C: 300-500 SAR/sqm - older buildings or distant locations"] }
+        ]},
+        { id: "hospitality", label: "Hospitality", icon: "🏨", content: [
+          { type: "heading", text: "Hospitality Projects" },
+          { type: "text", text: "Hotels and resorts - the most complex model type because it includes a full operating P&L statement." },
+          { type: "heading", text: "Revenue Components" },
+          { type: "list", items: ["Room revenue (usually 65-75% of total): Keys × ADR × Occupancy × 365", "F&B revenue (usually 18-25%)", "MICE/conferences (usually 3-5%)", "Other revenue (spa, parking, laundry) - usually 2-5%"] },
+          { type: "heading", text: "Operating Expenses" },
+          { type: "list", items: ["Room expenses: 20-25% of room revenue", "F&B expenses: 55-65% of F&B revenue", "Undistributed expenses: 25-30% of revenue", "Fixed charges: 8-12% of revenue", "Management fees: 3-5% of revenue + incentives"] },
+          { type: "heading", text: "Saudi Benchmarks" },
+          { type: "list", items: ["5-star ADR (Riyadh): 800-1,500 SAR", "4-star ADR: 400-700 SAR", "Stabilized occupancy: 65-75%", "5-star construction cost: 10,000-15,000 SAR/sqm", "EBITDA margin: 30-40% of revenue"] }
+        ]},
+        { id: "mixeduse", label: "Mixed-Use", icon: "🌊", content: [
+          { type: "heading", text: "Mixed-Use Projects" },
+          { type: "text", text: "Multiple asset types in one project - like ZAN Waterfront: mall + hotel + offices + residential + marina. Each component is modeled independently then consolidated." },
+          { type: "heading", text: "Why Mixed-Use?" },
+          { type: "list", items: ["Revenue diversification reduces risk", "Components support each other (hotel serves mall and marina)", "Better land utilization and return maximization", "Higher attractiveness for investors and banks"] },
+          { type: "heading", text: "How to Model in the Platform" },
+          { type: "list", items: ["Each asset is added as a separate row in the Asset Table", "Each asset belongs to a specific Phase", "Engine calculates CAPEX and revenue per asset independently", "Cash flow is consolidated at phase then project level", "Example: ZAN Waterfront = 6 assets × 2 phases = 12 independent calculations"] }
+        ]}
+      ]
+    }
+  },
+  bankPack: {
+    ar: {
+      title: "حزمة تقديم البنك",
+      intro: "البنك يحتاج حزمة مستندات مالية محددة قبل الموافقة على التمويل. فهم ما يبحث عنه البنك يساعدك في تجهيز طلب أقوى.",
+      cta: "فهمت",
+      tabs: [
+        { id: "overview", label: "نظرة عامة", icon: "🏦", content: [
+          { type: "heading", text: "ما هي حزمة البنك؟" },
+          { type: "text", text: "مجموعة مستندات مالية يطلبها البنك لدراسة طلب التمويل. تشمل دراسة المشروع، طلب التمويل، النطاق المالي، والتدفقات النقدية." },
+          { type: "heading", text: "المكونات الرئيسية" },
+          { type: "list", items: ["1. دراسة المشروع (Project Study): وصف المشروع، الموقع، المكونات، الجدول الزمني", "2. طلب التمويل (Financing Request): المبلغ المطلوب، الشروط المقترحة، الضمانات", "3. النطاق المالي (Financial Scope): إجمالي التكاليف، مصادر التمويل، هيكل رأس المال", "4. التدفقات النقدية (Cash Flow): 10+ سنوات توقعات إيرادات ومصاريف وخدمة دين"] },
+          { type: "heading", text: "أول شيء يبحث عنه البنك" },
+          { type: "list", items: ["DSCR - نسبة تغطية خدمة الدين (يجب > 1.2x)", "LTV - نسبة القرض إلى القيمة (عادة لا تتجاوز 70%)", "مساهمة المطور - البنك يريد skin in the game", "ضمانات عينية (رهن عقاري) أو كفالات شخصية", "سجل المطور السابق في مشاريع مماثلة"] }
+        ]},
+        { id: "dscr", label: "DSCR", icon: "📊", content: [
+          { type: "heading", text: "نسبة تغطية خدمة الدين (DSCR)" },
+          { type: "text", text: "أهم رقم في حزمة البنك. يقيس قدرة المشروع على سداد أقساط القرض من دخله التشغيلي." },
+          { type: "heading", text: "كيف تُحسب؟" },
+          { type: "text", text: "DSCR = صافي الدخل التشغيلي (NOI) ÷ خدمة الدين السنوية (أصل + ربح)" },
+          { type: "heading", text: "ماذا تعني الأرقام؟" },
+          { type: "list", items: ["أقل من 1.0x: المشروع لا يغطي أقساطه - مرفوض", "1.0x - 1.2x: يغطي بالكاد - خطر عالي", "1.2x - 1.5x: مقبول لمعظم البنوك السعودية", "1.5x - 2.0x: مريح - شروط أفضل ممكنة", "أكثر من 2.0x: ممتاز - أقل معدل ربح وأقل ضمانات"] },
+          { type: "heading", text: "متطلبات البنوك السعودية" },
+          { type: "list", items: ["الحد الأدنى عادة 1.2x (بعض البنوك 1.25x)", "البنك قد يشترط الحفاظ على DSCR طوال فترة القرض", "كسر DSCR covenant يعطي البنك حق تسريع السداد", "البنك يختبر DSCR تحت سيناريوهات ضغط (إشغال -10%, إيجار -15%)"] }
+        ]},
+        { id: "presentation", label: "كيف تقدم", icon: "📋", content: [
+          { type: "heading", text: "نصائح لتقديم حزمة بنك ناجحة" },
+          { type: "list", items: ["ابدأ بملخص تنفيذي من صفحة واحدة: المشروع، التكلفة، المبلغ المطلوب، DSCR", "قدّم 3 سيناريوهات: أساسي + متفائل + متشائم - أثبت أن المشروع ينجو حتى في الأسوأ", "استخدم جداول حساسية: وضّح كيف يتغير DSCR مع تغير الإشغال والإيجار", "أظهر خبرة المطور: مشاريع سابقة ناجحة تبني ثقة البنك", "كن واقعياً: لا تبالغ في الإشغال أو الإيجارات - البنك سيتحقق من السوق"] },
+          { type: "heading", text: "أخطاء شائعة" },
+          { type: "list", items: ["تقديم سيناريو واحد فقط (البنك يشك أنك تخفي المخاطر)", "إشغال 100% من السنة الأولى (غير واقعي)", "عدم احتساب فترة البناء بدون دخل", "نسيان رسوم ترتيب القرض وتكاليف التمويل", "عدم إظهار مصدر مساهمة المطور في رأس المال"] }
+        ]}
+      ]
+    },
+    en: {
+      title: "Bank Submission Pack",
+      intro: "Banks require a specific set of financial documents before approving financing. Understanding what banks look for helps you prepare a stronger application.",
+      cta: "Got it",
+      tabs: [
+        { id: "overview", label: "Overview", icon: "🏦", content: [
+          { type: "heading", text: "What is a Bank Pack?" },
+          { type: "text", text: "A set of financial documents required by banks to evaluate financing requests. Includes project study, financing request, financial scope, and cash flow projections." },
+          { type: "heading", text: "Key Components" },
+          { type: "list", items: ["1. Project Study: project description, location, components, timeline", "2. Financing Request: amount needed, proposed terms, collateral", "3. Financial Scope: total costs, funding sources, capital structure", "4. Cash Flow: 10+ year projections of revenue, expenses, and debt service"] },
+          { type: "heading", text: "What Banks Look For First" },
+          { type: "list", items: ["DSCR - Debt Service Coverage Ratio (must be > 1.2x)", "LTV - Loan to Value ratio (typically max 70%)", "Developer contribution - banks want skin in the game", "Collateral (real estate mortgage) or personal guarantees", "Developer's track record in similar projects"] }
+        ]},
+        { id: "dscr", label: "DSCR Deep Dive", icon: "📊", content: [
+          { type: "heading", text: "Debt Service Coverage Ratio (DSCR)" },
+          { type: "text", text: "The most important number in a bank pack. Measures the project's ability to pay loan installments from operating income." },
+          { type: "heading", text: "Formula" },
+          { type: "text", text: "DSCR = Net Operating Income (NOI) ÷ Annual Debt Service (Principal + Profit)" },
+          { type: "heading", text: "What the Numbers Mean" },
+          { type: "list", items: ["Below 1.0x: Project can't cover payments - rejected", "1.0x - 1.2x: Barely covers - high risk", "1.2x - 1.5x: Acceptable for most Saudi banks", "1.5x - 2.0x: Comfortable - better terms possible", "Above 2.0x: Excellent - lowest rate and fewer covenants"] },
+          { type: "heading", text: "Saudi Bank Requirements" },
+          { type: "list", items: ["Minimum typically 1.2x (some banks require 1.25x)", "Bank may require maintaining DSCR throughout loan tenor", "Breaking DSCR covenant gives bank right to accelerate repayment", "Banks stress-test DSCR with adverse scenarios (occupancy -10%, rent -15%)"] }
+        ]},
+        { id: "presentation", label: "How to Present", icon: "📋", content: [
+          { type: "heading", text: "Tips for a Successful Bank Submission" },
+          { type: "list", items: ["Start with a one-page executive summary: project, cost, amount requested, DSCR", "Present 3 scenarios: base + optimistic + pessimistic - prove project survives the worst case", "Use sensitivity tables: show how DSCR changes with occupancy and rent variations", "Show developer experience: successful past projects build bank confidence", "Be realistic: don't inflate occupancy or rents - the bank will verify with market data"] },
+          { type: "heading", text: "Common Mistakes" },
+          { type: "list", items: ["Presenting only one scenario (bank suspects you're hiding risks)", "100% occupancy from Year 1 (unrealistic)", "Ignoring construction period with no income", "Forgetting loan arrangement fees and financing costs", "Not showing source of developer's equity contribution"] }
+        ]}
+      ]
+    }
+  },
+  quickStart: {
+    ar: {
+      title: "دليل البداية السريعة",
+      intro: "خطوات عملية لإنشاء أول نموذج مالي لك في أقل من 10 دقائق.",
+      cta: "يلا نبدأ!",
+      tabs: [
+        { id: "step1", label: "الخطوة 1: المشروع", icon: "1️⃣", content: [
+          { type: "heading", text: "أنشئ مشروع جديد" },
+          { type: "list", items: ["اضغط \"+ مشروع جديد\" في صفحة المشاريع", "اختر قالب يناسب مشروعك (واجهة بحرية، سكني، تجاري، فندق) أو ابدأ فارغ", "سيفتح المعالج السريع (Quick Setup Wizard) - 4 خطوات سريعة"] },
+          { type: "heading", text: "المعالج السريع يسألك عن:" },
+          { type: "list", items: ["1. اسم المشروع والموقع", "2. نوع الأرض (إيجار أو شراء أو شراكة)", "3. آلية التمويل (ذاتي، بنكي، دين+ملكية، صندوق)", "4. استراتيجية التخارج (بيع، احتفاظ)"] },
+          { type: "heading", text: "نصيحة" },
+          { type: "text", text: "لا تقلق من الاختيارات - كل شيء قابل للتعديل لاحقاً من الشريط الجانبي." }
+        ]},
+        { id: "step2", label: "الخطوة 2: الأصول", icon: "2️⃣", content: [
+          { type: "heading", text: "أضف أصولك" },
+          { type: "text", text: "انتقل لتبويب \"الأصول\" وأضف المكونات الرئيسية لمشروعك." },
+          { type: "heading", text: "لكل أصل، أدخل:" },
+          { type: "list", items: ["المرحلة التي ينتمي لها", "التصنيف (سكني، تجاري، فندقي، مكاتب...)", "المساحات: مساحة الأرض، البصمة، GFA", "نوع الإيراد: إيجار أو تشغيل (للفنادق والمارينا)", "معدل الإيجار، الإشغال، فترة التأجير التدريجي", "تكلفة البناء (SAR/sqm) ومدة الإنشاء"] },
+          { type: "heading", text: "نصيحة" },
+          { type: "text", text: "ابدأ بأصل واحد فقط وتأكد أن الأرقام منطقية في لوحة التحكم قبل إضافة المزيد." }
+        ]},
+        { id: "step3", label: "الخطوة 3: النتائج", icon: "3️⃣", content: [
+          { type: "heading", text: "اقرأ النتائج" },
+          { type: "text", text: "فوراً بعد إضافة أصل واحد على الأقل، ستظهر النتائج في لوحة التحكم (Dashboard)." },
+          { type: "heading", text: "أهم الأرقام التي تبحث عنها:" },
+          { type: "list", items: ["إجمالي CAPEX: التكلفة الإجمالية للمشروع", "IRR: العائد الداخلي - هل المشروع مجدي؟ (أعلى من 10% عادة جيد)", "NPV: صافي القيمة الحالية - هل يضيف قيمة؟ (موجب = جيد)", "DSCR: تغطية الدين - هل يقدر يسدد القرض؟ (أعلى من 1.2x)"] },
+          { type: "heading", text: "التبويبات المهمة" },
+          { type: "list", items: ["التمويل: اضبط شروط القرض والصندوق", "الشلال: شاهد توزيع الأرباح بين GP و LP", "السيناريوهات: قارن 8 سيناريوهات مختلفة", "الفحوصات: تأكد من عدم وجود أخطاء", "التقارير: صدّر حزمة البنك أو تقرير المستثمر"] }
+        ]},
+        { id: "tips", label: "نصائح ذهبية", icon: "💡", content: [
+          { type: "heading", text: "نصائح من الممارسة" },
+          { type: "list", items: ["ابدأ بالأبسط: مشروع واحد، أصل واحد، تمويل ذاتي - ثم عقّد تدريجياً", "استخدم القوالب الجاهزة: فيها أرقام واقعية من السوق السعودي", "تحقق من الفحوصات (Checks): إذا فيها تحذير، عالجه قبل ما تكمل", "جرّب السيناريوهات: غيّر الإيجار -10% وشوف هل المشروع لسا يشتغل", "قارن بين التمويل الذاتي والبنكي: شوف كيف الرافعة المالية تأثر على IRR"] },
+          { type: "heading", text: "اختصارات لوحة المفاتيح" },
+          { type: "list", items: ["Ctrl+Z: تراجع عن آخر تعديل (30 خطوة)", "مبدّل اللغة: عربي ↔ English في أي وقت", "وضع العرض (Present): لعرض النموذج على البنك أو المستثمر"] }
+        ]}
+      ]
+    },
+    en: {
+      title: "Quick Start Guide",
+      intro: "Practical steps to create your first financial model in under 10 minutes.",
+      cta: "Let's go!",
+      tabs: [
+        { id: "step1", label: "Step 1: Project", icon: "1️⃣", content: [
+          { type: "heading", text: "Create a New Project" },
+          { type: "list", items: ["Click \"+ New Project\" on the Projects page", "Choose a template (waterfront, residential, commercial, hotel) or start blank", "The Quick Setup Wizard opens - 4 quick steps"] },
+          { type: "heading", text: "The Wizard Asks About:" },
+          { type: "list", items: ["1. Project name and location", "2. Land type (lease, purchase, or partnership)", "3. Financing mode (self-funded, bank, debt+equity, fund)", "4. Exit strategy (sell, hold)"] },
+          { type: "heading", text: "Tip" },
+          { type: "text", text: "Don't worry about choices - everything can be changed later from the sidebar." }
+        ]},
+        { id: "step2", label: "Step 2: Assets", icon: "2️⃣", content: [
+          { type: "heading", text: "Add Your Assets" },
+          { type: "text", text: "Go to the \"Assets\" tab and add your project's main components." },
+          { type: "heading", text: "For Each Asset, Enter:" },
+          { type: "list", items: ["Phase assignment", "Category (residential, commercial, hospitality, office...)", "Areas: plot area, footprint, GFA", "Revenue type: lease or operating (for hotels and marinas)", "Lease rate, occupancy, ramp-up period", "Construction cost (SAR/sqm) and duration"] },
+          { type: "heading", text: "Tip" },
+          { type: "text", text: "Start with just one asset and verify the numbers make sense on the Dashboard before adding more." }
+        ]},
+        { id: "step3", label: "Step 3: Results", icon: "3️⃣", content: [
+          { type: "heading", text: "Read the Results" },
+          { type: "text", text: "Immediately after adding at least one asset, results appear on the Dashboard." },
+          { type: "heading", text: "Key Numbers to Look For:" },
+          { type: "list", items: ["Total CAPEX: total project cost", "IRR: internal rate of return - is the project viable? (above 10% is usually good)", "NPV: net present value - does it add value? (positive = good)", "DSCR: debt coverage - can it repay the loan? (above 1.2x)"] },
+          { type: "heading", text: "Important Tabs" },
+          { type: "list", items: ["Financing: adjust loan and fund terms", "Waterfall: see profit distribution between GP and LP", "Scenarios: compare 8 different scenarios", "Checks: verify no errors exist", "Reports: export bank pack or investor report"] }
+        ]},
+        { id: "tips", label: "Pro Tips", icon: "💡", content: [
+          { type: "heading", text: "Tips from Practice" },
+          { type: "list", items: ["Start simple: one project, one asset, self-funded - then add complexity gradually", "Use ready templates: they contain realistic Saudi market numbers", "Check the Checks tab: if there's a warning, fix it before proceeding", "Try scenarios: reduce rent by -10% and see if the project still works", "Compare self-funded vs bank: see how leverage affects IRR"] },
+          { type: "heading", text: "Keyboard Shortcuts" },
+          { type: "list", items: ["Ctrl+Z: undo last change (30 steps)", "Language toggle: Arabic ↔ English anytime", "Present mode: for presenting to banks or investors"] }
+        ]}
+      ]
+    }
+  }
 };
 
 // ── HelpLink: Reusable inline clickable trigger ──
@@ -9334,10 +9582,18 @@ const ACADEMY_TERM_REGISTRY = {
 
 const ACADEMY_PATHS = [
   {
+    id: "quickstart",
+    icon: "🚀",
+    title: { ar: "البداية السريعة", en: "Quick Start" },
+    desc: { ar: "ابدأ هنا: دليل عملي خطوة بخطوة لبناء أول نموذج مالي لك", en: "Start here: step-by-step practical guide to building your first financial model" },
+    sections: ["quickStart", "projectTypes"],
+    color: "#f59e0b",
+  },
+  {
     id: "foundations",
     icon: "🧱",
     title: { ar: "أساسيات النمذجة المالية", en: "Financial Modeling Foundations" },
-    desc: { ar: "ابدأ هنا: المفاهيم الأساسية التي تحتاجها لفهم أي نموذج مالي عقاري", en: "Start here: core concepts needed to understand any RE financial model" },
+    desc: { ar: "المفاهيم الأساسية: المقاييس المالية، أنواع الأرض، وتحليل السيناريوهات", en: "Core concepts: financial metrics, land types, and scenario analysis" },
     sections: ["financialMetrics", "landType", "scenarioAnalysis"],
     color: "#2563eb",
   },
@@ -9345,29 +9601,32 @@ const ACADEMY_PATHS = [
     id: "structuring",
     icon: "🏗",
     title: { ar: "هيكلة التمويل والاستثمار", en: "Financing & Investment Structuring" },
-    desc: { ar: "كيف تموّل مشروعك؟ خيارات التمويل البنكي، الإسلامي، الصناديق، والحوافز الحكومية", en: "How to finance your project? Bank debt, Islamic finance, fund structures, and government incentives" },
+    desc: { ar: "خيارات التمويل البنكي، الإسلامي، الصناديق، والحوافز الحكومية", en: "Bank debt, Islamic finance, fund structures, and government incentives" },
     sections: ["financingMode", "islamicFinance", "govIncentives", "waterfallConcepts"],
     color: "#8b5cf6",
   },
   {
     id: "exits",
     icon: "🎯",
-    title: { ar: "التخارج والعوائد", en: "Exit & Returns" },
-    desc: { ar: "استراتيجيات التخارج، حساب العوائد، وتوزيع الأرباح بين المستثمرين", en: "Exit strategies, return calculations, and profit distribution among investors" },
-    sections: ["exitStrategy", "waterfallConcepts", "financialMetrics"],
+    title: { ar: "التخارج والتقديم للبنك", en: "Exit & Bank Submission" },
+    desc: { ar: "استراتيجيات التخارج، حساب العوائد، وتجهيز حزمة البنك", en: "Exit strategies, return calculations, and bank pack preparation" },
+    sections: ["exitStrategy", "bankPack", "financialMetrics"],
     color: "#16a34a",
   },
 ];
 
 const ACADEMY_RELATED = {
   financingMode: ["islamicFinance", "financialMetrics", "waterfallConcepts"],
-  landType: ["financingMode", "exitStrategy", "scenarioAnalysis"],
-  exitStrategy: ["financialMetrics", "waterfallConcepts", "financingMode"],
+  landType: ["financingMode", "exitStrategy", "projectTypes"],
+  exitStrategy: ["financialMetrics", "waterfallConcepts", "bankPack"],
   waterfallConcepts: ["financingMode", "exitStrategy", "financialMetrics"],
-  islamicFinance: ["financingMode", "govIncentives", "financialMetrics"],
+  islamicFinance: ["financingMode", "govIncentives", "bankPack"],
   govIncentives: ["financingMode", "islamicFinance", "scenarioAnalysis"],
-  financialMetrics: ["exitStrategy", "waterfallConcepts", "scenarioAnalysis"],
-  scenarioAnalysis: ["financialMetrics", "financingMode", "exitStrategy"],
+  financialMetrics: ["exitStrategy", "waterfallConcepts", "bankPack"],
+  scenarioAnalysis: ["financialMetrics", "financingMode", "bankPack"],
+  projectTypes: ["landType", "financingMode", "quickStart"],
+  bankPack: ["financialMetrics", "scenarioAnalysis", "exitStrategy"],
+  quickStart: ["projectTypes", "financingMode", "landType"],
 };
 
 const ACADEMY_SECTION_ICONS = {
@@ -9379,9 +9638,119 @@ const ACADEMY_SECTION_ICONS = {
   govIncentives: "🏛",
   financialMetrics: "📊",
   scenarioAnalysis: "🔄",
+  projectTypes: "🏘",
+  bankPack: "📋",
+  quickStart: "🚀",
 };
 
-function LearningCenterView({ lang, onBack }) {
+// ── Demo Projects for Academy ──
+const ACADEMY_DEMO_PROJECTS = [
+  {
+    id: "demo_self_residential",
+    icon: "🏘",
+    title: { ar: "مجمع سكني - تمويل ذاتي", en: "Residential - Self Funded" },
+    desc: { ar: "مشروع سكني بسيط بتمويل ذاتي كامل. أبسط سيناريو للتعلم.", en: "Simple residential project, fully self-funded. Easiest scenario to learn." },
+    tags: ["self", "purchase", "hold"],
+    overrides: {
+      name: "", landType: "purchase", landPurchasePrice: 15000000, landArea: 10000,
+      finMode: "self", exitStrategy: "hold", horizon: 25, location: "الرياض - حي النرجس",
+      phases: [{ name: "Phase 1", startYearOffset: 1, completionMonth: 24, footprint: 0 }],
+      assets: [
+        { phase: "Phase 1", category: "Residential", name: "برج سكني", code: "T1", gfa: 18000, footprint: 2500, plotArea: 5000, revType: "Lease", efficiency: 85, leaseRate: 900, escalation: 1.0, rampUpYears: 2, stabilizedOcc: 90, costPerSqm: 3000, constrStart: 1, constrDuration: 24, opEbitda: 0 },
+        { phase: "Phase 1", category: "Amenity", name: "مرافق خدمية", code: "AM", gfa: 1500, footprint: 1200, plotArea: 2000, revType: "Lease", efficiency: 50, leaseRate: 400, escalation: 0.5, rampUpYears: 1, stabilizedOcc: 80, costPerSqm: 2000, constrStart: 1, constrDuration: 18, opEbitda: 0 },
+      ],
+    },
+  },
+  {
+    id: "demo_bank_commercial",
+    icon: "🏢",
+    title: { ar: "مركز تجاري - تمويل بنكي", en: "Commercial Center - Bank Debt" },
+    desc: { ar: "مول تجاري مع تمويل بنكي. تعلّم كيف يعمل DSCR وخدمة الدين.", en: "Shopping mall with bank financing. Learn how DSCR and debt service work." },
+    tags: ["debt", "lease", "sale"],
+    overrides: {
+      name: "", landType: "lease", landArea: 15000, landRentAnnual: 3000000, landRentGrace: 3,
+      finMode: "debt", debtAllowed: true, maxLtvPct: 65, financeRate: 7, loanTenor: 10, debtGrace: 3, upfrontFeePct: 1,
+      exitStrategy: "sale", exitMultiple: 12, exitCostPct: 2, exitYear: 0,
+      horizon: 30, location: "جدة - كورنيش",
+      phases: [{ name: "Phase 1", startYearOffset: 1, completionMonth: 30, footprint: 0 }],
+      assets: [
+        { phase: "Phase 1", category: "Retail", name: "مول تجاري", code: "RM", gfa: 22000, footprint: 11000, plotArea: 12000, revType: "Lease", efficiency: 80, leaseRate: 2200, escalation: 1.0, rampUpYears: 3, stabilizedOcc: 88, costPerSqm: 4200, constrStart: 1, constrDuration: 30, opEbitda: 0 },
+        { phase: "Phase 1", category: "Infrastructure", name: "مواقف", code: "PK", gfa: 6000, footprint: 3000, plotArea: 3000, revType: "Lease", efficiency: 0, leaseRate: 0, escalation: 0, rampUpYears: 0, stabilizedOcc: 100, costPerSqm: 1500, constrStart: 1, constrDuration: 18, opEbitda: 0 },
+      ],
+    },
+  },
+  {
+    id: "demo_fund_hotel",
+    icon: "🏨",
+    title: { ar: "فندق 5 نجوم - صندوق استثماري", en: "5-Star Hotel - Investment Fund" },
+    desc: { ar: "فندق فاخر بهيكل صندوق GP/LP مع شلال توزيعات. أعقد سيناريو.", en: "Luxury hotel with GP/LP fund structure and waterfall. Most complex scenario." },
+    tags: ["fund", "lease", "sale"],
+    overrides: {
+      name: "", landType: "lease", landArea: 12000, landRentAnnual: 4500000, landRentGrace: 5,
+      landCapitalize: true, landCapRate: 1200, landCapTo: "gp",
+      finMode: "fund", vehicleType: "fund", debtAllowed: true, maxLtvPct: 60, financeRate: 6.5, loanTenor: 10, debtGrace: 4, upfrontFeePct: 0.75,
+      subscriptionFeePct: 2, annualMgmtFeePct: 1.5, developerFeePct: 10, structuringFeePct: 1, custodyFeeAnnual: 100000,
+      exitStrategy: "sale", exitMultiple: 14, exitCostPct: 2.5, exitYear: 0,
+      prefReturnPct: 12, gpCatchup: true, carryPct: 25, lpProfitSplitPct: 75,
+      horizon: 30, location: "الرياض - KAFD",
+      phases: [{ name: "Phase 1", startYearOffset: 1, completionMonth: 42, footprint: 0 }],
+      assets: [
+        { phase: "Phase 1", category: "Hospitality", name: "فندق 5 نجوم", code: "H5", gfa: 25000, footprint: 5000, plotArea: 12000, revType: "Operating", efficiency: 0, leaseRate: 0, escalation: 0.75, rampUpYears: 4, stabilizedOcc: 100, costPerSqm: 12000, constrStart: 1, constrDuration: 42, opEbitda: 52000000 },
+      ],
+    },
+  },
+  {
+    id: "demo_mixed_waterfront",
+    icon: "🌊",
+    title: { ar: "واجهة بحرية متكاملة", en: "Waterfront Mixed-Use" },
+    desc: { ar: "مشروع مختلط: مول + فندق + مكاتب + سكني + مارينا. النموذج الأشمل.", en: "Mixed project: mall + hotel + offices + residential + marina. The most comprehensive model." },
+    tags: ["fund", "lease", "sale"],
+    overrides: {
+      name: "", landType: "lease", landArea: 55000, landRentAnnual: 8000000, landRentGrace: 5, landRentTerm: 50,
+      landCapitalize: true, landCapRate: 1000, landCapTo: "gp",
+      finMode: "fund", vehicleType: "fund", debtAllowed: true, maxLtvPct: 60, financeRate: 6.5, loanTenor: 8, debtGrace: 3, upfrontFeePct: 0.5,
+      subscriptionFeePct: 2, annualMgmtFeePct: 1.5, developerFeePct: 10, structuringFeePct: 1,
+      exitStrategy: "sale", exitMultiple: 10, exitCostPct: 2, exitYear: 0,
+      prefReturnPct: 15, gpCatchup: true, carryPct: 30, lpProfitSplitPct: 70,
+      horizon: 50, location: "جازان - الواجهة البحرية",
+      phases: [
+        { name: "Phase 1", startYearOffset: 1, completionMonth: 36, footprint: 0 },
+        { name: "Phase 2", startYearOffset: 3, completionMonth: 72, footprint: 0 },
+      ],
+      assets: [
+        { phase: "Phase 1", category: "Retail", name: "Marina Mall", code: "C1", gfa: 31000, footprint: 20000, plotArea: 28000, revType: "Lease", efficiency: 80, leaseRate: 2100, escalation: 0.75, rampUpYears: 4, stabilizedOcc: 95, costPerSqm: 3900, constrStart: 2, constrDuration: 36, opEbitda: 0 },
+        { phase: "Phase 1", category: "Hospitality", name: "فندق 4 نجوم", code: "H1", gfa: 16000, footprint: 2000, plotArea: 5000, revType: "Operating", efficiency: 0, leaseRate: 0, escalation: 0.75, rampUpYears: 4, stabilizedOcc: 100, costPerSqm: 8000, constrStart: 2, constrDuration: 36, opEbitda: 14000000 },
+        { phase: "Phase 2", category: "Office", name: "برج مكاتب", code: "O1", gfa: 16000, footprint: 2700, plotArea: 5500, revType: "Lease", efficiency: 90, leaseRate: 900, escalation: 0.75, rampUpYears: 2, stabilizedOcc: 88, costPerSqm: 2600, constrStart: 3, constrDuration: 36, opEbitda: 0 },
+        { phase: "Phase 2", category: "Residential", name: "أبراج سكنية", code: "R1", gfa: 14000, footprint: 2000, plotArea: 4000, revType: "Lease", efficiency: 85, leaseRate: 800, escalation: 0.75, rampUpYears: 2, stabilizedOcc: 90, costPerSqm: 2800, constrStart: 3, constrDuration: 30, opEbitda: 0 },
+      ],
+    },
+  },
+  {
+    id: "demo_incentives",
+    icon: "🏛",
+    title: { ar: "مشروع مدعوم حكومياً", en: "Government-Supported Project" },
+    desc: { ar: "مشروع يستفيد من حوافز حكومية: دعم CAPEX، إعفاء إيجار أرض، دعم تمويل.", en: "Project benefiting from government incentives: CAPEX grant, land rebate, finance support." },
+    tags: ["debt", "lease", "hold"],
+    overrides: {
+      name: "", landType: "lease", landArea: 20000, landRentAnnual: 2000000, landRentGrace: 5,
+      finMode: "debt", debtAllowed: true, maxLtvPct: 70, financeRate: 7, loanTenor: 10, debtGrace: 3,
+      exitStrategy: "hold", horizon: 30, location: "جازان - المنطقة الصناعية",
+      incentives: {
+        capexGrant: { enabled: true, grantPct: 25, maxCap: 30000000, phases: [], timing: "construction" },
+        financeSupport: { enabled: true, subType: "interestSubsidy", subsidyPct: 50, subsidyYears: 5, subsidyStart: "operation", softLoanAmount: 0, softLoanTenor: 10, softLoanGrace: 3, phases: [] },
+        landRentRebate: { enabled: true, constrRebatePct: 100, constrRebateYears: 0, operRebatePct: 50, operRebateYears: 5, phases: [] },
+        feeRebates: { enabled: false, items: [], phases: [] },
+      },
+      phases: [{ name: "Phase 1", startYearOffset: 1, completionMonth: 24, footprint: 0 }],
+      assets: [
+        { phase: "Phase 1", category: "Retail", name: "مركز تجاري", code: "RM", gfa: 15000, footprint: 8000, plotArea: 12000, revType: "Lease", efficiency: 80, leaseRate: 1800, escalation: 1.0, rampUpYears: 3, stabilizedOcc: 85, costPerSqm: 3500, constrStart: 1, constrDuration: 24, opEbitda: 0 },
+        { phase: "Phase 1", category: "Office", name: "مكاتب", code: "OF", gfa: 8000, footprint: 2000, plotArea: 4000, revType: "Lease", efficiency: 88, leaseRate: 800, escalation: 0.75, rampUpYears: 2, stabilizedOcc: 80, costPerSqm: 2800, constrStart: 1, constrDuration: 24, opEbitda: 0 },
+      ],
+    },
+  },
+];
+
+function LearningCenterView({ lang, onBack, onCreateDemo }) {
   const ar = lang === "ar";
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState(null);
@@ -9719,6 +10088,53 @@ function LearningCenterView({ lang, onBack }) {
             </div>
           </div>
         ))}
+
+        {/* ── Interactive Demo Projects ── */}
+        {!searchQuery && onCreateDemo && (
+          <div style={{ marginTop: 8, marginBottom: 36 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <span style={{ fontSize: 22 }}>🎮</span>
+              <div>
+                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? "نماذج تعليمية تفاعلية" : "Interactive Demo Projects"}</div>
+                <div style={{ fontSize: 12, color: "#6b7080", marginTop: 2 }}>{ar ? "مشاريع جاهزة بأرقام واقعية. افتحها، استكشفها، وعدّل عليها - ستُحفظ كنسخة في مشاريعك." : "Ready projects with realistic numbers. Open, explore, and modify - saves as a copy in your projects."}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+              {ACADEMY_DEMO_PROJECTS.map(demo => (
+                <div key={demo.id} style={{
+                  background: "#fff", border: "1px solid #e5e7ec", borderRadius: 12,
+                  padding: isMobile ? "16px 14px" : "20px 18px",
+                  display: "flex", flexDirection: "column", gap: 8,
+                  borderInlineStart: "4px solid #C8A96E",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                  transition: "all 0.2s",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 22 }}>{demo.icon}</span>
+                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? demo.title.ar : demo.title.en}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#6b7080", lineHeight: 1.6 }}>{ar ? demo.desc.ar : demo.desc.en}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {demo.tags.map(tag => (
+                      <span key={tag} style={{ fontSize: 9, padding: "2px 7px", background: "#f0f1f5", borderRadius: 4, color: "#4b5060", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>{tag}</span>
+                    ))}
+                  </div>
+                  <button onClick={() => onCreateDemo(demo)} style={{
+                    marginTop: 4, padding: "9px 18px", background: "#0B2341", color: "#C8A96E",
+                    border: "1px solid rgba(200,169,110,0.3)", borderRadius: 8,
+                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                    transition: "all 0.15s", alignSelf: "flex-start",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#C8A96E"; e.currentTarget.style.color = "#0B2341"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "#0B2341"; e.currentTarget.style.color = "#C8A96E"; }}
+                  >
+                    {ar ? "🚀 افتح النموذج التعليمي" : "🚀 Open Demo Project"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* All Topics */}
         {!searchQuery && (
