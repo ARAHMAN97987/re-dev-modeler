@@ -3915,7 +3915,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     )}
 
     {/* ═══ FINANCING CONFIGURATION PANEL ═══ */}
-    <div style={{background:showConfig?"#fff":"#f8f9fb",borderRadius:12,border:showConfig?"2px solid #2563eb":"1px solid #e5e7ec",marginBottom:18,overflow:"hidden",boxShadow:showConfig?"0 2px 12px rgba(37,99,235,0.08)":"none",transition:"all 0.2s"}}>
+    <div style={{background:showConfig?"#fff":"#f8f9fb",borderRadius:12,border:showConfig?"2px solid #2563eb":"1px solid #e5e7ec",marginBottom:18,overflow:showConfig?"visible":"hidden",boxShadow:showConfig?"0 2px 12px rgba(37,99,235,0.08)":"none",transition:"all 0.2s"}}>
       <div onClick={()=>setShowConfig(!showConfig)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:showConfig?"linear-gradient(135deg, #eff6ff, #f0f4ff)":"#f8f9fb",borderBottom:showConfig?"1px solid #dbeafe":"none"}}>
         <div style={{width:32,height:32,borderRadius:8,background:showConfig?"#2563eb":"#e5e7ec",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:showConfig?"#fff":"#6b7080",transition:"all 0.2s"}}>⚙</div>
         <div style={{flex:1}}>
@@ -3944,21 +3944,20 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         };
         const AB = ({id, children, visible}) => {
           if (visible === false || !cfgOpen(id)) return null;
-          return <div style={{padding:"10px 14px 12px",display:"grid",gridTemplateColumns:"1fr",gap:6}}>{children}</div>;
+          return <div style={{padding:"10px 14px 12px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6}}>{children}</div>;
         };
-        const g2 = {display:"grid",gridTemplateColumns:"1fr 1fr",gap:6};
-        const g3 = {display:"grid",gridTemplateColumns:"1fr 1fr",gap:6};
+        const g2 = {display:"contents"};
+        const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
         return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:0}}>
-        {/* ── SECTION: FINANCING MODE (always visible, not collapsible) ── */}
-        <div style={{padding:"12px 14px",borderBottom:"1px solid #eef0f4",gridColumn:"1/-1"}}>
-          <FL label={ar?"آلية التمويل":"Financing Mode"} tip="يحدد طريقة تمويل المشروع: ذاتي، بنكي، أو عبر صندوق استثماري\nChoose how the project will be funded: self, bank, or fund structure">
-            <Drp lang={lang} value={cfg.finMode} onChange={v=>upCfg({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
-              {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
-              {value:"bank100",en:"100% Bank Debt",ar:"بنكي 100%"},
-              {value:"debt",en:"Debt + Equity",ar:"دين + ملكية"},
-              {value:"fund",en:"Fund (GP/LP)",ar:"صندوق (GP/LP)"},
-            ]} />
-          </FL>
+        {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
+        <div style={{padding:"12px 14px",borderBottom:"1px solid #eef0f4",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;upCfg({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+            <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
+            <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
+            <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
+            <option value="fund">{ar?"صندوق (GP/LP)":"Fund (GP/LP)"}</option>
+          </select>
         </div>
 
         {/* ── SECTION: DEBT TERMS ── */}
