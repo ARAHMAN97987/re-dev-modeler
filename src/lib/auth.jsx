@@ -45,6 +45,7 @@ export function AuthGate({ children }) {
   const [busy, setBusy] = useState(false)
   const [pwdStr, setPwdStr] = useState(0)
   const [lang, setLang] = useState('ar')
+  const [showPublicAcademy, setShowPublicAcademy] = useState(false)
   const ar = lang === 'ar'
   const isMobile = useIsMobile()
 
@@ -58,6 +59,7 @@ export function AuthGate({ children }) {
   if (!supabase) return children({ user: null, userId: 'anonymous', signOut: () => {} })
   if (loading) return <LoadingScreen />
   if (session) return children({ user: session.user, userId: session.user.id, signOut: () => supabase.auth.signOut() })
+  if (showPublicAcademy) return children({ user: null, userId: 'anonymous', signOut: null, publicAcademy: true, exitAcademy: () => setShowPublicAcademy(false) })
 
   const calcPwd = (p) => { let s=0; if(p.length>=4)s++; if(p.length>=6)s++; if(p.length>=8)s++; if(p.length>=10)s++; setPwdStr(s) }
   const switchMode = (m) => { setMode(m); setError(''); setMessage(''); setConfirm(''); setPwdStr(0) }
@@ -163,8 +165,12 @@ export function AuthGate({ children }) {
                   </div>
                 ))}
               </div>
-              <div style={{marginTop:14,fontSize:11,color:'#C8A96E',fontWeight:600,textAlign:'center'}}>
-                {ar?'سجّل مجاناً للوصول الكامل ←':'Sign up free for full access →'}
+              <div style={{marginTop:14,display:'flex',gap:10,justifyContent:'center',alignItems:'center'}}>
+                <button onClick={()=>setShowPublicAcademy(true)} style={{padding:'10px 24px',background:'#C8A96E',color:'#0B2341',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",transition:'all 0.2s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.background='#d4b87e';e.currentTarget.style.boxShadow='0 4px 12px rgba(200,169,110,0.3)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='#C8A96E';e.currentTarget.style.boxShadow='none';}}>
+                  📚 {ar?'ادخل الأكاديمية مجاناً':'Enter Academy Free'}
+                </button>
               </div>
             </div>
           </div>

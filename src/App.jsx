@@ -4805,8 +4805,13 @@ function useIsMobile(breakpoint = 768) {
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 
-function ReDevModelerInner({ user, signOut, onSignIn }) {
+function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy }) {
   const isMobile = useIsMobile();
+  // ── Public Academy Mode (no auth required) ──
+  const [publicLang, setPublicLang] = useState("ar");
+  if (publicAcademy) {
+    return <LearningCenterView lang={publicLang} onBack={exitAcademy || (() => {})} onCreateDemo={null} publicMode={true} onLangToggle={() => setPublicLang(l => l === "ar" ? "en" : "ar")} />;
+  }
   const [view, setView] = useState("dashboard");
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
@@ -9772,7 +9777,7 @@ const ACADEMY_DEMO_PROJECTS = [
   },
 ];
 
-function LearningCenterView({ lang, onBack, onCreateDemo }) {
+function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangToggle }) {
   const ar = lang === "ar";
   const isMobile = useIsMobile();
   const [activeSection, setActiveSection] = useState(null);
@@ -9902,7 +9907,8 @@ function LearningCenterView({ lang, onBack, onCreateDemo }) {
           )}
           <div style={{ flex: 1 }} />
           <button onClick={goHome} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>📚 {ar ? "الرئيسية" : "Home"}</button>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>✕ {ar ? "إغلاق" : "Close"}</button>
+          {publicMode && onLangToggle && <button onClick={onLangToggle} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "4px 10px", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>{ar ? "EN" : "عربي"}</button>}
+          <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>{publicMode ? (ar ? "→ تسجيل" : "Sign Up") : (ar ? "✕ إغلاق" : "✕ Close")}</button>
         </div>
 
         {/* Breadcrumbs */}
@@ -9999,8 +10005,13 @@ function LearningCenterView({ lang, onBack, onCreateDemo }) {
         {/* Top bar */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isMobile ? 28 : 40, position: "relative", zIndex: 1 }}>
           <button onClick={onBack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: "7px 14px", color: "#2EC4B6", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-            {ar ? "→ المشاريع" : "← Projects"}
+            {publicMode ? (ar ? "→ تسجيل الدخول" : "← Sign In") : (ar ? "→ المشاريع" : "← Projects")}
           </button>
+          {publicMode && onLangToggle && (
+            <button onClick={onLangToggle} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "7px 14px", color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              {ar ? "EN" : "عربي"}
+            </button>
+          )}
           <div style={{ flex: 1 }} />
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>زان</span>
@@ -10112,13 +10123,13 @@ function LearningCenterView({ lang, onBack, onCreateDemo }) {
         ))}
 
         {/* ── Interactive Demo Projects ── */}
-        {!searchQuery && onCreateDemo && (
+        {!searchQuery && (onCreateDemo || publicMode) && (
           <div style={{ marginTop: 8, marginBottom: 36 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <span style={{ fontSize: 22 }}>🎮</span>
               <div>
                 <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? "نماذج تعليمية تفاعلية" : "Interactive Demo Projects"}</div>
-                <div style={{ fontSize: 12, color: "#6b7080", marginTop: 2 }}>{ar ? "مشاريع جاهزة بأرقام واقعية. افتحها، استكشفها، وعدّل عليها - ستُحفظ كنسخة في مشاريعك." : "Ready projects with realistic numbers. Open, explore, and modify - saves as a copy in your projects."}</div>
+                <div style={{ fontSize: 12, color: "#6b7080", marginTop: 2 }}>{publicMode ? (ar ? "سجّل حساب مجاني لتجربة هذه النماذج وتعديلها بنفسك." : "Create a free account to try these demos and customize them yourself.") : (ar ? "مشاريع جاهزة بأرقام واقعية. افتحها، استكشفها، وعدّل عليها - ستُحفظ كنسخة في مشاريعك." : "Ready projects with realistic numbers. Open, explore, and modify - saves as a copy in your projects.")}</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
@@ -10129,7 +10140,7 @@ function LearningCenterView({ lang, onBack, onCreateDemo }) {
                   display: "flex", flexDirection: "column", gap: 8,
                   borderInlineStart: "4px solid #C8A96E",
                   boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                  transition: "all 0.2s",
+                  transition: "all 0.2s", opacity: publicMode ? 0.85 : 1,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 22 }}>{demo.icon}</span>
@@ -10141,20 +10152,41 @@ function LearningCenterView({ lang, onBack, onCreateDemo }) {
                       <span key={tag} style={{ fontSize: 9, padding: "2px 7px", background: "#f0f1f5", borderRadius: 4, color: "#4b5060", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>{tag}</span>
                     ))}
                   </div>
-                  <button onClick={() => onCreateDemo(demo)} style={{
-                    marginTop: 4, padding: "9px 18px", background: "#0B2341", color: "#C8A96E",
-                    border: "1px solid rgba(200,169,110,0.3)", borderRadius: 8,
-                    fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                    transition: "all 0.15s", alignSelf: "flex-start",
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#C8A96E"; e.currentTarget.style.color = "#0B2341"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "#0B2341"; e.currentTarget.style.color = "#C8A96E"; }}
-                  >
-                    {ar ? "🚀 افتح النموذج التعليمي" : "🚀 Open Demo Project"}
-                  </button>
+                  {onCreateDemo ? (
+                    <button onClick={() => onCreateDemo(demo)} style={{
+                      marginTop: 4, padding: "9px 18px", background: "#0B2341", color: "#C8A96E",
+                      border: "1px solid rgba(200,169,110,0.3)", borderRadius: 8,
+                      fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                      transition: "all 0.15s", alignSelf: "flex-start",
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#C8A96E"; e.currentTarget.style.color = "#0B2341"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "#0B2341"; e.currentTarget.style.color = "#C8A96E"; }}
+                    >
+                      {ar ? "🚀 افتح النموذج التعليمي" : "🚀 Open Demo Project"}
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, fontStyle: "italic" }}>
+                      🔒 {ar ? "سجّل مجاناً لتجربة هذا النموذج" : "Sign up free to try this demo"}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
+            {publicMode && (
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <button onClick={onBack} style={{
+                  padding: "12px 32px", background: "#2EC4B6", color: "#fff", border: "none",
+                  borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer",
+                  fontFamily: "'Tajawal',sans-serif", transition: "all 0.2s",
+                  boxShadow: "0 4px 12px rgba(46,196,182,0.2)",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#25a89c"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#2EC4B6"; }}
+                >
+                  {ar ? "سجّل حساب مجاني الآن ←" : "Create Free Account Now →"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
