@@ -6585,10 +6585,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const fw = useMemo(() => {
     if (!isFiltered || !waterfall) return waterfall;
     if (!phaseWaterfalls || Object.keys(phaseWaterfalls).length === 0) return waterfall;
-    // Aggregate selected phase waterfalls
     const pwList = activePh.map(p => phaseWaterfalls[p]).filter(Boolean);
     if (pwList.length === 0) return waterfall;
-    const sum = (arr) => arr.reduce((a,b)=>a+b,0);
     const sumArrays = (key) => { const out = new Array(h).fill(0); pwList.forEach(pw => { const arr = pw[key]; if (arr) for(let y=0;y<h;y++) out[y]+=(arr[y]||0); }); return out; };
     const lpNetCF = sumArrays('lpNetCF'), gpNetCF = sumArrays('gpNetCF');
     return {
@@ -6618,48 +6616,96 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
   };
 
+  // ── ZAN Brand Styles ──
+  const zanSec = {fontSize:14,fontWeight:700,color:"#0f1117",marginTop:22,marginBottom:10,paddingBottom:6,paddingLeft:10,borderLeft:"3px solid #5fbfbf",borderBottom:"1px solid #e5e7ec"};
+  const zanTh = {color:"#fff",padding:"6px 8px",textAlign:"start",fontSize:9,textTransform:"uppercase",letterSpacing:0.5};
+  const zanTd = {padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:11};
+  const zanKpi = (accent) => ({border:"1px solid #e5e7ec",borderRadius:8,padding:"10px 12px",borderTop:`3px solid ${accent||"#5fbfbf"}`});
+
+  const reportLabels = {
+    exec: {label:ar?"ملخص تنفيذي":"Executive Summary", desc:ar?"نظرة عامة على المشروع والمؤشرات الرئيسية":"Project overview and key metrics", icon:"📋"},
+    bank: {label:ar?"حزمة البنك":"Bank Submission Pack", desc:ar?"دراسة المشروع وطلب التمويل":"Project study and financing request", icon:"🏦"},
+    investor: {label:ar?"مذكرة المستثمر":"Investor Memo", desc:ar?"شروط الصندوق والعوائد المستهدفة":"Fund terms and target returns", icon:"💼"},
+  };
+
   const printReport = () => {
     const el = reportRef.current;
     if (!el) return;
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${project.name} - Report</title><style>
-      @page { size: A4; margin: 15mm; }
-      body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1d23; line-height: 1.5; margin: 0; padding: 20px; }
-      h1 { font-size: 20px; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 6px; }
-      h2 { font-size: 14px; color: #1e3a5f; margin-top: 18px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
-      table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
-      th { background: #1e3a5f; color: #fff; padding: 5px 6px; text-align: left; font-size: 9px; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      td { padding: 4px 6px; border-bottom: 1px solid #e5e7ec; }
-      div[style] { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    </style></head><body onload="window.print()">${el.innerHTML}</body></html>`;
+    const reportTitle = reportLabels[activeReport]?.label || "Report";
+    const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${project.name} - ${reportTitle}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 12mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'DM Sans','Segoe UI',system-ui,sans-serif; font-size: 11px; color: #1a1d23; line-height: 1.5; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .zan-cover { page-break-after: always; min-height: 100vh; background: #0f1117; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 60px 40px; position: relative; overflow: hidden; }
+  .zan-cover::before { content: ''; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(95,191,191,0.12) 0%, transparent 70%); }
+  .zan-cover::after { content: ''; position: absolute; bottom: -80px; left: -80px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(15,118,110,0.1) 0%, transparent 70%); }
+  .zan-cover .logo { font-size: 52px; font-weight: 800; color: #5fbfbf; letter-spacing: 6px; margin-bottom: 6px; position: relative; z-index: 1; }
+  .zan-cover .sub { font-size: 13px; color: #5fbfbf; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; opacity: 0.8; margin-bottom: 48px; position: relative; z-index: 1; }
+  .zan-cover .rtype { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; }
+  .zan-cover .pname { font-size: 18px; color: #d0d4dc; font-weight: 500; margin-bottom: 6px; position: relative; z-index: 1; }
+  .zan-cover .ploc { font-size: 13px; color: #6b7080; position: relative; z-index: 1; margin-bottom: 48px; }
+  .zan-cover .conf { display: inline-block; padding: 6px 24px; border: 1px solid rgba(95,191,191,0.3); border-radius: 4px; color: #5fbfbf; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; position: relative; z-index: 1; }
+  .zan-hdr { background: linear-gradient(135deg, #0f766e, #5fbfbf); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .zan-hdr .logo { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 2px; }
+  .zan-hdr .title { font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 500; }
+  .zan-ftr { margin-top: 30px; padding-top: 12px; border-top: 1px solid #e5e7ec; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #9ca3af; }
+  .zan-ftr .logo { font-size: 12px; font-weight: 800; color: #5fbfbf; letter-spacing: 1px; }
+  .report-body { padding: 0 20px 20px 20px; }
+  h2.zan-sec { font-size: 14px; font-weight: 700; color: #0f1117; margin: 22px 0 10px 0; padding: 0 0 6px 10px; border-left: 3px solid #5fbfbf; border-bottom: 1px solid #e5e7ec; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
+  th { background: #0f1117; color: #fff; padding: 6px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 5px 8px; border-bottom: 1px solid #f0f1f5; font-size: 11px; }
+  tr:nth-child(even) { background: #fafbfc; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0 18px 0; }
+  .kpi-box { border: 1px solid #e5e7ec; border-radius: 8px; padding: 10px 12px; border-top: 3px solid #5fbfbf; }
+  .kpi-box .lbl { font-size: 9px; color: #6b7080; text-transform: uppercase; letter-spacing: 0.3px; }
+  .kpi-box .val { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .tier-strip { display: flex; gap: 8px; margin: 8px 0 16px 0; }
+  .tier-card { flex: 1; border-radius: 8px; padding: 10px; text-align: center; }
+  .tier-card .tl { font-size: 9px; font-weight: 600; }
+  .tier-card .tv { font-size: 15px; font-weight: 700; margin-top: 3px; }
+  @media print { .no-print { display: none !important; } }
+</style></head><body>
+<div class="zan-cover">
+  <div class="logo">ZAN</div>
+  <div class="sub">Financial Modeler</div>
+  <div class="rtype">${reportTitle}</div>
+  <div class="pname">${project.name}</div>
+  <div class="ploc">${project.location||""} &middot; ${cur} &middot; ${dateStr}</div>
+  <div class="conf">CONFIDENTIAL</div>
+</div>
+<div class="zan-hdr"><div class="logo">ZAN</div><div class="title">${reportTitle} &mdash; ${project.name}</div></div>
+<div class="report-body">${el.innerHTML}</div>
+<div class="zan-ftr"><div class="logo">ZAN</div><div>${dateStr} &middot; Confidential &middot; ZAN Financial Modeler</div></div>
+</body></html>`;
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${project.name.replace(/[^a-zA-Z0-9]/g, '_')}_${activeReport}.html`;
+    a.download = `${project.name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_')}_${activeReport}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const reports = [
-    { key: "exec", label: lang === "ar" ? "ملخص تنفيذي" : "Executive Summary", icon: "📋" },
-    { key: "bank", label: lang === "ar" ? "حزمة البنك" : "Bank Submission Pack", icon: "🏦" },
-    { key: "investor", label: lang === "ar" ? "مذكرة المستثمر" : "Investor Memo", icon: "💼" },
-  ];
-
   // 10-year CF for bank pack
   const bankYears = Array.from({length: Math.min(10, h)}, (_, i) => i);
 
   return (<div>
-    {/* Report selector */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:12,marginBottom:18}}>
-      {reports.map(r => (
-        <button key={r.key} onClick={() => setActiveReport(r.key)}
-          style={{background:activeReport===r.key?"#1e3a5f":"#fff",color:activeReport===r.key?"#fff":"#1a1d23",
-            border:"1px solid #e5e7ec",borderRadius:8,padding:"16px",cursor:"pointer",textAlign:"start",transition:"all 0.15s"}}>
-          <div style={{fontSize:24,marginBottom:6}}>{r.icon}</div>
-          <div style={{fontSize:13,fontWeight:600}}>{r.label}</div>
+    {/* ── Report selector cards ── */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18}}>
+      {Object.entries(reportLabels).map(([key,r]) => (
+        <button key={key} onClick={() => setActiveReport(key)}
+          style={{background:activeReport===key?"linear-gradient(135deg,#0f766e,#5fbfbf)":"#fff",color:activeReport===key?"#fff":"#1a1d23",
+            border:activeReport===key?"none":"1px solid #e5e7ec",borderRadius:10,padding:"18px",cursor:"pointer",textAlign:"start",transition:"all 0.2s",
+            boxShadow:activeReport===key?"0 4px 16px rgba(95,191,191,0.25)":"0 1px 3px rgba(0,0,0,0.04)"}}>
+          <div style={{fontSize:26,marginBottom:8}}>{r.icon}</div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:3}}>{r.label}</div>
+          <div style={{fontSize:11,opacity:0.75,fontWeight:400}}>{r.desc}</div>
         </button>
       ))}
     </div>
@@ -6667,13 +6713,13 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {/* Phase filter */}
     {phaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
-        <div style={{fontSize:12,color:"#6b7080",marginBottom:6}}>{lang==="ar"?"اختر المراحل للتقرير":"Select phases for report"}</div>
+        <div style={{fontSize:12,color:"#6b7080",marginBottom:6}}>{ar?"اختر المراحل للتقرير":"Select phases for report"}</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec")}}>
-            {lang==="ar"?"الكل":"All"}
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"#0f1117":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#0f1117":"#e5e7ec")}}>
+            {ar?"الكل":"All"}
           </button>
           {phaseNames.map(p=>(
-            <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"5px 12px",fontSize:11,background:activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#f0f1f5",color:activePh.includes(p)&&selectedPhases.length>0?"#fff":"#1a1d23",border:"1px solid "+(activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#e5e7ec")}}>
+            <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"5px 12px",fontSize:11,background:activePh.includes(p)&&selectedPhases.length>0?"#0f766e":"#f0f1f5",color:activePh.includes(p)&&selectedPhases.length>0?"#fff":"#1a1d23",border:"1px solid "+(activePh.includes(p)&&selectedPhases.length>0?"#0f766e":"#e5e7ec")}}>
               {p}
             </button>
           ))}
@@ -6683,168 +6729,178 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
-      {activeReport && <button onClick={printReport} style={{...btnPrim,padding:"8px 18px",fontSize:12}}>{lang==="ar"?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
-      <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);}catch(e){console.error("Formula Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600}}>
-        {lang==="ar"?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
+      {activeReport && <button onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#5fbfbf)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
+      <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);}catch(e){console.error("Formula Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
+        {ar?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
       </button>
-      <button onClick={async()=>{try{await generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks);}catch(e){console.error("Data Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500}}>
-        {lang==="ar"?"⬇ تقرير بيانات (Excel)":"⬇ Data Report (Excel)"}
+      <button onClick={async()=>{try{await generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks);}catch(e){console.error("Data Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500,borderRadius:8}}>
+        {ar?"⬇ تقرير بيانات (Excel)":"⬇ Data Report (Excel)"}
       </button>
     </div>
 
-    {/* Report content */}
+    {/* ── Report content ── */}
     <div ref={reportRef}>
       {activeReport === "exec" && (
-        <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:24}}>
-          <h1 style={{fontSize:20,color:"#1e3a5f",borderBottom:"2px solid #1e3a5f",paddingBottom:6,marginTop:0}}>{project.name} - Executive Summary</h1>
-          <div style={{fontSize:11,color:"#6b7080",marginBottom:16}}>{project.location} | {cur} | {sy} - {sy + h} ({h} years) | {new Date().toLocaleDateString()}</div>
+        <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+            <span style={{fontSize:22,fontWeight:800,color:"#5fbfbf",letterSpacing:2}}>ZAN</span>
+            <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
+          </div>
+          <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4,borderBottom:"none"}}>{project.name}</h1>
+          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.location} | {cur} | {sy} - {sy + h} ({h} {ar?"سنة":"years"}) | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8,marginBottom:18}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4, 1fr)",gap:8,marginBottom:20}}>
             {[
-              {l:ar?"إجمالي التكاليف":"Total CAPEX",v:fmtM(fc.totalCapex),c:"#ef4444"},
-              {l:ar?"إجمالي الإيرادات":"Total Income",v:fmtM(fc.totalIncome),c:"#16a34a"},
-              {l:ar?"IRR (قبل التمويل)":"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",c:"#2563eb"},
-              {l:"NPV @10%",v:fmtM(fc.npv10),c:"#06b6d4"},
-              ...(f&&f.mode!=="self"&&!isFiltered?[{l:ar?"IRR (بعد التمويل)":"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",c:"#8b5cf6"},{l:ar?"إجمالي الدين":"Total Debt",v:fmtM(f.totalDebt),c:"#f59e0b"}]:[]),
-              ...(fw?[{l:ar?"عائد الممول (LP)":"Investor IRR (LP)",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",c:"#8b5cf6"},{l:ar?"مضاعف الممول (LP)":"Investor MOIC (LP)",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",c:"#8b5cf6"}]:[]),
+              {l:ar?"إجمالي التكاليف":"Total CAPEX",v:fmtM(fc.totalCapex),ac:"#ef4444"},
+              {l:ar?"إجمالي الإيرادات":"Total Income",v:fmtM(fc.totalIncome),ac:"#16a34a"},
+              {l:ar?"IRR (قبل التمويل)":"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",ac:"#2563eb"},
+              {l:"NPV @10%",v:fmtM(fc.npv10),ac:"#06b6d4"},
+              ...(f&&f.mode!=="self"&&!isFiltered?[{l:ar?"IRR (بعد التمويل)":"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"إجمالي الدين":"Total Debt",v:fmtM(f.totalDebt),ac:"#f59e0b"}]:[]),
+              ...(fw?[{l:ar?"عائد الممول (LP)":"Investor IRR (LP)",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"مضاعف الممول (LP)":"Investor MOIC (LP)",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e"}]:[]),
             ].map((k,i) => (
-              <div key={i} style={{border:"1px solid #e5e7ec",borderRadius:6,padding:"8px 10px"}}>
-                <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{k.l}</div>
-                <div style={{fontSize:16,fontWeight:700,color:k.c,marginTop:2}}>{k.v}</div>
+              <div key={i} style={{...zanKpi(k.ac)}}>
+                <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
+                <div style={{fontSize:17,fontWeight:700,color:k.ac,marginTop:3}}>{k.v}</div>
               </div>
             ))}
           </div>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>{lang==="ar"?"ملخص المراحل":"Phase Summary"}</h2>
+          <div style={zanSec}>{ar?"ملخص المراحل":"Phase Summary"}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-            <thead><tr style={{background:"#1e3a5f"}}>
-              {["Phase","Assets","CAPEX","Revenue","Net CF","IRR"].map(h=><th key={h} style={{color:"#fff",padding:"5px 6px",textAlign:"start",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
+            <thead><tr style={{background:"#0f1117"}}>
+              {(ar?["المرحلة","الأصول","التكاليف","الإيرادات","صافي التدفق","IRR"]:["Phase","Assets","CAPEX","Revenue","Net CF","IRR"]).map(h=><th key={h} style={zanTh}>{h}</th>)}
             </tr></thead>
             <tbody>
-              {Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name)).map(([name,pr])=>(
-                <tr key={name}>
-                  <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",fontWeight:600}}>{name}</td>
-                  <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",textAlign:"right"}}>{pr.assetCount}</td>
-                  <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",textAlign:"right"}}>{fmt(pr.totalCapex)}</td>
-                  <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",textAlign:"right"}}>{fmt(pr.totalIncome)}</td>
-                  <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",textAlign:"right",color:pr.totalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(pr.totalNetCF)}</td>
-                  <td style={{padding:"4px 6px",borderBottom:"1px solid #e5e7ec",textAlign:"right",fontWeight:600}}>{pr.irr?fmtPct(pr.irr*100):"—"}</td>
+              {Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name)).map(([name,pr],ri)=>(
+                <tr key={name} style={{background:ri%2===0?"#fff":"#fafbfc"}}>
+                  <td style={{...zanTd,fontWeight:600}}>{name}</td>
+                  <td style={{...zanTd,textAlign:"right"}}>{pr.assetCount}</td>
+                  <td style={{...zanTd,textAlign:"right"}}>{fmt(pr.totalCapex)}</td>
+                  <td style={{...zanTd,textAlign:"right"}}>{fmt(pr.totalIncome)}</td>
+                  <td style={{...zanTd,textAlign:"right",color:pr.totalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(pr.totalNetCF)}</td>
+                  <td style={{...zanTd,textAlign:"right",fontWeight:700}}>{pr.irr?fmtPct(pr.irr*100):"—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4,marginTop:18}}>Asset Program ({filteredAssets.length} assets){isFiltered?" - "+activePh.join(", "):""}</h2>
+          <div style={{...zanSec,marginTop:24}}>{ar?"برنامج الأصول":"Asset Program"} ({filteredAssets.length} {ar?"أصل":"assets"}){isFiltered?" - "+activePh.join(", "):""}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
-            <thead><tr style={{background:"#1e3a5f"}}>
-              {(ar?["#","الأصل","التصنيف","المرحلة","المساحة","التكاليف","الإيرادات","النوع"]:["#","Asset","Category","Phase","GFA","CAPEX","Revenue","Type"]).map(h=><th key={h} style={{color:"#fff",padding:"4px 6px",fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
+            <thead><tr style={{background:"#0f1117"}}>
+              {(ar?["#","الأصل","التصنيف","المرحلة","المساحة","التكاليف","الإيرادات","النوع"]:["#","Asset","Category","Phase","GFA","CAPEX","Revenue","Type"]).map(h=><th key={h} style={zanTh}>{h}</th>)}
             </tr></thead>
             <tbody>
               {filteredAssets.map((a,i)=>(
                 <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{i+1}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{a.name}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{catL(a.category,ar)}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{a.phase}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(a.gfa)}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(a.totalCapex)}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right",color:"#16a34a"}}>{fmt(a.totalRevenue)}</td>
-                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>{revL(a.revType,ar)}</td>
+                  <td style={zanTd}>{i+1}</td>
+                  <td style={zanTd}>{a.name}</td>
+                  <td style={zanTd}>{catL(a.category,ar)}</td>
+                  <td style={zanTd}>{a.phase}</td>
+                  <td style={{...zanTd,textAlign:"right"}}>{fmt(a.gfa)}</td>
+                  <td style={{...zanTd,textAlign:"right"}}>{fmt(a.totalCapex)}</td>
+                  <td style={{...zanTd,textAlign:"right",color:"#16a34a"}}>{fmt(a.totalRevenue)}</td>
+                  <td style={zanTd}>{revL(a.revType,ar)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4,marginTop:18}}>Model Integrity</h2>
-          <div style={{fontSize:12}}>{failCount === 0 ? "✅ All checks passed" : `⚠️ ${failCount} check(s) failed`}</div>
+          <div style={{...zanSec,marginTop:24}}>{ar?"سلامة النموذج":"Model Integrity"}</div>
+          <div style={{fontSize:12,padding:"8px 12px",background:failCount===0?"#f0fdf4":"#fef2f2",borderRadius:6,border:failCount===0?"1px solid #bbf7d0":"1px solid #fecaca"}}>
+            {failCount === 0 ? (ar?"✅ جميع الفحوصات ناجحة":"✅ All checks passed") : `⚠️ ${failCount} ${ar?"فحص فشل":"check(s) failed"}`}
+          </div>
         </div>
       )}
 
       {activeReport === "bank" && (
-        <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:24}}>
-          <h1 style={{fontSize:20,color:"#1e3a5f",borderBottom:"2px solid #1e3a5f",paddingBottom:6,marginTop:0}}>Bank Submission Pack</h1>
-          <div style={{fontSize:11,color:"#6b7080",marginBottom:16}}>{project.name} | {project.location} | {new Date().toLocaleDateString()}</div>
+        <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+            <span style={{fontSize:22,fontWeight:800,color:"#5fbfbf",letterSpacing:2}}>ZAN</span>
+            <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
+          </div>
+          <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"حزمة تقديم البنك":"Bank Submission Pack"}</h1>
+          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.name} | {project.location} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>1. Project Study</h2>
+          <div style={zanSec}>{ar?"1. دراسة المشروع":"1. Project Study"}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:12}}>
             <tbody>
               {[
-                ["Project Name",project.name],["Location",project.location],["Land Area",fmt(project.landArea)+" sqm"],
-                ["Land Type",project.landType],["Total GFA",fmt(filteredAssets.reduce((s,a)=>s+(a.gfa||0),0))+" sqm"],
-                ["Number of Assets",filteredAssets.length],["Total Development Cost",fmt(fc.totalCapex)+" "+cur],
-                ["Projected Annual Income (Stabilized)",fmt(fc.income[Math.min(10,h-1)])+" "+cur],
+                [ar?"اسم المشروع":"Project Name",project.name],[ar?"الموقع":"Location",project.location],[ar?"مساحة الأرض":"Land Area",fmt(project.landArea)+" sqm"],
+                [ar?"نوع الأرض":"Land Type",project.landType],[ar?"إجمالي المساحة المبنية":"Total GFA",fmt(filteredAssets.reduce((s,a)=>s+(a.gfa||0),0))+" sqm"],
+                [ar?"عدد الأصول":"Number of Assets",filteredAssets.length],[ar?"إجمالي تكلفة التطوير":"Total Development Cost",fmt(fc.totalCapex)+" "+cur],
+                [ar?"الإيرادات السنوية (مستقرة)":"Projected Annual Income (Stabilized)",fmt(fc.income[Math.min(10,h-1)])+" "+cur],
               ].map(([k,v],i)=>(
-                <tr key={i}><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",color:"#6b7080",width:"40%"}}>{k}</td><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",fontWeight:500}}>{v}</td></tr>
+                <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}><td style={{...zanTd,color:"#6b7080",width:"40%"}}>{k}</td><td style={{...zanTd,fontWeight:600}}>{v}</td></tr>
               ))}
             </tbody>
           </table>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>2. Financing Request</h2>
+          <div style={zanSec}>{ar?"2. طلب التمويل":"2. Financing Request"}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:12}}>
             <tbody>
               {[
-                ["Requested Facility",fmt(f?.maxDebt||0)+" "+cur],
-                ["LTV Ratio",(project.maxLtvPct||70)+"%"],
-                ["Proposed Rate",(project.financeRate||6.5)+"% p.a."],
-                ["Tenor",(project.loanTenor||7)+" years (incl. "+(project.debtGrace||3)+" grace)"],
-                ["Repayment",project.repaymentType==="amortizing"?"Equal Installments":"Bullet"],
-                ["Structure",project.islamicMode==="conventional"?"Conventional":project.islamicMode==="murabaha"?"Murabaha":"Ijara"],
+                [ar?"مبلغ التسهيل":"Requested Facility",fmt(f?.maxDebt||0)+" "+cur],
+                [ar?"نسبة التمويل":"LTV Ratio",(project.maxLtvPct||70)+"%"],
+                [ar?"المعدل المقترح":"Proposed Rate",(project.financeRate||6.5)+"% p.a."],
+                [ar?"المدة":"Tenor",(project.loanTenor||7)+" "+(ar?"سنوات (تشمل ":"years (incl. ")+(project.debtGrace||3)+" "+(ar?"فترة سماح)":"grace)")],
+                [ar?"نوع السداد":"Repayment",project.repaymentType==="amortizing"?(ar?"أقساط متساوية":"Equal Installments"):(ar?"دفعة واحدة":"Bullet")],
+                [ar?"الهيكل":"Structure",project.islamicMode==="conventional"?(ar?"تقليدي":"Conventional"):project.islamicMode==="murabaha"?(ar?"مرابحة":"Murabaha"):(ar?"إجارة":"Ijara")],
               ].map(([k,v],i)=>(
-                <tr key={i}><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",color:"#6b7080",width:"40%"}}>{k}</td><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",fontWeight:500}}>{v}</td></tr>
+                <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}><td style={{...zanTd,color:"#6b7080",width:"40%"}}>{k}</td><td style={{...zanTd,fontWeight:600}}>{v}</td></tr>
               ))}
             </tbody>
           </table>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>3. Sources & Uses</h2>
+          <div style={zanSec}>{ar?"3. المصادر والاستخدامات":"3. Sources & Uses"}</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
             <div>
-              <div style={{fontSize:12,fontWeight:600,marginBottom:6}}>Sources</div>
+              <div style={{fontSize:12,fontWeight:700,marginBottom:6,color:"#0f766e"}}>{ar?"المصادر":"Sources"}</div>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <tbody>
-                  <tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Senior Debt</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(f?.totalDebt||0)}</td></tr>
-                  <tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Equity</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(f?.totalEquity||0)}</td></tr>
-                  <tr style={{fontWeight:700}}><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f"}}>Total Sources</td><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f",textAlign:"right"}}>{fmt((f?.totalDebt||0)+(f?.totalEquity||0))}</td></tr>
+                  <tr><td style={zanTd}>{ar?"الدين":"Senior Debt"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(f?.totalDebt||0)}</td></tr>
+                  <tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"حقوق الملكية":"Equity"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(f?.totalEquity||0)}</td></tr>
+                  <tr style={{fontWeight:700}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"إجمالي المصادر":"Total Sources"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right"}}>{fmt((f?.totalDebt||0)+(f?.totalEquity||0))}</td></tr>
                 </tbody>
               </table>
             </div>
             <div>
-              <div style={{fontSize:12,fontWeight:600,marginBottom:6}}>Uses</div>
+              <div style={{fontSize:12,fontWeight:700,marginBottom:6,color:"#0f766e"}}>{ar?"الاستخدامات":"Uses"}</div>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <tbody>
-                  <tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Development CAPEX</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(fc.totalCapex)}</td></tr>
-                  {project.landType==="purchase"&&<tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Land Purchase</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(project.landPurchasePrice)}</td></tr>}
-                  <tr><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5"}}>Interest During Constr.</td><td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right"}}>{fmt(f?.totalInterest||0)}</td></tr>
-                  <tr style={{fontWeight:700}}><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f"}}>Total Uses</td><td style={{padding:"3px 6px",borderTop:"2px solid #1e3a5f",textAlign:"right"}}>{fmt(fc.totalCapex+(f?.totalInterest||0))}</td></tr>
+                  <tr><td style={zanTd}>{ar?"تكاليف التطوير":"Development CAPEX"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(fc.totalCapex)}</td></tr>
+                  {project.landType==="purchase"&&<tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"شراء الأرض":"Land Purchase"}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(project.landPurchasePrice)}</td></tr>}
+                  <tr style={{background:"#fafbfc"}}><td style={zanTd}>{ar?"فوائد أثناء البناء":"Interest During Constr."}</td><td style={{...zanTd,textAlign:"right",fontWeight:600}}>{fmt(f?.totalInterest||0)}</td></tr>
+                  <tr style={{fontWeight:700}}><td style={{...zanTd,borderTop:"2px solid #0f1117"}}>{ar?"إجمالي الاستخدامات":"Total Uses"}</td><td style={{...zanTd,borderTop:"2px solid #0f1117",textAlign:"right"}}>{fmt(fc.totalCapex+(f?.totalInterest||0))}</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>{lang==="ar"?"4. التدفقات النقدية 10 سنوات وDSCR":"4. 10-Year Cash Flow & DSCR"}</h2>
+          <div style={zanSec}>{ar?"4. التدفقات النقدية 10 سنوات وDSCR":"4. 10-Year Cash Flow & DSCR"}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:9}}>
-            <thead><tr style={{background:"#1e3a5f"}}>
-              <th style={{color:"#fff",padding:"4px 5px",textAlign:"start",fontSize:8}}>{lang==="ar"?"البند":"Item"}</th>
-              {bankYears.map(y=><th key={y} style={{color:"#fff",padding:"4px 5px",textAlign:"right",fontSize:8}}>{sy+y}</th>)}
+            <thead><tr style={{background:"#0f1117"}}>
+              <th style={{...zanTh,fontSize:8}}>{ar?"البند":"Item"}</th>
+              {bankYears.map(y=><th key={y} style={{...zanTh,textAlign:"right",fontSize:8}}>{sy+y}</th>)}
             </tr></thead>
             <tbody>
               {[
                 {l:ar?"الإيرادات":"Revenue",v:fc.income,cl:"#16a34a"},
                 {l:ar?"إيجار الأرض":"Land Rent",v:fc.landRent,cl:"#ef4444"},
-                {l:ar?"صافي الدخل التشغيلي":"NOI",v:bankYears.map(y=>(fc.income[y]||0)-(fc.landRent[y]||0)),cl:"#1a1d23",b:true},
+                {l:ar?"صافي الدخل التشغيلي":"NOI",v:bankYears.map(y=>(fc.income[y]||0)-(fc.landRent[y]||0)),cl:"#0f1117",b:true},
                 {l:ar?"تكاليف التطوير":"CAPEX",v:fc.capex,cl:"#ef4444"},
                 ...(f&&f.mode!=="self"?[
                   {l:ar?"خدمة الدين":"Debt Service",v:f.debtService,cl:"#ef4444"},
                   {l:ar?"رصيد الدين":"Debt Balance",v:f.debtBalClose,cl:"#3b82f6"},
-                  {l:"DSCR",v:bankYears.map(y=>f.dscr[y]),cl:"#1a1d23",b:true,isDscr:true},
+                  {l:"DSCR",v:bankYears.map(y=>f.dscr[y]),cl:"#0f1117",b:true,isDscr:true},
                 ]:[]),
-                {l:ar?"صافي التدفق":"Net CF",v:f&&f.mode!=="self"&&!isFiltered?f.leveredCF:fc.netCF,cl:"#1a1d23",b:true},
+                {l:ar?"صافي التدفق":"Net CF",v:f&&f.mode!=="self"&&!isFiltered?f.leveredCF:fc.netCF,cl:"#0f1117",b:true},
               ].map((row,ri)=>(
                 <tr key={ri} style={row.b?{fontWeight:700,background:"#f8f9fb"}:{}}>
-                  <td style={{padding:"3px 5px",borderBottom:"1px solid #f0f1f5",fontSize:9}}>{row.l}</td>
+                  <td style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",fontSize:9}}>{row.l}</td>
                   {bankYears.map(y=>{
                     const v = Array.isArray(row.v) ? row.v[y] : (row.v?.[y]||0);
-                    if (row.isDscr) return <td key={y} style={{padding:"3px 5px",borderBottom:"1px solid #f0f1f5",textAlign:"right",fontSize:9,fontWeight:700,color:v===null?"#9ca3af":v>=1.2?"#16a34a":"#ef4444"}}>{v===null?"—":v.toFixed(2)+"x"}</td>;
-                    return <td key={y} style={{padding:"3px 5px",borderBottom:"1px solid #f0f1f5",textAlign:"right",fontSize:9,color:row.cl}}>{v===0?"—":fmt(v)}</td>;
+                    if (row.isDscr) return <td key={y} style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right",fontSize:9,fontWeight:700,color:v===null?"#9ca3af":v>=1.2?"#16a34a":"#ef4444"}}>{v===null?"—":v.toFixed(2)+"x"}</td>;
+                    return <td key={y} style={{padding:"3px 6px",borderBottom:"1px solid #f0f1f5",textAlign:"right",fontSize:9,color:row.cl}}>{v===0?"—":fmt(v)}</td>;
                   })}
                 </tr>
               ))}
@@ -6854,79 +6910,86 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       )}
 
       {activeReport === "investor" && (
-        <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:24}}>
-          <h1 style={{fontSize:20,color:"#1e3a5f",borderBottom:"2px solid #1e3a5f",paddingBottom:6,marginTop:0}}>Investor Memo - {project.name}</h1>
-          <div style={{fontSize:11,color:"#6b7080",marginBottom:16}}>{project.location} | {cur} | {new Date().toLocaleDateString()} | CONFIDENTIAL</div>
+        <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+            <span style={{fontSize:22,fontWeight:800,color:"#5fbfbf",letterSpacing:2}}>ZAN</span>
+            <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
+          </div>
+          <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"مذكرة المستثمر":"Investor Memo"} - {project.name}</h1>
+          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.location} | {cur} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})} | {ar?"سري":"CONFIDENTIAL"}</div>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>Investment Highlights</h2>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:8,marginBottom:16}}>
+          <div style={zanSec}>{ar?"أبرز المؤشرات":"Investment Highlights"}</div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4, 1fr)",gap:8,marginBottom:18}}>
             {[
-              {l:"Target LP IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A"},{l:"Target LP MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A"},
-              {l:"Preferred Return",v:(project.prefReturnPct||15)+"%"},{l:"Exit Timeline",v:fw?fw.exitYear:"TBD"},
+              {l:ar?"عائد LP المستهدف":"Target LP IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#0f766e"},
+              {l:ar?"مضاعف LP المستهدف":"Target LP MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#5fbfbf"},
+              {l:ar?"العائد المفضل":"Preferred Return",v:(project.prefReturnPct||15)+"%",ac:"#2563eb"},
+              {l:ar?"سنة التخارج":"Exit Timeline",v:fw?fw.exitYear:"TBD",ac:"#f59e0b"},
             ].map((k,i) => (
-              <div key={i} style={{border:"1px solid #e5e7ec",borderRadius:6,padding:"10px 12px",textAlign:"center"}}>
-                <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase"}}>{k.l}</div>
-                <div style={{fontSize:18,fontWeight:700,color:"#1e3a5f",marginTop:4}}>{k.v}</div>
+              <div key={i} style={zanKpi(k.ac)}>
+                <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
+                <div style={{fontSize:20,fontWeight:800,color:k.ac,marginTop:4}}>{k.v}</div>
               </div>
             ))}
           </div>
 
-          <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>Fund Terms</h2>
+          <div style={zanSec}>{ar?"شروط الصندوق":"Fund Terms"}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:16}}>
             <tbody>
               {[
-                ["Fund Strategy","Develop & Hold"],["Currency",cur],
-                ["GP Equity (Land Contribution)",fw?fmt(fw.gpEquity)+" "+cur+" ("+fmtPct(fw.gpPct*100)+")":"—"],
-                ["LP Equity Required",fw?fmt(fw.lpEquity)+" "+cur+" ("+fmtPct(fw.lpPct*100)+")":"—"],
-                ["Preferred Return",(project.prefReturnPct||15)+"% p.a. on unreturned capital"],
-                ["GP Catch-up",project.gpCatchup?"Yes":"No"],
-                ["Carry / Performance Fee",(project.carryPct||30)+"%"],
-                ["Profit Split (after catch-up)","LP "+(project.lpProfitSplitPct||70)+"% / GP "+(100-(project.lpProfitSplitPct||70))+"%"],
-                ["Subscription Fee",(project.subscriptionFeePct||2)+"%"],
-                ["Annual Management Fee",(project.annualMgmtFeePct||0.9)+"%"],
-                ["Developer Fee",(project.developerFeePct||10)+"% of CAPEX"],
+                [ar?"استراتيجية الصندوق":"Fund Strategy",ar?"تطوير واحتفاظ":"Develop & Hold"],[ar?"العملة":"Currency",cur],
+                [ar?"حقوق ملكية GP (مساهمة الأرض)":"GP Equity (Land Contribution)",fw?fmt(fw.gpEquity)+" "+cur+" ("+fmtPct(fw.gpPct*100)+")":"—"],
+                [ar?"حقوق ملكية LP المطلوبة":"LP Equity Required",fw?fmt(fw.lpEquity)+" "+cur+" ("+fmtPct(fw.lpPct*100)+")":"—"],
+                [ar?"العائد المفضل":"Preferred Return",(project.prefReturnPct||15)+"% "+(ar?"سنوي على رأس المال غير المسترد":"p.a. on unreturned capital")],
+                [ar?"اللحاق GP":"GP Catch-up",project.gpCatchup?(ar?"نعم":"Yes"):(ar?"لا":"No")],
+                [ar?"أداء / حمولة":"Carry / Performance Fee",(project.carryPct||30)+"%"],
+                [ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)","LP "+(project.lpProfitSplitPct||70)+"% / GP "+(100-(project.lpProfitSplitPct||70))+"%"],
+                [ar?"رسوم الاشتراك":"Subscription Fee",(project.subscriptionFeePct||2)+"%"],
+                [ar?"رسوم الإدارة السنوية":"Annual Management Fee",(project.annualMgmtFeePct||0.9)+"%"],
+                [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من التكاليف":"of CAPEX")],
               ].map(([k,v],i)=>(
-                <tr key={i}><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",color:"#6b7080",width:"40%"}}>{k}</td><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",fontWeight:500}}>{v}</td></tr>
+                <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}><td style={{...zanTd,color:"#6b7080",width:"40%"}}>{k}</td><td style={{...zanTd,fontWeight:600}}>{v}</td></tr>
               ))}
             </tbody>
           </table>
 
           {fw && <>
-            <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>Waterfall Distribution Summary</h2>
-            <div style={{display:"flex",gap:8,marginBottom:16}}>
+            <div style={zanSec}>{ar?"ملخص شلال التوزيعات":"Waterfall Distribution Summary"}</div>
+            <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:isMobile?"wrap":"nowrap"}}>
               {[
-                {l:"Return of Capital",v:fmtM(fw.tier1.reduce((a,b)=>a+b,0)),bg:"#dbeafe"},
-                {l:"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"#dcfce7"},
-                {l:"GP Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"#fef3c7"},
-                {l:"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"#ede9fe"},
+                {l:ar?"إعادة رأس المال":"Return of Capital",v:fmtM(fw.tier1.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dbeafe,#eff6ff)",bd:"#93c5fd"},
+                {l:ar?"العائد المفضل":"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dcfce7,#f0fdf4)",bd:"#86efac"},
+                {l:ar?"لحاق GP":"GP Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",bd:"#fcd34d"},
+                {l:ar?"تقسيم الأرباح":"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"linear-gradient(135deg,#ede9fe,#f5f3ff)",bd:"#c4b5fd"},
               ].map((t,i)=>(
-                <div key={i} style={{flex:1,background:t.bg,borderRadius:6,padding:"10px",textAlign:"center"}}>
-                  <div style={{fontSize:9,fontWeight:600}}>{t.l}</div>
-                  <div style={{fontSize:15,fontWeight:700,marginTop:3}}>{t.v}</div>
+                <div key={i} style={{flex:1,minWidth:isMobile?140:"auto",background:t.bg,borderRadius:8,padding:"12px",textAlign:"center",border:`1px solid ${t.bd}`}}>
+                  <div style={{fontSize:9,fontWeight:700,color:"#374151",letterSpacing:0.3}}>{t.l}</div>
+                  <div style={{fontSize:16,fontWeight:800,marginTop:4,color:"#0f1117"}}>{t.v}</div>
                 </div>
               ))}
             </div>
 
-            <h2 style={{fontSize:14,color:"#1e3a5f",borderBottom:"1px solid #ddd",paddingBottom:4}}>Return Analysis</h2>
+            <div style={zanSec}>{ar?"تحليل العوائد":"Return Analysis"}</div>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-              <thead><tr style={{background:"#1e3a5f"}}>
-                <th style={{color:"#fff",padding:"5px 8px",fontSize:10}}>Metric</th>
-                <th style={{color:"#fff",padding:"5px 8px",fontSize:10,textAlign:"center"}}>LP (Investor)</th>
-                <th style={{color:"#fff",padding:"5px 8px",fontSize:10,textAlign:"center"}}>GP (Sponsor)</th>
-                <th style={{color:"#fff",padding:"5px 8px",fontSize:10,textAlign:"center"}}>Project</th>
+              <thead><tr style={{background:"#0f1117"}}>
+                <th style={zanTh}>{ar?"المؤشر":"Metric"}</th>
+                <th style={{...zanTh,textAlign:"center"}}>{ar?"المستثمر (LP)":"LP (Investor)"}</th>
+                <th style={{...zanTh,textAlign:"center"}}>{ar?"المطور (GP)":"GP (Sponsor)"}</th>
+                <th style={{...zanTh,textAlign:"center"}}>{ar?"المشروع":"Project"}</th>
               </tr></thead>
               <tbody>
                 {[
-                  ["Net IRR",fw.lpIRR?fmtPct(fw.lpIRR*100):"—",fw.gpIRR?fmtPct(fw.gpIRR*100):"—",fc.irr?fmtPct(fc.irr*100):"—"],
+                  [ar?"صافي IRR":"Net IRR",fw.lpIRR?fmtPct(fw.lpIRR*100):"—",fw.gpIRR?fmtPct(fw.gpIRR*100):"—",fc.irr?fmtPct(fc.irr*100):"—"],
                   ["MOIC",fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"—",fw.gpMOIC?fw.gpMOIC.toFixed(2)+"x":"—","—"],
-                  ["Total Invested",fmt(fw.lpTotalInvested),fmt(fw.gpTotalInvested),fmt(fc.totalCapex)],
-                  ["Total Distributions",fmt(fw.lpTotalDist),fmt(fw.gpTotalDist),"—"],
+                  [ar?"إجمالي المستثمر":"Total Invested",fmt(fw.lpTotalInvested),fmt(fw.gpTotalInvested),fmt(fc.totalCapex)],
+                  [ar?"إجمالي التوزيعات":"Total Distributions",fmt(fw.lpTotalDist),fmt(fw.gpTotalDist),"—"],
                   ["NPV @10%",fmt(fw.lpNPV10),fmt(fw.gpNPV10),fmt(fw.projNPV10)],
                   ["NPV @12%",fmt(fw.lpNPV12),fmt(fw.gpNPV12),fmt(fw.projNPV12)],
                   ["NPV @14%",fmt(fw.lpNPV14),fmt(fw.gpNPV14),fmt(fw.projNPV14)],
                 ].map(([metric,...vals],i)=>(
-                  <tr key={i}><td style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",fontWeight:600}}>{metric}</td>
-                    {vals.map((v,j)=><td key={j} style={{padding:"4px 8px",borderBottom:"1px solid #f0f1f5",textAlign:"center"}}>{v}</td>)}
+                  <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}>
+                    <td style={{...zanTd,fontWeight:700}}>{metric}</td>
+                    {vals.map((v,j)=><td key={j} style={{...zanTd,textAlign:"center"}}>{v}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -6937,8 +7000,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     </div>
 
     {!activeReport && (
-      <div style={{textAlign:"center",padding:40,color:"#9ca3af",fontSize:13}}>
-        {lang==="ar"?"اختر تقريراً من الأعلى":"Select a report above to preview and print"}
+      <div style={{textAlign:"center",padding:48,color:"#9ca3af",fontSize:13}}>
+        <div style={{fontSize:32,fontWeight:800,color:"#e5e7ec",letterSpacing:3,marginBottom:8}}>ZAN</div>
+        {ar?"اختر تقريراً من الأعلى":"Select a report above to preview and download"}
       </div>
     )}
   </div>);
