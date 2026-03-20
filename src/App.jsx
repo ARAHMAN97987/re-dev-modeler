@@ -3181,11 +3181,11 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   const mode = project.finMode || financing?.mode || "self";
 
-  // ── FUND MODE: WaterfallView + Incentives impact ──
+  // ── FUND MODE: Incentives impact + WaterfallView ──
   if (mode === "fund") {
     return <>
-      <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />
       <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />
+      <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />
     </>;
   }
 
@@ -3316,6 +3316,9 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
       </div>
     </div>}
 
+    {/* ═══ INCENTIVES IMPACT ═══ */}
+    <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />
+
     {/* ═══ CF CHART ═══ */}
     {chartData.length > 2 && (
       <div style={{marginBottom:16}}>
@@ -3392,9 +3395,6 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
 
     </tbody></table></div>
     </div>
-
-    {/* ═══ INCENTIVES IMPACT ═══ */}
-    <div style={{marginTop:16}}><IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} /></div>
 
     {/* ═══ NPV ═══ */}
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966922",marginTop:16,overflow:"hidden"}}>
@@ -3713,6 +3713,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       </div>
     </div>
 
+    {/* ═══ INCENTIVES IMPACT ═══ */}
+    <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
+
     {/* ═══ CHART TOGGLE ═══ */}
     {chartData.length > 2 && (
       <div style={{marginBottom:14}}>
@@ -3801,9 +3804,6 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
     </tbody></table></div>
     </div>
-
-    {/* ═══ INCENTIVES IMPACT ═══ */}
-    <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
   </div>);
 }
 
