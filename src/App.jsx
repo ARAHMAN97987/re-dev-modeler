@@ -3,6 +3,7 @@ import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLin
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
 import { generateFormulaExcel } from "./excelFormulaExport";
+import { embeddedFontCSS } from "./embeddedFonts";
 import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
@@ -6636,7 +6637,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
     const htmlContent = `<!DOCTYPE html><html dir="${ar?'rtl':'ltr'}" lang="${ar?'ar':'en'}"><head><meta charset="utf-8"><title>${project.name} - ${reportTitle}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+  ${embeddedFontCSS}
   @page { size: A4; margin: 12mm 15mm; }
   * { box-sizing: border-box; }
   body { font-family: ${ar?"'Tajawal','DM Sans','Segoe UI',system-ui,sans-serif":"'DM Sans','Segoe UI',system-ui,sans-serif"}; font-size: 11px; color: #1a1d23; line-height: 1.5; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; direction: ${ar?'rtl':'ltr'}; text-align: ${ar?'right':'left'}; }
