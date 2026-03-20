@@ -3914,7 +3914,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
 
-  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0B2341",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#2EC4B6",letterSpacing:2}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
+  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</div><div style={{fontSize:12,color:"#6b7080",marginTop:8}}>Financial Modeler</div></div></div>;
   if (view === "dashboard") return <ProjectsDashboard index={projectIndex} onCreate={createProject} onOpen={openProject} onDup={duplicateProject} onDel={deleteProject} lang={lang} setLang={setLang} t={t} user={user} signOut={signOut} />;
   if (!project) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0B2341",fontFamily:"'IBM Plex Sans Arabic','Tajawal',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:700,color:"#f87171",letterSpacing:2}}>!</div><div style={{fontSize:14,color:"#d0d4dc",marginTop:8}}>{lang==="ar"?"لم يتم تحميل المشروع":"Project failed to load"}</div><button onClick={goBack} style={{marginTop:16,padding:"8px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{lang==="ar"?"رجوع":"Go Back"}</button></div></div>;
 
@@ -6645,19 +6645,19 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   [dir=rtl] .zan-ftr { flex-direction: row-reverse; }
   [dir=rtl] h2.zan-sec { border-left: none; border-right: 3px solid #5fbfbf; padding-left: 0; padding-right: 10px; }
   .zan-cover { page-break-after: always; min-height: 100vh; background: #0f1117; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 60px 40px; position: relative; overflow: hidden; }
-  .zan-cover::before { content: ''; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(95,191,191,0.12) 0%, transparent 70%); }
-  .zan-cover::after { content: ''; position: absolute; bottom: -80px; left: -80px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(15,118,110,0.1) 0%, transparent 70%); }
-  .zan-cover .logo { font-size: 52px; font-weight: 800; color: #5fbfbf; letter-spacing: 6px; margin-bottom: 6px; position: relative; z-index: 1; }
-  .zan-cover .sub { font-size: 13px; color: #5fbfbf; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; opacity: 0.8; margin-bottom: 48px; position: relative; z-index: 1; }
-  .zan-cover .rtype { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 12px; position: relative; z-index: 1; }
-  .zan-cover .pname { font-size: 18px; color: #d0d4dc; font-weight: 500; margin-bottom: 6px; position: relative; z-index: 1; }
-  .zan-cover .ploc { font-size: 13px; color: #6b7080; position: relative; z-index: 1; margin-bottom: 48px; }
-  .zan-cover .conf { display: inline-block; padding: 6px 24px; border: 1px solid rgba(95,191,191,0.3); border-radius: 4px; color: #5fbfbf; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; position: relative; z-index: 1; }
-  .zan-hdr { background: linear-gradient(135deg, #0f766e, #5fbfbf); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-  .zan-hdr .logo { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 2px; }
-  .zan-hdr .title { font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 500; }
-  .zan-ftr { margin-top: 30px; padding-top: 12px; border-top: 1px solid #e5e7ec; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #9ca3af; }
-  .zan-ftr .logo { font-size: 12px; font-weight: 800; color: #5fbfbf; letter-spacing: 1px; }
+  .zan-cover::before { content: ''; position: absolute; top: -120px; right: -120px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(95,191,191,0.15) 0%, transparent 60%); }
+  .zan-cover::after { content: ''; position: absolute; bottom: -100px; left: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(15,118,110,0.12) 0%, transparent 60%); }
+  .zan-cover .logo { font-size: 56px; font-weight: 800; color: #5fbfbf; letter-spacing: 8px; margin-bottom: 4px; position: relative; z-index: 1; }
+  .zan-cover .sub { font-size: 12px; color: #5fbfbf; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; opacity: 0.7; margin-bottom: 56px; position: relative; z-index: 1; }
+  .zan-cover .rtype { font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 14px; position: relative; z-index: 1; letter-spacing: -0.3px; }
+  .zan-cover .pname { font-size: 20px; color: #d0d4dc; font-weight: 500; margin-bottom: 6px; position: relative; z-index: 1; }
+  .zan-cover .ploc { font-size: 13px; color: #6b7080; position: relative; z-index: 1; margin-bottom: 56px; }
+  .zan-cover .conf { display: inline-block; padding: 8px 28px; border: 1px solid rgba(95,191,191,0.25); border-radius: 4px; color: #5fbfbf; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; font-weight: 600; position: relative; z-index: 1; }
+  .zan-hdr { background: linear-gradient(135deg, #0f766e, #5fbfbf); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-radius: 0; }
+  .zan-hdr .logo { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 3px; }
+  .zan-hdr .title { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 500; letter-spacing: 0.3px; }
+  .zan-ftr { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e5e7ec; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #9ca3af; }
+  .zan-ftr .logo { font-size: 14px; font-weight: 800; color: #5fbfbf; letter-spacing: 2px; }
   .report-body { padding: 0 20px 20px 20px; }
   h2.zan-sec { font-size: 14px; font-weight: 700; color: #0f1117; margin: 22px 0 10px 0; padding: 0 0 6px 10px; border-left: 3px solid #5fbfbf; border-bottom: 1px solid #e5e7ec; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
@@ -6748,7 +6748,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {activeReport === "exec" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-            <span style={{fontSize:22,fontWeight:800,color:"#5fbfbf",letterSpacing:2}}>ZAN</span>
+            <span style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</span>
             <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4,borderBottom:"none"}}>{project.name}</h1>
@@ -6916,7 +6916,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {activeReport === "bank" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-            <span style={{fontSize:22,fontWeight:800,color:"#5fbfbf",letterSpacing:2}}>ZAN</span>
+            <span style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</span>
             <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"حزمة تقديم البنك":"Bank Submission Pack"}</h1>
@@ -7144,7 +7144,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {activeReport === "investor" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-            <span style={{fontSize:22,fontWeight:800,color:"#5fbfbf",letterSpacing:2}}>ZAN</span>
+            <span style={{fontSize:28,fontWeight:800,color:"#5fbfbf",letterSpacing:3}}>ZAN</span>
             <span style={{fontSize:11,color:"#5fbfbf",letterSpacing:1.5,textTransform:"uppercase",fontWeight:600}}>Financial Modeler</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"مذكرة المستثمر":"Investor Memo"} - {project.name}</h1>
@@ -7345,9 +7345,12 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     </div>
 
     {!activeReport && (
-      <div style={{textAlign:"center",padding:48,color:"#9ca3af",fontSize:13}}>
-        <div style={{fontSize:32,fontWeight:800,color:"#e5e7ec",letterSpacing:3,marginBottom:8}}>ZAN</div>
-        {ar?"اختر تقريراً من الأعلى":"Select a report above to preview and download"}
+      <div style={{textAlign:"center",padding:"56px 24px",background:"#0f1117",borderRadius:12,border:"1px solid #1e2230"}}>
+        <div style={{fontSize:40,fontWeight:800,color:"#5fbfbf",letterSpacing:4,marginBottom:4}}>ZAN</div>
+        <div style={{fontSize:11,color:"#6b7080",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:20}}>Financial Modeler</div>
+        <div style={{fontSize:13,color:"#4b5060"}}>
+          {ar?"اختر تقريراً من الأعلى":"Select a report above to preview and download"}
+        </div>
       </div>
     )}
   </div>);
