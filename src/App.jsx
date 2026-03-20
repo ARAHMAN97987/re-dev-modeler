@@ -3354,6 +3354,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
   const [showYrs, setShowYrs] = useState(15);
   const [showChart, setShowChart] = useState(false);
   const [secOpen, setSecOpen] = useState({});
+  const [kpiOpen, setKpiOpen] = useState({proj:false,cap:false,ret:false});
 
   const f = financing;
   const c = results.consolidated;
@@ -3369,80 +3370,158 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
   const totalIncome = c.totalIncome;
   const devCost = f?.devCostInclLand || totalCapex;
   const levCF = f?.leveredCF || c.netCF;
+  const totalLevCF = levCF.reduce((a,b)=>a+b,0);
 
   // Payback
   const payback = (() => { let cum=0, wasNeg=false; for(let y=0;y<h;y++){cum+=levCF[y]||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return y+1;} return null; })();
 
-  // Yield on cost
+  // NOI
+  const noiArr = new Array(h).fill(0);
+  for (let y=0;y<h;y++) noiArr[y] = (c.income[y]||0) - (c.landRent[y]||0);
+  const totalNOI = noiArr.reduce((a,b)=>a+b,0);
+
+  // Yield on cost & stabilized
   const constrEnd = f?.constrEnd || 0;
-  const stableNOI = c.income[Math.min(constrEnd+2,h-1)] - (c.landRent[Math.min(constrEnd+2,h-1)]||0);
-  const yieldOnCost = totalCapex > 0 ? stableNOI / totalCapex : 0;
+  const stabIdx = Math.min(constrEnd+2, h-1);
+  const stabNOI = noiArr[stabIdx] || 0;
+  const yieldOnCost = totalCapex > 0 ? stabNOI / totalCapex : 0;
+  const stabIncome = c.income[stabIdx] || 0;
+
+  // Peak capital deployed (max cumulative negative CF)
+  let peakCap = 0, cumCF = 0;
+  for (let y=0;y<h;y++) { cumCF += levCF[y]||0; if (cumCF < peakCap) peakCap = cumCF; }
+  peakCap = Math.abs(peakCap);
+
+  // Capital deployed per year (cumulative CAPEX - cumulative income, floored at 0)
+  const capitalDeployed = new Array(h).fill(0);
+  let cumCapex=0, cumInc=0;
+  for (let y=0;y<h;y++) { cumCapex+=c.capex[y]||0; cumInc+=c.income[y]||0; capitalDeployed[y]=Math.max(0,cumCapex-cumInc); }
 
   // Incentives
   const ir = incentivesResult;
-  const hasIncentives = ir && (ir.capexGrantTotal > 0 || ir.interestSubsidyTotal > 0 || ir.landRentSavings > 0 || ir.feeRebateTotal > 0);
-  const incentiveTotal = hasIncentives ? (ir.capexGrantTotal||0)+(ir.landRentSavings||0)+(ir.feeRebateTotal||0) : 0;
+  const hasIncentives = ir && ((ir.capexGrantTotal||0) > 0 || (ir.landRentSavingTotal||0) > 0 || (ir.feeRebateTotal||0) > 0);
+  const incentiveTotal = hasIncentives ? (ir.capexGrantTotal||0)+(ir.landRentSavingTotal||0)+(ir.feeRebateTotal||0) : 0;
 
   // Chart data
   const chartData = years.map(y => ({
     year: sy+y, yr: `Yr ${y+1}`,
     income: c.income[y]||0,
-    capex: -(c.capex[y]||0),
+    capex: c.capex[y]||0,
     net: levCF[y]||0,
+    cumCF: (() => { let s=0; for(let i=0;i<=y;i++) s+=levCF[i]||0; return s; })(),
   }));
 
-  const RK = ({label, value, sub, color, large}) => (
-    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:large?"14px 16px":"10px 14px",display:"flex",flexDirection:"column",gap:2}}>
-      <div style={{fontSize:10,color:"#6b7080",fontWeight:500,letterSpacing:0.2}}>{label}</div>
-      <div style={{fontSize:large?20:16,fontWeight:800,color:color||"#1a1d23",fontVariantNumeric:"tabular-nums"}}>{value}</div>
-      {sub && <div style={{fontSize:10,color:"#9ca3af"}}>{sub}</div>}
-    </div>
-  );
+  // Shared mini-components (same as Bank/Fund KPI cards)
+  const badge = (label, value, color) => <span style={{display:"inline-flex",alignItems:"center",gap:4,background:color+"18",color,borderRadius:5,padding:"3px 8px",fontSize:10,fontWeight:700}}>{label} <strong>{value}</strong></span>;
+  const KR = ({l,v,c:clr,bold:b}) => <><span style={{color:"#6b7080",fontSize:11}}>{l}</span><span style={{textAlign:"right",fontWeight:b?700:500,fontSize:11,color:clr||"#1a1d23"}}>{v}</span></>;
+  const SecHd = ({text}) => <div style={{gridColumn:"1/-1",fontSize:9,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:"#9ca3af",paddingTop:6,borderTop:"1px solid #f0f1f5",marginTop:2}}>{text}</div>;
+  const cardHd = {cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"};
 
-  const CFRow = ({label, values, total, bold, color, negate, sub: isSub}) => {
+  const CFRow = ({label, values, total, bold, color, negate}) => {
     const st = bold ? {fontWeight:700,background:"#f8f9fb"} : {};
-    const nc = v => { if(color) return color; return v<0?"#ef4444":v>0?"#1a1d23":"#d0d4dc"; };
+    const nc = v => { if(color) return color; return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af"; };
     return <tr style={st}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:isSub?400:500,minWidth:200,paddingInlineStart:isSub?24:10,fontSize:isSub?10:11,color:isSub?"#6b7080":undefined}}>{label}</td>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:200}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-(total||0):(total||0))}}>{total!==null&&total!==undefined?fmt(total):""}</td>
       {years.map(y=>{const v=values?.[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
     </tr>;
   };
 
   return (<div>
-    {/* ═══ MODE BANNER ═══ */}
-    <div style={{background:"#f0fdf4",border:"1px solid #16a34a33",borderRadius:10,padding:"12px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-      <span style={{fontSize:22}}>🏠</span>
-      <div style={{flex:1}}>
-        <div style={{fontSize:14,fontWeight:800,color:"#16a34a"}}>{ar?"تمويل ذاتي":"Self-Funded"}</div>
-        <div style={{fontSize:11,color:"#6b7080"}}>{ar?"المطور يمول المشروع بالكامل - بدون دين أو مستثمرين":"Developer funds entire project - no debt, no investors"}</div>
-      </div>
-      <div style={{textAlign:"right"}}>
-        <div style={{fontSize:10,color:"#6b7080"}}>{ar?"استراتيجية التخارج":"Exit Strategy"}</div>
-        <div style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>
-          {project.exitStrategy === "hold" ? (ar?"احتفاظ":"Hold") : project.exitStrategy === "caprate" ? "Cap Rate" : (ar?"بيع":"Sale")}
-          {exitYear > 0 && project.exitStrategy !== "hold" && ` · ${exitYear}`}
+    {/* ═══ EXPANDABLE KPI CARDS: Project | Capital | Returns ═══ */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+      {/* ── 🏠 Project Card ── */}
+      <div style={{background:kpiOpen.proj?"#fff":"linear-gradient(135deg, #f0fdf4, #ecfdf5)",borderRadius:10,border:kpiOpen.proj?"2px solid #16a34a":"1px solid #86efac",padding:"12px 16px",transition:"all 0.2s"}}>
+        <div onClick={()=>setKpiOpen(p=>({...p,proj:!p.proj}))} style={cardHd}>
+          <span style={{width:22,height:22,borderRadius:5,background:"#16a34a",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10}}>🏠</span>
+          <span style={{fontSize:11,fontWeight:700,color:"#166534",flex:1}}>{ar?"المشروع":"Project"}</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.proj?"▲":"▼"}</span>
         </div>
+        {!kpiOpen.proj ? (
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+            {badge(ar?"تكلفة":"Cost", fmtM(devCost), "#1a1d23")}
+            {badge(ar?"إيرادات":"Revenue", fmtM(totalIncome), "#16a34a")}
+            {badge("NOI", fmtM(totalNOI), "#059669")}
+          </div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+            <SecHd text={ar?"التكاليف":"COSTS"} />
+            <KR l={ar?"تكلفة التطوير":"Dev Cost"} v={fmtM(devCost)} bold />
+            <KR l="CAPEX" v={fmtM(totalCapex)} />
+            <KR l={ar?"إيجار الأرض":"Land Rent"} v={fmtM(c.totalLandRent)} c="#ef4444" />
+            {f?.landCapValue > 0 && <KR l={ar?"رسملة الأرض":"Land Cap"} v={fmtM(f.landCapValue)} />}
+            <SecHd text={ar?"الإيرادات":"REVENUE"} />
+            <KR l={ar?"إجمالي الإيرادات":"Total Revenue"} v={fmtM(totalIncome)} c="#16a34a" bold />
+            <KR l={ar?"دخل مستقر (NOI)":"Stabilized NOI"} v={fmt(stabNOI)} c="#059669" />
+            <KR l={ar?"عائد على التكلفة":"Yield on Cost"} v={yieldOnCost>0?fmtPct(yieldOnCost*100):"—"} c={yieldOnCost>0.08?"#16a34a":"#f59e0b"} />
+            <KR l={ar?"الأفق":"Horizon"} v={`${h} ${ar?"سنة":"yrs"}`} />
+            {hasIncentives && <><SecHd text={ar?"حوافز":"INCENTIVES"} /><KR l={ar?"إجمالي الحوافز":"Total Incentives"} v={fmtM(incentiveTotal)} c="#059669" bold /></>}
+          </div>
+        )}
       </div>
-    </div>
 
-    {/* ═══ PRIMARY KPIs ═══ */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5, 1fr)",gap:10,marginBottom:16}}>
-      <RK label={ar?"IRR المشروع":"Project IRR"} value={levIRR!==null?fmtPct(levIRR*100):"N/A"} color={levIRR>0.12?"#16a34a":"#f59e0b"} large />
-      <RK label={ar?"فترة الاسترداد":"Payback"} value={payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"} color="#2563eb" large />
-      <RK label={ar?"تكلفة التطوير":"Dev Cost"} value={fmtM(devCost)} sub={cur} large />
-      <RK label={ar?"إجمالي الإيرادات":"Total Revenue"} value={fmtM(totalIncome)} sub={`${h} ${ar?"سنة":"yrs"}`} large />
-      <RK label={ar?"عائد التخارج":"Exit Proceeds"} value={exitProc>0?fmtM(exitProc):(ar?"بدون تخارج":"No Exit")} color={exitProc>0?"#16a34a":"#6b7080"} large />
-    </div>
+      {/* ── 💰 Capital Card ── */}
+      <div style={{background:kpiOpen.cap?"#fff":"linear-gradient(135deg, #eff6ff, #e0f2fe)",borderRadius:10,border:kpiOpen.cap?"2px solid #2563eb":"1px solid #93c5fd",padding:"12px 16px",transition:"all 0.2s"}}>
+        <div onClick={()=>setKpiOpen(p=>({...p,cap:!p.cap}))} style={cardHd}>
+          <span style={{width:22,height:22,borderRadius:5,background:"#2563eb",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10}}>💰</span>
+          <span style={{fontSize:11,fontWeight:700,color:"#1e40af",flex:1}}>{ar?"رأس المال":"Capital"}</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.cap?"▲":"▼"}</span>
+        </div>
+        {!kpiOpen.cap ? (
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+            {badge(ar?"مطلوب":"Required", fmtM(devCost), "#2563eb")}
+            {badge(ar?"ذروة":"Peak", fmtM(peakCap), "#dc2626")}
+            {badge(ar?"استرداد":"Payback", payback?`Yr ${payback}`:"—", "#6366f1")}
+          </div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+            <SecHd text={ar?"الحاجة الرأسمالية":"CAPITAL NEEDS"} />
+            <KR l={ar?"إجمالي مطلوب":"Total Required"} v={fmtM(devCost)} c="#2563eb" bold />
+            <KR l={ar?"ذروة رأس المال المجمد":"Peak Capital Locked"} v={fmtM(peakCap)} c="#dc2626" bold />
+            <KR l={ar?"فترة البناء":"Construction"} v={`${constrEnd+1} ${ar?"سنة":"yrs"}`} />
+            <SecHd text={ar?"الاسترداد":"RECOVERY"} />
+            <KR l={ar?"فترة الاسترداد":"Payback Period"} v={payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"} c="#2563eb" bold />
+            <KR l={ar?"صافي التدفق":"Total Net CF"} v={fmtM(totalLevCF)} c={totalLevCF>0?"#16a34a":"#ef4444"} />
+            {exitProc > 0 && <KR l={ar?"عائد التخارج":"Exit Proceeds"} v={fmtM(exitProc)} c="#16a34a" />}
+            <SecHd text={ar?"تكلفة الفرصة البديلة":"OPPORTUNITY COST"} />
+            <KR l={ar?"لو استثمرت بـ 5% سنوي":"If invested @5%/yr"} v={fmtM(devCost * Math.pow(1.05, payback||10) - devCost)} c="#6b7080" />
+            <KR l={ar?"لو استثمرت بـ 8% سنوي":"If invested @8%/yr"} v={fmtM(devCost * Math.pow(1.08, payback||10) - devCost)} c="#6b7080" />
+          </div>
+        )}
+      </div>
 
-    {/* ═══ SECONDARY KPIs ═══ */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(140px, 1fr))",gap:8,marginBottom:18}}>
-      <RK label={ar?"إجمالي CAPEX":"Total CAPEX"} value={fmtM(totalCapex)} sub={cur} />
-      <RK label={ar?"إيجار الأرض":"Land Rent"} value={fmtM(c.totalLandRent)} sub={`${h} ${ar?"سنة":"yrs"}`} />
-      <RK label={ar?"صافي التدفق":"Net Cash Flow"} value={fmtM(levCF.reduce((a,b)=>a+b,0))} color={levCF.reduce((a,b)=>a+b,0)>0?"#16a34a":"#ef4444"} />
-      <RK label={ar?"عائد على التكلفة":"Yield on Cost"} value={yieldOnCost>0?fmtPct(yieldOnCost*100):"—"} color={yieldOnCost>0.08?"#16a34a":"#6b7080"} />
-      {exitProc>0 && <RK label={ar?"العائد / التكلفة":"Return / Cost"} value={(exitProc/devCost).toFixed(2)+"x"} color={exitProc/devCost>1?"#16a34a":"#ef4444"} />}
-      {hasIncentives && <RK label={ar?"حوافز حكومية":"Gov Incentives"} value={fmtM(incentiveTotal)} color="#059669" />}
+      {/* ── 📈 Returns Card ── */}
+      <div style={{background:kpiOpen.ret?"#fff":"linear-gradient(135deg, #fefce8, #fff7ed)",borderRadius:10,border:kpiOpen.ret?"2px solid #f59e0b":"1px solid #fde68a",padding:"12px 16px",transition:"all 0.2s"}}>
+        <div onClick={()=>setKpiOpen(p=>({...p,ret:!p.ret}))} style={cardHd}>
+          <span style={{width:22,height:22,borderRadius:5,background:"#f59e0b",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10}}>📈</span>
+          <span style={{fontSize:11,fontWeight:700,color:"#92400e",flex:1}}>{ar?"العوائد":"Returns"}</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.ret?"▲":"▼"}</span>
+        </div>
+        {!kpiOpen.ret ? (
+          <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center"}}>
+            {badge("IRR", levIRR!==null?fmtPct(levIRR*100):"—", levIRR>0.12?"#16a34a":"#f59e0b")}
+            {badge(ar?"صافي":"Net", fmtM(totalLevCF), totalLevCF>0?"#16a34a":"#ef4444")}
+            {exitProc>0 && badge(ar?"تخارج":"Exit", fmtM(exitProc), "#f59e0b")}
+          </div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10}}>
+            <SecHd text={ar?"المؤشرات":"METRICS"} />
+            <KR l="IRR" v={levIRR!==null?fmtPct(levIRR*100):"N/A"} c={levIRR>0.12?"#16a34a":"#f59e0b"} bold />
+            <KR l={ar?"عائد على التكلفة":"Yield on Cost"} v={yieldOnCost>0?fmtPct(yieldOnCost*100):"—"} c={yieldOnCost>0.08?"#16a34a":"#6b7080"} />
+            <KR l={ar?"استرداد":"Payback"} v={payback?`${payback} ${ar?"سنة":"yr"}`:"—"} c="#2563eb" />
+            {exitProc>0 && <KR l={ar?"العائد / التكلفة":"Return / Cost"} v={(exitProc/devCost).toFixed(2)+"x"} c={exitProc/devCost>1?"#16a34a":"#ef4444"} bold />}
+            <SecHd text="NPV" />
+            <KR l="@10%" v={fmtM(calcNPV(levCF,0.10))} />
+            <KR l="@12%" v={fmtM(calcNPV(levCF,0.12))} c="#2563eb" bold />
+            <KR l="@14%" v={fmtM(calcNPV(levCF,0.14))} />
+            <SecHd text={ar?"فحوصات":"CHECKS"} />
+            <KR l="IRR > 12%" v={levIRR>0.12?"✅":"❌"} c={levIRR>0.12?"#16a34a":"#ef4444"} />
+            <KR l="NPV@12% > 0" v={calcNPV(levCF,0.12)>0?"✅":"❌"} c={calcNPV(levCF,0.12)>0?"#16a34a":"#ef4444"} />
+            <KR l={ar?"صافي إيجابي":"Net CF > 0"} v={totalLevCF>0?"✅":"❌"} c={totalLevCF>0?"#16a34a":"#ef4444"} />
+            <KR l={ar?"عائد > 8%":"Yield > 8%"} v={yieldOnCost>0.08?"✅":"❌"} c={yieldOnCost>0.08?"#16a34a":"#ef4444"} />
+          </div>
+        )}
+      </div>
     </div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
@@ -3451,81 +3530,37 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
     {/* ═══ INCENTIVES IMPACT ═══ */}
     <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />
 
-    {/* ═══ CF CHART ═══ */}
+    {/* ═══ CF CHART (Revenue + CAPEX + Cumulative) ═══ */}
     {chartData.length > 2 && (
       <div style={{marginBottom:16}}>
         <button onClick={()=>setShowChart(!showChart)} style={{...btnS,fontSize:11,padding:"6px 14px",background:showChart?"#f0fdf4":"#f8f9fb",color:showChart?"#16a34a":"#6b7080",border:"1px solid "+(showChart?"#86efac":"#e5e7ec"),borderRadius:6,fontWeight:600}}>
-          📈 {ar?"رسم بياني - التدفق النقدي":"Cash Flow Chart"} {showChart?"▲":"▼"}
+          📈 {ar?"رسم بياني":"Cash Flow Chart"} {showChart?"▲":"▼"}
         </button>
         {showChart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{top:5,right:10,left:10,bottom:5}}>
               <defs>
-                <linearGradient id="incG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#16a34a" stopOpacity={0.15}/><stop offset="95%" stopColor="#16a34a" stopOpacity={0}/></linearGradient>
-                <linearGradient id="netG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient>
+                <linearGradient id="incSG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#16a34a" stopOpacity={0.1}/><stop offset="95%" stopColor="#16a34a" stopOpacity={0}/></linearGradient>
+                <linearGradient id="cumSG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f1f5" />
               <XAxis dataKey="year" tick={{fontSize:10,fill:"#6b7080"}} />
               <YAxis tick={{fontSize:10,fill:"#6b7080"}} tickFormatter={v => v>=1e6?`${(v/1e6).toFixed(0)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:v} />
               <Tooltip formatter={(v) => fmt(Math.abs(v))} />
-              <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} fill="url(#incG)" name={ar?"الإيرادات":"Revenue"} dot={false} />
-              <Area type="monotone" dataKey="net" stroke="#2563eb" strokeWidth={2} fill="url(#netG)" name={ar?"صافي":"Net CF"} dot={false} />
+              <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="4 4" strokeWidth={1} />
+              <Area type="monotone" dataKey="income" stroke="#16a34a" strokeWidth={2} fill="url(#incSG)" name={ar?"الإيرادات":"Revenue"} dot={false} />
+              <Area type="monotone" dataKey="capex" stroke="#ef4444" strokeWidth={1.5} fill="none" strokeDasharray="4 4" name="CAPEX" dot={false} />
+              <Area type="monotone" dataKey="cumCF" stroke="#2563eb" strokeWidth={2.5} fill="url(#cumSG)" name={ar?"تراكمي":"Cumulative"} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
+          <div style={{display:"flex",gap:14,justifyContent:"center",marginTop:6,fontSize:10}}>
+            <span><span style={{display:"inline-block",width:12,height:3,background:"#16a34a",borderRadius:2,marginInlineEnd:4}} />{ar?"الإيرادات":"Revenue"}</span>
+            <span><span style={{display:"inline-block",width:12,height:3,background:"#ef4444",borderRadius:2,marginInlineEnd:4,borderTop:"1px dashed #ef4444"}} />CAPEX</span>
+            <span><span style={{display:"inline-block",width:12,height:3,background:"#2563eb",borderRadius:2,marginInlineEnd:4}} />{ar?"تراكمي":"Cumulative CF"}</span>
+          </div>
         </div>}
       </div>
     )}
-
-    {/* ═══ NPV (collapsible) ═══ */}
-    <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966922",marginBottom:16,overflow:"hidden"}}>
-      <div onClick={()=>setSecOpen(p=>({...p,npv:!p.npv}))} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#05966908",borderBottom:!secOpen.npv?"1px solid #05966918":"none",cursor:"pointer",userSelect:"none"}}>
-        <span style={{fontSize:14}}>📈</span>
-        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تحليل القيمة الحالية (NPV)":"NPV Analysis"}</span>
-        <span style={{fontSize:10,fontWeight:600,color:"#059669",background:"#05966918",padding:"2px 8px",borderRadius:10}}>@12% {fmtM(calcNPV(levCF,0.12))}</span>
-        <span style={{fontSize:10,color:"#9ca3af"}}>{!secOpen.npv?"▼":"▶"}</span>
-      </div>
-      {!secOpen.npv && <div style={{padding:"14px 16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3, 1fr)",gap:12}}>
-          {[{rate:"10%",val:calcNPV(levCF,0.10)},{rate:"12%",val:calcNPV(levCF,0.12)},{rate:"14%",val:calcNPV(levCF,0.14)}].map(({rate,val})=>(
-            <div key={rate} style={{background:val>0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"12px 14px",textAlign:"center"}}>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:4}}>{ar?"معدل الخصم":"Discount Rate"} {rate}</div>
-              <div style={{fontSize:18,fontWeight:800,color:val>0?"#16a34a":"#ef4444"}}>{fmtM(val)}</div>
-              <div style={{fontSize:10,color:"#9ca3af"}}>{cur}</div>
-            </div>
-          ))}
-        </div>
-      </div>}
-    </div>
-
-    {/* ═══ INVESTMENT SUMMARY (collapsible) ═══ */}
-    <div style={{background:"#fff",borderRadius:10,border:"1px solid #16a34a22",marginBottom:16,overflow:"hidden"}}>
-      <div onClick={()=>setSecOpen(p=>({...p,inv:!p.inv}))} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#16a34a08",borderBottom:!secOpen.inv?"1px solid #16a34a18":"none",cursor:"pointer",userSelect:"none"}}>
-        <span style={{fontSize:14}}>✅</span>
-        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"ملخص الاستثمار":"Investment Summary"}</span>
-        <span style={{fontSize:10,color:"#9ca3af"}}>{!secOpen.inv?"▼":"▶"}</span>
-      </div>
-      {!secOpen.inv && <div style={{padding:"14px 16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
-          {[
-            {test:ar?"IRR > 0":"IRR > 0", pass:levIRR!==null&&levIRR>0, val:levIRR!==null?fmtPct(levIRR*100):"N/A"},
-            {test:ar?"IRR > 12%":"IRR > 12%", pass:levIRR!==null&&levIRR>0.12, val:levIRR!==null?fmtPct(levIRR*100):"N/A"},
-            {test:ar?"فترة الاسترداد":"Payback ≤ 10yr", pass:payback!==null&&payback<=10, val:payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"},
-            {test:ar?"عائد على التكلفة > 8%":"Yield > 8%", pass:yieldOnCost>0.08, val:yieldOnCost>0?fmtPct(yieldOnCost*100):"N/A"},
-            {test:ar?"صافي إيجابي":"Positive Net CF", pass:levCF.reduce((a,b)=>a+b,0)>0, val:fmtM(levCF.reduce((a,b)=>a+b,0))},
-            {test:"NPV@12% > 0", pass:calcNPV(levCF,0.12)>0, val:fmtM(calcNPV(levCF,0.12))},
-          ].map((ck,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:6,background:ck.pass?"#f0fdf4":"#fef2f2",border:`1px solid ${ck.pass?"#dcfce7":"#fecaca"}`}}>
-              <span style={{fontSize:16}}>{ck.pass?"✅":"❌"}</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:11,fontWeight:600,color:"#1a1d23"}}>{ck.test}</div>
-                <div style={{fontSize:10,color:"#6b7080"}}>{ck.val}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>}
-    </div>
 
     {/* ═══ COMPREHENSIVE CASH FLOW TABLE ═══ */}
     <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8}}>
@@ -3538,42 +3573,60 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
     <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
       <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
-      <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
-      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
+      <th style={{...thSt,textAlign:"right",minWidth:85}}>Total</th>
+      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
     </tr></thead><tbody>
 
-      {/* § 1. PROJECT CF */}
+      {/* ═══ § 1. PROJECT CF ═══ */}
       <tr onClick={()=>setSecOpen(p=>({...p,s1:!p.s1}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",userSelect:"none"}}>{secOpen.s1?"▶":"▼"} {ar?"1. تدفقات المشروع":"1. PROJECT CASH FLOWS"}</td></tr>
       {!secOpen.s1 && <>
       <CFRow label={ar?"الإيرادات":"Revenue"} values={c.income} total={c.totalIncome} color="#16a34a" />
       <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
-      {/* NOI */}
-      {(() => { const noi=new Array(h).fill(0);for(let y=0;y<h;y++)noi[y]=c.income[y]-(c.landRent[y]||0);return <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI"} values={noi} total={noi.reduce((a,b)=>a+b,0)} bold />; })()}
+      <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noiArr} total={totalNOI} bold />
       <CFRow label={ar?"(-) تكلفة التطوير (CAPEX)":"(-) Development CAPEX"} values={c.capex} total={c.totalCapex} negate color="#ef4444" />
       <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={c.netCF} total={c.netCF.reduce((a,b)=>a+b,0)} bold />
       </>}
 
-      {/* § 2. EXIT & FINAL */}
+      {/* ═══ § 2. EXIT & INCENTIVES ═══ */}
       {(exitProc > 0 || hasIncentives) && <>
       <tr onClick={()=>setSecOpen(p=>({...p,s2:!p.s2}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#f59e0b",background:"#fffbeb",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #f59e0b",userSelect:"none"}}>{secOpen.s2?"▶":"▼"} {ar?"2. التخارج والحوافز":"2. EXIT & INCENTIVES"}</td></tr>
       {!secOpen.s2 && <>
       {exitProc > 0 && <CFRow label={ar?"(+) حصيلة التخارج":"(+) Exit Proceeds"} values={f?.exitProceeds||new Array(h).fill(0)} total={exitProc} color="#16a34a" />}
       {hasIncentives && ir.capexGrantSchedule && (ir.capexGrantTotal||0)>0 && <CFRow label={ar?"(+) منحة CAPEX":"(+) CAPEX Grant"} values={ir.capexGrantSchedule} total={ir.capexGrantTotal} color="#059669" />}
-      {hasIncentives && ir.landRentSavingsSchedule && (ir.landRentSavings||0)>0 && <CFRow label={ar?"(+) وفر إيجار الأرض":"(+) Land Rent Savings"} values={ir.landRentSavingsSchedule} total={ir.landRentSavings} color="#059669" />}
+      {hasIncentives && ir.landRentSavingSchedule && (ir.landRentSavingTotal||0)>0 && <CFRow label={ar?"(+) وفر إيجار الأرض":"(+) Land Rent Savings"} values={ir.landRentSavingSchedule} total={ir.landRentSavingTotal} color="#059669" />}
       </>}
       </>}
 
-      {/* § 3. NET RESULT */}
-      <tr onClick={()=>setSecOpen(p=>({...p,s3:!p.s3}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s3?"▶":"▼"} {ar?"3. صافي النتيجة":"3. NET RESULT"}</td></tr>
+      {/* ═══ § 3. NET RESULT & CAPITAL ═══ */}
+      <tr onClick={()=>setSecOpen(p=>({...p,s3:!p.s3}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s3?"▶":"▼"} {ar?"3. صافي النتيجة ورأس المال":"3. NET RESULT & CAPITAL"}</td></tr>
       {!secOpen.s3 && <>
-      <CFRow label={ar?"= صافي التدفق النهائي":"= Final Net Cash Flow"} values={levCF} total={levCF.reduce((a,b)=>a+b,0)} bold />
+      <CFRow label={ar?"= صافي التدفق النهائي":"= Final Net Cash Flow"} values={levCF} total={totalLevCF} bold />
       {/* Cumulative */}
       {(() => { let cum=0; const cumArr=levCF.map(v=>{cum+=v;return cum;}); return <tr style={{background:"#fffbeb"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:200}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
         <td style={tdN}></td>
         {years.map(y=><td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cumArr[y]<0?"#ef4444":"#16a34a"}}>{fmt(cumArr[y])}</td>)}
       </tr>; })()}
+      {/* Capital Deployed */}
+      <tr style={{background:"#eff6ff"}}>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:10,color:"#2563eb",minWidth:200}}>{ar?"رأس المال المجمد":"Capital Deployed"}</td>
+        <td style={tdN}></td>
+        {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:capitalDeployed[y]>0?"#2563eb":"#d0d4dc"}}>{capitalDeployed[y]>0?fmt(capitalDeployed[y]):"—"}</td>)}
+      </tr>
       </>}
+
+      {/* ═══ § 4. DEVELOPER METRICS ═══ */}
+      <tr><td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11,background:"#e0e7ff",borderTop:"2px solid #1e3a5f"}}>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
+          <span>IRR <strong style={{color:levIRR>0.12?"#16a34a":"#f59e0b"}}>{levIRR!==null?fmtPct(levIRR*100):"N/A"}</strong></span>
+          <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
+          <span>{ar?"عائد/تكلفة":"Yield"} <strong style={{color:yieldOnCost>0.08?"#16a34a":"#f59e0b"}}>{yieldOnCost>0?fmtPct(yieldOnCost*100):"—"}</strong></span>
+          <span>NPV@10% <strong>{fmtM(calcNPV(levCF,0.10))}</strong></span>
+          <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(levCF,0.12))}</strong></span>
+          <span>NPV@14% <strong>{fmtM(calcNPV(levCF,0.14))}</strong></span>
+        </div>
+      </td></tr>
 
     </tbody></table></div>
     </div>
