@@ -4270,6 +4270,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع\nAsset Sale = exit at a set year. Hold for Income = no sale event">
             <Drp lang={lang} value={cfg.exitStrategy||"sale"} onChange={v=>upCfg({exitStrategy:v})} options={[{value:"sale",en:"Sale (Multiple)",ar:"بيع (مضاعف)"},{value:"caprate",en:"Sale (Cap Rate)",ar:"بيع (رسملة)"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
           </FL>
+          <div style={{gridColumn:"1/-1",marginTop:-6,marginBottom:4}}><HelpLink contentKey="exitStrategy" lang={lang} onOpen={setEduModal} /></div>
           {notHold&&<>
             <div style={g2}>
               <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto" tip="سنة بيع الأصل. عادة 5-10 سنوات بعد الاستقرار التشغيلي. 0 = تلقائي\nYear of asset sale. Usually 5-10 years after stabilization. 0 = auto"><Inp type="number" value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} /></FL>
@@ -4323,6 +4324,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         <SecWrap visible={isFundMode} color="#16a34a">
         <AH id="wf" color="#16a34a" label={ar?"الشلال":"Waterfall"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||10}% · Carry ${cfg.carryPct||20}%` : ""} visible={isFundMode} />
         <AB id="wf" visible={isFundMode}>
+          <div style={{gridColumn:"1/-1",marginBottom:4}}><HelpLink contentKey="waterfallConcepts" lang={lang} onOpen={setEduModal} label={ar?"اعرف أكثر عن الشلال":"Learn about Waterfall"} /></div>
           <div style={g2}>
             <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip="الحد الأدنى للعائد السنوي لـ LP قبل مشاركة GP. عادة 8-15%\nMinimum annual return for LP before GP shares profits. Usually 8-15%"><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:v})} /></FL>
             <FL label={ar?"حافز الأداء % (Carry)":"Performance Carry %"} tip="نسبة أرباح GP بعد تجاوز العائد التفضيلي. عادة 20-30%\nGP profit share after pref return is met. Usually 20-30%"><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:v})} /></FL>
@@ -5213,6 +5215,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
         <Option icon="📋" label={t?"إيجار أرض (حق انتفاع)":"Land Lease (Leasehold)"} desc={t?"إيجار سنوي من الحكومة/المالك":"Annual rent from government/owner"} selected={project.landType==="lease"} onClick={()=>onUpdate({landType:"lease"})} />
         <Option icon="🏠" label={t?"شراء أرض (تملك)":"Land Purchase (Freehold)"} desc={t?"شراء الأرض كاملة قبل البناء":"Buy land outright before construction"} selected={project.landType==="purchase"} onClick={()=>onUpdate({landType:"purchase"})} />
         <Option icon="🤝" label={t?"أرض كشريك (حصة عينية)":"Land as Partner (In-kind Equity)"} desc={t?"المالك يساهم بالأرض كحصة":"Landowner contributes as equity"} selected={project.landType==="partner"} onClick={()=>onUpdate({landType:"partner"})} />
+        <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="landType" lang={lang} onOpen={setEduModal} /></div>
       </div>
     )},
     // Step 2: Financing mode
@@ -5230,6 +5233,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <Option icon="🏷" label={t?"بيع الأصل":"Sell the Asset"} desc={t?"بيع المشروع كاملاً بعد الاستقرار":"Sell entire project after stabilization"} selected={project.exitStrategy==="sale"||project.exitStrategy==="caprate"} onClick={()=>onUpdate({exitStrategy:"sale"})} />
         <Option icon="💎" label={t?"احتفاظ بالدخل (بدون بيع)":"Hold for Income (No Sale)"} desc={t?"الاستمرار بتحصيل الإيرادات":"Continue collecting income indefinitely"} selected={project.exitStrategy==="hold"} onClick={()=>onUpdate({exitStrategy:"hold"})} />
+        <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="exitStrategy" lang={lang} onOpen={setEduModal} /></div>
       </div>
     )},
   ];
@@ -7442,20 +7446,630 @@ const EDUCATIONAL_CONTENT = {
         }
       ]
     }
+  },
+  landType: {
+    ar: {
+      title: "أنواع حيازة الأرض",
+      intro: "طريقة الحصول على الأرض تؤثر بشكل مباشر على هيكل التكاليف، المعالجة المحاسبية، حقوق الملكية، ومدة المشروع.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "lease",
+          label: "إيجار (حق انتفاع)",
+          icon: "📋",
+          content: [
+            { type: "heading", text: "ما هو إيجار الأرض؟" },
+            { type: "text", text: "المطور يستأجر الأرض من مالكها (حكومة أو قطاع خاص) لمدة محددة مقابل إيجار سنوي. المطور يملك المنشآت فقط وليس الأرض." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "أراضي حكومية أو أوقاف لا تُباع لكن تُؤجر (شائع في السعودية)",
+              "مشاريع الواجهات البحرية والمناطق الاقتصادية الخاصة",
+              "عندما يكون سعر شراء الأرض مرتفعاً جداً",
+              "مشاريع طويلة المدة (25-99 سنة) مثل الفنادق والوجهات السياحية"
+            ]},
+            { type: "heading", text: "المعالجة المالية" },
+            { type: "list", items: [
+              "الإيجار = مصروف تشغيلي سنوي (ليس CAPEX)",
+              "قد تكون هناك فترة سماح (بدون إيجار أثناء البناء)",
+              "الإيجار يتصاعد سنوياً حسب النسبة المتفق عليها",
+              "إمكانية رسملة حق الانتفاع (تحويله لـ Equity) لأغراض التمويل",
+              "القيمة = مساحة الأرض × سعر التقييم/م²"
+            ]},
+            { type: "heading", text: "المخاطر والملاحظات" },
+            { type: "list", items: [
+              "لا يملك المطور الأرض - المنشآت فقط",
+              "عند انتهاء العقد قد تعود المنشآت للمالك",
+              "تصاعد الإيجار يؤثر على التدفقات النقدية طويلة المدة",
+              "شروط التجديد والتخارج المبكر يجب أن تكون واضحة في العقد"
+            ]}
+          ]
+        },
+        {
+          id: "purchase",
+          label: "شراء (تملك)",
+          icon: "🏠",
+          content: [
+            { type: "heading", text: "ما هو شراء الأرض؟" },
+            { type: "text", text: "المطور يشتري الأرض بالكامل (Freehold) قبل البناء. يملك الأرض والمنشآت معاً." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "الأراضي الخاصة المعروضة للبيع",
+              "مشاريع التطوير السكني والتجاري في المدن",
+              "عندما يريد المطور ملكية كاملة وحرية تصرف مطلقة",
+              "مشاريع البيع (Strata Sale) التي تُباع فيها الوحدات"
+            ]},
+            { type: "heading", text: "المعالجة المالية" },
+            { type: "list", items: [
+              "سعر الشراء = CAPEX أرض في السنة الأولى (قبل البناء)",
+              "يُضاف إلى إجمالي تكلفة التطوير",
+              "يدخل في قاعدة حساب التمويل البنكي (LTV)",
+              "لا يوجد إيجار أرض سنوي - التكلفة لمرة واحدة فقط"
+            ]},
+            { type: "heading", text: "المزايا" },
+            { type: "list", items: [
+              "ملكية كاملة بدون التزامات مستمرة",
+              "قيمة الأرض قد ترتفع مع الوقت (مكسب رأسمالي)",
+              "حرية كاملة في التصرف: بيع، رهن، تطوير إضافي",
+              "أبسط في المعالجة المحاسبية والتمويلية"
+            ]},
+            { type: "heading", text: "المخاطر" },
+            { type: "list", items: [
+              "يتطلب رأس مال كبير مقدماً",
+              "يقلل السيولة المتاحة لتكاليف البناء",
+              "مخاطر انخفاض قيمة الأرض",
+              "في بعض المناطق الشراء غير متاح (أراضي حكومية)"
+            ]}
+          ]
+        },
+        {
+          id: "partner",
+          label: "شراكة (حصة عينية)",
+          icon: "🤝",
+          content: [
+            { type: "heading", text: "ما هي الأرض كشريك؟" },
+            { type: "text", text: "مالك الأرض يساهم بها كحصة عينية (In-kind Equity) في المشروع أو الصندوق. لا يوجد دفع نقدي للأرض - المالك يحصل على نسبة من الأرباح مقابل الأرض." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "عندما يملك شخص أرضاً لكن ليس لديه سيولة أو خبرة للتطوير",
+              "مشاريع حكومية مشتركة (الحكومة تساهم بالأرض)",
+              "شراكات استراتيجية بين مالك الأرض والمطور",
+              "عندما يكون سعر الأرض مرتفعاً والمطور لا يريد تحمّل تكلفتها نقداً"
+            ]},
+            { type: "heading", text: "المعالجة المالية" },
+            { type: "list", items: [
+              "الأرض تُقيّم بتقييم مستقل ثم تُحسب كـ Equity",
+              "مالك الأرض يحصل على نسبة ملكية بناءً على (قيمة الأرض / إجمالي قيمة المشروع)",
+              "لا يوجد تدفق نقدي خارج للأرض (لا CAPEX ولا إيجار)",
+              "حصة الأرض تؤثر على توزيع الأرباح وحقوق التصويت"
+            ]},
+            { type: "heading", text: "التحديات" },
+            { type: "list", items: [
+              "يحتاج تقييم مستقل متفق عليه من جميع الأطراف",
+              "يقلل حصة المطور في الأرباح",
+              "قد تنشأ خلافات على التقييم أو صلاحيات القرار",
+              "يحتاج اتفاقية شراكة مفصلة تغطي الحوكمة والتخارج",
+              "معقد في حالة الصناديق (يحتاج هيكلة قانونية خاصة)"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Land Acquisition Types",
+      intro: "How the land is acquired directly affects cost structure, accounting treatment, ownership rights, and project timeline.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "lease",
+          label: "Lease (Leasehold)",
+          icon: "📋",
+          content: [
+            { type: "heading", text: "What is a Land Lease?" },
+            { type: "text", text: "Developer leases the land from the owner (government or private) for a set period with annual rent. Developer owns the buildings only, not the land." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Government or waqf land not available for sale (common in Saudi)",
+              "Waterfront projects and special economic zones",
+              "When land purchase price is prohibitively high",
+              "Long-term projects (25-99 years) like hotels and tourism destinations"
+            ]},
+            { type: "heading", text: "Financial Treatment" },
+            { type: "list", items: [
+              "Rent = annual operating expense (not CAPEX)",
+              "Grace period possible (no rent during construction)",
+              "Rent escalates annually per agreed rate",
+              "Leasehold can be capitalized (converted to equity) for financing",
+              "Value = land area x appraisal rate/sqm"
+            ]},
+            { type: "heading", text: "Key Risks" },
+            { type: "list", items: [
+              "Developer doesn't own the land",
+              "Buildings may revert to owner at lease end",
+              "Escalating rent impacts long-term cash flows",
+              "Renewal and early exit terms must be clear in the contract"
+            ]}
+          ]
+        },
+        {
+          id: "purchase",
+          label: "Purchase (Freehold)",
+          icon: "🏠",
+          content: [
+            { type: "heading", text: "What is Land Purchase?" },
+            { type: "text", text: "Developer buys the land outright (Freehold) before construction. Owns both land and buildings." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Private land available for sale",
+              "Residential and commercial urban developments",
+              "When full ownership and control is needed",
+              "Strata sale projects where units are sold individually"
+            ]},
+            { type: "heading", text: "Financial Treatment" },
+            { type: "list", items: [
+              "Purchase price = land CAPEX in year 0",
+              "Added to total development cost",
+              "Included in bank financing base (LTV)",
+              "No annual land rent - one-time cost only"
+            ]},
+            { type: "heading", text: "Key Risks" },
+            { type: "list", items: [
+              "Requires large upfront capital",
+              "Reduces liquidity for construction costs",
+              "Land value depreciation risk",
+              "Not available in some areas (government land)"
+            ]}
+          ]
+        },
+        {
+          id: "partner",
+          label: "Partner (In-kind)",
+          icon: "🤝",
+          content: [
+            { type: "heading", text: "What is Land as Partner?" },
+            { type: "text", text: "Landowner contributes land as in-kind equity. No cash payment for land - owner gets a profit share instead." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Landowner has land but no liquidity or development expertise",
+              "Government joint ventures (government contributes land)",
+              "Strategic partnerships between landowner and developer",
+              "When land price is high and developer wants to avoid cash outflow"
+            ]},
+            { type: "heading", text: "Financial Treatment" },
+            { type: "list", items: [
+              "Land is independently appraised and counted as equity",
+              "Owner gets ownership % based on (land value / total project value)",
+              "No cash outflow for land (no CAPEX, no rent)",
+              "Land share affects profit distribution and voting rights"
+            ]},
+            { type: "heading", text: "Key Challenges" },
+            { type: "list", items: [
+              "Requires agreed independent valuation",
+              "Reduces developer's profit share",
+              "Potential disputes on valuation or decision authority",
+              "Needs detailed partnership agreement covering governance and exit"
+            ]}
+          ]
+        }
+      ]
+    }
+  },
+  exitStrategy: {
+    ar: {
+      title: "استراتيجيات التخارج",
+      intro: "استراتيجية التخارج تحدد كيف ومتى يسترد المطور والمستثمرون أموالهم وأرباحهم من المشروع.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "sale",
+          label: "بيع (مضاعف)",
+          icon: "🏷",
+          content: [
+            { type: "heading", text: "ما هو البيع بالمضاعف؟" },
+            { type: "text", text: "بيع المشروع كاملاً لمشترٍ بسعر يُحسب كمضاعف للإيجار السنوي المستقر. مثلاً: إيجار 10 مليون × مضاعف 12 = سعر بيع 120 مليون." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "الطريقة الأكثر شيوعاً للتخارج في التطوير العقاري",
+              "بعد استقرار المشروع تشغيلياً (عادة 2-5 سنوات بعد الافتتاح)",
+              "عندما يريد المطور/الصندوق تحويل العائد لسيولة",
+              "أصول مدرّة للدخل مثل المكاتب والمحلات والفنادق"
+            ]},
+            { type: "heading", text: "كيف يُحسب السعر؟" },
+            { type: "list", items: [
+              "سعر البيع = الإيجار السنوي المستقر × المضاعف",
+              "المضاعف يعتمد على: نوع الأصل، الموقع، جودة المستأجرين، مدة العقود",
+              "في السعودية: 8x-12x للتجاري، 10x-15x للمكاتب الفاخرة",
+              "تُخصم تكاليف البيع (سمسرة + قانوني) عادة 1.5% - 3%"
+            ]},
+            { type: "heading", text: "ملاحظات مهمة" },
+            { type: "list", items: [
+              "المضاعف الأعلى = سعر بيع أعلى = عائد أفضل",
+              "يعتمد بشكل كبير على ظروف السوق وقت البيع",
+              "يحتاج وقت لإتمام الصفقة (6-12 شهر عادة)",
+              "في الصناديق: عائدات البيع توزع حسب الشلال (Waterfall)"
+            ]}
+          ]
+        },
+        {
+          id: "caprate",
+          label: "بيع (رسملة)",
+          icon: "📈",
+          content: [
+            { type: "heading", text: "ما هو البيع بالرسملة (Cap Rate)؟" },
+            { type: "text", text: "نفس فكرة البيع لكن السعر يُحسب بطريقة معدل الرسملة: سعر البيع = صافي الدخل التشغيلي (NOI) ÷ معدل الرسملة." },
+            { type: "heading", text: "الفرق عن المضاعف" },
+            { type: "list", items: [
+              "المضاعف يُحسب على الإيجار الإجمالي (Gross Rent × Multiple)",
+              "الرسملة تُحسب على صافي الدخل بعد المصاريف (NOI ÷ Cap Rate)",
+              "الرسملة أدق لأنها تأخذ المصاريف التشغيلية في الحسبان",
+              "مثال: NOI = 8 مليون، Cap Rate = 8% → سعر = 100 مليون"
+            ]},
+            { type: "heading", text: "معدلات الرسملة في السعودية" },
+            { type: "list", items: [
+              "تجاري (محلات): 7% - 10%",
+              "مكاتب: 7% - 9%",
+              "سكني: 6% - 8%",
+              "فنادق: 8% - 11%",
+              "Cap Rate أقل = سعر بيع أعلى (الأصول الممتازة)"
+            ]},
+            { type: "heading", text: "متى يُفضل؟" },
+            { type: "list", items: [
+              "الأصول المدرّة للدخل مع مصاريف تشغيلية واضحة",
+              "عندما يكون المشتري مستثمراً مؤسسياً يستخدم Cap Rate كمعيار",
+              "المقارنة مع أصول مشابهة في السوق"
+            ]}
+          ]
+        },
+        {
+          id: "hold",
+          label: "احتفاظ بالدخل",
+          icon: "💎",
+          content: [
+            { type: "heading", text: "ما هو الاحتفاظ بالدخل؟" },
+            { type: "text", text: "المطور لا يبيع المشروع بل يحتفظ به كأصل مدرّ للدخل. العائد يأتي من التدفقات النقدية التشغيلية فقط بدون حدث بيع." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "مطور يريد بناء محفظة أصول طويلة المدة",
+              "أصول ذات دخل مستقر ومتصاعد (مثل مراكز التسوق الناجحة)",
+              "عندما تكون ظروف البيع غير مناسبة",
+              "استراتيجية الأوقاف والصناديق السيادية",
+              "في التمويل الذاتي: لا يوجد ضغط من مستثمرين للتخارج"
+            ]},
+            { type: "heading", text: "التأثير على العائد" },
+            { type: "list", items: [
+              "IRR عادة أقل من البيع (لأن القيمة لا تتحقق دفعة واحدة)",
+              "لكن إجمالي الدخل التراكمي قد يكون أعلى على المدى الطويل",
+              "العائد يعتمد على معدل الإشغال واستدامة الإيرادات",
+              "MOIC يتراكم ببطء لكن بثبات"
+            ]},
+            { type: "heading", text: "ملاحظات" },
+            { type: "list", items: [
+              "لا يوجد حدث تخارج - النموذج يحسب العائد على كامل الأفق الزمني",
+              "في الصناديق: يحتاج آلية واضحة لتوزيع الأرباح الدورية",
+              "يتطلب إدارة تشغيلية مستمرة",
+              "قد يحتاج إعادة تمويل (Refinance) لتوفير سيولة للمستثمرين"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Exit Strategies",
+      intro: "The exit strategy determines how and when the developer and investors recover their capital and returns from the project.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "sale",
+          label: "Sale (Multiple)",
+          icon: "🏷",
+          content: [
+            { type: "heading", text: "What is Sale by Multiple?" },
+            { type: "text", text: "Sell the entire project to a buyer at a price calculated as a multiple of stabilized annual rent. Example: 10M rent x 12x multiple = 120M sale price." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Most common exit method in real estate development",
+              "After project stabilization (usually 2-5 years after opening)",
+              "When developer/fund wants to convert returns to cash",
+              "Income-producing assets like offices, retail, hotels"
+            ]},
+            { type: "heading", text: "How is the price calculated?" },
+            { type: "list", items: [
+              "Sale price = Stabilized Annual Rent x Multiple",
+              "Multiple depends on: asset type, location, tenant quality, lease terms",
+              "Saudi market: 8x-12x commercial, 10x-15x premium offices",
+              "Exit costs (brokerage + legal) deducted: typically 1.5-3%"
+            ]},
+            { type: "heading", text: "Key Notes" },
+            { type: "list", items: [
+              "Higher multiple = higher sale price = better returns",
+              "Heavily dependent on market conditions at time of sale",
+              "Typically takes 6-12 months to close",
+              "In funds: sale proceeds distributed per waterfall"
+            ]}
+          ]
+        },
+        {
+          id: "caprate",
+          label: "Sale (Cap Rate)",
+          icon: "📈",
+          content: [
+            { type: "heading", text: "What is Cap Rate Exit?" },
+            { type: "text", text: "Same concept as sale, but price is calculated using capitalization rate: Sale Price = NOI / Cap Rate." },
+            { type: "heading", text: "Difference from Multiple" },
+            { type: "list", items: [
+              "Multiple uses Gross Rent (Rent x Multiple)",
+              "Cap Rate uses Net Operating Income (NOI / Cap Rate)",
+              "Cap Rate is more precise as it accounts for operating expenses",
+              "Example: NOI = 8M, Cap Rate = 8% -> Price = 100M"
+            ]},
+            { type: "heading", text: "Saudi Cap Rates" },
+            { type: "list", items: [
+              "Retail: 7-10%",
+              "Office: 7-9%",
+              "Residential: 6-8%",
+              "Hotels: 8-11%",
+              "Lower cap rate = higher price (premium assets)"
+            ]},
+            { type: "heading", text: "When preferred?" },
+            { type: "list", items: [
+              "Income assets with clear operating expenses",
+              "Institutional buyers who use Cap Rate as benchmark",
+              "Comparable asset analysis in the market"
+            ]}
+          ]
+        },
+        {
+          id: "hold",
+          label: "Hold for Income",
+          icon: "💎",
+          content: [
+            { type: "heading", text: "What is Hold for Income?" },
+            { type: "text", text: "Developer keeps the project as an income-generating asset. Returns come from operating cash flows only, with no sale event." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Developer building a long-term asset portfolio",
+              "Assets with stable, growing income",
+              "When market conditions aren't right for a sale",
+              "Endowment and sovereign fund strategies"
+            ]},
+            { type: "heading", text: "Impact on Returns" },
+            { type: "list", items: [
+              "IRR typically lower than sale (value not realized in lump sum)",
+              "But total cumulative income may be higher long-term",
+              "Returns depend on occupancy and income sustainability",
+              "MOIC accumulates slowly but steadily"
+            ]},
+            { type: "heading", text: "Key Notes" },
+            { type: "list", items: [
+              "No exit event - model calculates return over full horizon",
+              "In funds: needs clear periodic distribution mechanism",
+              "Requires ongoing operational management",
+              "May need refinancing to provide investor liquidity"
+            ]}
+          ]
+        }
+      ]
+    }
+  },
+  waterfallConcepts: {
+    ar: {
+      title: "شلال التوزيعات - المفاهيم الأساسية",
+      intro: "الشلال (Waterfall) هو الآلية التي تحدد ترتيب وأولوية توزيع الأرباح بين المطور (GP) والمستثمرين (LP). فهم كل مرحلة ضروري لتقييم عدالة الهيكل.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "overview",
+          label: "نظرة عامة",
+          icon: "📊",
+          content: [
+            { type: "heading", text: "ما هو شلال التوزيعات؟" },
+            { type: "text", text: "نظام من 4 مراحل متسلسلة يحدد أولوية توزيع الأموال. كل مرحلة يجب أن تكتمل قبل الانتقال للتي بعدها." },
+            { type: "heading", text: "لماذا يُستخدم؟" },
+            { type: "list", items: [
+              "يحمي المستثمرين بضمان استرداد رأس مالهم أولاً",
+              "يحفّز المطور على تحقيق عوائد عالية (كلما زاد العائد زادت حصته)",
+              "يوازن بين المخاطر والعوائد لجميع الأطراف",
+              "معيار صناعي في صناديق الاستثمار العقاري عالمياً"
+            ]},
+            { type: "heading", text: "ترتيب المراحل" },
+            { type: "list", items: [
+              "المرحلة 1: إرجاع رأس المال (Return of Capital)",
+              "المرحلة 2: العائد التفضيلي (Preferred Return)",
+              "المرحلة 3: تعويض المطور (GP Catch-up)",
+              "المرحلة 4: تقسيم الأرباح (Profit Split)"
+            ]},
+            { type: "heading", text: "مثال مبسّط" },
+            { type: "text", text: "صندوق بـ 100 مليون Equity، عائد تفضيلي 10%، Carry 20%. بعد 5 سنوات حقق 180 مليون. التوزيع: (1) أول 100 مليون ترجع للمستثمرين، (2) الـ 50 مليون التالية تغطي العائد التفضيلي التراكمي، (3) GP يأخذ catch-up، (4) الباقي يتقسم 80/20." }
+          ]
+        },
+        {
+          id: "pref",
+          label: "العائد التفضيلي",
+          icon: "⭐",
+          content: [
+            { type: "heading", text: "ما هو العائد التفضيلي (Preferred Return)؟" },
+            { type: "text", text: "حد أدنى للعائد السنوي يحصل عليه المستثمرون (LP) قبل أن يشارك المطور (GP) في أي أرباح. يُحسب كنسبة مئوية سنوية على رأس المال غير المسترد." },
+            { type: "heading", text: "كيف يعمل؟" },
+            { type: "list", items: [
+              "يتراكم سنوياً على رأس المال غير المسترد",
+              "إذا لم يُدفع في سنة معينة يتراكم للسنة التالية (Accrual)",
+              "يجب سداد كامل المبلغ المتراكم قبل الانتقال للمرحلة 3",
+              "عادة 8% - 15% سنوياً حسب مستوى المخاطرة"
+            ]},
+            { type: "heading", text: "نسبي أم للمستثمر فقط؟" },
+            { type: "list", items: [
+              "نسبي (Pro Rata): العائد التفضيلي يوزع على GP و LP حسب حصصهم في رأس المال",
+              "للمستثمر فقط (LP Only): كامل العائد التفضيلي يذهب للمستثمرين",
+              "الطريقة المختارة تؤثر على عوائد GP بشكل كبير"
+            ]},
+            { type: "heading", text: "معدلات شائعة في السعودية" },
+            { type: "list", items: [
+              "صناديق عقارية مستقرة: 8% - 10%",
+              "مشاريع تطوير: 10% - 12%",
+              "مشاريع عالية المخاطرة: 12% - 15%",
+              "كلما زاد العائد التفضيلي، زادت حماية المستثمر لكن صعب تحقيقه"
+            ]}
+          ]
+        },
+        {
+          id: "catchup",
+          label: "تعويض المطور",
+          icon: "🔄",
+          content: [
+            { type: "heading", text: "ما هو تعويض المطور (GP Catch-up)؟" },
+            { type: "text", text: "بعد حصول المستثمرين على العائد التفضيلي، يأخذ المطور حصة أكبر مؤقتاً حتى يصل لنسبة الأرباح المتفق عليها (Carry)." },
+            { type: "heading", text: "لماذا يوجد؟" },
+            { type: "list", items: [
+              "بدونه: المطور يحصل على Carry فقط على الأرباح فوق Pref",
+              "معه: المطور يصل لنسبة Carry الكاملة من إجمالي الأرباح",
+              "يضمن أن نسبة GP النهائية تعكس الـ Carry المتفق عليه",
+              "شائع في معظم الصناديق العقارية المهنية"
+            ]},
+            { type: "heading", text: "طريقة الحساب" },
+            { type: "list", items: [
+              "سنوي (Per Year): يُحسب الـ catch-up كل سنة مستقل",
+              "تراكمي (Cumulative): يُحسب على إجمالي التوزيعات من بداية الصندوق",
+              "الطريقة السنوية أبسط والتراكمية أدق"
+            ]},
+            { type: "heading", text: "مثال" },
+            { type: "text", text: "أرباح = 100، Pref = 60 ذهبت لـ LP، Carry = 20%. بدون catch-up: GP يأخذ 20% من المتبقي (40 × 20% = 8). مع catch-up: GP يأخذ حتى يصل لـ 20% من إجمالي الأرباح (100 × 20% = 20)." }
+          ]
+        },
+        {
+          id: "split",
+          label: "تقسيم الأرباح",
+          icon: "💰",
+          content: [
+            { type: "heading", text: "ما هو تقسيم الأرباح (Profit Split)؟" },
+            { type: "text", text: "المرحلة الأخيرة: الأرباح المتبقية بعد كل المراحل السابقة تُقسم بنسبة ثابتة بين المستثمرين والمطور." },
+            { type: "heading", text: "النسب الشائعة" },
+            { type: "list", items: [
+              "80/20: المستثمرون 80% والمطور 20% (الأكثر شيوعاً)",
+              "70/30: للمطورين ذوي السجل المميز",
+              "90/10: صناديق كبيرة بمخاطر منخفضة",
+              "60/40: نادر - فقط لمطورين لهم ميزة تنافسية استثنائية"
+            ]},
+            { type: "heading", text: "Carry (حافز الأداء)" },
+            { type: "list", items: [
+              "Carry = نسبة المطور من الأرباح في هذه المرحلة",
+              "عادة 20% - 30%",
+              "هذه أهم آلية تحفيز للمطور",
+              "كلما حقق المشروع عوائد أعلى، زاد مبلغ Carry للمطور"
+            ]},
+            { type: "heading", text: "MOIC و IRR" },
+            { type: "list", items: [
+              "MOIC (مضاعف رأس المال): إجمالي ما حصل عليه الطرف ÷ ما دفعه",
+              "MOIC = 2x يعني ضعّف فلوسه، 3x = ثلاثة أضعاف",
+              "IRR (معدل العائد الداخلي): يأخذ التوقيت في الاعتبار",
+              "IRR أفضل لمقارنة الفرص لأنه يعكس سرعة العائد"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Waterfall Distribution - Core Concepts",
+      intro: "The Waterfall defines the order and priority of profit distribution between developer (GP) and investors (LP). Understanding each tier is essential to evaluate deal fairness.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "overview",
+          label: "Overview",
+          icon: "📊",
+          content: [
+            { type: "heading", text: "What is a Distribution Waterfall?" },
+            { type: "text", text: "A 4-tier sequential system that prioritizes how funds are distributed. Each tier must complete before moving to the next." },
+            { type: "heading", text: "Why is it used?" },
+            { type: "list", items: [
+              "Protects investors by ensuring capital return first",
+              "Incentivizes developer to achieve higher returns",
+              "Balances risk and return for all parties",
+              "Industry standard in real estate investment funds globally"
+            ]},
+            { type: "heading", text: "Tier Order" },
+            { type: "list", items: [
+              "Tier 1: Return of Capital",
+              "Tier 2: Preferred Return",
+              "Tier 3: GP Catch-up",
+              "Tier 4: Profit Split"
+            ]}
+          ]
+        },
+        {
+          id: "pref",
+          label: "Preferred Return",
+          icon: "⭐",
+          content: [
+            { type: "heading", text: "What is Preferred Return?" },
+            { type: "text", text: "Minimum annual return to LPs before GP shares in any profits. Calculated as annual % on unreturned capital." },
+            { type: "heading", text: "How it works" },
+            { type: "list", items: [
+              "Accrues annually on unreturned capital",
+              "If unpaid in a year, it carries forward (accrual)",
+              "Must be fully paid before Tier 3 begins",
+              "Typically 8-15% depending on risk level"
+            ]},
+            { type: "heading", text: "Pro Rata vs LP Only" },
+            { type: "list", items: [
+              "Pro Rata: Pref distributed to GP and LP by ownership share",
+              "LP Only: All pref goes exclusively to investors",
+              "Choice significantly impacts GP economics"
+            ]}
+          ]
+        },
+        {
+          id: "catchup",
+          label: "GP Catch-up",
+          icon: "🔄",
+          content: [
+            { type: "heading", text: "What is GP Catch-up?" },
+            { type: "text", text: "After LPs receive their preferred return, GP temporarily takes a larger share until reaching their agreed carry percentage of total profits." },
+            { type: "heading", text: "Why it exists" },
+            { type: "list", items: [
+              "Without it: GP only earns carry on profits above pref",
+              "With it: GP reaches full carry % of total profits",
+              "Ensures GP's final share reflects the agreed carry",
+              "Standard in most professional real estate funds"
+            ]},
+            { type: "heading", text: "Calculation Method" },
+            { type: "list", items: [
+              "Per Year: catch-up calculated each year independently",
+              "Cumulative: calculated on total distributions from fund start",
+              "Per Year is simpler, Cumulative is more precise"
+            ]}
+          ]
+        },
+        {
+          id: "split",
+          label: "Profit Split",
+          icon: "💰",
+          content: [
+            { type: "heading", text: "What is Profit Split?" },
+            { type: "text", text: "Final tier: remaining profits after all previous tiers are split at a fixed ratio between LP and GP." },
+            { type: "heading", text: "Common Ratios" },
+            { type: "list", items: [
+              "80/20: LP 80% / GP 20% (most common)",
+              "70/30: For developers with proven track record",
+              "90/10: Large funds with lower risk",
+              "Carry = GP's share in this tier (usually 20-30%)"
+            ]},
+            { type: "heading", text: "MOIC & IRR" },
+            { type: "list", items: [
+              "MOIC: Total received / Total invested (2x = doubled money)",
+              "IRR: Accounts for timing of cash flows",
+              "IRR better for comparing opportunities (reflects speed of return)"
+            ]}
+          ]
+        }
+      ]
+    }
   }
-  // Future content keys can be added here:
-  // landType: { ar: {...}, en: {...} },
-  // exitStrategy: { ar: {...}, en: {...} },
-  // islamicFinance: { ar: {...}, en: {...} },
-  // govIncentives: { ar: {...}, en: {...} },
-  // revenueTypes: { ar: {...}, en: {...} },
-  // waterfallConcepts: { ar: {...}, en: {...} },
+  // Future: islamicFinance, govIncentives, revenueTypes
 };
 
 // ── HelpLink: Reusable inline clickable trigger ──
-function HelpLink({ contentKey, lang, onOpen }) {
+function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
   const ar = lang === "ar";
-  const label = ar ? "ما الفرق؟" : "What's the difference?";
+  const label = customLabel || (ar ? "ما الفرق؟" : "What's the difference?");
   return (
     <span
       onClick={(e) => { e.stopPropagation(); onOpen(contentKey); }}
