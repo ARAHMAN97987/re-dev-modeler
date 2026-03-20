@@ -4199,22 +4199,26 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         const AH = ({id, color, icon, label, summary, visible}) => {
           if (visible === false) return null;
           const open = cfgOpen(id);
-          return <div onClick={()=>cfgToggle(id)} style={{padding:"9px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid #eef0f4",background:open?color+"06":"#fafbfc",userSelect:"none",transition:"background 0.15s"}}>
-            <span style={{width:8,height:8,borderRadius:4,background:color,flexShrink:0}} />
+          return <div onClick={()=>cfgToggle(id)} style={{padding:"9px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderBottom:open?`1px solid ${color}20`:"none",background:open?color+"06":"#fafbfc",userSelect:"none",transition:"background 0.15s",borderInlineStart:`3px solid ${color}`}}>
             <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",flex:1}}>{label}</span>
-            {summary && <span style={{fontSize:10,color:"#9ca3af",fontWeight:500}}>{summary}</span>}
+            {summary && <span style={{fontSize:10,color:"#9ca3af",fontWeight:500,maxWidth:160,textAlign:"end",lineHeight:1.2}}>{summary}</span>}
             <span style={{fontSize:10,color:"#9ca3af",transition:"transform 0.2s",transform:open?"rotate(0)":"rotate(-90deg)"}}>{open?"▼":"▶"}</span>
           </div>;
         };
         const AB = ({id, children, visible}) => {
           if (visible === false || !cfgOpen(id)) return null;
-          return <div style={{padding:"10px 14px 12px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6}}>{children}</div>;
+          return <div style={{padding:"10px 14px 12px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6,background:"#fff"}}>{children}</div>;
         };
         const g2 = {display:"contents"};
         const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
-        return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:0}}>
+        // Section card wrapper
+        const SecWrap = ({children, visible}) => {
+          if (visible === false) return null;
+          return <div style={{borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",background:"#fafbfc"}}>{children}</div>;
+        };
+        return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
-        <div style={{padding:"12px 14px",borderBottom:"1px solid #eef0f4",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <div style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff"}}>
           <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
           <select value={cfg.finMode} onChange={e=>{const v=e.target.value;upCfg({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
@@ -4225,7 +4229,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </div>
 
         {/* ── SECTION: DEBT TERMS ── */}
-        <div style={{borderRight:isMobile?"none":"1px solid #eef0f4",borderBottom:"1px solid #eef0f4"}}>
+        <SecWrap visible={hasDbt}>
         <AH id="debt" color="#2563eb" label={ar?"شروط القرض":"Debt Terms"} summary={hasDbt && (cfg.debtAllowed || cfg.finMode==="bank100") ? `${cfg.finMode!=="bank100"?(cfg.maxLtvPct||70)+"% LTV · ":""}${cfg.financeRate||6.5}% · ${cfg.loanTenor||12}yr` : ""} visible={hasDbt} />
         <AB id="debt" visible={hasDbt}>{(() => {
           const showDebtFields = cfg.debtAllowed || cfg.finMode === "bank100";
@@ -4259,8 +4263,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         })()}</AB>
 
         {/* ── SECTION: EXIT STRATEGY ── */}
-        </div>
-        <div style={{borderBottom:"1px solid #eef0f4"}}>
+        </SecWrap>
+        <SecWrap visible={hasDbt}>
         <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={hasDbt ? `${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ":"Hold"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`  : ""} visible={hasDbt} />
         <AB id="exit" visible={hasDbt}>
           <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع\nAsset Sale = exit at a set year. Hold for Income = no sale event">
@@ -4277,8 +4281,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: LAND & EQUITY ── */}
-        </div>
-        <div style={{borderRight:isMobile?"none":"1px solid #eef0f4",borderBottom:"1px solid #eef0f4"}}>
+        </SecWrap>
+        <SecWrap visible={hasEq}>
         <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · GP ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
         <AB id="land" visible={hasEq}>
           <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض إلى حصة Equity في الحسابات التمويلية\nConvert leasehold land value to equity in financing calculations">
@@ -4298,8 +4302,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: FUND STRUCTURE ── */}
-        </div>
-        <div style={{borderBottom:"1px solid #eef0f4"}}>
+        </SecWrap>
+        <SecWrap visible={isFundMode}>
         <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"GP = Mgr")}` : ""} visible={isFundMode} />
         <AB id="fund" visible={isFundMode}>
           <div style={g2}>
@@ -4315,8 +4319,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: WATERFALL ── */}
-        </div>
-        <div style={{borderRight:isMobile?"none":"1px solid #eef0f4",borderBottom:"1px solid #eef0f4"}}>
+        </SecWrap>
+        <SecWrap visible={isFundMode}>
         <AH id="wf" color="#16a34a" label={ar?"الشلال":"Waterfall"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||10}% · Carry ${cfg.carryPct||20}%` : ""} visible={isFundMode} />
         <AB id="wf" visible={isFundMode}>
           <div style={g2}>
@@ -4331,8 +4335,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
 
         {/* ── SECTION: FEES ── */}
-        </div>
-        <div style={{borderBottom:"1px solid #eef0f4"}}>
+        </SecWrap>
+        <SecWrap visible={hasEq || isFundMode}>
         <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : hasEq ? (ar?"رسوم التطوير":"Dev Fee") : ""} visible={hasEq || isFundMode} />
         <AB id="fees" visible={hasEq || isFundMode}>{(() => {
           if (isFundMode && cfg.vehicleType==="fund") return <>
@@ -4368,8 +4372,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         })()}</AB>
 
         {/* Self-funded message */}
-        </div>
-        {cfg.finMode === "self" && <div style={{padding:"20px 18px",textAlign:"center",color:"#9ca3af",fontSize:12,gridColumn:"1/-1"}}>{ar?"لا يوجد تمويل خارجي":"No external financing"}</div>}
+        </SecWrap>
+        {cfg.finMode === "self" && <div style={{padding:"20px 18px",textAlign:"center",color:"#9ca3af",fontSize:12,gridColumn:"1/-1",borderRadius:8,border:"1px solid #e5e7ec",background:"#fafbfc"}}>{ar?"لا يوجد تمويل خارجي":"No external financing"}</div>}
         </div>;
       })()}
     </div>
