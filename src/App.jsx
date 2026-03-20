@@ -2574,7 +2574,7 @@ function computePhaseWaterfalls(project, projectResults, financing, waterfallCon
 
   return result;
 }
-function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, t, lang, up }) {
+function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -2911,6 +2911,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </div>;
     })()}
 
+    {/* ═══ INCENTIVES IMPACT (if active) ═══ */}
+    {incentivesResult && <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />}
+
     {/* ═══ CHART TOGGLE ═══ */}
     {cfChartData.length > 2 && (
       <div style={{marginBottom:14}}>
@@ -3085,6 +3088,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 // ═══════════════════════════════════════════════════════════════
 function IncentivesImpact({ project, results, financing, incentivesResult, lang }) {
   const ar = lang === "ar";
+  const [open, setOpen] = useState(true);
   const ir = incentivesResult;
   if (!ir || !financing) return null;
   const hasAny = (ir.capexGrantTotal||0) > 0 || (ir.interestSubsidyTotal||0) > 0 || (ir.landRentSavingTotal||0) > 0 || (ir.feeRebateTotal||0) > 0;
@@ -3123,12 +3127,13 @@ function IncentivesImpact({ project, results, financing, incentivesResult, lang 
 
   return (
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966933",marginBottom:16,overflow:"hidden"}}>
-      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#05966908",borderBottom:"1px solid #05966918"}}>
+      <div onClick={()=>setOpen(!open)} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#05966908",borderBottom:open?"1px solid #05966918":"none",cursor:"pointer",userSelect:"none"}}>
         <span style={{fontSize:14}}>🏛</span>
         <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"أثر الحوافز الحكومية":"Government Incentives Impact"}</span>
         <span style={{fontSize:10,fontWeight:600,color:"#059669",background:"#05966918",padding:"2px 8px",borderRadius:10}}>{fmtM(total)} {cur}</span>
+        <span style={{fontSize:10,color:"#9ca3af"}}>{open?"▼":"▶"}</span>
       </div>
-      <div style={{padding:"14px 16px"}}>
+      {open && <div style={{padding:"14px 16px"}}>
         {/* Active incentives */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
           {items.map((it,i) => (
@@ -3167,7 +3172,7 @@ function IncentivesImpact({ project, results, financing, incentivesResult, lang 
             <div style={{fontSize:12,fontWeight:600,color:"#16a34a"}}>{withNPV!==null?fmtM(withNPV):""}</div>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -3181,12 +3186,9 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   const mode = project.finMode || financing?.mode || "self";
 
-  // ── FUND MODE: Incentives impact + WaterfallView ──
+  // ── FUND MODE: WaterfallView (incentives injected inside) ──
   if (mode === "fund") {
-    return <>
-      <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />
-      <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />
-    </>;
+    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} />;
   }
 
   // ── BANK DEBT / BANK 100%: Full bank results ──
@@ -3298,14 +3300,15 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
       {hasIncentives && <RK label={ar?"حوافز حكومية":"Gov Incentives"} value={fmtM(incentiveTotal)} color="#059669" />}
     </div>
 
-    {/* ═══ EXIT ANALYSIS ═══ */}
+    {/* ═══ EXIT ANALYSIS (collapsible) ═══ */}
     {exitProc > 0 && <div style={{background:"#fff",borderRadius:10,border:"1px solid #f59e0b22",marginBottom:16,overflow:"hidden"}}>
-      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#f59e0b08",borderBottom:"1px solid #f59e0b18"}}>
+      <div onClick={()=>setSecOpen(p=>({...p,exit:!p.exit}))} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#f59e0b08",borderBottom:!secOpen.exit?"1px solid #f59e0b18":"none",cursor:"pointer",userSelect:"none"}}>
         <span style={{fontSize:14}}>🚪</span>
         <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تحليل التخارج":"Exit Analysis"}</span>
         <span style={{fontSize:10,fontWeight:600,color:"#f59e0b",background:"#f59e0b18",padding:"2px 8px",borderRadius:10}}>{exitYear}</span>
+        <span style={{fontSize:10,color:"#9ca3af"}}>{!secOpen.exit?"▼":"▶"}</span>
       </div>
-      <div style={{padding:"14px 16px"}}>
+      {!secOpen.exit && <div style={{padding:"14px 16px"}}>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(130px, 1fr))",gap:10,fontSize:12}}>
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"سنة التخارج":"Exit Year"}</span><strong>{exitYear}</strong></div>
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"الإجمالي":"Proceeds"}</span><strong>{fmtM(exitProc)}</strong></div>
@@ -3313,7 +3316,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"التكلفة":"Exit Cost"}</span><strong>{project.exitCostPct||2}%</strong></div>
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"صافي / تكلفة التطوير":"Net / Dev Cost"}</span><strong style={{color:exitProc/devCost>1?"#16a34a":"#ef4444"}}>{(exitProc/devCost).toFixed(2)}x</strong></div>
         </div>
-      </div>
+      </div>}
     </div>}
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
@@ -3344,6 +3347,56 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
         </div>}
       </div>
     )}
+
+    {/* ═══ NPV (collapsible) ═══ */}
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966922",marginBottom:16,overflow:"hidden"}}>
+      <div onClick={()=>setSecOpen(p=>({...p,npv:!p.npv}))} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#05966908",borderBottom:!secOpen.npv?"1px solid #05966918":"none",cursor:"pointer",userSelect:"none"}}>
+        <span style={{fontSize:14}}>📈</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تحليل القيمة الحالية (NPV)":"NPV Analysis"}</span>
+        <span style={{fontSize:10,fontWeight:600,color:"#059669",background:"#05966918",padding:"2px 8px",borderRadius:10}}>@12% {fmtM(calcNPV(levCF,0.12))}</span>
+        <span style={{fontSize:10,color:"#9ca3af"}}>{!secOpen.npv?"▼":"▶"}</span>
+      </div>
+      {!secOpen.npv && <div style={{padding:"14px 16px"}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3, 1fr)",gap:12}}>
+          {[{rate:"10%",val:calcNPV(levCF,0.10)},{rate:"12%",val:calcNPV(levCF,0.12)},{rate:"14%",val:calcNPV(levCF,0.14)}].map(({rate,val})=>(
+            <div key={rate} style={{background:val>0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"12px 14px",textAlign:"center"}}>
+              <div style={{fontSize:10,color:"#6b7080",marginBottom:4}}>{ar?"معدل الخصم":"Discount Rate"} {rate}</div>
+              <div style={{fontSize:18,fontWeight:800,color:val>0?"#16a34a":"#ef4444"}}>{fmtM(val)}</div>
+              <div style={{fontSize:10,color:"#9ca3af"}}>{cur}</div>
+            </div>
+          ))}
+        </div>
+      </div>}
+    </div>
+
+    {/* ═══ INVESTMENT SUMMARY (collapsible) ═══ */}
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #16a34a22",marginBottom:16,overflow:"hidden"}}>
+      <div onClick={()=>setSecOpen(p=>({...p,inv:!p.inv}))} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#16a34a08",borderBottom:!secOpen.inv?"1px solid #16a34a18":"none",cursor:"pointer",userSelect:"none"}}>
+        <span style={{fontSize:14}}>✅</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"ملخص الاستثمار":"Investment Summary"}</span>
+        <span style={{fontSize:10,color:"#9ca3af"}}>{!secOpen.inv?"▼":"▶"}</span>
+      </div>
+      {!secOpen.inv && <div style={{padding:"14px 16px"}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
+          {[
+            {test:ar?"IRR > 0":"IRR > 0", pass:levIRR!==null&&levIRR>0, val:levIRR!==null?fmtPct(levIRR*100):"N/A"},
+            {test:ar?"IRR > 12%":"IRR > 12%", pass:levIRR!==null&&levIRR>0.12, val:levIRR!==null?fmtPct(levIRR*100):"N/A"},
+            {test:ar?"فترة الاسترداد":"Payback ≤ 10yr", pass:payback!==null&&payback<=10, val:payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"},
+            {test:ar?"عائد على التكلفة > 8%":"Yield > 8%", pass:yieldOnCost>0.08, val:yieldOnCost>0?fmtPct(yieldOnCost*100):"N/A"},
+            {test:ar?"صافي إيجابي":"Positive Net CF", pass:levCF.reduce((a,b)=>a+b,0)>0, val:fmtM(levCF.reduce((a,b)=>a+b,0))},
+            {test:"NPV@12% > 0", pass:calcNPV(levCF,0.12)>0, val:fmtM(calcNPV(levCF,0.12))},
+          ].map((ck,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:6,background:ck.pass?"#f0fdf4":"#fef2f2",border:`1px solid ${ck.pass?"#dcfce7":"#fecaca"}`}}>
+              <span style={{fontSize:16}}>{ck.pass?"✅":"❌"}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,fontWeight:600,color:"#1a1d23"}}>{ck.test}</div>
+                <div style={{fontSize:10,color:"#6b7080"}}>{ck.val}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>}
+    </div>
 
     {/* ═══ COMPREHENSIVE CASH FLOW TABLE ═══ */}
     <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8}}>
@@ -3394,57 +3447,6 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
       </>}
 
     </tbody></table></div>
-    </div>
-
-    {/* ═══ NPV ═══ */}
-    <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966922",marginTop:16,overflow:"hidden"}}>
-      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#05966908",borderBottom:"1px solid #05966918"}}>
-        <span style={{fontSize:14}}>📈</span>
-        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{ar?"تحليل القيمة الحالية (NPV)":"NPV Analysis"}</span>
-      </div>
-      <div style={{padding:"14px 16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3, 1fr)",gap:12}}>
-          {[
-            {rate:"10%",val:calcNPV(levCF,0.10)},
-            {rate:"12%",val:calcNPV(levCF,0.12)},
-            {rate:"14%",val:calcNPV(levCF,0.14)},
-          ].map(({rate,val})=>(
-            <div key={rate} style={{background:val>0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"12px 14px",textAlign:"center"}}>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:4}}>{ar?"معدل الخصم":"Discount Rate"} {rate}</div>
-              <div style={{fontSize:18,fontWeight:800,color:val>0?"#16a34a":"#ef4444"}}>{fmtM(val)}</div>
-              <div style={{fontSize:10,color:"#9ca3af"}}>{cur}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-
-    {/* ═══ INVESTMENT SUMMARY ═══ */}
-    <div style={{background:"#fff",borderRadius:10,border:"1px solid #16a34a22",marginTop:16,overflow:"hidden"}}>
-      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#16a34a08",borderBottom:"1px solid #16a34a18"}}>
-        <span style={{fontSize:14}}>✅</span>
-        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{ar?"ملخص الاستثمار":"Investment Summary"}</span>
-      </div>
-      <div style={{padding:"14px 16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
-          {[
-            {test:ar?"IRR > 0":"IRR > 0", pass:levIRR!==null&&levIRR>0, val:levIRR!==null?fmtPct(levIRR*100):"N/A"},
-            {test:ar?"IRR > 12% (معيار)":"IRR > 12% (benchmark)", pass:levIRR!==null&&levIRR>0.12, val:levIRR!==null?fmtPct(levIRR*100):"N/A"},
-            {test:ar?"فترة الاسترداد":"Payback Period", pass:payback!==null&&payback<=10, val:payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"},
-            {test:ar?"عائد على التكلفة > 8%":"Yield on Cost > 8%", pass:yieldOnCost>0.08, val:yieldOnCost>0?fmtPct(yieldOnCost*100):"N/A"},
-            {test:ar?"صافي التدفق إيجابي":"Positive Net CF", pass:levCF.reduce((a,b)=>a+b,0)>0, val:fmtM(levCF.reduce((a,b)=>a+b,0))},
-            {test:ar?"NPV@12% > 0":"NPV @12% > 0", pass:calcNPV(levCF,0.12)>0, val:fmtM(calcNPV(levCF,0.12))},
-          ].map((ck,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:6,background:ck.pass?"#f0fdf4":"#fef2f2",border:`1px solid ${ck.pass?"#dcfce7":"#fecaca"}`}}>
-              <span style={{fontSize:16}}>{ck.pass?"✅":"❌"}</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:11,fontWeight:600,color:"#1a1d23"}}>{ck.test}</div>
-                <div style={{fontSize:10,color:"#6b7080"}}>{ck.val}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   </div>);
 }
