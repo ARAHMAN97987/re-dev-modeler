@@ -4220,7 +4220,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff"}}>
           <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;upCfg({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasF=cfg.finMode==="fund";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{};const fundReset=wasF&&v!=="fund"?{subscriptionFeePct:0,structuringFeePct:0,structuringFeeCap:0,preEstablishmentFee:0,spvFee:0,auditorFeeAnnual:0,mgmtFeeCapAnnual:0,custodyFeeAnnual:0}:{};upCfg({finMode:v,...extras,...fundReset});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
@@ -4305,7 +4305,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"GP = Mgr")}` : ""} visible={isFundMode} />
         <AB id="fund" visible={isFundMode}>
           <div style={g2}>
-            <FL label={ar?"الهيكل القانوني":"Vehicle"} tip="نوع الوعاء مثل صندوق خاص أو SPV أو مشروع مشترك. يؤثر على الحوكمة والمتطلبات النظامية\nVehicle type such as private fund, SPV, or JV. Affects governance and regulatory requirements"><Drp lang={lang} value={cfg.vehicleType} onChange={v=>upCfg({vehicleType:v})} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
+            <FL label={ar?"الهيكل القانوني":"Vehicle"} tip="نوع الوعاء مثل صندوق خاص أو SPV أو مشروع مشترك. يؤثر على الحوكمة والمتطلبات النظامية\nVehicle type such as private fund, SPV, or JV. Affects governance and regulatory requirements"><Drp lang={lang} value={cfg.vehicleType} onChange={v=>{const reset=v!=="fund"?{subscriptionFeePct:0,structuringFeePct:0,structuringFeeCap:0,preEstablishmentFee:0,spvFee:0,auditorFeeAnnual:0,mgmtFeeCapAnnual:0,custodyFeeAnnual:0}:{};upCfg({vehicleType:v,...reset});}} options={[{value:"fund",en:"Fund",ar:"صندوق"},{value:"direct",en:"Direct",ar:"مباشر"},{value:"spv",en:"SPV",ar:"SPV"}]} /></FL>
             {cfg.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"} tip="الاسم القانوني أو التشغيلي للصندوق. للعرض والتقارير فقط\nLegal or operating fund name. For display and reports only"><Inp value={cfg.fundName} onChange={v=>upCfg({fundName:v})} /></FL>}
           </div>
           <div style={g2}>
