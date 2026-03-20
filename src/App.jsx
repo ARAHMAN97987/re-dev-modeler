@@ -8898,6 +8898,266 @@ const EDUCATIONAL_CONTENT = {
         }
       ]
     }
+  },
+  scenarioAnalysis: {
+    ar: {
+      title: "تحليل السيناريوهات - الدليل الكامل",
+      intro: "تحليل السيناريوهات يجيب على سؤال واحد: ماذا لو؟ يختبر مرونة المشروع أمام التغيرات المحتملة قبل ما تحصل فعلياً.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "what",
+          label: "ما هو؟",
+          icon: "📊",
+          content: [
+            { type: "heading", text: "ما هو تحليل السيناريوهات؟" },
+            { type: "text", text: "أداة تختبر أداء المشروع المالي تحت ظروف مختلفة. بدل ما تعتمد على رقم واحد (الحالة الأساسية)، تشوف كيف تتغير النتائج لو تغيرت الافتراضات." },
+            { type: "heading", text: "لماذا هو مهم؟" },
+            { type: "list", items: [
+              "البنك يطلبه قبل الموافقة على التمويل (اختبار إجهاد)",
+              "المستثمر يبي يعرف أسوأ حالة قبل ما يستثمر",
+              "المطور يحتاجه لتحديد المخاطر الحقيقية واتخاذ قرارات مدروسة",
+              "يكشف ايش المتغيرات اللي تأثر أكثر على العائد (أيها أخطر)"
+            ]},
+            { type: "heading", text: "3 أدوات في هذه الصفحة" },
+            { type: "list", items: [
+              "مقارنة السيناريوهات: 8 سيناريوهات جاهزة جنب بعض. سريعة وواضحة",
+              "جدول الحساسية: يغير متغيرين في نفس الوقت ويعرض الأثر في شبكة ملونة",
+              "نقطة التعادل: يحسب الحد الأدنى لكل متغير قبل ما يخسر المشروع"
+            ]}
+          ]
+        },
+        {
+          id: "scenarios",
+          label: "الثمانية",
+          icon: "🔢",
+          content: [
+            { type: "heading", text: "لماذا هذه السيناريوهات بالذات؟" },
+            { type: "text", text: "هذه الثمانية تغطي أكثر المخاطر شيوعاً في التطوير العقاري السعودي. كل واحد يختبر متغير مختلف:" },
+            { type: "heading", text: "CAPEX +10% (زيادة التكاليف)" },
+            { type: "list", items: [
+              "ايش يختبر: تكاليف البناء ارتفعت 10% عن المتوقع",
+              "متى يحصل: ارتفاع أسعار مواد البناء، تغيير التصاميم، أو ظروف موقع غير متوقعة",
+              "الأثر: يقلل IRR ويزيد رأس المال المطلوب",
+              "في السعودية: شائع مع ارتفاع أسعار الحديد والخرسانة في فترات الطلب العالي"
+            ]},
+            { type: "heading", text: "CAPEX -10% (انخفاض التكاليف)" },
+            { type: "list", items: [
+              "ايش يختبر: التكاليف أقل من المتوقع (تفاوض جيد أو سوق مواد منخفض)",
+              "الأثر: يرفع IRR ويقلل الدين المطلوب",
+              "مهم لأنه يوضح حجم تأثير التكاليف على الجدوى"
+            ]},
+            { type: "heading", text: "Rent +10% / -10% (تغير الإيجارات)" },
+            { type: "list", items: [
+              "ايش يختبر: الإيرادات أعلى أو أقل من المتوقع",
+              "متى يحصل: تغير العرض والطلب في السوق، دخول منافسين، تحسن الموقع",
+              "الأثر: يؤثر على كامل فترة المشروع (ليس سنة واحدة)",
+              "-10% هو اختبار الإجهاد الأهم — لو المشروع ينجح مع إيجارات أقل 10%، فيه هامش أمان"
+            ]},
+            { type: "heading", text: "Delay +6 months (تأخير البناء)" },
+            { type: "list", items: [
+              "ايش يختبر: البناء يتأخر 6 أشهر عن الجدول",
+              "متى يحصل: مشاكل تصاريح، تأخر مقاول، ظروف طقس",
+              "الأثر: يؤخر الإيرادات 6 أشهر لكن التكاليف الثابتة (إيجار أرض، فوائد) تستمر",
+              "يقلل IRR بشكل كبير لأن التوقيت مهم جداً في حسابات العائد"
+            ]},
+            { type: "heading", text: "Esc +0.5% / -0.5% (تغير التصاعد)" },
+            { type: "list", items: [
+              "ايش يختبر: الزيادة السنوية في الإيجارات أعلى أو أقل بنصف نقطة",
+              "الأثر: يبدو صغير لكنه يتراكم على 20-50 سنة (أثر تراكمي ضخم)",
+              "+0.5% على 30 سنة ممكن يزيد إجمالي الإيرادات 15-25%",
+              "مهم جداً لمشاريع الاحتفاظ طويلة المدة (Hold strategy)"
+            ]}
+          ]
+        },
+        {
+          id: "read",
+          label: "كيف تقرأ",
+          icon: "👁",
+          content: [
+            { type: "heading", text: "كيف تقرأ جدول المقارنة" },
+            { type: "list", items: [
+              "العمود الأول (أزرق): الحالة الأساسية — هذا المرجع",
+              "أخضر: أفضل من الحالة الأساسية",
+              "أحمر: أسوأ من الحالة الأساسية",
+              "قارن الفرق: كم تغير IRR أو NPV من الحالة الأساسية؟"
+            ]},
+            { type: "heading", text: "ايش أول شي تشوفه؟" },
+            { type: "list", items: [
+              "سطر Unlevered IRR: هل يبقى فوق 10% في أسوأ حالة؟",
+              "سطر NPV @10%: هل يبقى موجب في كل السيناريوهات؟",
+              "لو NPV سالب في أي سيناريو: المشروع حساس لهذا المتغير",
+              "لو Levered IRR ينزل تحت 8%: البنك قد يرفض التمويل"
+            ]},
+            { type: "heading", text: "مثال عملي" },
+            { type: "text", text: "IRR الأساسي 15%. في سيناريو CAPEX +10% نزل لـ 12%. في Rent -10% نزل لـ 9%. هذا يعني: المشروع حساس للإيرادات أكثر من التكاليف. لازم تركز على تأمين عقود إيجار قبل البناء." },
+            { type: "heading", text: "كيف تقرأ جدول الحساسية" },
+            { type: "list", items: [
+              "كل خلية = نتيجة تغيير متغيرين في نفس الوقت",
+              "الخلية الزرقاء = الحالة الأساسية (بدون تغيير)",
+              "أخضر = IRR فوق 15% (ممتاز) أو NPV موجب",
+              "أصفر = IRR بين 10%-15% (مقبول)",
+              "أحمر = IRR تحت 0% أو NPV سالب (خطر)",
+              "الزاوية العليا اليسرى = أسوأ حالة (المتغيرين سلبيين)",
+              "الزاوية السفلى اليمنى = أفضل حالة (المتغيرين إيجابيين)"
+            ]},
+            { type: "heading", text: "كيف تقرأ نقطة التعادل" },
+            { type: "list", items: [
+              "نقطة تعادل الإشغال 60% يعني: المشروع يربح حتى لو 40% من المساحة فاضية",
+              "تحمل انخفاض الإيجار -25% يعني: الإيجارات ممكن تنزل ربع وما يخسر",
+              "تحمل زيادة تكاليف +20% يعني: التكاليف ممكن تزيد 20% وما يخسر",
+              "القاعدة: هامش أمان فوق 30% = مريح. تحت 15% = خطر"
+            ]}
+          ]
+        },
+        {
+          id: "bank",
+          label: "للبنك",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "ايش يبي البنك يشوف؟" },
+            { type: "text", text: "البنك يستخدم تحليل السيناريوهات كـ 'اختبار إجهاد' (Stress Test). يبي يتأكد إن المشروع يقدر يسدد القرض حتى في أسوأ الظروف." },
+            { type: "heading", text: "اختبارات البنك النموذجية" },
+            { type: "list", items: [
+              "DSCR في سيناريو Rent -10%: هل يبقى فوق 1.2x؟",
+              "DSCR في سيناريو Delay +6mo: هل التأخير يكسر covenant؟",
+              "NPV في أسوأ حالة: هل المشروع يبقى مجدي؟",
+              "Combined stress: ماذا لو CAPEX +10% مع Rent -10% معاً؟"
+            ]},
+            { type: "heading", text: "كيف تجهز عرض البنك" },
+            { type: "list", items: [
+              "اعرض الحالة الأساسية أولاً مع IRR و DSCR",
+              "ثم اعرض أسوأ حالتين وبيّن أن المشروع يتحمل",
+              "أبرز هامش الأمان: الفرق بين الأداء الحالي ونقطة التعادل",
+              "لو المشروع يتحمل Rent -15% وما زال DSCR > 1.2x: هذا قوي",
+              "استخدم جدول الحساسية لإظهار نطاق واسع من الاحتمالات"
+            ]},
+            { type: "heading", text: "نصائح عملية" },
+            { type: "list", items: [
+              "لا تعرض سيناريوهات إيجابية فقط — البنك يفقد الثقة",
+              "كن صريح مع المخاطر وبيّن كيف تعالجها",
+              "فلتر حسب المرحلة لو عندك مشروع متعدد المراحل — البنك يموّل مرحلة مرحلة",
+              "تقرير البنك في تبويب التقارير يسحب هذه البيانات تلقائياً"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Scenario Analysis - Complete Guide",
+      intro: "Scenario analysis answers one question: What if? It tests project resilience against potential changes before they happen.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "what",
+          label: "What is it?",
+          icon: "📊",
+          content: [
+            { type: "heading", text: "What is Scenario Analysis?" },
+            { type: "text", text: "A tool that tests financial performance under different conditions. Instead of relying on a single number (base case), you see how results change when assumptions change." },
+            { type: "heading", text: "Why it matters" },
+            { type: "list", items: [
+              "Banks require it before loan approval (stress testing)",
+              "Investors want to see downside before committing",
+              "Developers need it to identify real risks and make informed decisions",
+              "Reveals which variables impact returns the most (which are most dangerous)"
+            ]},
+            { type: "heading", text: "3 tools on this page" },
+            { type: "list", items: [
+              "Scenario Comparison: 8 built-in scenarios side by side. Quick and clear",
+              "Sensitivity Table: changes 2 variables simultaneously in a color-coded grid",
+              "Break-Even: calculates the minimum threshold for each variable"
+            ]}
+          ]
+        },
+        {
+          id: "scenarios",
+          label: "The Eight",
+          icon: "🔢",
+          content: [
+            { type: "heading", text: "Why these 8 scenarios?" },
+            { type: "text", text: "They cover the most common risks in Saudi RE development. Each tests a different variable:" },
+            { type: "heading", text: "CAPEX +10% / -10%" },
+            { type: "list", items: [
+              "Tests: construction costs higher/lower than expected",
+              "When it happens: material price changes, design changes, site conditions",
+              "Impact: directly affects IRR and capital requirements",
+              "Common in Saudi during high-demand periods (steel/concrete price surges)"
+            ]},
+            { type: "heading", text: "Rent +10% / -10%" },
+            { type: "list", items: [
+              "Tests: revenue higher/lower than projected",
+              "Impact: affects entire project duration, not just one year",
+              "-10% is the most important stress test — if project survives with 10% less rent, there's safety margin"
+            ]},
+            { type: "heading", text: "Delay +6 months" },
+            { type: "list", items: [
+              "Tests: construction delayed by 6 months",
+              "Impact: delays revenue while fixed costs (land rent, interest) continue",
+              "Reduces IRR significantly because timing matters greatly in return calculations"
+            ]},
+            { type: "heading", text: "Escalation +/-0.5%" },
+            { type: "list", items: [
+              "Tests: annual rent growth higher/lower by 0.5 percentage points",
+              "Seems small but compounds over 20-50 years (massive cumulative effect)",
+              "+0.5% over 30 years can increase total revenue 15-25%"
+            ]}
+          ]
+        },
+        {
+          id: "read",
+          label: "How to read",
+          icon: "👁",
+          content: [
+            { type: "heading", text: "Reading the comparison table" },
+            { type: "list", items: [
+              "First column (blue): Base Case — this is your reference",
+              "Green: better than base case",
+              "Red: worse than base case",
+              "Check: does IRR stay above 10% in worst case? Does NPV stay positive?"
+            ]},
+            { type: "heading", text: "Reading the sensitivity table" },
+            { type: "list", items: [
+              "Each cell = result of changing 2 variables simultaneously",
+              "Blue cell = base case (no change)",
+              "Green = IRR above 15% or NPV positive",
+              "Red = IRR below 0% or NPV negative",
+              "Top-left corner = worst case. Bottom-right = best case"
+            ]},
+            { type: "heading", text: "Reading break-even" },
+            { type: "list", items: [
+              "Occupancy break-even 60% means: project profits even with 40% vacancy",
+              "Rent tolerance -25% means: rents can drop 25% without losing money",
+              "Rule: safety margin above 30% = comfortable. Below 15% = risky"
+            ]}
+          ]
+        },
+        {
+          id: "bank",
+          label: "For banks",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "What banks want to see" },
+            { type: "text", text: "Banks use scenario analysis as stress testing. They want to confirm the project can service debt even under adverse conditions." },
+            { type: "heading", text: "Typical bank stress tests" },
+            { type: "list", items: [
+              "DSCR in Rent -10% scenario: stays above 1.2x?",
+              "DSCR in Delay +6mo: does delay break the covenant?",
+              "Combined stress: what if CAPEX +10% AND Rent -10% together?",
+              "NPV in worst case: does project remain viable?"
+            ]},
+            { type: "heading", text: "Preparing a bank presentation" },
+            { type: "list", items: [
+              "Show base case first with IRR and DSCR",
+              "Then show 2 worst cases and prove project survives",
+              "Highlight safety margins: gap between current and break-even",
+              "Don't show only positive scenarios — banks lose trust",
+              "Use sensitivity table to show a wide range of outcomes"
+            ]}
+          ]
+        }
+      ]
+    }
   }
   // Future: revenueTypes
 };
@@ -10328,6 +10588,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
   const [sensRow, setSensRow] = useState("rentEscalation");
   const [sensCol, setSensCol] = useState("softCostPct");
   const [selectedPhases, setSelectedPhases] = useState([]);
+  const [eduModal, setEduModal] = useState(null);
   if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
 
   const cur = project.currency || "SAR";
@@ -10361,14 +10622,14 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
 
   // ── Section 1: Scenario Comparison ──
   const scenarioDefs = [
-    { name: "Base Case", overrides: { activeScenario: "Base Case" } },
-    { name: "CAPEX +10%", overrides: { activeScenario: "CAPEX +10%" } },
-    { name: "CAPEX -10%", overrides: { activeScenario: "CAPEX -10%" } },
-    { name: "Rent +10%", overrides: { activeScenario: "Rent +10%" } },
-    { name: "Rent -10%", overrides: { activeScenario: "Rent -10%" } },
-    { name: "Delay +6 months", overrides: { activeScenario: "Delay +6 months" } },
-    { name: "Esc +0.5%", overrides: { activeScenario: "Escalation +0.5%" } },
-    { name: "Esc -0.5%", overrides: { activeScenario: "Escalation -0.5%" } },
+    { name: ar?"الحالة الأساسية":"Base Case", overrides: { activeScenario: "Base Case" } },
+    { name: ar?"تكاليف +10%":"CAPEX +10%", overrides: { activeScenario: "CAPEX +10%" } },
+    { name: ar?"تكاليف -10%":"CAPEX -10%", overrides: { activeScenario: "CAPEX -10%" } },
+    { name: ar?"إيجار +10%":"Rent +10%", overrides: { activeScenario: "Rent +10%" } },
+    { name: ar?"إيجار -10%":"Rent -10%", overrides: { activeScenario: "Rent -10%" } },
+    { name: ar?"تأخير +6 أشهر":"Delay +6mo", overrides: { activeScenario: "Delay +6 months" } },
+    { name: ar?"تصاعد +0.5%":"Esc +0.5%", overrides: { activeScenario: "Escalation +0.5%" } },
+    { name: ar?"تصاعد -0.5%":"Esc -0.5%", overrides: { activeScenario: "Escalation -0.5%" } },
   ];
 
   const scenarioResults = useMemo(() => {
@@ -10474,7 +10735,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
 
   return (<div>
     {/* Sub-nav */}
-    <div style={{display:"flex",gap:8,marginBottom:18}}>
+    <div style={{display:"flex",gap:8,marginBottom:10}}>
       {sections.map(s => (
         <button key={s.key} onClick={() => setActiveSection(s.key)}
           style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:500,
@@ -10485,6 +10746,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
         </button>
       ))}
     </div>
+    <div style={{marginBottom:14}}><HelpLink contentKey="scenarioAnalysis" lang={lang} onOpen={setEduModal} label={ar?"كيف أستخدم تحليل السيناريوهات؟":"How to use Scenario Analysis?"} /></div>
 
     {/* Phase filter */}
     {phaseNames.length > 1 && (
@@ -10763,6 +11025,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
         </div>
       </div>
     )}
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
 
