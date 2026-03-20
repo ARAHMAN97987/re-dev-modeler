@@ -3094,19 +3094,402 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
     return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />;
   }
 
-  // ── OTHER MODES: Placeholder (will be built per-scenario) ──
-  const modeLabels = {
-    self: { icon: "🏠", label: ar?"تمويل ذاتي":"Self-Funded", color: "#16a34a" },
-    debt: { icon: "🏦", label: ar?"دين + ملكية":"Debt + Equity", color: "#2563eb" },
-    bank100: { icon: "🏦", label: ar?"بنكي 100%":"Bank 100%", color: "#1e40af" },
-  };
-  const mi = modeLabels[mode] || { icon: "📋", label: mode, color: "#6b7080" };
+  // ── BANK DEBT / BANK 100%: Full bank results ──
+  if (mode === "debt" || mode === "bank100") {
+    return <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} />;
+  }
 
+  // ── SELF: Placeholder ──
   return <div style={{padding:40,textAlign:"center"}}>
-    <div style={{fontSize:40,marginBottom:12}}>{mi.icon}</div>
-    <div style={{fontSize:16,fontWeight:700,color:mi.color,marginBottom:8}}>{mi.label}</div>
+    <div style={{fontSize:40,marginBottom:12}}>🏠</div>
+    <div style={{fontSize:16,fontWeight:700,color:"#16a34a",marginBottom:8}}>{ar?"تمويل ذاتي":"Self-Funded"}</div>
     <div style={{fontSize:13,color:"#9ca3af"}}>{ar?"صفحة النتائج لهذا المسار قيد البناء":"Results page for this mode is coming soon"}</div>
   </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BANK RESULTS VIEW - For debt & bank100 modes
+// ═══════════════════════════════════════════════════════════════
+function BankResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up }) {
+  const isMobile = useIsMobile();
+  const ar = lang === "ar";
+  const [showYrs, setShowYrs] = useState(15);
+  const [selectedPhase, setSelectedPhase] = useState("all");
+  const [showTerms, setShowTerms] = useState(false);
+  const [secOpen, setSecOpen] = useState({});
+  const [showChart, setShowChart] = useState(false);
+
+  const f = financing;
+  if (!f) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
+
+  // Per-phase support
+  const isPhaseView = selectedPhase !== "all";
+  const cfg = isPhaseView ? getPhaseFinancing(project, selectedPhase) : project;
+  const upCfg = up ? (isPhaseView
+    ? (fields) => up(prev => ({
+        phases: (prev.phases||[]).map(p => p.name === selectedPhase
+          ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
+          : p)
+      }))
+    : (fields) => up(prev => ({
+        ...fields,
+        phases: (prev.phases||[]).map(p => p.financing
+          ? { ...p, financing: { ...p.financing, ...fields } }
+          : p)
+      }))) : null;
+
+  const h = results.horizon;
+  const sy = results.startYear;
+  const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
+  const phaseNames = Object.keys(results.phaseResults || {});
+  const hasPhases = phaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
+  const pf = (isPhaseView && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : f;
+  const pc = (isPhaseView && results.phaseResults?.[selectedPhase]) ? results.phaseResults[selectedPhase] : results.consolidated;
+  const cur = project.currency || "SAR";
+  const isBank100 = (isPhaseView ? cfg.finMode : project.finMode) === "bank100";
+
+  // ── Derived metrics ──
+  const dscrVals = pf.dscr ? pf.dscr.filter(v => v !== null && v > 0) : [];
+  const dscrMin = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
+  const dscrAvg = dscrVals.length > 0 ? dscrVals.reduce((a,b)=>a+b,0)/dscrVals.length : null;
+  const peakDebt = pf.debtBalClose ? Math.max(...pf.debtBalClose) : 0;
+  const debtClearYr = (() => { if (!pf.debtBalClose) return null; for (let y=0;y<h;y++) { if (pf.debtBalClose[y]<=0 && y>0 && pf.debtBalClose[y-1]>0) return sy+y; } return null; })();
+  const totalDS = pf.debtService ? pf.debtService.reduce((a,b)=>a+b,0) : 0;
+  const exitProc = pf.exitProceeds ? pf.exitProceeds.reduce((a,b)=>a+b,0) : 0;
+
+  // Payback
+  const paybackLev = (() => { if (!pf.leveredCF) return null; let cum=0; for (let y=0;y<h;y++) { cum+=pf.leveredCF[y]||0; if (cum>=0&&y>0) return y+1; } return null; })();
+
+  // Cash-on-cash
+  const constrEnd = pf.constrEnd || 0;
+  const stableIncome = pc.income.find((v,i) => i > constrEnd && v > 0) || 0;
+  const cashOnCash = pf.totalEquity > 0 && stableIncome > 0 ? stableIncome / pf.totalEquity : 0;
+
+  // Debt balance chart data
+  const chartData = years.map(y => ({
+    year: sy+y, yr: `Yr ${y+1}`,
+    balance: pf.debtBalClose?.[y] || 0,
+    drawdown: pf.drawdown?.[y] || 0,
+    repay: -(pf.repayment?.[y] || 0),
+    ds: -(pf.debtService?.[y] || 0),
+  }));
+
+  // KPI card
+  const RK = ({label, value, sub, color, large}) => (
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:large?"14px 16px":"10px 14px",display:"flex",flexDirection:"column",gap:2}}>
+      <div style={{fontSize:10,color:"#6b7080",fontWeight:500,letterSpacing:0.2}}>{label}</div>
+      <div style={{fontSize:large?20:16,fontWeight:800,color:color||"#1a1d23",fontVariantNumeric:"tabular-nums"}}>{value}</div>
+      {sub && <div style={{fontSize:10,color:"#9ca3af"}}>{sub}</div>}
+    </div>
+  );
+
+  // CFRow
+  const CFRow = ({label, values, total, bold, color, negate, sub: isSub}) => {
+    const st = bold ? {fontWeight:700,background:"#f8f9fb"} : {};
+    const nc = v => { if(color) return color; return v<0?"#ef4444":v>0?"#1a1d23":"#d0d4dc"; };
+    return <tr style={st}>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:isSub?400:500,minWidth:200,paddingInlineStart:isSub?24:10,fontSize:isSub?10:11,color:isSub?"#6b7080":undefined}}>{label}</td>
+      <td style={{...tdN,fontWeight:600,color:nc(negate?-(total||0):(total||0))}}>{total!==null&&total!==undefined?fmt(total):""}</td>
+      {years.map(y=>{const v=values?.[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
+    </tr>;
+  };
+
+  return (<div>
+    {/* ═══ Phase Selector ═══ */}
+    {hasPhases && (
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          {ar?"الإجمالي":"Consolidated"}
+        </button>
+        {phaseNames.map(p => {
+          const pff = phaseFinancings?.[p];
+          const irr = pff?.leveredIRR;
+          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {p}{irr!==null&&irr!==undefined?<span style={{fontSize:10,opacity:0.8}}>{` ${(irr*100).toFixed(1)}%`}</span>:""}
+          </button>;
+        })}
+      </div>
+    )}
+
+    {/* ═══ Quick Edit - Debt Terms ═══ */}
+    {upCfg && (
+      <div style={{background:showTerms?"#fff":"#f8f9fb",borderRadius:10,border:showTerms?"2px solid #2563eb":"1px solid #e5e7ec",marginBottom:14,overflow:"hidden",transition:"all 0.2s"}}>
+        <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#eff6ff":"#f8f9fb",userSelect:"none"}}>
+          <span style={{fontSize:13}}>⚡</span>
+          <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تعديل سريع - شروط القرض":"Quick Edit - Loan Terms"}</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{!isBank100?`${cfg.maxLtvPct||70}% LTV · `:""}{cfg.financeRate||6.5}% · {cfg.loanTenor||7} {ar?"سنة":"yrs"} ({cfg.debtGrace||3} {ar?"سماح":"grace"})</span>
+          <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
+        </div>
+        {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #bfdbfe"}}>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+            {!isBank100 && <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:70}}>{ar?"نسبة التمويل %":"LTV %"}</span>
+              <input type="number" value={cfg.maxLtvPct||""} onChange={e=>upCfg({maxLtvPct:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>}
+            {[
+              {l:ar?"معدل التمويل %":"Rate %",k:"financeRate",v:cfg.financeRate},
+              {l:ar?"المدة (سنة)":"Tenor (yrs)",k:"loanTenor",v:cfg.loanTenor},
+              {l:ar?"فترة السماح":"Grace (yrs)",k:"debtGrace",v:cfg.debtGrace},
+              {l:ar?"رسوم مقدمة %":"Upfront Fee %",k:"upfrontFeePct",v:cfg.upfrontFeePct},
+            ].map(fld=><div key={fld.k} style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:80}}>{fld.l}</span>
+              <input type="number" value={fld.v||""} onChange={e=>upCfg({[fld.k]:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>)}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:80}}>{ar?"نوع السداد":"Repayment"}</span>
+              <select value={cfg.repaymentType||"amortizing"} onChange={e=>upCfg({repaymentType:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="amortizing">{ar?"أقساط":"Amortizing"}</option>
+                <option value="bullet">{ar?"دفعة واحدة":"Bullet"}</option>
+              </select>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:80}}>{ar?"التخارج":"Exit"}</span>
+              <select value={cfg.exitStrategy||"sale"} onChange={e=>upCfg({exitStrategy:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="sale">{ar?"بيع":"Sale"}</option>
+                <option value="hold">{ar?"احتفاظ":"Hold"}</option>
+                <option value="caprate">{ar?"Cap Rate":"Cap Rate"}</option>
+              </select>
+            </div>
+          </div>
+        </div>}
+      </div>
+    )}
+
+    {/* ═══ PRIMARY KPIs ═══ */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(6, 1fr)",gap:10,marginBottom:16}}>
+      <RK label={ar?"IRR بعد التمويل":"Levered IRR"} value={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"} color={pf.leveredIRR>0.12?"#16a34a":"#f59e0b"} large />
+      <RK label={ar?"IRR قبل التمويل":"Unlevered IRR"} value={pc.irr!==null?fmtPct(pc.irr*100):"N/A"} color={pc.irr>0.12?"#16a34a":"#f59e0b"} large />
+      <RK label={ar?"أقل DSCR":"Min DSCR"} value={dscrMin!==null?dscrMin.toFixed(2)+"x":"N/A"} color={dscrMin>=1.25?"#16a34a":dscrMin>=1.0?"#f59e0b":"#ef4444"} large />
+      <RK label={ar?"متوسط DSCR":"Avg DSCR"} value={dscrAvg!==null?dscrAvg.toFixed(2)+"x":"N/A"} color={dscrAvg>=1.5?"#16a34a":"#f59e0b"} large />
+      <RK label={ar?"فترة الاسترداد":"Payback"} value={paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"} color="#2563eb" large />
+      <RK label={ar?"إجمالي تكلفة الدين":"Total Debt Cost"} value={fmtM(pf.totalInterest+(pf.upfrontFee||0))} color="#ef4444" large />
+    </div>
+
+    {/* ═══ SECONDARY KPIs ═══ */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(140px, 1fr))",gap:8,marginBottom:18}}>
+      <RK label={ar?"تكلفة التطوير":"Dev Cost"} value={fmtM(pf.devCostInclLand)} sub={cur} />
+      <RK label={ar?"إجمالي الدين":"Total Debt"} value={fmtM(pf.totalDebt)} sub={isBank100?"100% LTV":`${cfg.maxLtvPct||70}% LTV`} color="#ef4444" />
+      {!isBank100 && <RK label={ar?"إجمالي الملكية":"Total Equity"} value={fmtM(pf.totalEquity)} sub={fmtPct((pf.totalEquity/(pf.devCostInclLand||1))*100)} color="#3b82f6" />}
+      <RK label={ar?"ذروة الدين":"Peak Debt"} value={fmtM(peakDebt)} color="#dc2626" />
+      <RK label={ar?"إجمالي الفوائد":"Total Interest"} value={fmtM(pf.totalInterest)} sub={`${cfg.financeRate||6.5}%`} color="#ef4444" />
+      {(pf.upfrontFee||0)>0 && <RK label={ar?"رسوم القرض":"Upfront Fee"} value={fmtM(pf.upfrontFee)} sub={`${cfg.upfrontFeePct||0}%`} />}
+      <RK label={ar?"عائد نقدي":"Cash-on-Cash"} value={cashOnCash>0?fmtPct(cashOnCash*100):"—"} color={cashOnCash>0.08?"#16a34a":"#6b7080"} />
+      {exitProc>0 && <RK label={ar?"عائد التخارج":"Exit Proceeds"} value={fmtM(exitProc)} color="#16a34a" />}
+      {debtClearYr && <RK label={ar?"سنة تصفية الدين":"Debt Cleared"} value={debtClearYr} color="#16a34a" />}
+    </div>
+
+    {/* ═══ CAPITAL STRUCTURE (Sources & Uses) ═══ */}
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #2563eb22",marginBottom:16,overflow:"hidden"}}>
+      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#2563eb08",borderBottom:"1px solid #2563eb18"}}>
+        <span style={{fontSize:14}}>🏗</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"هيكل رأس المال":"Capital Structure"}</span>
+        <span style={{fontSize:10,fontWeight:600,color:"#2563eb",background:"#2563eb18",padding:"2px 8px",borderRadius:10}}>{fmtM(pf.devCostInclLand)}</span>
+      </div>
+      <div style={{padding:"14px 16px"}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16}}>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:"#16a34a",letterSpacing:0.5,textTransform:"uppercase",marginBottom:6,paddingBottom:4,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
+            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 16px",rowGap:6}}>
+              <span style={{color:"#6b7080"}}>{ar?"الدين البنكي":"Bank Debt"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(pf.totalDebt)} <span style={{fontSize:10,color:"#9ca3af"}}>{isBank100?"100%":fmtPct((pf.totalDebt/(pf.devCostInclLand||1))*100)}</span></span>
+              {pf.gpEquity > 0 && <><span style={{color:"#3b82f6"}}>{ar?"ملكية المطور":"Developer Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(pf.gpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct((pf.gpEquity/(pf.devCostInclLand||1))*100)}</span></span></>}
+              {pf.lpEquity > 0 && <><span style={{color:"#8b5cf6"}}>{ar?"ملكية أخرى":"Other Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(pf.lpEquity)}</span></>}
+              <span style={{borderTop:"2px solid #16a34a",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
+              <span style={{borderTop:"2px solid #16a34a",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmt(pf.totalDebt+(pf.gpEquity||0)+(pf.lpEquity||0))}</span>
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:6,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{ar?"الاستخدامات":"USES"}</div>
+            <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 16px",rowGap:6}}>
+              <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(pf.devCostExclLand)}</span>
+              {pf.landCapValue > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Cap"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(pf.landCapValue)}</span></>}
+              {(pf.upfrontFee||0)>0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Upfront Fee"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(pf.upfrontFee)}</span></>}
+              <span style={{borderTop:"2px solid #ef4444",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
+              <span style={{borderTop:"2px solid #ef4444",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmt(pf.devCostInclLand)}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{marginTop:10,background:"#f0f4ff",borderRadius:6,padding:"6px 14px",fontSize:12}}>
+          <strong>{ar?"المعادلة":"Equation"}:</strong>{" "}
+          {ar?"دين":"Debt"} ({fmtM(pf.totalDebt)}){pf.gpEquity>0?` + ${ar?"ملكية":"Equity"} (${fmtM(pf.gpEquity)})`:""} = {fmtM(pf.totalDebt+(pf.gpEquity||0)+(pf.lpEquity||0))}{" "}
+          {Math.abs((pf.totalDebt+(pf.gpEquity||0)+(pf.lpEquity||0)) - pf.devCostInclLand) < 1000
+            ? <span style={{color:"#16a34a",fontWeight:600}}>✓</span>
+            : <span style={{color:"#ef4444",fontWeight:600}}>✗</span>}
+        </div>
+      </div>
+    </div>
+
+    {/* ═══ DSCR TIMELINE ═══ */}
+    {dscrVals.length > 0 && <div style={{background:"#fff",borderRadius:10,border:"1px solid #2563eb22",marginBottom:16,overflow:"hidden"}}>
+      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#2563eb08",borderBottom:"1px solid #2563eb18"}}>
+        <span style={{fontSize:14}}>🏦</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تغطية خدمة الدين (DSCR)":"Debt Service Coverage Ratio (DSCR)"}</span>
+        <span style={{fontSize:10,fontWeight:600,color:dscrMin>=1.25?"#16a34a":"#ef4444",background:dscrMin>=1.25?"#dcfce7":"#fef2f2",padding:"2px 8px",borderRadius:10}}>
+          Min {dscrMin?.toFixed(2)}x {dscrMin>=1.25?"✓":"✗"}
+        </span>
+      </div>
+      <div style={{padding:"14px 16px"}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          {years.filter(y=>pf.dscr[y]!==null).map(y=>{
+            const v = pf.dscr[y];
+            const bg = v >= 1.5 ? "#dcfce7" : v >= 1.25 ? "#fef9c3" : v >= 1.0 ? "#ffedd5" : "#fef2f2";
+            const fg = v >= 1.5 ? "#16a34a" : v >= 1.25 ? "#a16207" : v >= 1.0 ? "#c2410c" : "#ef4444";
+            const border = v < 1.25 ? "2px solid #ef444444" : "1px solid transparent";
+            return <div key={y} style={{textAlign:"center",padding:"6px 10px",borderRadius:6,background:bg,minWidth:55,border}}>
+              <div style={{fontSize:10,color:"#6b7080",fontWeight:500}}>{sy+y}</div>
+              <div style={{fontSize:14,fontWeight:800,color:fg}}>{v.toFixed(2)}x</div>
+            </div>;
+          })}
+        </div>
+        <div style={{display:"flex",gap:12,fontSize:10,color:"#6b7080",flexWrap:"wrap"}}>
+          <span>🟢 ≥ 1.50x {ar?"ممتاز":"Excellent"}</span>
+          <span>🟡 ≥ 1.25x {ar?"مقبول":"Acceptable"}</span>
+          <span>🟠 ≥ 1.00x {ar?"حرج":"Marginal"}</span>
+          <span>🔴 {"<"} 1.00x {ar?"خطر":"Risk"}</span>
+          <span style={{marginInlineStart:"auto",fontWeight:600,color:"#ef4444"}}>{ar?"الحد الأدنى للبنوك":"Bank Minimum"}: 1.25x</span>
+        </div>
+      </div>
+    </div>}
+
+    {/* ═══ DEBT BALANCE CHART ═══ */}
+    {chartData.length > 2 && (
+      <div style={{marginBottom:16}}>
+        <button onClick={()=>setShowChart(!showChart)} style={{...btnS,fontSize:11,padding:"6px 14px",background:showChart?"#eff6ff":"#f8f9fb",color:showChart?"#2563eb":"#6b7080",border:"1px solid "+(showChart?"#93c5fd":"#e5e7ec"),borderRadius:6,fontWeight:600}}>
+          📈 {ar?"رسم بياني - رصيد الدين":"Debt Balance Chart"} {showChart?"▲":"▼"}
+        </button>
+        {showChart && <div style={{marginTop:10,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 18px"}}>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={chartData} margin={{top:5,right:10,left:10,bottom:5}}>
+              <defs>
+                <linearGradient id="debtG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.15}/><stop offset="95%" stopColor="#ef4444" stopOpacity={0}/></linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f1f5" />
+              <XAxis dataKey="year" tick={{fontSize:10,fill:"#6b7080"}} />
+              <YAxis tick={{fontSize:10,fill:"#6b7080"}} tickFormatter={v => v>=1e6?`${(v/1e6).toFixed(0)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:v} />
+              <Tooltip formatter={(v) => fmt(Math.abs(v))} />
+              <ReferenceLine y={0} stroke="#16a34a" strokeDasharray="4 4" strokeWidth={1.5} />
+              <Area type="monotone" dataKey="balance" stroke="#ef4444" strokeWidth={2.5} fill="url(#debtG)" name={ar?"رصيد الدين":"Debt Balance"} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>}
+      </div>
+    )}
+
+    {/* ═══ COMPREHENSIVE CASH FLOW TABLE ═══ */}
+    <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:8}}>
+      <div style={{fontSize:14,fontWeight:700,flex:1}}>{ar?"التدفق النقدي الشامل":"Comprehensive Cash Flow"}</div>
+      <select value={showYrs} onChange={e=>setShowYrs(parseInt(e.target.value))} style={{padding:"4px 8px",borderRadius:4,border:"1px solid #e5e7ec",fontSize:11}}>
+        {[10,15,20,30,50].map(n=><option key={n} value={n}>{n} {ar?"سنة":"yrs"}</option>)}
+      </select>
+    </div>
+
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
+    <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
+      <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
+      <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
+      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
+    </tr></thead><tbody>
+
+      {/* ═══ § 1. PROJECT CF (Unlevered) ═══ */}
+      <tr onClick={()=>setSecOpen(p=>({...p,s1:!p.s1}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",userSelect:"none"}}>{secOpen.s1?"▶":"▼"} {ar?"1. تدفقات المشروع (قبل التمويل)":"1. PROJECT CASH FLOWS (Unlevered)"}</td></tr>
+      {!secOpen.s1 && <>
+      <CFRow label={ar?"الإيرادات":"Revenue"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
+      <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
+      <CFRow label={ar?"(-) تكلفة التطوير (CAPEX)":"(-) Development CAPEX"} values={pc.capex} total={pc.totalCapex} negate color="#ef4444" />
+      <CFRow label={ar?"= صافي التدفق (قبل التمويل)":"= Net Project CF (Unlevered)"} values={pc.netCF} total={pc.netCF.reduce((a,b)=>a+b,0)} bold />
+      </>}
+
+      {/* ═══ § 2. FINANCING (Debt) ═══ */}
+      <tr onClick={()=>setSecOpen(p=>({...p,s2:!p.s2}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #3b82f6",userSelect:"none"}}>{secOpen.s2?"▶":"▼"} {ar?"2. التمويل البنكي":"2. BANK FINANCING"}</td></tr>
+      {!secOpen.s2 && <>
+      {!isBank100 && pf.equityCalls && <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={pf.equityCalls} total={pf.equityCalls.reduce((a,b)=>a+b,0)} color="#3b82f6" />}
+      <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={pf.drawdown} total={pf.drawdown?.reduce((a,b)=>a+b,0)||0} color="#2563eb" />
+      <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={pf.debtBalOpen} total={null} />
+      <CFRow label={ar?"(-) سداد أصل الدين":"(-) Principal Repayment"} values={pf.repayment} total={pf.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
+      <CFRow label={ar?"رصيد الدين (نهاية)":"Debt Balance (Close)"} values={pf.debtBalClose} total={null} />
+      <CFRow label={ar?"(-) تكلفة التمويل (فائدة)":"(-) Interest / Profit Cost"} values={pf.interest} total={pf.totalInterest||0} negate color="#ef4444" />
+      <CFRow label={ar?"= إجمالي خدمة الدين":"= Total Debt Service"} values={pf.debtService} total={totalDS} negate bold color="#ef4444" />
+      {/* DSCR row */}
+      {pf.dscr && <tr>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:600,minWidth:200,fontSize:10,color:"#2563eb",paddingInlineStart:20}}>DSCR</td>
+        <td style={tdN}></td>
+        {years.map(y=>{const v=pf.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.25?700:500,color:v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.25?"#f59e0b":"#16a34a"}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
+      </tr>}
+      {/* Exit Proceeds */}
+      {exitProc>0 && <CFRow label={ar?"(+) حصيلة التخارج":"(+) Exit Proceeds"} values={pf.exitProceeds} total={exitProc} color="#16a34a" />}
+      </>}
+
+      {/* ═══ § 3. LEVERED CF + NET RESULTS ═══ */}
+      <tr onClick={()=>setSecOpen(p=>({...p,s3:!p.s3}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s3?"▶":"▼"} {ar?"3. صافي التدفق النقدي (بعد التمويل)":"3. NET CASH FLOW (After Financing)"}</td></tr>
+      {!secOpen.s3 && <>
+      <CFRow label={ar?"= صافي التدفق النقدي (بعد التمويل)":"= Levered Net Cash Flow"} values={pf.leveredCF} total={pf.leveredCF.reduce((a,b)=>a+b,0)} bold />
+      {/* Cumulative */}
+      {(() => { let cum=0; const cumArr=pf.leveredCF.map(v=>{cum+=v;return cum;}); return <tr style={{background:"#fffbeb"}}>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:200}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
+        <td style={tdN}></td>
+        {years.map(y=><td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cumArr[y]<0?"#ef4444":"#16a34a"}}>{fmt(cumArr[y])}</td>)}
+      </tr>; })()}
+      {/* Cash yield */}
+      {pf.totalEquity > 0 && <tr>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>{ar?"عائد نقدي %":"Cash Yield %"}</td>
+        <td style={tdN}></td>
+        {years.map(y=>{const inc=pc.income[y]||0;const v=pf.totalEquity>0&&inc>0?inc/pf.totalEquity:0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#d0d4dc"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
+      </tr>}
+      </>}
+
+    </tbody></table></div>
+    </div>
+
+    {/* ═══ NPV ANALYSIS ═══ */}
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #05966922",marginTop:16,overflow:"hidden"}}>
+      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#05966908",borderBottom:"1px solid #05966918"}}>
+        <span style={{fontSize:14}}>📈</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{ar?"تحليل القيمة الحالية (NPV)":"NPV Analysis"}</span>
+      </div>
+      <div style={{padding:"14px 16px"}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3, 1fr)",gap:12}}>
+          {[
+            {rate:"10%",val:calcNPV(pf.leveredCF,0.10)},
+            {rate:"12%",val:calcNPV(pf.leveredCF,0.12)},
+            {rate:"14%",val:calcNPV(pf.leveredCF,0.14)},
+          ].map(({rate,val})=>(
+            <div key={rate} style={{background:val>0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"12px 14px",textAlign:"center"}}>
+              <div style={{fontSize:10,color:"#6b7080",marginBottom:4}}>{ar?"معدل الخصم":"Discount Rate"} {rate}</div>
+              <div style={{fontSize:18,fontWeight:800,color:val>0?"#16a34a":"#ef4444"}}>{fmtM(val)}</div>
+              <div style={{fontSize:10,color:"#9ca3af"}}>{cur}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* ═══ BANK COMPLIANCE SUMMARY ═══ */}
+    <div style={{background:"#fff",borderRadius:10,border:"1px solid #1e3a5f22",marginTop:16,overflow:"hidden"}}>
+      <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#1e3a5f08",borderBottom:"1px solid #1e3a5f18"}}>
+        <span style={{fontSize:14}}>✅</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{ar?"ملخص الامتثال البنكي":"Bank Compliance Summary"}</span>
+      </div>
+      <div style={{padding:"14px 16px"}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
+          {[
+            {test:ar?"DSCR أدنى ≥ 1.25x":"Min DSCR ≥ 1.25x", pass:dscrMin!==null&&dscrMin>=1.25, val:dscrMin!==null?dscrMin.toFixed(2)+"x":"N/A"},
+            {test:ar?"DSCR متوسط ≥ 1.50x":"Avg DSCR ≥ 1.50x", pass:dscrAvg!==null&&dscrAvg>=1.5, val:dscrAvg!==null?dscrAvg.toFixed(2)+"x":"N/A"},
+            {test:ar?"الدين يتم تصفيته":"Debt Fully Repaid", pass:debtClearYr!==null, val:debtClearYr?`${debtClearYr}`:(ar?"لم يُصفَّ":"Not cleared")},
+            {test:ar?"تغطية التخارج > الدين":"Exit Covers Debt", pass:exitProc>0&&exitProc>=peakDebt, val:exitProc>0?`${(exitProc/peakDebt).toFixed(2)}x`:(ar?"بدون تخارج":"No exit")},
+            {test:ar?"Levered IRR > 0":"Levered IRR > 0", pass:pf.leveredIRR!==null&&pf.leveredIRR>0, val:pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"},
+            {test:ar?"فترة استرداد < المدة":"Payback < Tenor", pass:paybackLev!==null&&paybackLev<=(cfg.loanTenor||7), val:paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"},
+          ].map((c,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:6,background:c.pass?"#f0fdf4":"#fef2f2",border:`1px solid ${c.pass?"#dcfce7":"#fecaca"}`}}>
+              <span style={{fontSize:16}}>{c.pass?"✅":"❌"}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,fontWeight:600,color:"#1a1d23"}}>{c.test}</div>
+                <div style={{fontSize:10,color:"#6b7080"}}>{c.val}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>);
 }
 
 // ── Financing Panel Input Components (MUST be outside FinancingView to keep focus) ──
