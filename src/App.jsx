@@ -1838,7 +1838,8 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   // Fee calculations (only Fund type gets full fees)
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
   const devFeeTotal = c.totalCapex * (project.developerFeePct || 0) / 100;
-  let structFee = isFund ? totalEquity * (project.structuringFeePct || 0) / 100 : 0;
+  // Structuring fee: % of development cost (CAPEX), not equity — matches ZAN Fund Model
+  let structFee = isFund ? f.devCostExclLand * (project.structuringFeePct || 0) / 100 : 0;
   const structFeeCap = project.structuringFeeCap || 0;
   if (structFeeCap > 0 && structFee > structFeeCap) structFee = structFeeCap;
   const mgmtFeeBase = project.mgmtFeeBase || "nav";
