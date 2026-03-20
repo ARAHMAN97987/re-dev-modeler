@@ -5065,9 +5065,9 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         </>
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        <div style={{height:48,minHeight:48,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:"0 12px",gap:8}}>
+        <div style={{height:isMobile?44:48,minHeight:isMobile?44:48,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:isMobile?"0 8px":"0 12px",gap:isMobile?4:8}}>
           {/* Back to projects */}
-          <button onClick={goBack} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"5px 10px",fontSize:11,flexShrink:0,border:"1px solid #e5e7ec"}}>{t.back}</button>
+          <button onClick={goBack} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:isMobile?"4px 8px":"5px 10px",fontSize:isMobile?10:11,flexShrink:0,border:"1px solid #e5e7ec"}}>{isMobile?"→":t.back}</button>
           {(() => {
             // Compute sidebar warning badge
             let _advWarn = 0;
@@ -5090,9 +5090,9 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               });
             }
             return (
-              <button onClick={()=>setSidebarOpen(!sidebarOpen)} title={sidebarOpen?(lang==="ar"?"إخفاء اللوحة":"Hide Panel"):(lang==="ar"?"إظهار اللوحة":"Show Panel")} style={{...btnS,background:sidebarOpen?"#f0f4ff":"#f0f1f5",color:sidebarOpen?"#2563eb":"#6b7080",padding:"6px 10px",fontSize:14,flexShrink:0,position:"relative",border:sidebarOpen?"1px solid #bfdbfe":"1px solid transparent"}}>
+              <button onClick={()=>setSidebarOpen(!sidebarOpen)} title={sidebarOpen?(lang==="ar"?"إخفاء اللوحة":"Hide Panel"):(lang==="ar"?"إظهار اللوحة":"Show Panel")} style={{...btnS,background:sidebarOpen?"#f0f4ff":"#f0f1f5",color:sidebarOpen?"#2563eb":"#6b7080",padding:isMobile?"4px 8px":"6px 10px",fontSize:isMobile?13:14,flexShrink:0,position:"relative",border:sidebarOpen?"1px solid #bfdbfe":"1px solid transparent"}}>
                 ☰
-                {!sidebarOpen && _advWarn > 0 && <span style={{position:"absolute",top:2,right:2,width:8,height:8,borderRadius:4,background:"#ef4444",border:"1.5px solid #fff"}} />}
+                {!sidebarOpen && _advWarn > 0 && <span style={{position:"absolute",top:1,right:1,width:7,height:7,borderRadius:4,background:"#ef4444",border:"1.5px solid #fff"}} />}
               </button>
             );
           })()}
@@ -5101,16 +5101,16 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           </div>
           {project?._shared && <span style={{fontSize:9,padding:"3px 10px",borderRadius:4,fontWeight:600,background:project._permission==="view"?"#fef3c7":"#dbeafe",color:project._permission==="view"?"#92400e":"#1d4ed8",flexShrink:0}}>{project._permission==="view"?(lang==="ar"?"🔒 قراءة":"🔒 View"):(lang==="ar"?"✏️ مشارك":"✏️ Edit")}</span>}
           {!isMobile && <StatusBadge status={project?.status} onChange={s=>up({status:s})} />}
-          {/* Undo */}
-          <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" style={{...btnS,background:"transparent",color:undoStack.current.length>0?"#6b7080":"#d0d4dc",padding:"5px 8px",fontSize:14,flexShrink:0,border:"none",cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>
-          {/* Primary: Present */}
-          <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"#16a34a":"#f0f4ff",color:presentMode?"#fff":"#2563eb",padding:"5px 10px",fontSize:10,fontWeight:600,border:presentMode?"none":"1px solid #bfdbfe",flexShrink:0}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>
+          {/* Undo - desktop only */}
+          {!isMobile && <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" style={{...btnS,background:"transparent",color:undoStack.current.length>0?"#6b7080":"#d0d4dc",padding:"5px 8px",fontSize:14,flexShrink:0,border:"none",cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>}
+          {/* Present - desktop only */}
+          {!isMobile && <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"#16a34a":"#f0f4ff",color:presentMode?"#fff":"#2563eb",padding:"5px 10px",fontSize:10,fontWeight:600,border:presentMode?"none":"1px solid #bfdbfe",flexShrink:0}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>}
           {/* Dropdown menu */}
           {(() => {
             const [menuOpen, setMenuOpen] = [headerMenuOpen, setHeaderMenuOpen];
             return (
               <div style={{position:"relative",flexShrink:0}}>
-                <button onClick={()=>setMenuOpen(!menuOpen)} style={{...btnS,background:menuOpen?"#f0f1f5":"transparent",color:"#4b5060",padding:"5px 8px",fontSize:16,fontWeight:500,border:"none"}}>⋮</button>
+                <button onClick={()=>setMenuOpen(!menuOpen)} style={{...btnS,background:menuOpen?"#f0f1f5":"transparent",color:"#4b5060",padding:isMobile?"4px 6px":"5px 8px",fontSize:isMobile?14:16,fontWeight:500,border:"none"}}>⋮</button>
                 {menuOpen && <>
                   <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:998}} />
                   <div style={{position:"absolute",top:"100%",marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:200,padding:"6px 0",...(lang==="ar"?{left:0}:{right:0})}}>
@@ -5118,6 +5118,14 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                     <button onClick={()=>{setAiOpen(true);setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>🤖</span> {lang==="ar"?"مساعد AI":"AI Assistant"}
                     </button>
+                    {/* Present mode (mobile only) */}
+                    {isMobile && <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:presentMode?"#16a34a":"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
+                      <span style={{fontSize:14}}>{presentMode?"✏️":"🎯"}</span> {presentMode?(lang==="ar"?"وضع التعديل":"Edit Mode"):(lang==="ar"?"وضع العرض":"Present Mode")}
+                    </button>}
+                    {/* Undo (mobile only) */}
+                    {isMobile && undoStack.current.length>0 && <button onClick={()=>{undo();setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
+                      <span style={{fontSize:14}}>↩</span> {lang==="ar"?"تراجع":"Undo"}
+                    </button>}
                     {/* Status (mobile only - hidden from header) */}
                     {isMobile && <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 16px"}}>
                       <span style={{fontSize:12,color:"#6b7080"}}>{lang==="ar"?"الحالة":"Status"}</span>
