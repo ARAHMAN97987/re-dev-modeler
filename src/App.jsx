@@ -6635,11 +6635,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     const reportTitle = reportLabels[activeReport]?.label || "Report";
     const dateStr = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
     const htmlContent = `<!DOCTYPE html><html dir="${ar?'rtl':'ltr'}" lang="${ar?'ar':'en'}"><head><meta charset="utf-8"><title>${project.name} - ${reportTitle}</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Tajawal:wght@300;400;700;800;900&display=swap" rel="stylesheet">
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
   @page { size: A4; margin: 12mm 15mm; }
   * { box-sizing: border-box; }
-  body { font-family: 'DM Sans','Segoe UI',system-ui,sans-serif; font-size: 11px; color: #1a1d23; line-height: 1.5; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; direction: ${ar?'rtl':'ltr'}; text-align: ${ar?'right':'left'}; }
+  body { font-family: ${ar?"'Tajawal','DM Sans','Segoe UI',system-ui,sans-serif":"'DM Sans','Segoe UI',system-ui,sans-serif"}; font-size: 11px; color: #1a1d23; line-height: 1.5; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; direction: ${ar?'rtl':'ltr'}; text-align: ${ar?'right':'left'}; }
   [dir=rtl] th { text-align: right; }
   [dir=rtl] .zan-hdr { flex-direction: row-reverse; }
   [dir=rtl] .zan-ftr { flex-direction: row-reverse; }
@@ -6753,7 +6753,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     </div>
 
     {/* ── Report content ── */}
-    <div ref={reportRef} dir={ar?"rtl":"ltr"} style={{textAlign:ar?"right":"left"}}>
+    <div ref={reportRef} dir={ar?"rtl":"ltr"} style={{textAlign:ar?"right":"left",fontFamily:ar?"'Tajawal','DM Sans','Segoe UI',system-ui,sans-serif":"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
       {activeReport === "exec" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
