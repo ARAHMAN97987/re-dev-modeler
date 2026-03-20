@@ -2911,6 +2911,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </div>;
     })()}
 
+    {/* ═══ EXIT ANALYSIS ═══ */}
+    <ExitAnalysisPanel project={project} results={results} financing={financing} waterfall={w} lang={lang} />
+
     {/* ═══ INCENTIVES IMPACT (if active) ═══ */}
     {incentivesResult && <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />}
 
@@ -3081,6 +3084,148 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     </div>
   </div>);
 
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXIT ANALYSIS PANEL (shared by all Results views, collapsible)
+// ═══════════════════════════════════════════════════════════════
+function ExitAnalysisPanel({ project, results, financing, waterfall, lang }) {
+  const ar = lang === "ar";
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(true);
+  const f = financing;
+  if (!f || !results) return null;
+
+  const c = results.consolidated;
+  const h = results.horizon;
+  const sy = results.startYear;
+  const cur = project.currency || "SAR";
+  const strategy = project.exitStrategy || "sale";
+  const isHold = strategy === "hold";
+  const exitYearAbs = f.exitYear || 0;
+  const exitYrIdx = exitYearAbs > 0 ? exitYearAbs - sy : 0;
+  const exitProc = f.exitProceeds ? f.exitProceeds.reduce((a,b)=>a+b,0) : 0;
+
+  // If hold and no exit proceeds, still show but with hold info
+  if (isHold && exitProc <= 0) {
+    return (
+      <div style={{background:"#fff",borderRadius:10,border:"1px solid #f59e0b22",marginBottom:16,overflow:"hidden"}}>
+        <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#f59e0b08"}}>
+          <span style={{fontSize:14}}>🚪</span>
+          <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"استراتيجية التخارج":"Exit Strategy"}</span>
+          <span style={{fontSize:10,fontWeight:600,color:"#f59e0b",background:"#f59e0b18",padding:"2px 8px",borderRadius:10}}>{ar?"احتفاظ بالدخل":"Hold for Income"}</span>
+        </div>
+      </div>
+    );
+  }
+  if (exitProc <= 0) return null;
+
+  // Compute exit details
+  const exitMult = project.exitMultiple || 10;
+  const exitCostPct = project.exitCostPct || 2;
+  const exitCapRate = project.exitCapRate || 9;
+  const isSale = strategy === "sale";
+  const isCapRate = strategy === "caprate";
+
+  // Stabilized income & NOI at exit
+  const stabIncome = exitYrIdx >= 0 && exitYrIdx < h ? (c.income[exitYrIdx] || 0) : 0;
+  const stabLandRent = exitYrIdx >= 0 && exitYrIdx < h ? (c.landRent[exitYrIdx] || 0) : 0;
+  const stabNOI = stabIncome - stabLandRent;
+
+  // Gross exit value (before cost deduction)
+  const grossExit = exitCostPct > 0 ? exitProc / (1 - exitCostPct/100) : exitProc;
+  const exitCostAmt = grossExit - exitProc;
+
+  // Implied cap rate and implied multiple
+  const impliedCapRate = stabNOI > 0 ? (stabNOI / grossExit) * 100 : 0;
+  const impliedMultiple = stabIncome > 0 ? grossExit / stabIncome : 0;
+
+  // Debt remaining at exit
+  const debtAtExit = f.debtBalClose ? (exitYrIdx > 0 && exitYrIdx < h ? (f.debtBalClose[Math.max(0,exitYrIdx-1)] || 0) : 0) : 0;
+  const netToEquity = exitProc - debtAtExit;
+
+  // Years from construction end to exit
+  const constrEnd = f.constrEnd || 0;
+  const holdPeriod = exitYrIdx - constrEnd;
+
+  // Dev cost ratio
+  const devCost = f.devCostInclLand || c.totalCapex;
+  const returnOnCost = devCost > 0 ? exitProc / devCost : 0;
+
+  // Fund-specific: LP/GP exit share
+  const w = waterfall;
+  const hasWaterfall = w && w.lpTotalDist > 0;
+
+  return (
+    <div style={{background:"#fff",borderRadius:10,border:`1px solid ${open?"#f59e0b33":"#f59e0b22"}`,marginBottom:16,overflow:"hidden"}}>
+      <div onClick={()=>setOpen(!open)} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#f59e0b08",borderBottom:open?"1px solid #f59e0b18":"none",cursor:"pointer",userSelect:"none"}}>
+        <span style={{fontSize:14}}>🚪</span>
+        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تحليل التخارج":"Exit Analysis"}</span>
+        <span style={{fontSize:10,fontWeight:600,color:"#f59e0b",background:"#f59e0b18",padding:"2px 8px",borderRadius:10}}>
+          {isSale ? `${exitMult}x · ` : isCapRate ? `${exitCapRate}% CR · ` : ""}{exitYearAbs} · {fmtM(exitProc)}
+        </span>
+        <span style={{fontSize:10,color:"#9ca3af"}}>{open?"▼":"▶"}</span>
+      </div>
+      {open && <div style={{padding:"14px 16px"}}>
+        {/* Row 1: Strategy + Valuation */}
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)",gap:10,marginBottom:14}}>
+          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"الاستراتيجية":"Strategy"}</div>
+            <div style={{fontSize:13,fontWeight:700}}>{isSale?(ar?"بيع (مضاعف)":"Sale (Multiple)"):isCapRate?(ar?"بيع (رسملة)":"Sale (Cap Rate)"):(ar?"احتفاظ":"Hold")}</div>
+          </div>
+          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"سنة التخارج":"Exit Year"}</div>
+            <div style={{fontSize:13,fontWeight:700}}>{exitYearAbs} <span style={{fontSize:10,color:"#9ca3af"}}>({ar?"سنة":"Yr"} {exitYrIdx+1})</span></div>
+          </div>
+          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"فترة الاحتفاظ":"Hold Period"}</div>
+            <div style={{fontSize:13,fontWeight:700}}>{holdPeriod > 0 ? `${holdPeriod} ${ar?"سنة بعد البناء":"yr post-build"}` : "—"}</div>
+          </div>
+          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}>
+            <div style={{fontSize:10,color:"#6b7080"}}>{isSale?(ar?"المضاعف":"Multiple"):(ar?"معدل الرسملة":"Cap Rate")}</div>
+            <div style={{fontSize:13,fontWeight:700}}>{isSale?`${exitMult}x`:isCapRate?`${exitCapRate}%`:"—"}</div>
+          </div>
+        </div>
+
+        {/* Row 2: Value breakdown */}
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
+          {/* Valuation */}
+          <div style={{background:"#fffbeb",borderRadius:8,padding:"10px 14px",border:"1px solid #fde68a"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#92400e",letterSpacing:0.5,textTransform:"uppercase",marginBottom:6}}>{ar?"التقييم":"VALUATION"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",fontSize:12}}>
+              <span style={{color:"#6b7080"}}>{ar?"دخل مستقر":"Stabilized Income"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(stabIncome)}</span>
+              {stabLandRent > 0 && <><span style={{color:"#6b7080"}}>{ar?"(-) إيجار أرض":"(-) Land Rent"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>{fmt(stabLandRent)}</span></>}
+              {stabNOI !== stabIncome && <><span style={{color:"#6b7080"}}>= NOI</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(stabNOI)}</span></>}
+              <span style={{borderTop:"1px solid #fde68a",paddingTop:4,color:"#6b7080"}}>{isSale?`× ${exitMult}x`:isCapRate?`÷ ${exitCapRate}%`:""}</span>
+              <span style={{borderTop:"1px solid #fde68a",paddingTop:4,textAlign:"right",fontWeight:700,color:"#1a1d23"}}>{fmtM(grossExit)}</span>
+              <span style={{color:"#ef4444",fontSize:11}}>{ar?"(-) تكاليف التخارج":"(-) Exit Costs"} ({exitCostPct}%)</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(exitCostAmt)}</span>
+              <span style={{borderTop:"2px solid #f59e0b",paddingTop:4,fontWeight:700,color:"#16a34a"}}>{ar?"= صافي العائد":"= Net Proceeds"}</span>
+              <span style={{borderTop:"2px solid #f59e0b",paddingTop:4,textAlign:"right",fontWeight:800,fontSize:14,color:"#16a34a"}}>{fmtM(exitProc)}</span>
+            </div>
+          </div>
+
+          {/* Returns */}
+          <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 14px",border:"1px solid #dcfce7"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#166534",letterSpacing:0.5,textTransform:"uppercase",marginBottom:6}}>{ar?"مؤشرات التخارج":"EXIT METRICS"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 12px",fontSize:12}}>
+              <span style={{color:"#6b7080"}}>{ar?"العائد / التكلفة":"Proceeds / Dev Cost"}</span><span style={{textAlign:"right",fontWeight:700,color:returnOnCost>1?"#16a34a":"#ef4444"}}>{returnOnCost.toFixed(2)}x</span>
+              {impliedCapRate > 0 && <><span style={{color:"#6b7080"}}>{ar?"معدل رسملة ضمني":"Implied Cap Rate"}</span><span style={{textAlign:"right",fontWeight:500}}>{impliedCapRate.toFixed(1)}%</span></>}
+              {impliedMultiple > 0 && <><span style={{color:"#6b7080"}}>{ar?"مضاعف ضمني":"Implied Multiple"}</span><span style={{textAlign:"right",fontWeight:500}}>{impliedMultiple.toFixed(1)}x</span></>}
+              {debtAtExit > 0 && <>
+                <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#ef4444"}}>{ar?"دين متبقي عند التخارج":"Debt at Exit"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#ef4444"}}>{fmtM(debtAtExit)}</span>
+                <span style={{color:"#16a34a",fontWeight:600}}>{ar?"صافي للملكية":"Net to Equity"}</span><span style={{textAlign:"right",fontWeight:700,color:netToEquity>0?"#16a34a":"#ef4444"}}>{fmtM(netToEquity)}</span>
+              </>}
+              {f.totalEquity > 0 && <><span style={{color:"#6b7080"}}>{ar?"العائد / الملكية":"Proceeds / Equity"}</span><span style={{textAlign:"right",fontWeight:600,color:"#16a34a"}}>{(exitProc/f.totalEquity).toFixed(2)}x</span></>}
+              {hasWaterfall && <>
+                <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#8b5cf6"}}>{ar?"حصة LP من التخارج":"LP Exit Share"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM((w.lpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
+                <span style={{color:"#3b82f6"}}>{ar?"حصة GP من التخارج":"GP Exit Share"}</span><span style={{textAlign:"right",fontWeight:500,color:"#3b82f6"}}>{fmtM((w.gpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
+              </>}
+            </div>
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3300,24 +3445,8 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
       {hasIncentives && <RK label={ar?"حوافز حكومية":"Gov Incentives"} value={fmtM(incentiveTotal)} color="#059669" />}
     </div>
 
-    {/* ═══ EXIT ANALYSIS (collapsible) ═══ */}
-    {exitProc > 0 && <div style={{background:"#fff",borderRadius:10,border:"1px solid #f59e0b22",marginBottom:16,overflow:"hidden"}}>
-      <div onClick={()=>setSecOpen(p=>({...p,exit:!p.exit}))} style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#f59e0b08",borderBottom:!secOpen.exit?"1px solid #f59e0b18":"none",cursor:"pointer",userSelect:"none"}}>
-        <span style={{fontSize:14}}>🚪</span>
-        <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تحليل التخارج":"Exit Analysis"}</span>
-        <span style={{fontSize:10,fontWeight:600,color:"#f59e0b",background:"#f59e0b18",padding:"2px 8px",borderRadius:10}}>{exitYear}</span>
-        <span style={{fontSize:10,color:"#9ca3af"}}>{!secOpen.exit?"▼":"▶"}</span>
-      </div>
-      {!secOpen.exit && <div style={{padding:"14px 16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(130px, 1fr))",gap:10,fontSize:12}}>
-          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"سنة التخارج":"Exit Year"}</span><strong>{exitYear}</strong></div>
-          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"الإجمالي":"Proceeds"}</span><strong>{fmtM(exitProc)}</strong></div>
-          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"المضاعف":"Multiple"}</span><strong>{project.exitMultiple||10}x</strong></div>
-          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"التكلفة":"Exit Cost"}</span><strong>{project.exitCostPct||2}%</strong></div>
-          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"صافي / تكلفة التطوير":"Net / Dev Cost"}</span><strong style={{color:exitProc/devCost>1?"#16a34a":"#ef4444"}}>{(exitProc/devCost).toFixed(2)}x</strong></div>
-        </div>
-      </div>}
-    </div>}
+    {/* ═══ EXIT ANALYSIS ═══ */}
+    <ExitAnalysisPanel project={project} results={results} financing={financing} lang={lang} />
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
     <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />
@@ -3714,6 +3843,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         )}
       </div>
     </div>
+
+    {/* ═══ EXIT ANALYSIS ═══ */}
+    <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} />
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
     <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
