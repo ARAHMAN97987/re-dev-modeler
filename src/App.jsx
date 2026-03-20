@@ -3854,6 +3854,14 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"فترة الاسترداد":"Payback"} v={paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"—"} c="#2563eb" />
             <KR l={ar?"عائد نقدي":"Cash-on-Cash"} v={cashOnCash>0?fmtPct(cashOnCash*100):"—"} c={cashOnCash>0.08?"#16a34a":"#6b7080"} />
             <KR l={ar?"صافي التدفق":"Net CF"} v={fmtM(devNetCF)} c={devNetCF>0?"#16a34a":"#ef4444"} bold />
+            {/* Leverage Effect (debt+equity only) */}
+            {!isBank100 && pf.totalEquity > 0 && <>
+            <SecHd text={ar?"تأثير الرافعة المالية":"LEVERAGE EFFECT"} />
+            <KR l={ar?"IRR بدون دين":"Without Debt"} v={pc.irr!==null?fmtPct(pc.irr*100):"—"} c="#6b7080" />
+            <KR l={ar?"IRR مع دين":"With Debt"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—"} c={pf.leveredIRR>0.12?"#16a34a":"#f59e0b"} bold />
+            <KR l={ar?"الفرق (أثر الدين)":"IRR Boost"} v={pc.irr!==null&&pf.leveredIRR!==null?`+${((pf.leveredIRR-pc.irr)*100).toFixed(2)}%`:"—"} c={pf.leveredIRR>pc.irr?"#16a34a":"#ef4444"} bold />
+            <KR l={ar?"مضاعف الملكية":"Equity Multiple"} v={pf.totalEquity>0?((exitProc+devNetCF)/pf.totalEquity).toFixed(2)+"x":"—"} c={exitProc+devNetCF>pf.totalEquity?"#16a34a":"#ef4444"} bold />
+            </>}
             <SecHd text="NPV" />
             <KR l="@10%" v={fmtM(calcNPV(pf.leveredCF,0.10))} />
             <KR l="@12%" v={fmtM(calcNPV(pf.leveredCF,0.12))} c="#2563eb" bold />
@@ -3880,6 +3888,17 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <SecHd text={ar?"المصادر والاستخدامات":"SOURCES & USES"} />
             <KR l={ar?"دين بنكي":"Bank Debt"} v={fmtM(pf.totalDebt)} c="#ef4444" />
             <KR l={ar?"ملكية":"Equity"} v={fmtM(pf.totalEquity)} c="#3b82f6" />
+            {/* Visual Debt/Equity bar */}
+            {!isBank100 && pf.devCostInclLand > 0 && <div style={{gridColumn:"1/-1",marginTop:2,marginBottom:4}}>
+              <div style={{display:"flex",height:8,borderRadius:4,overflow:"hidden",background:"#e5e7ec"}}>
+                <div style={{width:`${(pf.totalDebt/(pf.devCostInclLand||1))*100}%`,background:"#ef4444",borderRadius:"4px 0 0 4px"}} />
+                <div style={{width:`${(pf.totalEquity/(pf.devCostInclLand||1))*100}%`,background:"#3b82f6",borderRadius:"0 4px 4px 0"}} />
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginTop:2}}>
+                <span style={{color:"#ef4444",fontWeight:600}}>{ar?"دين":"Debt"} {fmtPct((pf.totalDebt/(pf.devCostInclLand||1))*100)}</span>
+                <span style={{color:"#3b82f6",fontWeight:600}}>{ar?"ملكية":"Equity"} {fmtPct((pf.totalEquity/(pf.devCostInclLand||1))*100)}</span>
+              </div>
+            </div>}
             <KR l={ar?"تكلفة بناء":"Construction"} v={fmtM(pf.devCostExclLand)} />
             {pf.landCapValue>0 && <KR l={ar?"أرض":"Land"} v={fmtM(pf.landCapValue)} />}
             <KR l={ar?"الإجمالي":"Total"} v={fmtM(pf.devCostInclLand)} bold />
@@ -3967,6 +3986,12 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <tr onClick={()=>setSecOpen(p=>({...p,s2:!p.s2}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #3b82f6",userSelect:"none"}}>{secOpen.s2?"▶":"▼"} {ar?"2. التمويل البنكي":"2. BANK FINANCING"}</td></tr>
       {!secOpen.s2 && <>
       {!isBank100 && pf.equityCalls && <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={pf.equityCalls} total={pf.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" negate />}
+      {/* Cumulative equity deployed */}
+      {!isBank100 && pf.equityCalls && <tr style={{background:"#faf5ff"}}>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:500,fontSize:10,color:"#7c3aed",paddingInlineStart:20,minWidth:200}}>{ar?"↳ ملكية تراكمية":"↳ Cumulative Equity"}</td>
+        <td style={tdN}></td>
+        {(() => { let cum=0; return years.map(y => { cum+=pf.equityCalls[y]||0; return <td key={y} style={{...tdN,fontSize:10,fontWeight:500,color:cum>0?"#7c3aed":"#d0d4dc"}}>{cum>0?fmt(cum):"—"}</td>; }); })()}
+      </tr>}
       <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={pf.drawdown} total={pf.drawdown?.reduce((a,b)=>a+b,0)||0} />
       <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={pf.debtBalOpen} total={null} />
       <CFRow label={ar?"(-) سداد أصل الدين":"(-) Principal Repayment"} values={pf.repayment} total={pf.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
