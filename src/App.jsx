@@ -2602,6 +2602,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [showTerms, setShowTerms] = useState(false);
   const [wSec, setWSec] = useState({});  // chart toggle state
   const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false}); // expandable KPI cards
+  const [eduModal, setEduModal] = useState(null);
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
@@ -2930,6 +2931,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         </div>
       </div>;
     })()}
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
     <ExitAnalysisPanel project={project} results={results} financing={financing} waterfall={w} lang={lang} />
@@ -3102,6 +3104,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
     </tbody></table></div>
     </div>
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 
 }
