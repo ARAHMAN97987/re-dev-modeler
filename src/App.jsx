@@ -4258,6 +4258,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
                 </FL>
               </div>
               <FL label={ar?"طريقة السحب":"Tranche Mode"} tip="Single: all debt as one block. Per Draw: each drawdown as separate tranche"><Drp lang={lang} value={cfg.debtTrancheMode||"single"} onChange={v=>upCfg({debtTrancheMode:v})} options={[{value:"single",en:"Single Block",ar:"كتلة واحدة"},{value:"perDraw",en:"Per Drawdown",ar:"لكل سحبة"}]} /></FL>
+              <div style={{gridColumn:"1/-1",marginTop:-2,marginBottom:4}}><HelpLink contentKey="islamicFinance" lang={lang} onOpen={setEduModal} label={ar?"المرابحة والإجارة والتقليدي":"Murabaha vs Ijara vs Conventional"} /></div>
             </>}
           </>;
         })()}</AB>
@@ -5980,6 +5981,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
 function ControlPanel({ project, up, t, lang, results }) {
   if (!project) return null;
   const [showLandRentDetail, setShowLandRentDetail] = useState(false);
+  const [eduModal, setEduModal] = useState(null);
 
   const cur = project.currency || "SAR";
   const ar = lang==="ar";
@@ -6003,6 +6005,7 @@ Model currency. Default is SAR"><Sel lang={lang} value={project.currency} onChan
     <Sec title={t.landAcq} filled={project.landArea > 0} summary={project.landArea > 0 ? `${project.landType} | ${fmt(project.landArea)} m²` : ""}>
       <Fld label={t.landType} tip="نوع حيازة الأرض: شراء، إيجار، شراكة، أو BOT. يؤثر على CAPEX والتدفقات
 Land tenure type: purchase, lease, partner equity, or BOT. Affects CAPEX and cash flows"><Sel lang={lang} value={project.landType} onChange={v=>up({landType:v})} options={LAND_TYPES} /></Fld>
+      <div style={{marginBottom:8}}><HelpLink contentKey="landType" lang={lang} onOpen={setEduModal} /></div>
       <Fld label={t.landArea} tip="إجمالي مساحة الأرض بالمتر المربع. تُستخدم لحساب إيجار الأرض والرسملة
 Total land area in sqm. Used to calculate land rent and capitalization"><SidebarInput type="number" value={project.landArea} onChange={v=>up({landArea:v})} /></Fld>
       {project.landType==="lease"&&<>
@@ -6146,6 +6149,7 @@ Default lease rate for new assets in SAR/sqm/year"><SidebarInput type="number" v
       <Fld label={t.defCostSqm} tip="تكلفة البناء الافتراضية للأصول الجديدة بالريال/م²
 Default construction cost for new assets in SAR/sqm"><SidebarInput type="number" value={project.defaultCostPerSqm} onChange={v=>up({defaultCostPerSqm:v})} /></Fld>
     </Sec>
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </>);
 }
 
@@ -8062,8 +8066,416 @@ const EDUCATIONAL_CONTENT = {
         }
       ]
     }
+  },
+  islamicFinance: {
+    ar: {
+      title: "هياكل التمويل الإسلامي",
+      intro: "في السعودية معظم التمويل البنكي يتم وفق أحكام الشريعة الإسلامية. الفرق ليس فقط في المسمى بل في الهيكل القانوني والملكية وتوزيع المخاطر.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "murabaha",
+          label: "المرابحة",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "ما هي المرابحة؟" },
+            { type: "text", text: "البنك يشتري الأصل (أرض، مواد بناء، معدات) ثم يبيعه للعميل بسعر أعلى يشمل هامش ربح معلوم ومتفق عليه. الدفع يكون بأقساط على فترة محددة." },
+            { type: "heading", text: "كيف تعمل في التطوير العقاري؟" },
+            { type: "list", items: [
+              "البنك يشتري الأرض أو مواد البناء نيابةً عن المطور",
+              "يبيعها للمطور بسعر التكلفة + هامش ربح (يعادل نسبة الفائدة)",
+              "السداد على أقساط حسب جدول متفق عليه",
+              "الملكية تنتقل للمطور فوراً بعد البيع"
+            ]},
+            { type: "heading", text: "الفرق عن القرض التقليدي" },
+            { type: "list", items: [
+              "البنك يملك الأصل لحظة (ولو شكلياً) قبل بيعه - لا يقرض مال مباشرة",
+              "الربح ثابت ومعلوم من البداية (لا يتغير مع السوق)",
+              "لا يوجد \"فائدة\" بل \"هامش ربح\" - الأثر المالي مشابه",
+              "في النموذج المالي: المعالجة الحسابية متطابقة تقريباً مع القرض التقليدي"
+            ]},
+            { type: "heading", text: "الاستخدام في السعودية" },
+            { type: "list", items: [
+              "الأكثر شيوعاً في تمويل شراء الأراضي والعقارات",
+              "معتمد من جميع البنوك السعودية",
+              "الهامش عادة مرتبط بـ SAIBOR + سبريد ثابت",
+              "مقبول من هيئة السوق المالية والبنك المركزي"
+            ]}
+          ]
+        },
+        {
+          id: "ijara",
+          label: "الإجارة",
+          icon: "📄",
+          content: [
+            { type: "heading", text: "ما هي الإجارة المنتهية بالتمليك؟" },
+            { type: "text", text: "البنك يشتري الأصل ويؤجره للعميل لفترة محددة. عند انتهاء الإجارة ينتقل ملكية الأصل للعميل. أثناء الإجارة البنك هو المالك القانوني." },
+            { type: "heading", text: "كيف تعمل في التطوير العقاري؟" },
+            { type: "list", items: [
+              "البنك يشتري العقار أو جزءاً منه",
+              "يؤجره للمطور بأجرة شهرية/ربع سنوية",
+              "الأجرة تشمل جزء إيجار + جزء يُسدد من الأصل",
+              "في نهاية المدة: المطور يملك العقار بسعر رمزي أو مجاناً"
+            ]},
+            { type: "heading", text: "الفرق عن المرابحة" },
+            { type: "list", items: [
+              "في الإجارة: البنك يظل مالكاً طوال فترة العقد",
+              "في المرابحة: الملكية تنتقل فوراً بعد البيع",
+              "الإجارة أنسب للأصول المدرّة للدخل (المطور يستخدم دخل الإيجار للسداد)",
+              "المرابحة أنسب لتمويل شراء الأراضي ومواد البناء"
+            ]},
+            { type: "heading", text: "المزايا" },
+            { type: "list", items: [
+              "مرونة في هيكلة الأقساط (موسمية، متصاعدة)",
+              "البنك يتحمل مخاطر ملكية الأصل نظرياً",
+              "إمكانية إعادة تسعير الأجرة دورياً",
+              "مناسب لمشاريع التأجير والتشغيل طويلة المدة"
+            ]},
+            { type: "heading", text: "في النموذج المالي" },
+            { type: "list", items: [
+              "الأثر الحسابي مشابه جداً للقرض التقليدي والمرابحة",
+              "الفرق في المسمى: \"أجرة\" بدل \"قسط\"، \"ربح\" بدل \"فائدة\"",
+              "DSCR والنسب المالية تُحسب بنفس الطريقة",
+              "التقارير البنكية تستخدم المصطلحات الشرعية"
+            ]}
+          ]
+        },
+        {
+          id: "conventional",
+          label: "تقليدي",
+          icon: "💳",
+          content: [
+            { type: "heading", text: "ما هو التمويل التقليدي؟" },
+            { type: "text", text: "قرض مباشر من البنك للعميل بفائدة. البنك لا يملك الأصل - فقط يُقرض المال ويأخذ ضمانات. متاح في بنوك دولية وبعض البرامج الخاصة." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "تمويل من بنوك دولية ليس لها فروع شرعية",
+              "تمويل مشاريع خارج السعودية",
+              "برامج تمويل حكومية أو دولية بشروط خاصة",
+              "عندما تكون الفائدة المتغيرة أفضل من هامش المرابحة الثابت"
+            ]},
+            { type: "heading", text: "الفرق الجوهري" },
+            { type: "list", items: [
+              "فائدة على المبلغ المقترض (بسيطة أو مركبة)",
+              "الفائدة قد تكون ثابتة أو متغيرة (مرتبطة بمؤشر)",
+              "البنك لا يملك الأصل في أي مرحلة",
+              "أبسط قانونياً لكن لا يتوافق مع الشريعة"
+            ]},
+            { type: "heading", text: "في النموذج المالي" },
+            { type: "list", items: [
+              "الحسابات متطابقة مع المرابحة والإجارة رقمياً",
+              "الفرق فقط في المصطلحات: فائدة vs ربح vs أجرة",
+              "النموذج يتعامل مع الثلاثة بنفس المنطق الحسابي"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Islamic Finance Structures",
+      intro: "In Saudi Arabia most bank financing follows Sharia principles. The difference is not just naming but legal structure, ownership, and risk allocation.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "murabaha",
+          label: "Murabaha",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "What is Murabaha?" },
+            { type: "text", text: "Bank purchases the asset (land, materials, equipment) then sells it to the client at cost plus an agreed profit margin. Payment is in installments." },
+            { type: "heading", text: "How it works in real estate" },
+            { type: "list", items: [
+              "Bank purchases land or construction materials on behalf of developer",
+              "Sells to developer at cost + profit margin (equivalent to interest rate)",
+              "Repayment in installments per agreed schedule",
+              "Ownership transfers to developer immediately after sale"
+            ]},
+            { type: "heading", text: "Difference from conventional loan" },
+            { type: "list", items: [
+              "Bank momentarily owns the asset before selling - doesn't lend money directly",
+              "Profit is fixed and known upfront (doesn't fluctuate)",
+              "No 'interest' but 'profit margin' - financial impact is similar",
+              "In the financial model: calculations are nearly identical"
+            ]}
+          ]
+        },
+        {
+          id: "ijara",
+          label: "Ijara",
+          icon: "📄",
+          content: [
+            { type: "heading", text: "What is Ijara (Lease-to-Own)?" },
+            { type: "text", text: "Bank purchases the asset and leases it to the client. At lease end, ownership transfers to client. During the lease, bank remains legal owner." },
+            { type: "heading", text: "How it works in real estate" },
+            { type: "list", items: [
+              "Bank purchases the property or portion of it",
+              "Leases to developer at periodic rent",
+              "Rent includes lease portion + principal repayment",
+              "At end: developer owns at nominal or zero price"
+            ]},
+            { type: "heading", text: "Difference from Murabaha" },
+            { type: "list", items: [
+              "Ijara: bank remains owner throughout the contract",
+              "Murabaha: ownership transfers immediately after sale",
+              "Ijara better for income-producing assets",
+              "Murabaha better for land purchase and construction materials"
+            ]}
+          ]
+        },
+        {
+          id: "conventional",
+          label: "Conventional",
+          icon: "💳",
+          content: [
+            { type: "heading", text: "What is Conventional Finance?" },
+            { type: "text", text: "Direct loan from bank to client at interest. Bank doesn't own the asset - only lends money against collateral." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Financing from international banks without Sharia windows",
+              "Projects outside Saudi Arabia",
+              "Government or international programs with special terms"
+            ]},
+            { type: "heading", text: "In the financial model" },
+            { type: "list", items: [
+              "Calculations are identical to Murabaha and Ijara numerically",
+              "Only difference is terminology: interest vs profit vs rent",
+              "Model treats all three with the same calculation logic"
+            ]}
+          ]
+        }
+      ]
+    }
+  },
+  govIncentives: {
+    ar: {
+      title: "الحوافز الحكومية للتطوير العقاري",
+      intro: "الحكومة السعودية تقدم عدة أنواع من الحوافز لتشجيع التطوير العقاري في مناطق معينة أو لقطاعات محددة. هذه الحوافز تؤثر مباشرة على جدوى المشروع وعائد المستثمر.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "capexGrant",
+          label: "منحة CAPEX",
+          icon: "🏗",
+          content: [
+            { type: "heading", text: "ما هي منحة CAPEX؟" },
+            { type: "text", text: "الحكومة تدفع نسبة من تكاليف البناء مباشرة للمطور. تخفض التكلفة الفعلية للمشروع وترفع العائد على الاستثمار." },
+            { type: "heading", text: "كيف تعمل؟" },
+            { type: "list", items: [
+              "نسبة محددة من تكلفة البناء (عادة 10% - 30%)",
+              "حد أقصى بالريال (مثلاً 50 مليون ريال)",
+              "تُصرف خلال البناء (مع مستخلصات المقاول) أو عند الإنجاز",
+              "تحتاج استيفاء شروط ومعايير محددة من الجهة المانحة"
+            ]},
+            { type: "heading", text: "الأثر على النموذج المالي" },
+            { type: "list", items: [
+              "تخفض صافي CAPEX المطلوب تمويله",
+              "تقلل حجم الدين أو الـ Equity المطلوب",
+              "ترفع IRR مباشرة (لأن التكلفة أقل)",
+              "لا تؤثر على الإيرادات - فقط على جانب التكاليف"
+            ]},
+            { type: "heading", text: "أمثلة" },
+            { type: "list", items: [
+              "هيئة المدن الاقتصادية: منح للمشاريع في المدن الاقتصادية",
+              "صندوق التنمية السياحي: دعم مشاريع الضيافة والسياحة",
+              "برنامج جدة التاريخية: حوافز لإعادة تطوير المنطقة التاريخية",
+              "وزارة الاستثمار: حوافز للمشاريع الأجنبية المشتركة"
+            ]}
+          ]
+        },
+        {
+          id: "landRent",
+          label: "إعفاء إيجار الأرض",
+          icon: "🌍",
+          content: [
+            { type: "heading", text: "ما هو إعفاء إيجار الأرض؟" },
+            { type: "text", text: "الحكومة أو الجهة المالكة تعفي المطور من إيجار الأرض لفترة محددة (عادة فترة البناء + سنوات إضافية) أو تخفض النسبة بشكل كبير." },
+            { type: "heading", text: "الأنواع الشائعة" },
+            { type: "list", items: [
+              "إعفاء كامل: بدون إيجار لمدة محددة (مثلاً 5-10 سنوات)",
+              "إعفاء جزئي: تخفيض بنسبة (مثلاً 50% لمدة 7 سنوات)",
+              "تدريجي: إعفاء كامل أول 3 سنوات ثم 50% ثم السعر الكامل",
+              "مرتبط بالإنجاز: الإعفاء يسري حتى اكتمال البناء"
+            ]},
+            { type: "heading", text: "الأثر على النموذج المالي" },
+            { type: "list", items: [
+              "يقلل المصاريف التشغيلية في السنوات الأولى",
+              "يحسّن التدفقات النقدية أثناء فترة التطوير والتشغيل المبكر",
+              "يرفع DSCR في السنوات الأولى (مهم للبنك)",
+              "يخفض نقطة التعادل (Break-even)"
+            ]},
+            { type: "heading", text: "ملاحظات" },
+            { type: "list", items: [
+              "ينطبق فقط على أراضي الإيجار (Leasehold) وليس الشراء",
+              "قد تكون هناك شروط أداء (مثل الانتهاء خلال مدة محددة)",
+              "الإيجار بعد انتهاء الإعفاء قد يكون بالسعر الكامل فوراً",
+              "يجب حساب القيمة الحالية للوفر لتقييم الأثر الحقيقي"
+            ]}
+          ]
+        },
+        {
+          id: "finSupport",
+          label: "دعم التمويل",
+          icon: "💜",
+          content: [
+            { type: "heading", text: "ما هو دعم التمويل؟" },
+            { type: "text", text: "الحكومة تتحمل جزءاً من تكلفة التمويل البنكي (فائدة/ربح) أو تقدم قرضاً ميسراً بشروط أفضل من السوق." },
+            { type: "heading", text: "الأنواع" },
+            { type: "list", items: [
+              "دعم الفائدة: الحكومة تدفع جزء من نسبة الربح (مثلاً 2% من 7%)",
+              "قرض ميسّر: قرض بنسبة ربح أقل من السوق وفترة أطول",
+              "ضمان حكومي: كفالة حكومية تقلل مخاطر البنك وبالتالي النسبة",
+              "تمويل بدون أرباح: نادر لكن متاح لبعض المشاريع الاستراتيجية"
+            ]},
+            { type: "heading", text: "الأثر على النموذج المالي" },
+            { type: "list", items: [
+              "يقلل تكلفة خدمة الدين سنوياً",
+              "يرفع DSCR ويحسّن الموقف أمام البنك",
+              "يخفض نقطة التعادل للمشروع",
+              "في الصناديق: يرفع العائد للمستثمرين مباشرة"
+            ]},
+            { type: "heading", text: "مصادر الدعم في السعودية" },
+            { type: "list", items: [
+              "صندوق التنمية العقارية: للمشاريع السكنية",
+              "صندوق التنمية السياحي: للفنادق والمنتجعات",
+              "صندوق التنمية الصناعية: للمشاريع الصناعية واللوجستية",
+              "بنك التصدير والاستيراد: للمشاريع ذات البعد التصديري"
+            ]}
+          ]
+        },
+        {
+          id: "feeRebates",
+          label: "استرداد الرسوم",
+          icon: "🔄",
+          content: [
+            { type: "heading", text: "ما هو استرداد الرسوم؟" },
+            { type: "text", text: "إعفاء أو تخفيض الرسوم الحكومية المرتبطة بالمشروع مثل رسوم التراخيص وربط الخدمات والضرائب البلدية." },
+            { type: "heading", text: "الرسوم التي قد تُعفى" },
+            { type: "list", items: [
+              "رسوم رخصة البناء",
+              "رسوم ربط الكهرباء والمياه والصرف",
+              "رسوم الطرق والبنية التحتية",
+              "رسوم التصنيف الفندقي والتراخيص السياحية",
+              "رسوم بلدية سنوية"
+            ]},
+            { type: "heading", text: "طريقة الاسترداد" },
+            { type: "list", items: [
+              "إعفاء مباشر: الرسم لا يُطلب من الأساس",
+              "استرداد: المطور يدفع ثم يسترد من الجهة الحكومية",
+              "تأجيل: دفع الرسم لاحقاً (مثلاً بعد 3 سنوات) بتخفيض",
+              "مقاصة: خصم الرسوم من مستحقات أخرى"
+            ]},
+            { type: "heading", text: "الأثر على النموذج" },
+            { type: "list", items: [
+              "يقلل التكاليف الأولية (CAPEX) أو التكاليف التشغيلية",
+              "قد يكون مبلغ صغير نسبياً لكنه مؤثر في المشاريع الصغيرة",
+              "مهم احتسابه في تحليل الجدوى الشامل",
+              "يجب التحقق من الاستمرارية (هل الإعفاء مؤقت أم دائم)"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Government Incentives for Real Estate Development",
+      intro: "The Saudi government offers several types of incentives to encourage development in specific areas or sectors. These directly impact project feasibility and investor returns.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "capexGrant",
+          label: "CAPEX Grant",
+          icon: "🏗",
+          content: [
+            { type: "heading", text: "What is a CAPEX Grant?" },
+            { type: "text", text: "Government pays a percentage of construction costs directly to the developer. Reduces effective project cost and improves ROI." },
+            { type: "heading", text: "How it works" },
+            { type: "list", items: [
+              "Set percentage of construction cost (typically 10-30%)",
+              "Capped at a maximum SAR amount",
+              "Disbursed during construction or at completion",
+              "Requires meeting specific criteria from the granting authority"
+            ]},
+            { type: "heading", text: "Impact on financial model" },
+            { type: "list", items: [
+              "Reduces net CAPEX requiring financing",
+              "Reduces debt or equity needed",
+              "Directly improves IRR (lower cost base)",
+              "No impact on revenue - cost side only"
+            ]}
+          ]
+        },
+        {
+          id: "landRent",
+          label: "Land Rent Rebate",
+          icon: "🌍",
+          content: [
+            { type: "heading", text: "What is a Land Rent Rebate?" },
+            { type: "text", text: "Government or landowner waives/reduces land rent for a specified period (usually construction + additional years)." },
+            { type: "heading", text: "Common types" },
+            { type: "list", items: [
+              "Full waiver: no rent for a set period (e.g. 5-10 years)",
+              "Partial: percentage reduction (e.g. 50% for 7 years)",
+              "Graduated: full waiver first 3 years, then 50%, then full price",
+              "Completion-linked: waiver until construction is complete"
+            ]},
+            { type: "heading", text: "Impact" },
+            { type: "list", items: [
+              "Reduces OPEX in early years",
+              "Improves cash flow during development and early operations",
+              "Raises DSCR in initial years (important for bank)",
+              "Only applies to leasehold land, not purchased"
+            ]}
+          ]
+        },
+        {
+          id: "finSupport",
+          label: "Finance Support",
+          icon: "💜",
+          content: [
+            { type: "heading", text: "What is Finance Support?" },
+            { type: "text", text: "Government covers part of bank financing cost (interest/profit) or provides a soft loan at below-market terms." },
+            { type: "heading", text: "Types" },
+            { type: "list", items: [
+              "Interest subsidy: gov pays portion of profit rate",
+              "Soft loan: below-market rate with longer tenor",
+              "Government guarantee: reduces bank risk and rate",
+              "Zero-profit financing: rare, for strategic projects"
+            ]},
+            { type: "heading", text: "Saudi sources" },
+            { type: "list", items: [
+              "Real Estate Development Fund: residential projects",
+              "Tourism Development Fund: hotels and resorts",
+              "Industrial Development Fund: industrial/logistics",
+              "Saudi EXIM Bank: export-oriented projects"
+            ]}
+          ]
+        },
+        {
+          id: "feeRebates",
+          label: "Fee Rebates",
+          icon: "🔄",
+          content: [
+            { type: "heading", text: "What are Fee Rebates?" },
+            { type: "text", text: "Waiver or reduction of government fees related to the project such as construction permits, utility connections, and municipal charges." },
+            { type: "heading", text: "Fees that may be waived" },
+            { type: "list", items: [
+              "Construction permit fees",
+              "Electricity, water, sewage connection fees",
+              "Road and infrastructure fees",
+              "Hotel classification and tourism licenses",
+              "Annual municipal fees"
+            ]},
+            { type: "heading", text: "Impact" },
+            { type: "list", items: [
+              "Reduces upfront (CAPEX) or operating costs",
+              "May be small in absolute terms but impactful for smaller projects",
+              "Must verify if waiver is temporary or permanent"
+            ]}
+          ]
+        }
+      ]
+    }
   }
-  // Future: islamicFinance, govIncentives, revenueTypes
+  // Future: revenueTypes
 };
 
 // ── HelpLink: Reusable inline clickable trigger ──
@@ -9935,6 +10347,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
 // ═══════════════════════════════════════════════════════════════
 function IncentivesView({ project, results, incentivesResult, financing, lang, up }) {
   const isMobile = useIsMobile();
+  const [eduModal, setEduModal] = useState(null);
   if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
   const ir = incentivesResult;
   const inc = project.incentives || {};
@@ -9992,6 +10405,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
     </div>
 
     {/* Incentive cards */}
+    <div style={{ marginBottom: 12 }}><HelpLink contentKey="govIncentives" lang={lang} onOpen={setEduModal} label={lang === "ar" ? "اعرف أكثر عن أنواع الحوافز" : "Learn about incentive types"} /></div>
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
       {/* ── 1. CAPEX Grant ── */}
@@ -10090,6 +10504,7 @@ Rebates or deferrals of municipal charges, permits, and regulatory fees. Even de
       </ToggleCard>
 
     </div>
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
 
