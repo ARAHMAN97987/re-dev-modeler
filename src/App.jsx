@@ -10701,9 +10701,9 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
 
   const breakeven = useMemo(() => {
     const results = {};
-    // Break-even occupancy: find occ where NPV=0
+    // Break-even occupancy: find occ where NPV=0 (2% steps for accuracy)
     const filteredAssetPhases = isFiltered ? activePh : null;
-    for (let occ = 100; occ >= 0; occ -= 5) {
+    for (let occ = 100; occ >= 0; occ -= 2) {
       const assets = project.assets.map(a => {
         if (filteredAssetPhases && !filteredAssetPhases.includes(a.phase)) return a;
         return { ...a, stabilizedOcc: occ };
@@ -10711,25 +10711,49 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
       const p2 = { ...project, assets };
       const r = computeProjectCashFlows(p2);
       if (getFilteredNPV(r) <= 0) {
-        results.occupancy = occ + 5;
+        results.occupancy = occ + 2;
         break;
       }
     }
-    // Break-even rent reduction
-    for (let mult = 100; mult >= 0; mult -= 5) {
+    // Break-even rent reduction (2% steps)
+    for (let mult = 100; mult >= 0; mult -= 2) {
       const p2 = { ...project, activeScenario: "Custom", customRentMult: mult, customCapexMult: 100, customDelay: 0, customEscAdj: 0 };
       const r = computeProjectCashFlows(p2);
       if (getFilteredNPV(r) <= 0) {
-        results.rentDrop = 100 - mult - 5;
+        results.rentDrop = 100 - mult - 2;
         break;
       }
     }
-    // Break-even CAPEX increase
-    for (let mult = 100; mult <= 200; mult += 5) {
+    // Break-even CAPEX increase (2% steps, up to 300%)
+    for (let mult = 100; mult <= 300; mult += 2) {
       const p2 = { ...project, activeScenario: "Custom", customCapexMult: mult, customRentMult: 100, customDelay: 0, customEscAdj: 0 };
       const r = computeProjectCashFlows(p2);
       if (getFilteredNPV(r) <= 0) {
-        results.capexIncrease = mult - 100 - 5;
+        results.capexIncrease = mult - 100 - 2;
+        break;
+      }
+    }
+    // Break-even finance rate: what rate makes NPV=0?
+    if (project.finMode !== "self") {
+      const baseRate = project.financeRate ?? 6.5;
+      for (let rate = baseRate; rate <= 25; rate += 0.5) {
+        const p2 = { ...project, financeRate: rate };
+        const r = computeProjectCashFlows(p2);
+        const ir2 = computeIncentives(p2, r);
+        const f2 = computeFinancing(p2, r, ir2);
+        if (f2 && f2.leveredIRR !== null && f2.leveredIRR <= 0) {
+          results.financeRate = rate - 0.5;
+          results.financeRateMargin = (rate - 0.5) - baseRate;
+          break;
+        }
+      }
+    }
+    // Break-even delay: how many months of delay kills NPV?
+    for (let delay = 0; delay <= 36; delay += 3) {
+      const p2 = { ...project, activeScenario: "Custom", customDelay: delay, customCapexMult: 100, customRentMult: 100, customEscAdj: 0 };
+      const r = computeProjectCashFlows(p2);
+      if (getFilteredNPV(r) <= 0) {
+        results.delayMonths = delay - 3;
         break;
       }
     }
@@ -10978,9 +11002,39 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
               <span>{lang==="ar"?"مخاطرة عالية":"High Risk"}</span><span>{lang==="ar"?"هامش أمان":"Safety Margin"}</span>
             </div>
           </div>
-        </div>
 
-        {/* Summary */}
+          {/* Finance rate tolerance (only for debt modes) */}
+          {project.finMode !== "self" && <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
+            <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+              <Tip text="أعلى معدل ربح بنكي قبل ما يصير العائد سالب&#10;Maximum finance rate before levered IRR turns negative">{lang==="ar"?"تحمل ارتفاع الفائدة":"Finance Rate Tolerance"}</Tip>
+            </div>
+            <div style={{fontSize:28,fontWeight:700,color:breakeven.financeRate?"#f59e0b":"#16a34a"}}>
+              {breakeven.financeRate ? breakeven.financeRate.toFixed(1) + "%" : "> 25%"}
+            </div>
+            <div style={{fontSize:11,color:"#6b7080",marginTop:6}}>
+              {lang==="ar"?`الحالي: ${project.financeRate??6.5}% · هامش: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "واسع"}`:`Current: ${project.financeRate??6.5}% · Margin: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "wide"}`}
+            </div>
+            <div style={{marginTop:12,height:8,background:"#f0f1f5",borderRadius:4,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.min(100,(breakeven.financeRateMargin||20)*5)+"%",background:(breakeven.financeRateMargin||20)<3?"#ef4444":(breakeven.financeRateMargin||20)<6?"#f59e0b":"#16a34a",borderRadius:4}} />
+            </div>
+          </div>}
+
+          {/* Delay tolerance */}
+          <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
+            <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+              <Tip text="أقصى تأخير بالبناء قبل ما يصير NPV سالب&#10;Maximum construction delay before NPV turns negative">{lang==="ar"?"تحمل التأخير":"Delay Tolerance"}</Tip>
+            </div>
+            <div style={{fontSize:28,fontWeight:700,color:breakeven.delayMonths?"#f59e0b":"#16a34a"}}>
+              {breakeven.delayMonths != null ? breakeven.delayMonths + (lang==="ar"?" شهر":" mo") : "> 36" + (lang==="ar"?" شهر":" mo")}
+            </div>
+            <div style={{fontSize:11,color:"#6b7080",marginTop:6}}>
+              {lang==="ar"?"أقصى تأخير في البناء مع بقاء NPV@10% موجب":"Max construction delay keeping NPV@10% positive"}
+            </div>
+            <div style={{marginTop:12,height:8,background:"#f0f1f5",borderRadius:4,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.min(100,((breakeven.delayMonths||36)/36)*100)+"%",background:(breakeven.delayMonths||36)<6?"#ef4444":(breakeven.delayMonths||36)<12?"#f59e0b":"#16a34a",borderRadius:4}} />
+            </div>
+          </div>
+        </div>
         <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:18,marginTop:16}}>
           <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>{lang==="ar"?"ملخص المخاطر":"Risk Summary"}</div>
           <table style={{...tblStyle,fontSize:12}}>
@@ -11013,6 +11067,20 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
                   current: "Base (0%)",
                   margin: breakeven.capexIncrease ? breakeven.capexIncrease+"%" : "> 100%",
                   risk: !breakeven.capexIncrease || breakeven.capexIncrease > 30 ? "low" : breakeven.capexIncrease > 15 ? "med" : "high",
+                },
+                ...(project.finMode !== "self" ? [{
+                  label: lang==="ar"?"معدل الربح":"Finance Rate",
+                  be: breakeven.financeRate ? breakeven.financeRate.toFixed(1)+"%" : "> 25%",
+                  current: (project.financeRate??6.5)+"%",
+                  margin: breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "> 18%",
+                  risk: !breakeven.financeRateMargin || breakeven.financeRateMargin > 6 ? "low" : breakeven.financeRateMargin > 3 ? "med" : "high",
+                }] : []),
+                {
+                  label: lang==="ar"?"تأخير البناء":"Construction Delay",
+                  be: breakeven.delayMonths != null ? breakeven.delayMonths+(lang==="ar"?" شهر":" mo") : "> 36"+(lang==="ar"?" شهر":" mo"),
+                  current: lang==="ar"?"بدون تأخير":"No delay",
+                  margin: breakeven.delayMonths != null ? breakeven.delayMonths+(lang==="ar"?" شهر":" mo") : "> 36"+(lang==="ar"?" شهر":" mo"),
+                  risk: breakeven.delayMonths == null || breakeven.delayMonths > 18 ? "low" : breakeven.delayMonths > 9 ? "med" : "high",
                 },
               ].map((r, i) => (
                 <tr key={i}>
