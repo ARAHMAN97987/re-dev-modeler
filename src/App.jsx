@@ -10082,11 +10082,11 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
         )}
 
         {/* Learning Paths */}
-        {!searchQuery && ACADEMY_PATHS.map((path) => (
-          <div key={path.id} style={{ marginBottom: 36 }}>
-            <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 10, marginBottom: 12 }}>
+        {!searchQuery && ACADEMY_PATHS.map((path, pathIdx) => (
+          <div key={path.id} style={{ marginBottom: isMobile ? 28 : 36 }}>
+            <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 10, marginBottom: 12, background: isMobile ? "#fff" : "transparent", padding: isMobile ? "12px 14px" : 0, borderRadius: isMobile ? 10 : 0, border: isMobile ? "1px solid #e5e7ec" : "none", boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.04)" : "none" }}>
               <span style={{ fontSize: isMobile ? 18 : 22, flexShrink: 0, marginTop: isMobile ? 2 : 0 }}>{path.icon}</span>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.3 }}>{ar ? path.title.ar : path.title.en}</div>
                 <div style={{ fontSize: isMobile ? 11 : 12, color: "#6b7080", marginTop: 2, lineHeight: 1.5 }}>{ar ? path.desc.ar : path.desc.en}</div>
               </div>
