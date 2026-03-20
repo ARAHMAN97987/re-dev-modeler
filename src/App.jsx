@@ -10000,9 +10000,9 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
   // ── PATHS OVERVIEW (HOME) ──
   return (
-    <div dir={dir} style={{ minHeight: "100vh", background: isMobile ? "linear-gradient(180deg, #0B2341 0%, #0B2341 260px, #f8f9fb 260px)" : "linear-gradient(180deg, #0B2341 0%, #0B2341 340px, #f8f9fb 340px)", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
+    <div dir={dir} style={{ minHeight: "100vh", background: isMobile ? "linear-gradient(180deg, #0B2341 0%, #0B2341 280px, #f8f9fb 280px)" : "linear-gradient(180deg, #0B2341 0%, #0B2341 340px, #f8f9fb 340px)", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
       {/* Hero Header */}
-      <div style={{ padding: isMobile ? "16px 14px 50px" : "24px 32px 80px", position: "relative", overflow: "hidden" }}>
+      <div style={{ padding: isMobile ? "16px 14px 56px" : "24px 32px 80px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
         {/* Top bar */}
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12, marginBottom: isMobile ? 20 : 40, position: "relative", zIndex: 1 }}>
@@ -10038,14 +10038,14 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: 900, margin: "-40px auto 0", padding: isMobile ? "0 16px 40px" : "0 24px 60px", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 900, margin: isMobile ? "-24px auto 0" : "-40px auto 0", padding: isMobile ? "0 14px 40px" : "0 24px 60px", position: "relative", zIndex: 1 }}>
         {/* Search */}
-        <div style={{ marginBottom: isMobile ? 20 : 32 }}>
-          <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e5e7ec", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: isMobile ? "2px 2px 2px 12px" : "4px 4px 4px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: isMobile ? 14 : 16, color: "#9ca3af" }}>🔍</span>
+        <div style={{ marginBottom: isMobile ? 24 : 32 }}>
+          <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e5e7ec", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: isMobile ? "2px 2px 2px 12px" : "4px 4px 4px 16px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 14, color: "#9ca3af", flexShrink: 0 }}>🔍</span>
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder={ar ? (isMobile ? "ابحث... IRR, المرابحة" : "ابحث عن مفهوم... مثال: IRR, المرابحة, شلال التوزيعات") : (isMobile ? "Search... IRR, DSCR" : "Search concepts... e.g. IRR, Murabaha, Waterfall")}
-              style={{ flex: 1, border: "none", outline: "none", fontSize: isMobile ? 12 : 13, color: "#374151", fontFamily: "inherit", padding: isMobile ? "10px 0" : "12px 0", background: "transparent" }} />
+              style={{ flex: 1, border: "none", outline: "none", fontSize: isMobile ? 13 : 13, color: "#374151", fontFamily: "inherit", padding: isMobile ? "11px 0" : "12px 0", background: "transparent", minWidth: 0 }} />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} style={{ background: "#f0f1f5", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 11, color: "#6b7080", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>✕</button>
             )}
