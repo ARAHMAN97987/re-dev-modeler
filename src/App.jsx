@@ -4196,26 +4196,32 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         const isFundMode = cfg.finMode === "fund";
         const notHold = (cfg.exitStrategy||"sale") !== "hold";
         // Accordion section header helper
-        const AH = ({id, color, icon, label, summary, visible}) => {
+        const AH = ({id, color, label, summary, visible}) => {
           if (visible === false) return null;
           const open = cfgOpen(id);
-          return <div onClick={()=>cfgToggle(id)} style={{padding:"9px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderBottom:open?`1px solid ${color}20`:"none",background:open?color+"06":"#fafbfc",userSelect:"none",transition:"background 0.15s",borderInlineStart:`3px solid ${color}`}}>
-            <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",flex:1}}>{label}</span>
-            {summary && <span style={{fontSize:10,color:"#9ca3af",fontWeight:500,maxWidth:160,textAlign:"end",lineHeight:1.2}}>{summary}</span>}
-            <span style={{fontSize:10,color:"#9ca3af",transition:"transform 0.2s",transform:open?"rotate(0)":"rotate(-90deg)"}}>{open?"▼":"▶"}</span>
+          return <div onClick={()=>cfgToggle(id)} style={{padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:open?"#fff":"#fafbfc",userSelect:"none",transition:"all 0.2s"}}>
+            <span style={{fontSize:12,fontWeight:600,color:open?color:"#1a1d23",flex:1,transition:"color 0.2s"}}>{label}</span>
+            {!open && summary && <span style={{fontSize:10,color:"#9ca3af",fontWeight:500,maxWidth:180,textAlign:"end",lineHeight:1.2}}>{summary}</span>}
+            <span style={{fontSize:10,color:"#9ca3af",transition:"transform 0.25s ease",transform:open?"rotate(0)":"rotate(-90deg)",display:"inline-block"}}>{open?"▼":"▶"}</span>
           </div>;
         };
         const AB = ({id, children, visible}) => {
           if (visible === false || !cfgOpen(id)) return null;
-          return <div style={{padding:"10px 14px 12px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6,background:"#fff"}}>{children}</div>;
+          return <div style={{padding:"8px 14px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6,background:"#fff",borderTop:"1px solid #f0f1f5",animation:"cfgSlideDown 0.2s ease"}}>{children}</div>;
         };
         const g2 = {display:"contents"};
         const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
-        // Section card wrapper
-        const SecWrap = ({children, visible}) => {
+        // Section card wrapper with color accent
+        const SecWrap = ({children, visible, color}) => {
           if (visible === false) return null;
-          return <div style={{borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",background:"#fafbfc"}}>{children}</div>;
+          return <div style={{borderRadius:8,border:`1px solid ${color||"#e5e7ec"}40`,borderTop:`3px solid ${color||"#e5e7ec"}`,overflow:"hidden",background:"#fafbfc",transition:"border-color 0.2s"}}>{children}</div>;
         };
+        // Inject animation keyframes once
+        if (typeof document !== "undefined" && !document.getElementById("cfgAnim")) {
+          const s = document.createElement("style"); s.id = "cfgAnim";
+          s.textContent = "@keyframes cfgSlideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}";
+          document.head.appendChild(s);
+        }
         return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff"}}>
@@ -4229,7 +4235,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </div>
 
         {/* ── SECTION: DEBT TERMS ── */}
-        <SecWrap visible={hasDbt}>
+        <SecWrap visible={hasDbt} color="#2563eb">
         <AH id="debt" color="#2563eb" label={ar?"شروط القرض":"Debt Terms"} summary={hasDbt && (cfg.debtAllowed || cfg.finMode==="bank100") ? `${cfg.finMode!=="bank100"?(cfg.maxLtvPct||70)+"% LTV · ":""}${cfg.financeRate||6.5}% · ${cfg.loanTenor||12}yr` : ""} visible={hasDbt} />
         <AB id="debt" visible={hasDbt}>{(() => {
           const showDebtFields = cfg.debtAllowed || cfg.finMode === "bank100";
@@ -4264,7 +4270,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
         {/* ── SECTION: EXIT STRATEGY ── */}
         </SecWrap>
-        <SecWrap visible={hasDbt}>
+        <SecWrap visible={hasDbt} color="#8b5cf6">
         <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={hasDbt ? `${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ":"Hold"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`  : ""} visible={hasDbt} />
         <AB id="exit" visible={hasDbt}>
           <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع\nAsset Sale = exit at a set year. Hold for Income = no sale event">
@@ -4282,7 +4288,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
         {/* ── SECTION: LAND & EQUITY ── */}
         </SecWrap>
-        <SecWrap visible={hasEq}>
+        <SecWrap visible={hasEq} color="#8b5cf6">
         <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · GP ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
         <AB id="land" visible={hasEq}>
           <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض إلى حصة Equity في الحسابات التمويلية\nConvert leasehold land value to equity in financing calculations">
@@ -4303,7 +4309,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
         {/* ── SECTION: FUND STRUCTURE ── */}
         </SecWrap>
-        <SecWrap visible={isFundMode}>
+        <SecWrap visible={isFundMode} color="#16a34a">
         <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"GP = Mgr")}` : ""} visible={isFundMode} />
         <AB id="fund" visible={isFundMode}>
           <div style={g2}>
@@ -4320,7 +4326,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
         {/* ── SECTION: WATERFALL ── */}
         </SecWrap>
-        <SecWrap visible={isFundMode}>
+        <SecWrap visible={isFundMode} color="#16a34a">
         <AH id="wf" color="#16a34a" label={ar?"الشلال":"Waterfall"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||10}% · Carry ${cfg.carryPct||20}%` : ""} visible={isFundMode} />
         <AB id="wf" visible={isFundMode}>
           <div style={g2}>
@@ -4336,7 +4342,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
         {/* ── SECTION: FEES ── */}
         </SecWrap>
-        <SecWrap visible={hasEq || isFundMode}>
+        <SecWrap visible={hasEq || isFundMode} color="#f59e0b">
         <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : hasEq ? (ar?"رسوم التطوير":"Dev Fee") : ""} visible={hasEq || isFundMode} />
         <AB id="fees" visible={hasEq || isFundMode}>{(() => {
           if (isFundMode && cfg.vehicleType==="fund") return <>
