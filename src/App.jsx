@@ -4097,6 +4097,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const [cfgSec, setCfgSec] = useState({}); // accordion sections: {debt:false} = collapsed
   const cfgToggle = (id) => setCfgSec(prev => ({...prev, [id]: !prev[id]}));
   const cfgOpen = (id) => !cfgSec[id]; // all open by default
+  const [eduModal, setEduModal] = useState(null); // educational modal content key
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
   const toggle = (id) => setCollapsed(prev => ({...prev, [id]: !prev[id]}));
@@ -4226,6 +4227,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
             <option value="fund">{ar?"صندوق (GP/LP)":"Fund (GP/LP)"}</option>
           </select>
+          <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
 
         {/* ── SECTION: DEBT TERMS ── */}
@@ -4645,6 +4647,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       </>;
     })()}
     </>)}
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
 const EditableCell = memo(function EditableCell({ value, onChange, type = "text", options, labelMap, style: sx, placeholder, step }) {
@@ -5178,6 +5181,7 @@ function ReDevModelerInner({ user, signOut, onSignIn }) {
 // ═══════════════════════════════════════════════════════════════
 function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
   const [step, setStep] = useState(0);
+  const [eduModal, setEduModal] = useState(null);
   const t = lang === "ar";
 
   const Option = ({icon, label, desc, selected, onClick}) => (
@@ -5218,6 +5222,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
         <Option icon="🏦" label={t?"تمويل بنكي 100% (ملك المطور)":"100% Bank Debt (Developer-Owned)"} desc={t?"البنك يموّل كامل التكلفة، المطور هو المالك":"Bank finances 100%, developer owns"} selected={project.finMode==="bank100"} onClick={()=>onUpdate({finMode:"bank100",debtAllowed:true,maxLtvPct:100})} />
         <Option icon="🏗" label={t?"دين بنكي + رأس مال المطور":"Bank Debt + Developer Equity"} desc={t?"جزء من البنك وجزء من المطور":"Part bank loan, part developer equity"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
         <Option icon="📊" label={t?"صندوق استثماري (GP/LP)":"Fund Structure (GP/LP)"} desc={t?"مطور + مستثمرين مع شلال توزيعات":"Developer + investors with waterfall"} selected={project.finMode==="fund"} onClick={()=>onUpdate({finMode:"fund",debtAllowed:true})} />
+        <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} /></div>
       </div>
     )},
     // Step 3: Exit strategy
@@ -5235,7 +5240,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
   const isLast = step === activeSteps.length - 1;
   const canNext = step === 0 ? (project.name && project.name !== "New Project") : true;
 
-  return (
+  return (<>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
       <div style={{background:"#fff",borderRadius:20,width:520,maxWidth:"94vw",padding:0,boxShadow:"0 24px 80px rgba(0,0,0,0.2)",overflow:"hidden"}}>
         {/* Progress */}
@@ -5263,6 +5268,8 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
         </div>
       </div>
     </div>
+    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
+    </>
   );
 }
 
@@ -7117,6 +7124,468 @@ function Tip({text,children}) {
     <span ref={ref} onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)} onClick={()=>{if(!show)onEnter();else setShow(false);}} style={{cursor:"help",fontSize:10,color:"#9ca3af",marginInlineStart:3,lineHeight:1}}>ⓘ</span>
     {show&&<div style={{position:"fixed",top:pos.top,...(document.dir==="rtl"?{right:Math.max(10,Math.min(window.innerWidth-pos.left-140,window.innerWidth-300))}:{left:Math.max(10,Math.min(pos.left-140,window.innerWidth-300))}),width:280,background:"#1a1d23",color:"#d0d4dc",padding:"10px 13px",borderRadius:8,fontSize:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"start",pointerEvents:"none"}}>{text.split("\n").map((line,i)=><div key={i} dir={/[\u0600-\u06FF]/.test(line)?"rtl":"ltr"} style={{marginBottom:i===0?4:0}}>{line}</div>)}</div>}
   </span>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EDUCATIONAL HELP SYSTEM — Reusable Modal + HelpLink
+// ═══════════════════════════════════════════════════════════════
+
+// Content registry: keyed by section ID. Each entry has title, intro, tabs[].
+// This can later be extracted to a separate config file.
+const EDUCATIONAL_CONTENT = {
+  financingMode: {
+    ar: {
+      title: "آليات التمويل العقاري",
+      intro: "اختيار آلية التمويل يحدد هيكل الصفقة، الأطراف المشاركة، التكاليف، والعوائد. كل آلية لها متطلبات وتأثيرات مختلفة على المشروع.",
+      cta: "فهمت",
+      tabs: [
+        {
+          id: "self",
+          label: "تمويل ذاتي",
+          icon: "💰",
+          content: [
+            { type: "heading", text: "ما هو التمويل الذاتي؟" },
+            { type: "text", text: "يقوم المطور بتمويل المشروع بالكامل من أمواله الخاصة بدون أي تمويل بنكي أو مستثمرين خارجيين." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "المشاريع الصغيرة والمتوسطة التي لا تحتاج رأس مال ضخم",
+              "عندما يكون لدى المطور سيولة كافية ولا يريد تحمّل تكاليف تمويل",
+              "مشاريع تطوير الأراضي أو البنية التحتية قصيرة المدة",
+              "عندما تكون شروط البنوك غير مناسبة أو التمويل غير متاح"
+            ]},
+            { type: "heading", text: "التأثير على هيكل الصفقة" },
+            { type: "text", text: "أبسط هيكل ممكن: لا يوجد أقساط بنكية، ولا التزامات لمستثمرين، ولا رسوم هيكلة أو إدارة صناديق. المطور يملك المشروع 100% ويتحمل المخاطرة كاملة." },
+            { type: "heading", text: "المزايا" },
+            { type: "list", items: [
+              "تحكم كامل بالقرارات بدون شروط مقرضين أو مستثمرين",
+              "لا توجد تكاليف تمويل (فوائد، رسوم بنكية، رسوم صندوق)",
+              "سرعة في التنفيذ بدون إجراءات موافقات بنكية",
+              "كل الأرباح للمطور بدون مشاركة"
+            ]},
+            { type: "heading", text: "المخاطر والملاحظات" },
+            { type: "list", items: [
+              "يتطلب سيولة عالية قد تكون محجوزة لفترة طويلة",
+              "يحد من القدرة على تنفيذ مشاريع متعددة في نفس الوقت",
+              "لا يستفيد من الرافعة المالية (Leverage) التي ترفع العائد على رأس المال",
+              "المخاطرة الكاملة على المطور وحده"
+            ]}
+          ]
+        },
+        {
+          id: "bank100",
+          label: "بنكي 100%",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "ما هو التمويل البنكي 100%؟" },
+            { type: "text", text: "البنك يموّل كامل تكلفة المشروع (100% LTV). المطور يملك المشروع لكن بدون مساهمة نقدية مباشرة - الاعتماد الكامل على التمويل البنكي." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "عندما يملك المطور أصولاً كبيرة كضمانات لكن سيولته محدودة",
+              "مشاريع مدعومة حكومياً أو ضمن برامج تمويل ميسّرة",
+              "عندما يكون للمطور سجل ائتماني قوي وعلاقة قوية مع البنك",
+              "مشاريع ذات تدفقات نقدية مضمونة (عقود إيجار مسبقة)"
+            ]},
+            { type: "heading", text: "المتطلبات الأساسية" },
+            { type: "list", items: [
+              "ضمانات عينية (رهن عقاري) أو ضمانات شخصية/كفالات",
+              "تقييم ائتماني وتصنيف مقبول من البنك",
+              "دراسة جدوى مفصلة ونموذج مالي معتمد",
+              "نسبة تغطية خدمة الدين (DSCR) مقبولة للبنك",
+              "قد يشترط البنك حساب ضمان (Escrow) للتدفقات النقدية"
+            ]},
+            { type: "heading", text: "التكاليف المتوقعة" },
+            { type: "list", items: [
+              "معدل ربح/فائدة سنوي (في السعودية عادة SAIBOR + هامش)",
+              "رسوم ترتيب القرض (Upfront Fee) - عادة 0.5% إلى 2%",
+              "رسوم تقييم والتزام ورسوم قانونية",
+              "تكلفة التأمين المطلوب من البنك"
+            ]},
+            { type: "heading", text: "المخاطر والملاحظات" },
+            { type: "list", items: [
+              "أعلى مستوى مديونية - أي تأخير بالإيرادات يضغط على DSCR",
+              "شروط البنك قد تكون مقيّدة (قيود على التوزيعات، تعهدات مالية)",
+              "البنك قد يطلب حق الموافقة على قرارات رئيسية",
+              "في حال تعثر المشروع، البنك يأخذ الأولوية في الاسترداد",
+              "نادر في السوق السعودي بدون أي مساهمة من المطور"
+            ]}
+          ]
+        },
+        {
+          id: "debt",
+          label: "دين + ملكية",
+          icon: "🏗",
+          content: [
+            { type: "heading", text: "ما هو نموذج الدين + الملكية؟" },
+            { type: "text", text: "الهيكل الأكثر شيوعاً في التطوير العقاري: جزء من التمويل يأتي من البنك (قرض) والباقي من رأس مال المطور (Equity). نسبة التمويل البنكي (LTV) عادة 50% إلى 70% في السوق السعودي." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "معظم مشاريع التطوير العقاري المتوسطة والكبيرة",
+              "عندما يريد المطور الاستفادة من الرافعة المالية لرفع العائد",
+              "مشاريع ذات دراسة جدوى قوية ومقبولة بنكياً",
+              "التطوير السكني والتجاري والمختلط"
+            ]},
+            { type: "heading", text: "كيف يعمل الهيكل؟" },
+            { type: "list", items: [
+              "المطور يساهم برأس المال أولاً (عادة 30% - 50%)",
+              "البنك يسحب القرض تدريجياً مع تقدم البناء",
+              "فترة سماح أثناء البناء (الفائدة تتراكم بدون أقساط)",
+              "بعد الانتهاء تبدأ أقساط السداد من إيرادات المشروع",
+              "المطور يملك المشروع بالكامل بعد سداد القرض"
+            ]},
+            { type: "heading", text: "التكاليف والأثر المالي" },
+            { type: "list", items: [
+              "تكلفة التمويل (فائدة + رسوم) تقلل صافي العائد",
+              "لكن الرافعة المالية ترفع العائد على رأس المال (ROE)",
+              "كلما زادت نسبة الدين زاد العائد والمخاطرة معاً",
+              "DSCR هو المؤشر الأهم - يجب أن يبقى فوق 1.2x عادة"
+            ]},
+            { type: "heading", text: "ملاحظات مهمة" },
+            { type: "list", items: [
+              "البنك يشترط ضمانات وتعهدات مالية (Covenants)",
+              "في التمويل الإسلامي: يكون عبر عقد مرابحة أو إجارة",
+              "رأس مال المطور يجب أن يُضخ أولاً قبل سحب القرض",
+              "توزيعات الأرباح قد تكون مقيدة حتى يصل DSCR لمستوى معين"
+            ]}
+          ]
+        },
+        {
+          id: "fund",
+          label: "صندوق (GP/LP)",
+          icon: "📊",
+          content: [
+            { type: "heading", text: "ما هو الصندوق الاستثماري (GP/LP)؟" },
+            { type: "text", text: "هيكل استثماري يجمع رأس المال من مستثمرين متعددين (LP - شركاء محدودون) ويديره المطور أو مدير استثمار (GP - الشريك العام). يُستخدم للمشاريع الكبيرة التي تحتاج رؤوس أموال تتجاوز قدرة مطور واحد." },
+            { type: "heading", text: "متى يُستخدم؟" },
+            { type: "list", items: [
+              "المشاريع الكبيرة (عادة أكثر من 100 مليون ريال)",
+              "عندما يحتاج المطور رأس مال أكبر من قدرته الذاتية",
+              "لجذب مستثمرين مؤسسيين (صناديق سيادية، شركات تأمين، أوقاف)",
+              "مشاريع التطوير والاحتفاظ طويلة المدة (Develop & Hold)"
+            ]},
+            { type: "heading", text: "الأطراف المطلوبة" },
+            { type: "list", items: [
+              "GP (الشريك العام): المطور أو مدير الاستثمار - يدير المشروع",
+              "LP (الشركاء المحدودون): المستثمرون - يساهمون برأس المال",
+              "مدير الصندوق: قد يكون GP نفسه أو جهة مالية مرخصة (CMA)",
+              "أمين حفظ (Custodian): يحفظ أصول الصندوق - مطلوب نظامياً",
+              "مدقق حسابات: تدقيق سنوي إلزامي",
+              "مستشار قانوني: لصياغة وثائق الصندوق والاتفاقيات"
+            ]},
+            { type: "heading", text: "الرسوم والتكاليف" },
+            { type: "list", items: [
+              "رسوم هيكلة (Structuring Fee): 1% - 3% مرة واحدة لتأسيس الصندوق",
+              "رسوم اشتراك (Subscription Fee): 1% - 2% عند دخول المستثمر",
+              "رسوم إدارة سنوية (Management Fee): 1% - 2.5% من صافي الأصول",
+              "رسوم أمين الحفظ: 0.05% - 0.15% سنوياً",
+              "رسوم تطوير (Developer Fee): 3% - 8% من تكلفة البناء",
+              "رسوم ما قبل التأسيس: مصاريف دراسات وتقديم لهيئة السوق المالية",
+              "رسوم أداء (Carry): 15% - 25% من الأرباح فوق العائد المفضل"
+            ]},
+            { type: "heading", text: "آلية توزيع الأرباح (Waterfall)" },
+            { type: "list", items: [
+              "المرحلة 1: إرجاع رأس المال للمستثمرين أولاً",
+              "المرحلة 2: عائد مفضّل (Preferred Return) - عادة 8% - 12% سنوياً",
+              "المرحلة 3: تعويض GP (Catch-up) حتى يصل لنسبة الأرباح المتفق عليها",
+              "المرحلة 4: توزيع الأرباح المتبقية (عادة 70/30 أو 80/20 لصالح LP)"
+            ]},
+            { type: "heading", text: "المتطلبات التنظيمية (السعودية)" },
+            { type: "list", items: [
+              "ترخيص من هيئة السوق المالية (CMA) للصناديق العامة",
+              "الصناديق الخاصة: حد أدنى 50 مستثمر أو مستثمرون مؤهلون",
+              "تقارير دورية للمستثمرين وهيئة السوق المالية",
+              "حوكمة صارمة: لجنة استثمار، تقييمات مستقلة، تدقيق سنوي"
+            ]},
+            { type: "heading", text: "مخاطر وملاحظات مهمة" },
+            { type: "list", items: [
+              "تكلفة التأسيس والتشغيل مرتفعة مقارنة بالتمويل المباشر",
+              "المطور يفقد جزءاً من السيطرة (قرارات تحتاج موافقة المستثمرين)",
+              "الخروج مقيّد بفترة الصندوق وشروط الاسترداد",
+              "الشفافية والتقارير الدورية التزام مستمر وليس اختيارياً",
+              "مناسب فقط عندما يكون حجم المشروع يبرر تكاليف الهيكلة"
+            ]}
+          ]
+        }
+      ]
+    },
+    en: {
+      title: "Real Estate Financing Methods",
+      intro: "Choosing the financing method defines the deal structure, parties involved, costs, and return distribution. Each method has different requirements and implications.",
+      cta: "Got it",
+      tabs: [
+        {
+          id: "self",
+          label: "Self-Funded",
+          icon: "💰",
+          content: [
+            { type: "heading", text: "What is Self-Funding?" },
+            { type: "text", text: "The developer funds the entire project from their own capital with no external debt or investors." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Small to medium projects that don't require significant capital",
+              "When the developer has sufficient liquidity and wants to avoid financing costs",
+              "Short-term land development or infrastructure projects",
+              "When bank terms are unfavorable or financing is unavailable"
+            ]},
+            { type: "heading", text: "Impact on Deal Structure" },
+            { type: "text", text: "Simplest possible structure: no debt service, no investor obligations, no structuring or management fees. Developer owns 100% and bears all risk." },
+            { type: "heading", text: "Key Risks" },
+            { type: "list", items: [
+              "Requires high liquidity that may be locked for extended periods",
+              "Limits ability to execute multiple projects simultaneously",
+              "Misses leverage benefit that amplifies return on equity",
+              "Full risk borne by the developer alone"
+            ]}
+          ]
+        },
+        {
+          id: "bank100",
+          label: "100% Bank Debt",
+          icon: "🏦",
+          content: [
+            { type: "heading", text: "What is 100% Bank Debt?" },
+            { type: "text", text: "The bank finances the entire project cost (100% LTV). The developer owns the project but with no direct cash contribution." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Developer has strong collateral assets but limited liquidity",
+              "Government-backed or subsidized financing programs",
+              "Strong credit history and banking relationship",
+              "Projects with secured cash flows (pre-leased)"
+            ]},
+            { type: "heading", text: "Requirements" },
+            { type: "list", items: [
+              "Real estate collateral or personal guarantees",
+              "Acceptable credit assessment and rating",
+              "Detailed feasibility study and financial model",
+              "Acceptable DSCR for the bank"
+            ]},
+            { type: "heading", text: "Key Risks" },
+            { type: "list", items: [
+              "Highest debt level — any revenue delay pressures DSCR",
+              "Bank conditions may be restrictive (distribution locks, covenants)",
+              "Rare in Saudi market without some developer contribution"
+            ]}
+          ]
+        },
+        {
+          id: "debt",
+          label: "Debt + Equity",
+          icon: "🏗",
+          content: [
+            { type: "heading", text: "What is Debt + Equity?" },
+            { type: "text", text: "The most common structure: part bank loan and part developer equity. LTV typically 50-70% in the Saudi market." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Most medium to large real estate developments",
+              "When the developer wants to leverage for higher ROE",
+              "Projects with strong feasibility accepted by banks"
+            ]},
+            { type: "heading", text: "How it Works" },
+            { type: "list", items: [
+              "Developer contributes equity first (usually 30-50%)",
+              "Bank draws loan progressively with construction",
+              "Grace period during construction (interest accrues)",
+              "Repayment starts from project revenue after completion"
+            ]},
+            { type: "heading", text: "Key Risks" },
+            { type: "list", items: [
+              "Finance cost reduces net return but leverage boosts ROE",
+              "DSCR must stay above ~1.2x",
+              "Bank covenants may restrict distributions",
+              "In Islamic finance: structured as Murabaha or Ijara"
+            ]}
+          ]
+        },
+        {
+          id: "fund",
+          label: "Fund (GP/LP)",
+          icon: "📊",
+          content: [
+            { type: "heading", text: "What is a Fund Structure (GP/LP)?" },
+            { type: "text", text: "An investment vehicle pooling capital from multiple investors (LPs) managed by the developer or investment manager (GP). Used for large projects exceeding a single developer's capacity." },
+            { type: "heading", text: "When is it used?" },
+            { type: "list", items: [
+              "Large projects (usually >SAR 100M)",
+              "When developer needs more capital than available",
+              "To attract institutional investors",
+              "Long-term develop-and-hold strategies"
+            ]},
+            { type: "heading", text: "Parties Required" },
+            { type: "list", items: [
+              "GP (General Partner): Developer/investment manager",
+              "LP (Limited Partners): Investors providing capital",
+              "Fund Manager: GP or licensed financial entity (CMA)",
+              "Custodian, Auditor, Legal Counsel"
+            ]},
+            { type: "heading", text: "Fees & Costs" },
+            { type: "list", items: [
+              "Structuring Fee: 1-3% one-time",
+              "Subscription Fee: 1-2% at investor entry",
+              "Management Fee: 1-2.5% annual on NAV",
+              "Developer Fee: 3-8% of construction cost",
+              "Performance Fee (Carry): 15-25% above preferred return"
+            ]},
+            { type: "heading", text: "Waterfall Distribution" },
+            { type: "list", items: [
+              "Tier 1: Return of Capital to investors",
+              "Tier 2: Preferred Return (8-12% annual)",
+              "Tier 3: GP Catch-up",
+              "Tier 4: Profit Split (usually 70/30 or 80/20 to LP)"
+            ]},
+            { type: "heading", text: "Key Risks" },
+            { type: "list", items: [
+              "High setup and operating costs",
+              "Developer loses some control to investors",
+              "Regulatory requirements (CMA in Saudi)",
+              "Ongoing transparency and reporting obligations"
+            ]}
+          ]
+        }
+      ]
+    }
+  }
+  // Future content keys can be added here:
+  // landType: { ar: {...}, en: {...} },
+  // exitStrategy: { ar: {...}, en: {...} },
+  // islamicFinance: { ar: {...}, en: {...} },
+  // govIncentives: { ar: {...}, en: {...} },
+  // revenueTypes: { ar: {...}, en: {...} },
+  // waterfallConcepts: { ar: {...}, en: {...} },
+};
+
+// ── HelpLink: Reusable inline clickable trigger ──
+function HelpLink({ contentKey, lang, onOpen }) {
+  const ar = lang === "ar";
+  const label = ar ? "ما الفرق؟" : "What's the difference?";
+  return (
+    <span
+      onClick={(e) => { e.stopPropagation(); onOpen(contentKey); }}
+      style={{
+        fontSize: 11,
+        color: "#2563eb",
+        textDecoration: "underline",
+        textDecorationStyle: "dotted",
+        textUnderlineOffset: 3,
+        cursor: "pointer",
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+        userSelect: "none",
+        transition: "color 0.15s",
+      }}
+      onMouseEnter={e => { e.target.style.color = "#1d4ed8"; }}
+      onMouseLeave={e => { e.target.style.color = "#2563eb"; }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ── EducationalModal: Reusable full-screen learning modal ──
+function EducationalModal({ contentKey, lang, onClose }) {
+  const isMobile = useIsMobile();
+  const ar = lang === "ar";
+  const content = EDUCATIONAL_CONTENT[contentKey]?.[ar ? "ar" : "en"];
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  if (!content) return null;
+
+  const tab = content.tabs[activeTab];
+
+  const renderBlock = (block, i) => {
+    if (block.type === "heading") {
+      return <div key={i} style={{ fontSize: 13, fontWeight: 700, color: "#1a1d23", marginTop: i === 0 ? 0 : 18, marginBottom: 6 }}>{block.text}</div>;
+    }
+    if (block.type === "text") {
+      return <div key={i} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.75, marginBottom: 6 }}>{block.text}</div>;
+    }
+    if (block.type === "list") {
+      return (
+        <div key={i} style={{ marginBottom: 8 }}>
+          {block.items.map((item, j) => (
+            <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5, fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
+              <span style={{ color: "#9ca3af", fontSize: 8, marginTop: 6, flexShrink: 0 }}>●</span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (<>
+    {/* Overlay */}
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9998, backdropFilter: "blur(2px)" }} />
+
+    {/* Modal */}
+    <div style={{
+      position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+      width: isMobile ? "96vw" : 620, maxWidth: "96vw", maxHeight: "88vh",
+      background: "#fff", borderRadius: 16,
+      boxShadow: "0 24px 80px rgba(0,0,0,0.22)",
+      zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden",
+      direction: ar ? "rtl" : "ltr",
+    }}>
+
+      {/* Header */}
+      <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #e5e7ec", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <span style={{ fontSize: 20 }}>📘</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>{content.title}</div>
+          <div style={{ fontSize: 12, color: "#6b7080", marginTop: 3, lineHeight: 1.5 }}>{content.intro}</div>
+        </div>
+        <button onClick={onClose} style={{ background: "#f0f1f5", border: "none", borderRadius: 8, width: 34, height: 34, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7080", fontFamily: "inherit", flexShrink: 0 }}>✕</button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{
+        display: "flex", gap: 0, borderBottom: "1px solid #e5e7ec", flexShrink: 0,
+        overflowX: "auto", WebkitOverflowScrolling: "touch",
+        msOverflowStyle: "none", scrollbarWidth: "none",
+      }}>
+        {content.tabs.map((t, i) => {
+          const isActive = i === activeTab;
+          return (
+            <button key={t.id} onClick={() => setActiveTab(i)} style={{
+              padding: isMobile ? "10px 12px" : "12px 18px",
+              background: "none", border: "none", borderBottom: isActive ? "2.5px solid #2563eb" : "2.5px solid transparent",
+              fontSize: isMobile ? 11 : 12, fontWeight: isActive ? 700 : 500,
+              color: isActive ? "#2563eb" : "#6b7080",
+              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+              transition: "all 0.15s", flexShrink: 0,
+            }}>
+              <span style={{ marginInlineEnd: 5 }}>{t.icon}</span>{t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Content */}
+      <div style={{ flex: 1, overflow: "auto", padding: isMobile ? "16px 18px" : "20px 24px" }}>
+        {tab && tab.content.map(renderBlock)}
+      </div>
+
+      {/* Footer CTA */}
+      {content.cta && (
+        <div style={{ padding: "12px 22px", borderTop: "1px solid #e5e7ec", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+          <button onClick={onClose} style={{
+            padding: "9px 28px", borderRadius: 8, border: "none",
+            background: "#2563eb", color: "#fff", fontSize: 13, fontWeight: 600,
+            cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s",
+          }}
+          onMouseEnter={e => { e.target.style.background = "#1d4ed8"; }}
+          onMouseLeave={e => { e.target.style.background = "#2563eb"; }}
+          >{content.cta}</button>
+        </div>
+      )}
+    </div>
+  </>);
 }
 
 function KPI({label,value,sub,color,tip}) {
