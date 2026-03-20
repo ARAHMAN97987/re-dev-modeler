@@ -6850,6 +6850,57 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </div>
           </>}
 
+          <div style={{...zanSec,marginTop:24}}>{ar?"توزيع الإيرادات حسب التصنيف":"Revenue Breakdown by Category"}</div>
+          {(() => {
+            const catMap = {};
+            filteredAssets.forEach(a => { const cat = a.category||"Other"; catMap[cat] = (catMap[cat]||0) + (a.totalRevenue||0); });
+            const cats = Object.entries(catMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+            const total = cats.reduce((s,[,v])=>s+v,0) || 1;
+            const colors = ["#0f766e","#5fbfbf","#2563eb","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#ec4899"];
+            return <div style={{marginBottom:16}}>
+              <div style={{display:"flex",height:24,borderRadius:6,overflow:"hidden",marginBottom:10}}>
+                {cats.map(([cat,val],i) => (
+                  <div key={cat} style={{width:(val/total*100)+"%",background:colors[i%colors.length],minWidth:2}} title={`${catL(cat,ar)}: ${fmtM(val)} (${(val/total*100).toFixed(1)}%)`} />
+                ))}
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"6px 16px"}}>
+                {cats.map(([cat,val],i) => (
+                  <div key={cat} style={{display:"flex",alignItems:"center",gap:5,fontSize:10}}>
+                    <div style={{width:10,height:10,borderRadius:2,background:colors[i%colors.length]}} />
+                    <span style={{color:"#374151"}}>{catL(cat,ar)}</span>
+                    <span style={{fontWeight:700}}>{fmtM(val)}</span>
+                    <span style={{color:"#9ca3af"}}>({(val/total*100).toFixed(0)}%)</span>
+                  </div>
+                ))}
+              </div>
+            </div>;
+          })()}
+
+          {/* CAPEX breakdown by phase */}
+          <div style={{...zanSec,marginTop:24}}>{ar?"توزيع التكاليف حسب المرحلة":"CAPEX Distribution by Phase"}</div>
+          {(() => {
+            const phases = Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name));
+            const total = phases.reduce((s,[,pr])=>s+(pr.totalCapex||0),0) || 1;
+            const colors = ["#0f1117","#0f766e","#5fbfbf","#2563eb","#8b5cf6"];
+            return <div style={{marginBottom:16}}>
+              <div style={{display:"flex",height:24,borderRadius:6,overflow:"hidden",marginBottom:10}}>
+                {phases.map(([name,pr],i) => (
+                  <div key={name} style={{width:(pr.totalCapex/total*100)+"%",background:colors[i%colors.length],minWidth:2}} title={`${name}: ${fmtM(pr.totalCapex)}`} />
+                ))}
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"6px 16px"}}>
+                {phases.map(([name,pr],i) => (
+                  <div key={name} style={{display:"flex",alignItems:"center",gap:5,fontSize:10}}>
+                    <div style={{width:10,height:10,borderRadius:2,background:colors[i%colors.length]}} />
+                    <span style={{fontWeight:600}}>{name}</span>
+                    <span style={{fontWeight:700}}>{fmtM(pr.totalCapex)}</span>
+                    <span style={{color:"#9ca3af"}}>({(pr.totalCapex/total*100).toFixed(0)}%)</span>
+                  </div>
+                ))}
+              </div>
+            </div>;
+          })()}
+
           <div style={{...zanSec,marginTop:24}}>{ar?"سلامة النموذج":"Model Integrity"}</div>
           <div style={{fontSize:12,padding:"8px 12px",background:failCount===0?"#f0fdf4":"#fef2f2",borderRadius:6,border:failCount===0?"1px solid #bbf7d0":"1px solid #fecaca"}}>
             {failCount === 0 ? (ar?"✅ جميع الفحوصات ناجحة":"✅ All checks passed") : `⚠️ ${failCount} ${ar?"فحص فشل":"check(s) failed"}`}
@@ -6984,7 +7035,49 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             </table>;
           })()}
 
-          <div style={zanSec}>{ar?"6. المؤشرات الرئيسية":"6. Key Metrics"}</div>
+          {f && f.mode !== "self" && <>
+            <div style={zanSec}>{ar?"6. اتجاه DSCR ورصيد الدين":"6. DSCR Trend & Debt Profile"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+              {/* DSCR Trend */}
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#0f766e",marginBottom:8}}>{ar?"اتجاه DSCR":"DSCR Trend"}</div>
+                <div style={{display:"flex",alignItems:"flex-end",gap:2,height:80}}>
+                  {bankYears.map(y => {
+                    const d = f.dscr?.[y]; const val = d===null||d===undefined||d===Infinity ? 0 : d;
+                    const h = Math.min(val/3*100, 100);
+                    return <div key={y} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                      <div style={{fontSize:7,fontWeight:700,color:val>=1.2?"#16a34a":val>0?"#ef4444":"#9ca3af"}}>{val>0?val.toFixed(1)+"x":"—"}</div>
+                      <div style={{width:"100%",height:h+"%",minHeight:2,background:val>=1.25?"#86efac":val>=1.0?"#fde68a":"#fca5a5",borderRadius:"2px 2px 0 0",transition:"height 0.3s"}} />
+                      <div style={{fontSize:7,color:"#9ca3af"}}>{sy+y}</div>
+                    </div>;
+                  })}
+                </div>
+                <div style={{borderTop:"2px solid #ef4444",marginTop:0,position:"relative"}}>
+                  <span style={{position:"absolute",top:-8,right:0,fontSize:7,color:"#ef4444",fontWeight:600}}>1.0x {ar?"الحد الأدنى":"min"}</span>
+                </div>
+              </div>
+              {/* Debt Balance Profile */}
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#0f766e",marginBottom:8}}>{ar?"رصيد الدين":"Debt Balance Profile"}</div>
+                {(() => {
+                  const maxDebt = Math.max(...bankYears.map(y=>f.debtBalClose?.[y]||0),1);
+                  return <div style={{display:"flex",alignItems:"flex-end",gap:2,height:80}}>
+                    {bankYears.map(y => {
+                      const bal = f.debtBalClose?.[y]||0;
+                      const pct = bal/maxDebt*100;
+                      return <div key={y} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                        <div style={{fontSize:7,fontWeight:600,color:"#3b82f6"}}>{bal>0?fmtM(bal):""}</div>
+                        <div style={{width:"100%",height:pct+"%",minHeight:bal>0?2:0,background:"linear-gradient(180deg,#3b82f6,#93c5fd)",borderRadius:"2px 2px 0 0"}} />
+                        <div style={{fontSize:7,color:"#9ca3af"}}>{sy+y}</div>
+                      </div>;
+                    })}
+                  </div>;
+                })()}
+              </div>
+            </div>
+          </>}
+
+          <div style={zanSec}>{ar?"7. المؤشرات الرئيسية":"7. Key Metrics"}</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12}}>
             {[
               {l:"Project IRR",v:fc.irr?fmtPct(fc.irr*100):"—",ac:fc.irr>=0.10?"#16a34a":"#ef4444"},
@@ -6999,7 +7092,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           </div>
 
           {incentivesResult && incentivesResult.totalIncentiveValue > 0 && <>
-            <div style={zanSec}>{ar?"7. الحوافز الحكومية":"7. Government Incentives"}</div>
+            <div style={zanSec}>{ar?"8. الحوافز الحكومية":"8. Government Incentives"}</div>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:8}}>
               <thead><tr style={{background:"#0f1117"}}>
                 {(ar?["نوع الحافز","القيمة","الوصف"]:["Incentive Type","Value","Description"]).map(h=><th key={h} style={zanTh}>{h}</th>)}
@@ -7127,6 +7220,36 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 <div style={{display:"flex",gap:16,marginTop:6,fontSize:9,color:"#6b7080"}}>
                   <span><span style={{display:"inline-block",width:10,height:6,background:"#8b5cf6",borderRadius:2,marginRight:3}} />LP {ar?"التراكمي":"Cumulative"}</span>
                   <span><span style={{display:"inline-block",width:10,height:6,background:"#0f766e",borderRadius:2,marginRight:3}} />GP {ar?"التراكمي":"Cumulative"}</span>
+                </div>
+              </div>;
+            })()}
+
+            <div style={zanSec}>{ar?"دورة حياة الصندوق":"Fund Lifecycle"}</div>
+            {(() => {
+              // Determine key milestones
+              let constrEnd=0, firstIncome=0, exitYr=fw.exitYear||h;
+              for(let y=h-1;y>=0;y--){if((fc.capex[y]||0)>0){constrEnd=y;break;}}
+              for(let y=0;y<h;y++){if((fc.income[y]||0)>0){firstIncome=y;break;}}
+              const phases = [
+                {l:ar?"سحب الإكوتي":"Equity Calls",from:0,to:constrEnd,color:"#ef4444",icon:"📥"},
+                {l:ar?"البناء":"Construction",from:0,to:constrEnd,color:"#f59e0b",icon:"🏗"},
+                {l:ar?"الإيرادات":"Income Period",from:firstIncome,to:Math.min(exitYr,h-1),color:"#16a34a",icon:"💰"},
+                ...(fw.exitYear?[{l:ar?"التخارج":"Exit",from:exitYr-1,to:exitYr-1,color:"#8b5cf6",icon:"🏦"}]:[]),
+              ];
+              const totalYrs = Math.min(h, 25);
+              return <div style={{marginBottom:16}}>
+                {phases.map((p,i) => (
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:8,marginBottom:6,alignItems:"center"}}>
+                    <div style={{fontSize:10,fontWeight:600,color:"#374151"}}>{p.icon} {p.l}</div>
+                    <div style={{position:"relative",height:16,background:"#f0f1f5",borderRadius:8}}>
+                      <div style={{position:"absolute",left:(p.from/totalYrs*100)+"%",width:Math.max(4,(p.to-p.from+1)/totalYrs*100)+"%",height:"100%",background:p.color,borderRadius:8,opacity:0.8}} />
+                      <div style={{position:"absolute",left:(p.from/totalYrs*100)+"%",top:-1,fontSize:7,color:p.color,fontWeight:600}}>{sy+p.from}</div>
+                      <div style={{position:"absolute",left:Math.min(95,((p.to+1)/totalYrs*100))+"%",top:-1,fontSize:7,color:p.color,fontWeight:600}}>{sy+p.to}</div>
+                    </div>
+                  </div>
+                ))}
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#9ca3af",marginTop:4,paddingLeft:128}}>
+                  <span>{sy}</span><span>{sy+Math.floor(totalYrs/4)}</span><span>{sy+Math.floor(totalYrs/2)}</span><span>{sy+Math.floor(totalYrs*3/4)}</span><span>{sy+totalYrs-1}</span>
                 </div>
               </div>;
             })()}
