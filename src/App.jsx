@@ -3843,13 +3843,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         };
         const AB = ({id, children, visible}) => {
           if (visible === false || !cfgOpen(id)) return null;
-          return <div style={{padding:"10px 18px 14px"}}>{children}</div>;
+          return <div style={{padding:"10px 18px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6}}>{children}</div>;
         };
-        const g2 = {display:"grid",gridTemplateColumns:"1fr 1fr",gap:6};
-        const g3 = {display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6};
+        const g2 = {display:"contents"};
+        const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
         return <div>
         {/* ── SECTION: FINANCING MODE (always visible, not collapsible) ── */}
-        <div style={{padding:"12px 18px",borderBottom:"1px solid #eef0f4"}}>
+        <div style={{padding:"12px 18px",borderBottom:"1px solid #eef0f4",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6}}>
           <FL label={ar?"آلية التمويل":"Financing Mode"} tip="يحدد طريقة تمويل المشروع: ذاتي، بنكي، أو عبر صندوق استثماري\nChoose how the project will be funded: self, bank, or fund structure">
             <Drp lang={lang} value={cfg.finMode} onChange={v=>upCfg({finMode:v,...(v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{})})} options={[
               {value:"self",en:"Self-Funded",ar:"تمويل ذاتي"},
@@ -3961,7 +3961,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : hasEq ? (ar?"رسوم التطوير":"Dev Fee") : ""} visible={hasEq || isFundMode} />
         <AB id="fees" visible={hasEq || isFundMode}>{(() => {
           if (isFundMode && cfg.vehicleType==="fund") return <>
-            <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8}}>{ar?"رسوم لمرة واحدة":"One-time"}</div>
+            <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم لمرة واحدة":"One-time"}</div>
             <div style={g3}>
               <FL label={ar?"اكتتاب %":"Subscription %"} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر\nOne-time entry fee at subscription. Usually 1-2% of invested capital" hint={ar?"مرة واحدة · عند الاكتتاب":"One-time · at subscription"}><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
               <FL label={ar?"هيكلة %":"Structuring %"} tip="نسبة من حجم الصندوق تُدفع لمرة واحدة لمدير الصندوق مقابل ترتيب الفرصة ودراسات الجدوى\nOne-time fee for deal sourcing, due diligence, and fund setup" hint={ar?"مرة واحدة · من حجم الصندوق":"One-time · % of fund size"}><Inp type="number" value={cfg.structuringFeePct} onChange={v=>upCfg({structuringFeePct:v})} /></FL>
@@ -3972,8 +3972,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
               <FL label={ar?"إنشاء SPV":"SPV Fee"} tip="رسوم تأسيس الشركة ذات الغرض الخاص. تُدفع مرة واحدة عند بدء التأسيس\nSPV incorporation fee. One-time at setup" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.spvFee} onChange={v=>upCfg({spvFee:v})} /></FL>
               <div />
             </div>
-            <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8}} />
-            <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8}}>{ar?"رسوم سنوية":"Annual"}</div>
+            <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
+            <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم سنوية":"Annual"}</div>
             <div style={g2}>
               <FL label={ar?"إدارة %":"Management %"} tip="أتعاب إدارية سنوية من صافي أصول الصندوق (NAV). تُستحق وتسدد بشكل ربع سنوي\nAnnual management fee based on fund NAV. Paid quarterly" hint={ar?"سنوي · من صافي الأصول":"Annual · based on NAV"}><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
               <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="أساس حساب رسوم الإدارة:\n- صافي الأصول (NAV): القيمة الصافية للصندوق\n- CAPEX تراكمي: المبالغ المنفذة فعلياً\n- تكلفة التطوير: إجمالي التكلفة\n- رأس المال: الملكية الإجمالية"><Drp lang={lang} value={cfg.mgmtFeeBase||"nav"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"nav",en:"Fund NAV",ar:"صافي أصول الصندوق"},{value:"deployed",en:"Deployed CAPEX",ar:"CAPEX المنفذ"},{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
@@ -3983,8 +3983,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
               <FL label={ar?"رسوم الحفظ/سنة":"Custody/yr"} tip="رسوم سنوية لأمين الحفظ. تُدفع نصف سنوي\nAnnual custody fee. Paid semi-annually" hint={ar?"سنوي · نصف سنوي":"Annual · semi-annual"}><Inp type="number" value={cfg.custodyFeeAnnual} onChange={v=>upCfg({custodyFeeAnnual:v})} /></FL>
               <FL label={ar?"مراجع حسابات/سنة":"Auditor/yr"} tip="أتعاب سنوية لمراجع الحسابات. تُدفع نصف سنوي بعد كل تقييم\nAnnual auditor fee. Paid semi-annually after each valuation" hint={ar?"سنوي":"Annual"}><Inp type="number" value={cfg.auditorFeeAnnual} onChange={v=>upCfg({auditorFeeAnnual:v})} /></FL>
             </div>
-            <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8}} />
-            <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
+            <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
+            <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
             <FL label={ar?"رسوم التطوير %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={ar?"مع مستخلصات البناء":"With construction draws"}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
           </>;
           if (isFundMode) return <FL label={ar?"رسوم التطوير %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={ar?"مع مستخلصات البناء":"With construction draws"}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>;
