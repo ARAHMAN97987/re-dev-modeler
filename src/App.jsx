@@ -2316,7 +2316,7 @@ function aggregatePhaseFinancings(phaseFinancings, h) {
   };
   const levCF = sumArr('leveredCF');
   return {
-    mode: 'independent',
+    mode: phaseFinancings[names[0]]?.mode || 'independent',
     totalEquity: sum('totalEquity'), gpEquity: sum('gpEquity'), lpEquity: sum('lpEquity'),
     gpPct: sum('totalEquity') > 0 ? sum('gpEquity') / sum('totalEquity') : 0,
     lpPct: sum('totalEquity') > 0 ? sum('lpEquity') / sum('totalEquity') : 0,
@@ -3087,7 +3087,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const ar = lang === "ar";
   if (!project || !results) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"أضف أصول لرؤية النتائج":"Add assets to see results"}</div>;
 
-  const mode = financing?.mode || project.finMode || "self";
+  const mode = project.finMode || financing?.mode || "self";
 
   // ── FUND MODE: Render full WaterfallView (exact copy) ──
   if (mode === "fund") {
