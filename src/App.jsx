@@ -4255,9 +4255,6 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
                   <Drp lang={lang} value={cfg.repaymentType} onChange={v=>upCfg({repaymentType:v})} options={[{value:"amortizing",en:"Amortizing",ar:"أقساط"},{value:"bullet",en:"Bullet",ar:"دفعة واحدة"}]} />
                 </FL>
               </div>
-              <FL label={ar?"هيكل":"Structure"} tip="مرابحة = تكلفة + ربح (الأشيع). إجارة = تأجير منتهي بالتملك\nMurabaha = cost-plus (common). Ijara = lease-to-own">
-                <Drp lang={lang} value={cfg.islamicMode} onChange={v=>upCfg({islamicMode:v})} options={[{value:"conventional",en:"Conventional",ar:"تقليدي"},{value:"murabaha",en:"Murabaha",ar:"مرابحة"},{value:"ijara",en:"Ijara",ar:"إجارة"}]} />
-              </FL>
             </>}
           </>;
         })()}</AB>
@@ -4540,7 +4537,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       {f.totalDebt > 0 && <Sec id="dscr" icon="🏦" title="Debt Service & DSCR" titleAr="خدمة الدين و DSCR" color="#3b82f6">
         {/* Debt Structure Summary */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,fontSize:12,marginBottom:14}}>
-          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"الهيكل":"Structure"}</span><strong>{cfg.islamicMode==="conventional"?(ar?"تقليدي":"Conventional"):(ar?"مرابحة":"Murabaha")} - {cfg.repaymentType==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")}</strong></div>
+          <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"الهيكل":"Structure"}</span><strong>{cfg.repaymentType==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")}</strong></div>
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"المدة":"Tenor"}</span><strong>{cfg.loanTenor} {ar?"سنة":"yrs"}</strong> <span style={{fontSize:10,color:"#9ca3af"}}>({cfg.debtGrace} {ar?"سماح":"grace"} + {f.repayYears} {ar?"سداد":"repay"})</span></div>
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"بداية السداد":"Repay Starts"}</span><strong>{sy + f.repayStart}</strong></div>
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"التخارج":"Exit"}</span><strong>{f.exitYear}</strong> ({cfg.exitMultiple}x)</div>
@@ -4588,7 +4585,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={f.equityCalls} total={f.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
             <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.totalDebt} color="#3b82f6" />
             <CFRow label={ar?"(-) سداد أصل الدين":"(-) Repayment"} values={f.repayment} total={f.repayment.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
-            <CFRow label={cfg.islamicMode==="conventional"?(ar?"(-) فوائد":"(-) Interest"):(ar?"(-) تكلفة التمويل":"(-) Profit Cost")} values={f.interest} total={f.totalInterest} color="#ef4444" negate />
+            <CFRow label={ar?"(-) تكلفة التمويل":"(-) Interest / Profit Cost"} values={f.interest} total={f.totalInterest} color="#ef4444" negate />
             <CFRow label={ar?"= إجمالي خدمة الدين":"= Total Debt Service"} values={f.debtService} total={f.debtService.reduce((a,b)=>a+b,0)} color="#dc2626" negate bold />
             {/* Debt balance */}
             <tr style={{background:"#f0f4ff"}}>
@@ -7983,7 +7980,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 [ar?"المعدل المقترح":"Proposed Rate",(project.financeRate||6.5)+"% p.a."],
                 [ar?"المدة":"Tenor",(project.loanTenor||7)+" "+(ar?"سنوات (تشمل ":"years (incl. ")+(project.debtGrace||3)+" "+(ar?"فترة سماح)":"grace)")],
                 [ar?"نوع السداد":"Repayment",project.repaymentType==="amortizing"?(ar?"أقساط متساوية":"Equal Installments"):(ar?"دفعة واحدة":"Bullet")],
-                [ar?"الهيكل":"Structure",project.islamicMode==="conventional"?(ar?"تقليدي":"Conventional"):project.islamicMode==="murabaha"?(ar?"مرابحة":"Murabaha"):(ar?"إجارة":"Ijara")],
+                [ar?"السداد":"Repayment",project.repaymentType==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")],
               ].map(([k,v],i)=>(
                 <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}><td style={{...zanTd,color:"#6b7080",width:"40%"}}>{k}</td><td style={{...zanTd,fontWeight:600}}>{v}</td></tr>
               ))}
