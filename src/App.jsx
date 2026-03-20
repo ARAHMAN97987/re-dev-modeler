@@ -9835,17 +9835,17 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
   const renderBlock = (block, i) => {
     if (block.type === "heading") {
-      return <div key={i} style={{ fontSize: 15, fontWeight: 700, color: "#0B2341", marginTop: i === 0 ? 0 : 22, marginBottom: 8, fontFamily: "'Tajawal',sans-serif" }}>{renderWithLinks(block.text)}</div>;
+      return <div key={i} style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: "#0B2341", marginTop: i === 0 ? 0 : (isMobile ? 16 : 22), marginBottom: 6, fontFamily: "'Tajawal',sans-serif" }}>{renderWithLinks(block.text)}</div>;
     }
     if (block.type === "text") {
-      return <div key={i} style={{ fontSize: 13.5, color: "#374151", lineHeight: 1.85, marginBottom: 8 }}>{renderWithLinks(block.text)}</div>;
+      return <div key={i} style={{ fontSize: isMobile ? 12.5 : 13.5, color: "#374151", lineHeight: 1.8, marginBottom: 6 }}>{renderWithLinks(block.text)}</div>;
     }
     if (block.type === "list") {
       return (
-        <div key={i} style={{ marginBottom: 10 }}>
+        <div key={i} style={{ marginBottom: 8 }}>
           {block.items.map((item, j) => (
-            <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 6, fontSize: 13.5, color: "#374151", lineHeight: 1.75 }}>
-              <span style={{ color: "#2EC4B6", fontSize: 8, marginTop: 8, flexShrink: 0 }}>●</span>
+            <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5, fontSize: isMobile ? 12.5 : 13.5, color: "#374151", lineHeight: 1.7 }}>
+              <span style={{ color: "#2EC4B6", fontSize: 7, marginTop: 7, flexShrink: 0 }}>●</span>
               <span>{renderWithLinks(item)}</span>
             </div>
           ))}
@@ -9895,20 +9895,22 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
     return (
       <div dir={dir} style={{ minHeight: "100vh", background: "#f8f9fb", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
         {/* Top Bar */}
-        <div style={{ background: "#0B2341", padding: isMobile ? "14px 16px" : "16px 32px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
-          <button onClick={goBackInStack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: "7px 14px", color: "#2EC4B6", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 14 }}>{ar ? "→" : "←"}</span>
-            {parentStack ? (ar ? "ارجع" : "Back") : (ar ? "الأكاديمية" : "Academy")}
-          </button>
-          {parentStack && (
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {ar ? "من:" : "from:"} {EDUCATIONAL_CONTENT[parentStack.key]?.[ar ? "ar" : "en"]?.title}
-            </span>
-          )}
-          <div style={{ flex: 1 }} />
-          <button onClick={goHome} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>📚 {ar ? "الرئيسية" : "Home"}</button>
-          {publicMode && onLangToggle && <button onClick={onLangToggle} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "4px 10px", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>{ar ? "EN" : "عربي"}</button>}
-          <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>{publicMode ? (ar ? "→ تسجيل" : "Sign Up") : (ar ? "✕ إغلاق" : "✕ Close")}</button>
+        <div style={{ background: "#0B2341", padding: isMobile ? "10px 12px" : "16px 32px", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 12 }}>
+            <button onClick={goBackInStack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: isMobile ? "6px 10px" : "7px 14px", color: "#2EC4B6", fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+              <span>{ar ? "→" : "←"}</span>
+              {isMobile ? (parentStack ? (ar ? "رجوع" : "Back") : "📚") : (parentStack ? (ar ? "ارجع" : "Back") : (ar ? "الأكاديمية" : "Academy"))}
+            </button>
+            {parentStack && !isMobile && (
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
+                {ar ? "من:" : "from:"} {EDUCATIONAL_CONTENT[parentStack.key]?.[ar ? "ar" : "en"]?.title}
+              </span>
+            )}
+            <div style={{ flex: 1 }} />
+            {!isMobile && <button onClick={goHome} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>📚 {ar ? "الرئيسية" : "Home"}</button>}
+            {publicMode && onLangToggle && <button onClick={onLangToggle} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "4px 10px", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{ar ? "EN" : "عربي"}</button>}
+            <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500, flexShrink: 0 }}>{publicMode ? (ar ? "تسجيل →" : "Sign Up") : (ar ? "✕" : "✕")}</button>
+          </div>
         </div>
 
         {/* Breadcrumbs */}
@@ -9929,56 +9931,56 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
           </div>
         )}
 
-        <div style={{ maxWidth: 780, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 24px" }}>
+        <div style={{ maxWidth: 780, margin: "0 auto", padding: isMobile ? "16px 14px" : "32px 24px" }}>
           {/* Article Header */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <span style={{ fontSize: 28 }}>{ACADEMY_SECTION_ICONS[activeSection] || "📘"}</span>
-              <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 900, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", margin: 0 }}>{content.title}</h1>
+          <div style={{ marginBottom: isMobile ? 20 : 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 10, marginBottom: 8 }}>
+              <span style={{ fontSize: isMobile ? 22 : 28, flexShrink: 0 }}>{ACADEMY_SECTION_ICONS[activeSection] || "📘"}</span>
+              <h1 style={{ fontSize: isMobile ? 18 : 28, fontWeight: 900, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", margin: 0, lineHeight: 1.3 }}>{content.title}</h1>
             </div>
-            <p style={{ fontSize: 14, color: "#6b7080", lineHeight: 1.7, margin: 0 }}>{content.intro}</p>
+            <p style={{ fontSize: isMobile ? 12 : 14, color: "#6b7080", lineHeight: 1.7, margin: 0 }}>{content.intro}</p>
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7ec", marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7ec", marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {content.tabs.map((t, i) => {
               const isAct = i === activeTabIdx;
               return (
                 <button key={t.id} onClick={() => setActiveTabIdx(i)} style={{
-                  padding: isMobile ? "12px 14px" : "14px 22px",
+                  padding: isMobile ? "10px 12px" : "14px 22px",
                   background: "none", border: "none",
                   borderBottom: isAct ? "3px solid #2EC4B6" : "3px solid transparent",
-                  fontSize: isMobile ? 12 : 13, fontWeight: isAct ? 700 : 500,
+                  fontSize: isMobile ? 11 : 13, fontWeight: isAct ? 700 : 500,
                   color: isAct ? "#0B2341" : "#6b7080",
                   cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
                   transition: "all 0.15s", flexShrink: 0, marginBottom: -2,
                 }}>
-                  <span style={{ marginInlineEnd: 6 }}>{t.icon}</span>{t.label}
+                  <span style={{ marginInlineEnd: 4 }}>{t.icon}</span>{t.label}
                 </button>
               );
             })}
           </div>
 
           {/* Tab Content */}
-          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7ec", padding: isMobile ? "20px 18px" : "28px 32px", marginBottom: 32, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+          <div style={{ background: "#fff", borderRadius: isMobile ? 10 : 12, border: "1px solid #e5e7ec", padding: isMobile ? "16px 14px" : "28px 32px", marginBottom: isMobile ? 20 : 32, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
             {tab && tab.content.map(renderBlock)}
           </div>
 
           {/* Related Topics */}
           {related.length > 0 && (
-            <div style={{ marginBottom: 40 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#0B2341", marginBottom: 12, fontFamily: "'Tajawal',sans-serif" }}>
+            <div style={{ marginBottom: isMobile ? 24 : 40 }}>
+              <div style={{ fontSize: isMobile ? 12 : 13, fontWeight: 700, color: "#0B2341", marginBottom: 10, fontFamily: "'Tajawal',sans-serif" }}>
                 {ar ? "📎 مواضيع ذات صلة" : "📎 Related Topics"}
               </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {related.filter(k => EDUCATIONAL_CONTENT[k]).map(k => {
                   const s2 = EDUCATIONAL_CONTENT[k][ar ? "ar" : "en"];
                   return (
                     <button key={k} onClick={() => navigateTo(k, 0)} style={{
-                      display: "flex", alignItems: "center", gap: 8,
-                      padding: "10px 16px", background: "#fff", border: "1px solid #e5e7ec",
-                      borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-                      transition: "all 0.15s", fontSize: 12, fontWeight: 500, color: "#374151",
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: isMobile ? "8px 12px" : "10px 16px", background: "#fff", border: "1px solid #e5e7ec",
+                      borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                      transition: "all 0.15s", fontSize: isMobile ? 11 : 12, fontWeight: 500, color: "#374151",
                     }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = "#2EC4B6"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(46,196,182,0.12)"; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7ec"; e.currentTarget.style.boxShadow = "none"; }}
@@ -9998,14 +10000,14 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
   // ── PATHS OVERVIEW (HOME) ──
   return (
-    <div dir={dir} style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0B2341 0%, #0B2341 340px, #f8f9fb 340px)", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
+    <div dir={dir} style={{ minHeight: "100vh", background: isMobile ? "linear-gradient(180deg, #0B2341 0%, #0B2341 260px, #f8f9fb 260px)" : "linear-gradient(180deg, #0B2341 0%, #0B2341 340px, #f8f9fb 340px)", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
       {/* Hero Header */}
-      <div style={{ padding: isMobile ? "20px 16px 60px" : "24px 32px 80px", position: "relative", overflow: "hidden" }}>
+      <div style={{ padding: isMobile ? "16px 14px 50px" : "24px 32px 80px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
         {/* Top bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isMobile ? 28 : 40, position: "relative", zIndex: 1 }}>
-          <button onClick={onBack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: "7px 14px", color: "#2EC4B6", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-            {publicMode ? (ar ? "→ تسجيل الدخول" : "← Sign In") : (ar ? "→ المشاريع" : "← Projects")}
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12, marginBottom: isMobile ? 20 : 40, position: "relative", zIndex: 1 }}>
+          <button onClick={onBack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: isMobile ? "6px 10px" : "7px 14px", color: "#2EC4B6", fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+            {publicMode ? (ar ? "→ تسجيل" : "← Sign In") : (ar ? "→ المشاريع" : "← Projects")}
           </button>
           {publicMode && onLangToggle && (
             <button onClick={onLangToggle} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "7px 14px", color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -10014,9 +10016,11 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
           )}
           <div style={{ flex: 1 }} />
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>زان</span>
-            <span style={{ width: 1, height: 18, background: "rgba(46,196,182,0.35)" }} />
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{ar ? "النمذجة" : "Financial"}<br />{ar ? "المالية" : "Modeler"}</span>
+            <span style={{ fontSize: isMobile ? 20 : 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>زان</span>
+            {!isMobile && <>
+              <span style={{ width: 1, height: 18, background: "rgba(46,196,182,0.35)" }} />
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{ar ? "النمذجة" : "Financial"}<br />{ar ? "المالية" : "Modeler"}</span>
+            </>}
           </div>
         </div>
         {/* Title */}
@@ -10024,11 +10028,11 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
           <div style={{ display: "inline-block", padding: "6px 18px", background: "rgba(46,196,182,0.1)", border: "1px solid rgba(46,196,182,0.2)", borderRadius: 20, marginBottom: 16 }}>
             <span style={{ fontSize: 12, color: "#2EC4B6", fontWeight: 600 }}>📚 {ar ? "أكاديمية زان المالية" : "ZAN Academy"}</span>
           </div>
-          <h1 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 900, color: "#fff", lineHeight: 1.2, marginBottom: 12, fontFamily: "'Tajawal',sans-serif" }}>
+          <h1 style={{ fontSize: isMobile ? 22 : 36, fontWeight: 900, color: "#fff", lineHeight: 1.25, marginBottom: 10, fontFamily: "'Tajawal',sans-serif" }}>
             {ar ? "تعلّم النمذجة المالية العقارية" : "Learn Real Estate Financial Modeling"}
           </h1>
-          <p style={{ fontSize: isMobile ? 13 : 15, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
-            {ar ? "محتوى عملي مصمم للسوق السعودي. من الأساسيات إلى هيكلة الصفقات المعقدة." : "Practical content designed for the Saudi market. From basics to complex deal structuring."}
+          <p style={{ fontSize: isMobile ? 12 : 15, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
+            {ar ? "محتوى عملي مصمم للسوق السعودي." : "Practical content designed for the Saudi market."}
           </p>
         </div>
       </div>
@@ -10036,12 +10040,12 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
       {/* Main Content */}
       <div style={{ maxWidth: 900, margin: "-40px auto 0", padding: isMobile ? "0 16px 40px" : "0 24px 60px", position: "relative", zIndex: 1 }}>
         {/* Search */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7ec", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: "4px 4px 4px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 16, color: "#9ca3af" }}>🔍</span>
+        <div style={{ marginBottom: isMobile ? 20 : 32 }}>
+          <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e5e7ec", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: isMobile ? "2px 2px 2px 12px" : "4px 4px 4px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: isMobile ? 14 : 16, color: "#9ca3af" }}>🔍</span>
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder={ar ? "ابحث عن مفهوم... مثال: IRR, المرابحة, شلال التوزيعات" : "Search concepts... e.g. IRR, Murabaha, Waterfall"}
-              style={{ flex: 1, border: "none", outline: "none", fontSize: 13, color: "#374151", fontFamily: "inherit", padding: "12px 0", background: "transparent" }} />
+              placeholder={ar ? (isMobile ? "ابحث... IRR, المرابحة" : "ابحث عن مفهوم... مثال: IRR, المرابحة, شلال التوزيعات") : (isMobile ? "Search... IRR, DSCR" : "Search concepts... e.g. IRR, Murabaha, Waterfall")}
+              style={{ flex: 1, border: "none", outline: "none", fontSize: isMobile ? 12 : 13, color: "#374151", fontFamily: "inherit", padding: isMobile ? "10px 0" : "12px 0", background: "transparent" }} />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} style={{ background: "#f0f1f5", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 11, color: "#6b7080", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>✕</button>
             )}
@@ -10080,11 +10084,11 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
         {/* Learning Paths */}
         {!searchQuery && ACADEMY_PATHS.map((path) => (
           <div key={path.id} style={{ marginBottom: 36 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <span style={{ fontSize: 22 }}>{path.icon}</span>
+            <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: isMobile ? 18 : 22, flexShrink: 0, marginTop: isMobile ? 2 : 0 }}>{path.icon}</span>
               <div>
-                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? path.title.ar : path.title.en}</div>
-                <div style={{ fontSize: 12, color: "#6b7080", marginTop: 2 }}>{ar ? path.desc.ar : path.desc.en}</div>
+                <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.3 }}>{ar ? path.title.ar : path.title.en}</div>
+                <div style={{ fontSize: isMobile ? 11 : 12, color: "#6b7080", marginTop: 2, lineHeight: 1.5 }}>{ar ? path.desc.ar : path.desc.en}</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${Math.min(path.sections.length, 3)}, 1fr)`, gap: 12 }}>
@@ -10094,8 +10098,8 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
                 const tabCount = sec.tabs?.length || 0;
                 return (
                   <button key={sectionKey + "-" + idx} onClick={() => navigateTo(sectionKey, 0)} style={{
-                    background: "#fff", border: "1px solid #e5e7ec", borderRadius: 12,
-                    padding: isMobile ? "18px 16px" : "22px 20px",
+                    background: "#fff", border: "1px solid #e5e7ec", borderRadius: isMobile ? 10 : 12,
+                    padding: isMobile ? "14px 12px" : "22px 20px",
                     cursor: "pointer", fontFamily: "inherit", textAlign: "start",
                     transition: "all 0.2s", display: "flex", flexDirection: "column", gap: 8,
                     borderTop: `3px solid ${path.color}`,
@@ -10104,17 +10108,17 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
                     onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.08)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                     onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateY(0)"; }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 22 }}>{ACADEMY_SECTION_ICONS[sectionKey]}</span>
-                      <span style={{ fontSize: isMobile ? 14 : 15, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{sec.title}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: isMobile ? 18 : 22 }}>{ACADEMY_SECTION_ICONS[sectionKey]}</span>
+                      <span style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.3 }}>{sec.title}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: "#6b7080", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{sec.intro}</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                    <div style={{ fontSize: 11, color: "#6b7080", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{sec.intro}</div>
+                    {!isMobile && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
                       {sec.tabs?.slice(0, 4).map(t2 => (
                         <span key={t2.id} style={{ fontSize: 10, padding: "3px 8px", background: "#f0f1f5", borderRadius: 4, color: "#4b5060", fontWeight: 500 }}>{t2.icon} {t2.label}</span>
                       ))}
-                    </div>
-                    <div style={{ fontSize: 10, color: path.color, fontWeight: 600, marginTop: 4 }}>{tabCount} {ar ? "مواضيع" : "topics"} {ar ? "←" : "→"}</div>
+                    </div>}
+                    <div style={{ fontSize: 10, color: path.color, fontWeight: 600, marginTop: isMobile ? 2 : 4 }}>{tabCount} {ar ? "مواضيع" : "topics"} {ar ? "←" : "→"}</div>
                   </button>
                 );
               })}
@@ -10128,8 +10132,8 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <span style={{ fontSize: 22 }}>🎮</span>
               <div>
-                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? "نماذج تعليمية تفاعلية" : "Interactive Demo Projects"}</div>
-                <div style={{ fontSize: 12, color: "#6b7080", marginTop: 2 }}>{publicMode ? (ar ? "سجّل حساب مجاني لتجربة هذه النماذج وتعديلها بنفسك." : "Create a free account to try these demos and customize them yourself.") : (ar ? "مشاريع جاهزة بأرقام واقعية. افتحها، استكشفها، وعدّل عليها - ستُحفظ كنسخة في مشاريعك." : "Ready projects with realistic numbers. Open, explore, and modify - saves as a copy in your projects.")}</div>
+                <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? "نماذج تعليمية تفاعلية" : "Interactive Demo Projects"}</div>
+                <div style={{ fontSize: isMobile ? 11 : 12, color: "#6b7080", marginTop: 2, lineHeight: 1.5 }}>{publicMode ? (ar ? "سجّل حساب مجاني لتجربة هذه النماذج." : "Create a free account to try these demos.") : (ar ? "مشاريع جاهزة بأرقام واقعية. افتحها وعدّل عليها." : "Ready projects with realistic numbers. Open and customize.")}</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
@@ -10142,11 +10146,11 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
                   boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
                   transition: "all 0.2s", opacity: publicMode ? 0.85 : 1,
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 22 }}>{demo.icon}</span>
-                    <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? demo.title.ar : demo.title.en}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: isMobile ? 18 : 22, flexShrink: 0 }}>{demo.icon}</span>
+                    <span style={{ fontSize: isMobile ? 12 : 14, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.3 }}>{ar ? demo.title.ar : demo.title.en}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: "#6b7080", lineHeight: 1.6 }}>{ar ? demo.desc.ar : demo.desc.en}</div>
+                  <div style={{ fontSize: isMobile ? 11 : 12, color: "#6b7080", lineHeight: 1.5 }}>{ar ? demo.desc.ar : demo.desc.en}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {demo.tags.map(tag => (
                       <span key={tag} style={{ fontSize: 9, padding: "2px 7px", background: "#f0f1f5", borderRadius: 4, color: "#4b5060", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>{tag}</span>
