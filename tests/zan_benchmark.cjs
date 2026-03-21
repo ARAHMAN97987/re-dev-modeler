@@ -11,7 +11,7 @@
  * 
  * Run: cd re-dev-modeler && node tests/zan_benchmark.cjs
  */
-const E = require('./helpers/loadEngine.cjs');
+const E = require('./helpers/engine.cjs');
 
 // ═══ Test Framework ═══
 let pass = 0, fail = 0, tests = [], currentSuite = '';

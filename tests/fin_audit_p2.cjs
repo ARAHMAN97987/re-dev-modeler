@@ -1,9 +1,8 @@
 /**
  * FINANCING INPUTS AUDIT - Part 2: Land & Equity + Waterfall + Fund + Fees
  */
-const fs = require('fs');
-const appCode = fs.readFileSync('src/App.jsx', 'utf8');
-eval(appCode.substring(appCode.indexOf('function getScenarioMults'), appCode.indexOf('function computePhaseWaterfalls')));
+const { computeProjectCashFlows, computeIncentives, computeFinancing, computeWaterfall,
+  calcIRR, calcNPV } = require('./helpers/engine.cjs');
 
 let pass = 0, fail = 0, tests = [];
 const t = (cat, name, ok, detail) => {

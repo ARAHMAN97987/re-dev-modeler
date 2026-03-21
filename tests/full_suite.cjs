@@ -3,7 +3,7 @@
  * Coverage: 20 functions, 5 test layers, 3 datasets
  * Run: cd re-dev-modeler && node tests/full_suite.cjs
  */
-const E = require('./helpers/loadEngine.cjs');
+const E = require('./helpers/engine.cjs');
 const O = require('./helpers/oracles.cjs');
 const {TOL,oracleNPV,oracleIRR,oracleCapex,oracleCapexSchedule,oracleLeaseRevenue,oracleLandRent,oracleDebtRollForward,oracleWaterfall,arrClose,near} = O;
 
