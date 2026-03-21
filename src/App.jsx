@@ -1862,7 +1862,7 @@ function computeWaterfall(project, projectResults, financing, incentivesResult) 
   const totalEquity = f.totalEquity;
   const gpPct = f.gpPct;
   const lpPct = f.lpPct;
-  const isFund = project.finMode === "fund" || project.vehicleType === "fund";
+  const isFund = project.finMode === "fund";
 
   // Fee calculations (only Fund type gets full fees)
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
