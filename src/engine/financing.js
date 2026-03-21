@@ -235,6 +235,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // ── Tranche mode: 'single' (default/ZAN) vs 'perDraw' (each drawdown = independent loan) ──
   const trancheMode = project.debtTrancheMode || "single";
+  const repayType = project.repaymentType || "amortizing";
   let tranches = null; // Only populated for perDraw mode (for reporting)
 
   if (trancheMode === "perDraw" && repayYears > 0) {
@@ -264,9 +265,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
         tr.balOpen[y] = y === 0 ? 0 : tr.balClose[y - 1];
         let bal = tr.balOpen[y] + (y === tr.drawYear ? tr.amount : 0);
 
-        if (y >= tr.repayStart && bal > 0 && project.repaymentType === "amortizing") {
+        if (y >= tr.repayStart && bal > 0 && repayType === "amortizing") {
           tr.repay[y] = Math.min(tr.annualRepay, bal);
-        } else if (project.repaymentType === "bullet") {
+        } else if (repayType === "bullet") {
           const bulletYear = Math.min(tr.repayStart + repayYears - 1, h - 1);
           if (y === bulletYear && bal > 0) tr.repay[y] = bal;
         }
@@ -302,9 +303,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     for (let y = 0; y < h; y++) {
       debtBalOpen[y] = y === 0 ? 0 : debtBalClose[y - 1];
       let bal = debtBalOpen[y] + drawdown[y];
-      if (y >= repayStart && bal > 0 && project.repaymentType === "amortizing") {
+      if (y >= repayStart && bal > 0 && repayType === "amortizing") {
         repay[y] = Math.min(annualRepay, bal);
-      } else if (project.repaymentType === "bullet") {
+      } else if (repayType === "bullet") {
         // Cap bullet to last year of horizon if it would exceed
         const bulletYear = Math.min(repayStart + repayYears - 1, h - 1);
         if (y === bulletYear && bal > 0) repay[y] = bal;
