@@ -74,6 +74,8 @@ module.exports = {
   FINANCING_FIELDS, getPhaseFinancing, hasPerPhaseFinancing, migrateToPerPhaseFinancing,
   buildPhaseIncentives, buildPhaseVirtualProject, buildPhaseProjectResults,
   aggregatePhaseFinancings, aggregatePhaseWaterfalls, computeIndependentPhaseResults,
+  // engine/checks.js
+  runChecks,
   // engine/legacy/phaseWaterfalls.js
   computePhaseWaterfalls,
   // data/defaults.js

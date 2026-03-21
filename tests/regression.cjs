@@ -6,7 +6,8 @@
  * Must pass 100% before any deployment.
  */
 const { computeProjectCashFlows, computeIncentives, computeFinancing, computeWaterfall,
-  calcIRR, calcNPV, runChecks, computeIndependentPhaseResults } = require('./helpers/engine.cjs');
+  calcIRR, calcNPV, runChecks, computeIndependentPhaseResults,
+  buildPhaseVirtualProject, buildPhaseIncentives } = require('./helpers/engine.cjs');
 
 let pass = 0, fail = 0, tests = [];
 const t = (cat, name, ok, detail) => {
