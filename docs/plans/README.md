@@ -66,8 +66,8 @@ git pull origin feature/engine-extraction
 
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
-| P1 | Legacy vs New Engine Conflict | ⬜ | | Fix checks to use same source as UI |
-| P2 | isFund Logic Bug | ⬜ | | vehicleType defaults "fund" - debt projects get fund fees |
+| P1 | Legacy vs New Engine Conflict | ✅ | 2026-03-21 | checks + phaseWaterfalls now use resolved financing/waterfall (same as UI) |
+| P2 | isFund Logic Bug | ✅ | 2026-03-21 | isFund now only checks finMode==="fund", not vehicleType default |
 | P3 | React Hooks Safety Fix | ⬜ | | Move early return after all hooks |
 | P4 | Proxy Labeling (≈ indicator) | ⬜ | | Show ≈ next to DSCR and mgmt fee until fixed |
 

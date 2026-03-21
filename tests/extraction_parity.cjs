@@ -118,21 +118,21 @@ try {
     // Test hotel EBITDA
     const hotelConfig = {
       rooms: 200, adr: 800, occupancy: 70, fbCapture: 40, fbAvgCheck: 150,
-      otherPctRoom: 15, undistPctRev: 25, mgmtFeePct: 3, ffePct: 4, insurancePctRev: 1
+      otherPctRoom: 15, undistPctRev: 25, mgmtFeePct: 3, ffePct: 4, insurancePctRev: 1,
+      keys: 200, stabOcc: 70, daysYear: 365, roomsPct: 72, fbPct: 22, micePct: 4, otherPct: 2,
+      roomExpPct: 20, fbExpPct: 60, miceExpPct: 58, otherExpPct: 50, undistPct: 29, fixedPct: 9
     };
     const origHotel = calcHotelEBITDA(hotelConfig);
-    // We need to re-eval originals... but they're already in scope from the App.jsx eval
-    // The extracted version now shadows them. Let's test it differently.
-    t('hospitality.js: calcHotelEBITDA returns number', typeof origHotel === 'number' && origHotel > 0,
-      `EBITDA=${origHotel}`);
+    t('hospitality.js: calcHotelEBITDA returns object with ebitda', typeof origHotel === 'object' && typeof origHotel.ebitda === 'number' && origHotel.ebitda > 0,
+      `EBITDA=${origHotel?.ebitda}`);
 
     const marinaConfig = {
-      berths: 50, avgLength: 15, berthingPricePerM: 3000, occupancy: 60,
-      fuelRevenue: 500000, ancillaryRevenue: 200000, opexPctRev: 40
+      berths: 50, avgLength: 15, unitPrice: 3000, stabOcc: 60,
+      fuelPct: 25, otherRevPct: 10, berthingOpexPct: 58, fuelOpexPct: 96, otherOpexPct: 30
     };
     const origMarina = calcMarinaEBITDA(marinaConfig);
-    t('hospitality.js: calcMarinaEBITDA returns number', typeof origMarina === 'number' && origMarina > 0,
-      `EBITDA=${origMarina}`);
+    t('hospitality.js: calcMarinaEBITDA returns object with ebitda', typeof origMarina === 'object' && typeof origMarina.ebitda === 'number' && origMarina.ebitda > 0,
+      `EBITDA=${origMarina?.ebitda}`);
 
     console.log('  ✓ Step 2: engine/hospitality.js loaded and tested');
   } else {
