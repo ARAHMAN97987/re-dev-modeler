@@ -87,14 +87,6 @@ export function buildPhaseIncentives(projectResults, incentivesResult, phaseName
 export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
   const pf = getPhaseFinancing(project, phaseName);
   const allocPct = phaseResult.allocPct || 0;
-  const phase = (project.phases || []).find(p => p.name === phaseName);
-
-  // FIX#9: Don't inherit project-level manual equity into phase virtual projects.
-  // Project-level gpEquityManual/lpEquityManual are sized for the FULL project.
-  // Passing them unscaled to a phase causes gpEquity >= phase totalEquity → lpEquity = 0.
-  // Only use manual equity if the phase itself has explicit per-phase overrides.
-  const hasPhaseManualGP = (phase?.financing?.gpEquityManual ?? 0) > 0;
-  const hasPhaseManualLP = (phase?.financing?.lpEquityManual ?? 0) > 0;
 
   return {
     ...project,
@@ -111,9 +103,13 @@ export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
     landRentAnnual: project.landRentAnnual, // Not used directly - comes from phaseResults
     // Override phases to prevent recursion
     phases: project.phases,
-    // FIX#9: Clear manual equity unless phase has its own explicit override
-    gpEquityManual: hasPhaseManualGP ? pf.gpEquityManual : 0,
-    lpEquityManual: hasPhaseManualLP ? pf.lpEquityManual : 0,
+    // FIX#9: ALWAYS clear manual equity for per-phase virtual projects.
+    // Project-level gpEquityManual is sized for the FULL project.
+    // migrateToPerPhaseFinancing copies it to each phase.financing too.
+    // Passing it unscaled causes gpEquity >= phase totalEquity → lpEquity = 0.
+    // Force auto-calculation via land cap proportional split.
+    gpEquityManual: 0,
+    lpEquityManual: 0,
   };
 }
 

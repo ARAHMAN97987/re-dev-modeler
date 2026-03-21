@@ -14,9 +14,12 @@ const project = {
   softCostPct: 10, contingencyPct: 5, rentEscalation: 0.75,
   activeScenario: 'Base Case',
   phases: [
-    { name: 'ZAN 1', startYearOffset: 1, completionMonth: 36, footprint: 32000 },
-    { name: 'ZAN 2', startYearOffset: 2, completionMonth: 60, footprint: 32000 },
-    { name: 'ZAN 3', startYearOffset: 3, completionMonth: 72, footprint: 32000 },
+    { name: 'ZAN 1', startYearOffset: 1, completionMonth: 36, footprint: 32000,
+      financing: { gpEquityManual: 100000000, lpEquityManual: 0, finMode: 'fund' } },
+    { name: 'ZAN 2', startYearOffset: 2, completionMonth: 60, footprint: 32000,
+      financing: { gpEquityManual: 100000000, lpEquityManual: 0, finMode: 'fund' } },
+    { name: 'ZAN 3', startYearOffset: 3, completionMonth: 72, footprint: 32000,
+      financing: { gpEquityManual: 100000000, lpEquityManual: 0, finMode: 'fund' } },
   ],
   assets: [
     { phase:'ZAN 1', category:'Retail', name:'Mall A', code:'M1', gfa:30000, footprint:20000, plotArea:28000,
