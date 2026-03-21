@@ -1890,6 +1890,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const hasPhases = phaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
   const f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing;
   const c = results.consolidated;
+  // pc = "phase cash flow" - reads directly from phaseResults when a phase is selected
+  const pc = (selectedPhase !== "all" && results.phaseResults?.[selectedPhase]) ? results.phaseResults[selectedPhase] : c;
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
@@ -2186,7 +2188,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       const finCostPct = f.devCostInclLand > 0 ? totalFinCost / f.devCostInclLand : 0;
 
       // Stable income for yield
-      const stableIncome = c.income.find((v,i) => i > (f.constrEnd||0) && v > 0) || 0;
+      const stableIncome = pc.income.find((v,i) => i > (f.constrEnd||0) && v > 0) || 0;
       const cashOnCash = f.totalEquity > 0 && stableIncome > 0 ? stableIncome / f.totalEquity : 0;
 
       return <>
@@ -2339,11 +2341,11 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>{ar?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
           </tr></thead><tbody>
             {/* ── Project CF ── */}
-            <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"التدفق التشغيلي":"PROJECT CASH FLOW"}</td></tr>
-            <CFRow label={ar?"الإيرادات":"Revenue"} values={c.income} total={c.totalIncome} color="#16a34a" />
-            <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate />
-            <CFRow label={ar?"(-) تكاليف التطوير":"(-) CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
-            {(() => { const unlev = new Array(h).fill(0); for(let y=0;y<h;y++) unlev[y]=c.income[y]-c.landRent[y]-c.capex[y]; return <CFRow label={ar?"= صافي التدفق (قبل التمويل)":"= Unlevered Net CF"} values={unlev} total={unlev.reduce((a,b)=>a+b,0)} bold />; })()}
+            <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"التدفق التشغيلي":"PROJECT CASH FLOW"}{isPhaseView ? ` — ${selectedPhase}` : ""}</td></tr>
+            <CFRow label={ar?"الإيرادات":"Revenue"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
+            <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.totalLandRent} color="#ef4444" negate />
+            <CFRow label={ar?"(-) تكاليف التطوير":"(-) CAPEX"} values={pc.capex} total={pc.totalCapex} color="#ef4444" negate />
+            {(() => { const unlev = new Array(h).fill(0); for(let y=0;y<h;y++) unlev[y]=(pc.income[y]||0)-(pc.landRent[y]||0)-(pc.capex[y]||0); return <CFRow label={ar?"= صافي التدفق (قبل التمويل)":"= Unlevered Net CF"} values={unlev} total={unlev.reduce((a,b)=>a+b,0)} bold />; })()}
 
             {/* ── Financing ── */}
             <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#3b82f6",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"التمويل":"FINANCING"}</td></tr>
