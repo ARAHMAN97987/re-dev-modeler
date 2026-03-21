@@ -65,9 +65,9 @@ export default async function handler(req, res) {
     let index = [];
     if (idxRows && idxRows.length > 0) { try { index = JSON.parse(idxRows[0].value); } catch {} }
     index.push({ id: newId, name: project.name, status: project.status || 'Draft', updatedAt: project.updatedAt, createdAt: project.createdAt });
-    await fetch(restUrl, {
-      method: 'POST', headers,
-      body: JSON.stringify({ key: idxKey, value: JSON.stringify(index), user_id: uid, updated_at: new Date().toISOString() }),
+    await fetch(`${restUrl}?key=eq.${encodeURIComponent(idxKey)}&user_id=eq.${encodeURIComponent(uid)}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ value: JSON.stringify(index), updated_at: new Date().toISOString() }),
     });
 
     return res.status(200).json({ ok: true, newId, newKey, name: project.name, patchesApplied: !!patches });
