@@ -274,3 +274,4 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
 }
 
 // ═══ Legacy computePhaseWaterfalls (kept for backward compat) ═══
+

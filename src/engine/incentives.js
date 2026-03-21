@@ -35,6 +35,7 @@ export function computeIncentives(project, projectResults) {
     const grantAmt = Math.min(rawGrant, g.maxCap || Infinity);
     result.capexGrantTotal = grantAmt;
     if (g.timing === "construction" && constrEnd >= 0) {
+      // FIX#6: Spend-weighted grant distribution (proportional to actual CAPEX)
       const totalEligibleCapex = c.capex.reduce((s, v) => s + (v > 0 ? v : 0), 0);
       if (totalEligibleCapex > 0) {
         for (let y = 0; y < h; y++) {
@@ -47,6 +48,7 @@ export function computeIncentives(project, projectResults) {
       }
     } else {
       result.capexGrantSchedule[Math.min(constrEnd + 1, h - 1)] = grantAmt;
+      // Reduce adjustedCapex proportionally (grant received as lump-sum but reduces effective cost)
       const totalEligibleCapex = c.capex.reduce((s, v) => s + (v > 0 ? v : 0), 0);
       if (totalEligibleCapex > 0) {
         for (let y = 0; y < h; y++) {
@@ -61,6 +63,7 @@ export function computeIncentives(project, projectResults) {
   // ── 2. Land Rent Rebate ──
   if (inc.landRentRebate?.enabled && project.landType === "lease") {
     const lr = inc.landRentRebate;
+    // FIX#7: Find actual construction start from CAPEX schedule
     let constrStart = 0;
     for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = y; break; } }
     const constrYrs = lr.constrRebateYears > 0 ? lr.constrRebateYears : constrEnd - constrStart + 1;
@@ -90,8 +93,10 @@ export function computeIncentives(project, projectResults) {
       } else if (item.type === "deferral") {
         const deferYrs = Math.ceil((item.deferralMonths || 12) / 12);
         const newYr = Math.min(yr + deferYrs, h - 1);
-        result.feeRebateSchedule[yr] += amt;
-        result.feeRebateSchedule[newYr] -= amt;
+        // H5: Actually move cash flow - save at original year, pay at deferred year
+        result.feeRebateSchedule[yr] += amt;        // Save the fee at original year
+        result.feeRebateSchedule[newYr] -= amt;      // Pay it at deferred year
+        // Net benefit = NPV of deferral
         const benefit = amt - amt / Math.pow(1.1, deferYrs);
         result.feeRebateTotal += benefit;
       }
@@ -104,11 +109,13 @@ export function computeIncentives(project, projectResults) {
   }
   result.totalIncentiveValue = result.capexGrantTotal + result.landRentSavingTotal + result.feeRebateTotal;
 
-  // ── Finance Support value (estimate for display) ──
+  // ── Finance Support value (calculated later in computeFinancing, but estimate here for display) ──
   const fs = project.incentives?.financeSupport;
   if (fs?.enabled) {
     if (fs.subType === 'interestSubsidy') {
-      result.finSupportEstimate = true;
+      // Estimate: subsidy saves subsidyPct of total interest. Rough estimate for KPI card.
+      // Actual calculation happens in applyInterestSubsidy inside computeFinancing.
+      result.finSupportEstimate = true; // Flag that finance support is active
     } else if (fs.subType === 'softLoan') {
       const slAmt = fs.softLoanAmount || 0;
       result.softLoanAmount = slAmt;
@@ -140,6 +147,7 @@ export function applyInterestSubsidy(project, interest, constrEnd, totalDebt, ra
   let total = 0;
 
   if (inc.subType === "interestSubsidy") {
+    // H3: Start from first year with interest (first drawdown), not year 0
     let firstInterestYr = 0;
     for (let y = 0; y < h; y++) { if (interest[y] > 0) { firstInterestYr = y; break; } }
     const startYr = inc.subsidyStart === "operation" ? constrEnd + 1 : firstInterestYr;
@@ -151,20 +159,27 @@ export function applyInterestSubsidy(project, interest, constrEnd, totalDebt, ra
       total += savings[y];
     }
   } else if (inc.subType === "softLoan") {
+    // Soft loan = government provides 0% loan, reducing commercial interest
+    // Benefit = portion of debt that's interest-free × commercial rate
     const slAmt = Math.min(inc.softLoanAmount || 0, totalDebt);
     const slTenor = inc.softLoanTenor ?? 10;
     const slGrace = inc.softLoanGrace ?? 3;
     if (slAmt > 0 && rate > 0) {
+      // Find first draw year (soft loan starts from first actual drawdown)
       let firstDrawYr = 0;
       for (let y = 0; y < h; y++) { if (interest[y] > 0) { firstDrawYr = y; break; } }
+      // Soft loan portion doesn't accrue interest
+      // Savings each year = (soft loan outstanding) × commercial rate
       let slBalance = slAmt;
       const slRepayYrs = Math.max(1, slTenor - slGrace);
       const slAnnualRepay = slAmt / slRepayYrs;
       for (let y = firstDrawYr; y < h && slBalance > 0; y++) {
+        // Interest saving = soft loan balance × commercial rate (would have paid this)
         const saving = slBalance * rate;
-        savings[y] = Math.min(saving, interest[y]);
+        savings[y] = Math.min(saving, interest[y]); // Can't save more than actual interest
         adjusted[y] = interest[y] - savings[y];
         total += savings[y];
+        // Repay soft loan after grace (grace from first draw, not Y0)
         if (y >= firstDrawYr + slGrace) {
           slBalance = Math.max(0, slBalance - slAnnualRepay);
         }
@@ -174,3 +189,5 @@ export function applyInterestSubsidy(project, interest, constrEnd, totalDebt, ra
 
   return { adjusted, savings, total, softLoanSavings: total };
 }
+
+

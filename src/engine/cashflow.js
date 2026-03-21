@@ -140,6 +140,8 @@ export function computeProjectCashFlows(project) {
     // Lease contract start (absolute year). 0 = same as project start.
     const leaseStartAbsolute = (project.landLeaseStartYear || 0) > 0 ? project.landLeaseStartYear : startYear;
     // Grace end in model index (0-based from project startYear)
+    // Note: grace period is contractual (fixed). Construction delay does NOT auto-extend it.
+    // If user wants longer grace, they adjust landRentGrace manually.
     const graceEndIdx = Math.max(0, (leaseStartAbsolute + gr) - startYear);
 
     // First income year (when any asset starts generating revenue)
@@ -251,3 +253,4 @@ export function computeProjectCashFlows(project) {
     },
   };
 }
+

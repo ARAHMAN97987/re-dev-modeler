@@ -4817,9 +4817,11 @@ function useIsMobile(breakpoint = 768) {
 
 function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy }) {
   const isMobile = useIsMobile();
+  // ── Public Academy Mode (no auth required) ──
   const [publicLang, setPublicLang] = useState("ar");
-  // ── Public Academy Mode (no auth required) ── (moved after all hooks for React Rules of Hooks safety)
-  // publicAcademy early return is below, after all hooks are declared
+  if (publicAcademy) {
+    return <LearningCenterView lang={publicLang} onBack={exitAcademy || (() => {})} onCreateDemo={null} publicMode={true} onLangToggle={() => setPublicLang(l => l === "ar" ? "en" : "ar")} />;
+  }
   const [view, setView] = useState("dashboard");
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
