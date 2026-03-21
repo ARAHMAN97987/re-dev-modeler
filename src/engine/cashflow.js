@@ -2,14 +2,14 @@
  * ZAN Financial Engine — Project Cash Flow Calculator
  * @module engine/cashflow
  * 
- * Dependencies: engine/math.js, engine/hospitality.js
+ * Dependencies: engine/math.js (calcIRR, calcNPV)
  * This is the FOUNDATION - all other engine modules depend on its output.
+ * 
+ * NOTE: Hotel/Marina EBITDA (from engine/hospitality.js) is NOT computed here.
+ * It is pre-computed in the UI and stored as asset.opEbitda before reaching this engine.
  */
 
 import { calcIRR, calcNPV } from './math.js';
-// NOTE: calcHotelEBITDA/calcMarinaEBITDA are NOT used here.
-// Hotel/Marina EBITDA is pre-computed in the UI (HotelPLModal/MarinaPLModal)
-// and stored as asset.opEbitda before reaching this engine.
 
 export function getScenarioMults(p) {
   let cm=1,rm=1,dm=0,ea=0;
