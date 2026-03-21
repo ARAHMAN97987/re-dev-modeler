@@ -825,9 +825,9 @@ const normalize = (project) => {
 The current code at lines 4903-4909 uses aggregated results for UI display but legacy results for checks. After extraction, this mismatch is documented but NOT fixed during extraction. The fix (E3-1 from the Master Development Plan) happens as a separate task.
 
 ### Action items (post-extraction):
-- [ ] Fix placeholder fields in aggregatePhaseFinancings (rate, tenor, grace, etc.)
-- [ ] Fix hardcoded isFund: true in aggregatePhaseWaterfalls
-- [ ] Align checks to use same source as UI (E3-1)
+- [x] Fix placeholder fields in aggregatePhaseFinancings (rate, tenor, grace, etc.) — 2026-03-22
+- [x] Fix hardcoded isFund: true in aggregatePhaseWaterfalls — 2026-03-22
+- [x] Align checks to use same source as UI (E3-1) — 2026-03-22
 - [ ] Add parity tests: run both paths on same input, compare field by field
 
 ---

@@ -57,8 +57,8 @@ git pull origin feature/engine-extraction
 - ❌ Blocked
 - 🔬 Research needed
 
-**Last updated:** March 21, 2026
-**Updated by:** Claude (engine extraction complete)
+**Last updated:** March 22, 2026
+**Updated by:** Claude (post-split cleanup complete)
 
 ---
 
@@ -66,7 +66,7 @@ git pull origin feature/engine-extraction
 
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
-| P1 | Legacy vs New Engine Conflict | ⬜ | | REVERTED: aggregated financing has schema gaps (rate=0, MOIC diff). Fix requires engine reconciliation first |
+| P1 | Legacy vs New Engine Conflict | ✅ | 2026-03-22 | Post-split cleanup: placeholders fixed, isFund derived, checks aligned to consolidated |
 | P2 | isFund Logic Bug | ✅ | 2026-03-21 | isFund now only checks finMode==="fund", not vehicleType default |
 | P3 | React Hooks Safety Fix | ✅ | 2026-03-21 | Both early returns moved after all hooks |
 | P4 | Proxy Labeling (≈ indicator) | ✅ | 2026-03-21 | ≈ added to DSCR (7 locations) + Mgmt Fee (3 locations) |
