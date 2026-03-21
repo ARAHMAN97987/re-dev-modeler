@@ -112,7 +112,7 @@ function generateTemplate() {
   const csv = allRows.map(r => r.map(csvEscape).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = "RE-DEV_Asset_Template.csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const a = document.createElement("a"); a.href = url; a.download = "Haseef_Asset_Template.csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -1285,6 +1285,15 @@ function computeIncentives(project, projectResults) {
       }
     } else {
       result.capexGrantSchedule[Math.min(constrEnd + 1, h - 1)] = grantAmt;
+      // Reduce adjustedCapex proportionally (grant received as lump-sum but reduces effective cost)
+      const totalEligibleCapex = c.capex.reduce((s, v) => s + (v > 0 ? v : 0), 0);
+      if (totalEligibleCapex > 0) {
+        for (let y = 0; y < h; y++) {
+          if (c.capex[y] > 0) {
+            result.adjustedCapex[y] -= grantAmt * (c.capex[y] / totalEligibleCapex);
+          }
+        }
+      }
     }
   }
 
@@ -1521,12 +1530,13 @@ function computeFinancing(project, projectResults, incentivesResult) {
   const landCapTarget = project.landCapTo || "gp";
   if ((project.gpEquityManual ?? 0) > 0) {
     gpEquity = Math.min(project.gpEquityManual, totalEquity);
+  } else if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
+    // Partner contributes land as equity → their agreed % takes priority over landCap split
+    gpEquity = totalEquity * ((project.partnerEquityPct || 50) / 100);
   } else if (effectiveLandCap > 0) {
     if (landCapTarget === "gp") gpEquity = Math.min(effectiveLandCap, totalEquity);
     else if (landCapTarget === "lp") gpEquity = Math.max(0, totalEquity - effectiveLandCap);
     else gpEquity = totalEquity * 0.5; // split
-  } else if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
-    gpEquity = totalEquity * ((project.partnerEquityPct || 50) / 100);
   } else {
     gpEquity = totalEquity * 0.5;
   }
