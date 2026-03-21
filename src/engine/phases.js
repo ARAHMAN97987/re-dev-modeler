@@ -230,11 +230,6 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     prefAccrual: sumArr('prefAccrual'), prefAccumulated: sumArr('prefAccumulated'),
     lpIRR: calcIRR(lpNetCF), gpIRR: calcIRR(gpNetCF),
     lpTotalDist: sum('lpTotalDist'), gpTotalDist: sum('gpTotalDist'),
-    lpMOIC: lpEquity > 0 ? sum('lpTotalDist') / lpEquity : 0,
-    gpMOIC: gpEquity > 0 ? sum('gpTotalDist') / gpEquity : 0,
-    // Committed MOIC = same as lpMOIC/gpMOIC here (using original equity)
-    lpCommittedMOIC: lpEquity > 0 ? sum('lpTotalDist') / lpEquity : 0,
-    gpCommittedMOIC: gpEquity > 0 ? sum('gpTotalDist') / gpEquity : 0,
     // Net distributions (after land rent obligations)
     lpNetDist: sum('lpNetDist') || sum('lpTotalDist'),
     gpNetDist: sum('gpNetDist') || sum('gpTotalDist'),
@@ -243,8 +238,15 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     gpTotalCalled: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)),
     lpTotalInvested: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)),
     gpTotalInvested: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)),
-    lpDPI: sum('lpTotalDist') / Math.max(1, sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity))),
-    gpDPI: sum('gpTotalDist') / Math.max(1, sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity))),
+    // MOIC = NetDist / TotalCalled (paid-in basis, matches computeWaterfall)
+    lpMOIC: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)); const nd = sum('lpNetDist') || sum('lpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    gpMOIC: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)); const nd = sum('gpNetDist') || sum('gpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    // Committed MOIC = NetDist / Original Equity (secondary metric)
+    lpCommittedMOIC: lpEquity > 0 ? (sum('lpNetDist') || sum('lpTotalDist')) / lpEquity : 0,
+    gpCommittedMOIC: gpEquity > 0 ? (sum('gpNetDist') || sum('gpTotalDist')) / gpEquity : 0,
+    // DPI = NetDist / TotalCalled (same as paid-in MOIC)
+    lpDPI: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)); const nd = sum('lpNetDist') || sum('lpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    gpDPI: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)); const nd = sum('gpNetDist') || sum('gpTotalDist'); return c > 0 ? nd / c : 0; })(),
     lpNPV10: calcNPV(lpNetCF, 0.10), lpNPV12: calcNPV(lpNetCF, 0.12), lpNPV14: calcNPV(lpNetCF, 0.14),
     gpNPV10: calcNPV(gpNetCF, 0.10), gpNPV12: calcNPV(gpNetCF, 0.12), gpNPV14: calcNPV(gpNetCF, 0.14),
     isFund: names.some(n => phaseWaterfalls[n]?.isFund),
