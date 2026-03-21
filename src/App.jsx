@@ -2197,8 +2197,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       const cashOnCash = f.totalEquity > 0 && stableIncome > 0 ? stableIncome / f.totalEquity : 0;
 
       return <>
-      {/* LP = 0 warning */}
-      {f.lpEquity === 0 && project.finMode !== "self" && (
+      {/* LP = 0 warning - only relevant for fund/jv where LP is expected */}
+      {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv") && (
         <div style={{background:"#fef3c7",borderRadius:8,border:"1px solid #fde68a",padding:"12px 16px",marginBottom:14,fontSize:12,color:"#92400e"}}>
           <strong>⚠ {ar?"LP Equity = صفر":"LP Equity = 0"}</strong><br/>
           {ar ? "لا يوجد مستثمرين (LP). لتفعيل LP: فعّل رسملة الأرض أو أدخل GP Equity يدوياً" : "No investor equity. Enable Land Capitalization or enter GP Equity manually."}
@@ -2247,7 +2247,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* Equation */}
         <div style={{background:"#f0f4ff",borderRadius:6,padding:"8px 14px",fontSize:12}}>
           <strong>{ar?"المعادلة":"Equation"}:</strong>{" "}
-          {ar?"دين":"Debt"} ({fmtM(f.totalDebt)}) + GP ({fmtM(f.gpEquity)}) + LP ({fmtM(f.lpEquity)}) = {fmtM(f.totalDebt + f.gpEquity + f.lpEquity)}{" "}
+          {ar?"دين":"Debt"} ({fmtM(f.totalDebt)}) + GP ({fmtM(f.gpEquity)}){f.lpEquity > 0 ? ` + LP (${fmtM(f.lpEquity)})` : ""} = {fmtM(f.totalDebt + f.gpEquity + f.lpEquity)}{" "}
           {Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - f.devCostInclLand) < 1000
             ? <span style={{color:"#16a34a",fontWeight:600}}>✓</span>
             : <span style={{color:"#ef4444",fontWeight:600}}>✗ ≠ {fmtM(f.devCostInclLand)}</span>}
@@ -8197,7 +8197,7 @@ function _buildXLSX(XLSX, project, results, financing, waterfall) {
       s1.push(['  Dev Cost Incl Land', fm(f.devCostInclLand), '  Total Interest', fm(f.totalInterest)]);
       s1.push(['  Max Debt (' + (project.maxLtvPct||70) + '% LTV)', fm(f.maxDebt), '  Levered IRR', f.leveredIRR ? fp(f.leveredIRR) : 'N/A']);
       s1.push(['  GP Equity', fm(f.gpEquity), '  Upfront Fee', fm(f.upfrontFee)]);
-      s1.push(['  LP Equity', fm(f.lpEquity)]);
+      if (f.lpEquity > 0) s1.push(['  LP Equity', fm(f.lpEquity)]);
       s1.push(['  Total Equity', fm(f.totalEquity)]);
       s1.push([]);
     }
@@ -10388,7 +10388,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
               <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"إجمالي حقوق الملكية":"Total Equity"}</div>
                 <div style={{fontSize:20,fontWeight:700,color:"#16a34a"}}>{fmtM(f.totalEquity)}</div>
-                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>GP: {fmtM(f.gpEquity)} | LP: {fmtM(f.lpEquity)}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>GP: {fmtM(f.gpEquity)}{f.lpEquity > 0 ? ` | LP: ${fmtM(f.lpEquity)}` : ""}</div>
               </div>
               <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"معدل التمويل":"Finance Rate"}</div>
