@@ -1,6 +1,3 @@
-// One-shot: Read project, apply patches to project-level + all phase.financing, save back
-// GET /api/patch-project?id=X&uid=Y&patches={"maxLtvPct":70}
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -8,13 +5,15 @@ export default async function handler(req, res) {
   if (!supabaseUrl || !supabaseKey) return res.status(500).json({ error: 'No Supabase' });
 
   const restUrl = `${supabaseUrl}/rest/v1/kv_store`;
-  const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
+  const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' };
 
   try {
     const { id, uid, patches } = req.query;
     if (!id || !uid || !patches) return res.status(400).json({ error: 'id, uid, patches required' });
 
     const key = `redev:project:${id}`;
+
+    // Read
     const r1 = await fetch(`${restUrl}?key=eq.${encodeURIComponent(key)}&user_id=eq.${encodeURIComponent(uid)}&select=value`, { headers });
     const rows = await r1.json();
     if (!rows?.length) return res.status(404).json({ error: 'Not found' });
@@ -29,7 +28,7 @@ export default async function handler(req, res) {
       project[k] = v;
     }
 
-    // Apply to each phase.financing (if the field exists there)
+    // Apply to each phase.financing
     const phaseApplied = {};
     if (Array.isArray(project.phases)) {
       for (const phase of project.phases) {
@@ -47,10 +46,12 @@ export default async function handler(req, res) {
 
     project.updatedAt = new Date().toISOString();
 
-    // Save
-    const r2 = await fetch(restUrl, {
-      method: 'POST', headers,
-      body: JSON.stringify({ key, value: JSON.stringify(project), user_id: uid, updated_at: project.updatedAt }),
+    // Update via PATCH (not POST) to avoid duplicate key error
+    const updateUrl = `${restUrl}?key=eq.${encodeURIComponent(key)}&user_id=eq.${encodeURIComponent(uid)}`;
+    const r2 = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ value: JSON.stringify(project), updated_at: project.updatedAt }),
     });
     if (!r2.ok) return res.status(500).json({ error: await r2.text() });
 
