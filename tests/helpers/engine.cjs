@@ -57,6 +57,28 @@ eval(loadESM(path.join(engineDir, 'legacy', 'phaseWaterfalls.js')));
 // Data
 eval(loadESM(path.join(dataDir, 'defaults.js')));
 
+// runFullModel: thin orchestrator (mirrors engine/index.js runFullModel)
+// Defined here because index.js uses ESM re-exports that can't be eval'd
+function runFullModel(project) {
+  if (!project) return null;
+  var projectResults = computeProjectCashFlows(project);
+  if (!projectResults) return null;
+  var incentivesResult = computeIncentives(project, projectResults);
+  var _legacyFinancing = null, _legacyWaterfall = null;
+  try { _legacyFinancing = computeFinancing(project, projectResults, incentivesResult); } catch(e) {}
+  try { if (_legacyFinancing) _legacyWaterfall = computeWaterfall(project, projectResults, _legacyFinancing, incentivesResult); } catch(e) {}
+  var independentPhaseResults = null;
+  try { independentPhaseResults = computeIndependentPhaseResults(project, projectResults, incentivesResult); } catch(e) {}
+  var financing = (independentPhaseResults && independentPhaseResults.consolidatedFinancing) || _legacyFinancing;
+  var waterfall = (independentPhaseResults && independentPhaseResults.consolidatedWaterfall) || _legacyWaterfall;
+  var phaseFinancings = (independentPhaseResults && independentPhaseResults.phaseFinancings) || {};
+  var phaseWaterfalls = (independentPhaseResults && independentPhaseResults.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0)
+    ? independentPhaseResults.phaseWaterfalls : null;
+  var checks = [];
+  try { checks = runChecks(project, projectResults, financing, waterfall, incentivesResult); } catch(e) {}
+  return { projectResults, incentivesResult, financing, waterfall, independentPhaseResults, phaseFinancings, phaseWaterfalls, checks, _legacyFinancing, _legacyWaterfall };
+}
+
 module.exports = {
   // engine/math.js
   calcIRR, calcNPV,
@@ -80,4 +102,6 @@ module.exports = {
   computePhaseWaterfalls,
   // data/defaults.js
   defaultProject, defaultHotelPL, defaultMarinaPL,
+  // engine/index.js orchestrator
+  runFullModel,
 };
