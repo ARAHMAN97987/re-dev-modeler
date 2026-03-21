@@ -257,26 +257,11 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   const phaseFinancings = {};
   const phaseWaterfalls = {};
 
-  // FIX#9 Layer 3: Compute consolidated GP/LP ratio from the FULL project FIRST.
-  // Per-phase virtual projects inherit this ratio so that landCap-dominated phases
-  // still produce LP > 0 (matching ZAN Excel per-fund behavior).
-  let projGpPct = 0.5, projLpPct = 0.5; // Safe defaults
-  try {
-    const consolidatedFin = computeFinancing(project, projectResults, incentivesResult);
-    if (consolidatedFin && consolidatedFin.totalEquity > 0) {
-      projGpPct = consolidatedFin.gpPct;
-      projLpPct = consolidatedFin.lpPct;
-    }
-  } catch (e) { /* Use defaults */ }
-
   for (const pName of phaseNames) {
     const pr = phases[pName];
     if (!pr || pr.totalCapex === 0) continue;
 
     const vProject = buildPhaseVirtualProject(project, pName, pr);
-    // FIX#9 Layer 3: Attach project-level GP/LP ratio for per-phase equity split
-    vProject._projGpPct = projGpPct;
-    vProject._projLpPct = projLpPct;
 
     const vResults = buildPhaseProjectResults(projectResults, pName);
     if (!vResults) continue;

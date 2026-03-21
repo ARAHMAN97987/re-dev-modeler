@@ -46,13 +46,17 @@ export function computeProjectCashFlows(project) {
     const capexSch = new Array(horizon).fill(0);
     const revSch = new Array(horizon).fill(0);
     const cStart = (() => {
-      // NEW: Calculate start from phase completionMonth (all assets in phase finish together)
+      // Use asset's own constrStart if set (matches ZAN Excel per-asset timing)
+      if ((asset.constrStart || 0) > 0) {
+        return (asset.constrStart - 1) + delayYears;
+      }
+      // Fallback: derive from phase completionMonth if available
       const assetPhase = (project.phases || []).find(ph => ph.name === (asset.phase || 'Phase 1'));
       if (assetPhase?.completionMonth) {
         const phaseEndYear = Math.ceil(assetPhase.completionMonth / 12);
         return Math.max(0, phaseEndYear - durYears) + delayYears;
       }
-      return (asset.constrStart || 1) - 1 + delayYears; // Legacy fallback
+      return delayYears; // Last resort
     })();
 
     if (durYears > 0 && totalCapex > 0) {
