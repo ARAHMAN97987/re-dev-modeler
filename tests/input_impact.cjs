@@ -1,9 +1,5 @@
-const fs = require('fs');
-const appCode = fs.readFileSync('src/App.jsx', 'utf8');
-// Load Hotel/Marina calculators (replace const→var so eval leaks to scope)
-eval(appCode.substring(appCode.indexOf('const defaultHotelPL'), appCode.indexOf('const defaultProject')).replace(/^const /gm,'var '));
-// Load main calculation engine
-eval(appCode.substring(appCode.indexOf('function getScenarioMults'), appCode.indexOf('function computePhaseWaterfalls')));
+const { computeProjectCashFlows, computeIncentives, computeFinancing, computeWaterfall,
+  calcIRR, calcNPV, calcHotelEBITDA, calcMarinaEBITDA, defaultHotelPL, defaultMarinaPL } = require('./helpers/engine.cjs');
 
 let passed = 0, failed = 0;
 const issues = [];

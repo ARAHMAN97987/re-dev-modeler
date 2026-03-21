@@ -58,7 +58,7 @@ git pull origin feature/engine-extraction
 - 🔬 Research needed
 
 **Last updated:** March 21, 2026
-**Updated by:** Claude (initial plan creation)
+**Updated by:** Claude (engine extraction complete)
 
 ---
 
@@ -66,8 +66,8 @@ git pull origin feature/engine-extraction
 
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
-| P1 | Legacy vs New Engine Conflict | ⬜ | | Fix checks to use same source as UI |
-| P2 | isFund Logic Bug | ⬜ | | vehicleType defaults "fund" - debt projects get fund fees |
+| P1 | Legacy vs New Engine Conflict | ✅ | 2026-03-21 | checks + phaseWaterfalls now use resolved financing/waterfall (same as UI) |
+| P2 | isFund Logic Bug | ✅ | 2026-03-21 | isFund now only checks finMode==="fund", not vehicleType default |
 | P3 | React Hooks Safety Fix | ⬜ | | Move early return after all hooks |
 | P4 | Proxy Labeling (≈ indicator) | ⬜ | | Show ≈ next to DSCR and mgmt fee until fixed |
 
@@ -77,25 +77,25 @@ git pull origin feature/engine-extraction
 
 | Step | Item | Status | Date | Notes |
 |------|------|--------|------|-------|
-| 1 | engine/math.js | ⬜ | | calcIRR, calcNPV |
-| 2 | engine/hospitality.js | ⬜ | | calcHotelEBITDA, calcMarinaEBITDA |
-| 3 | data/defaults.js | ⬜ | | defaultProject, defaultHotelPL, defaultMarinaPL |
-| 4 | data/benchmarks.js | ⬜ | | getBenchmark, benchmarkColor, getAutoFillDefaults |
-| 5 | data/translations.js | ⬜ | | CAT_AR, REV_AR, catL, revL |
-| 6 | utils/format.js | ⬜ | | fmt, fmtPct, fmtM |
-| 7 | utils/csv.js | ⬜ | | csvEscape, csvParse, export/import |
-| 8 | engine/cashflow.js | ⬜ | | computeProjectCashFlows (core) |
-| 9 | engine/incentives.js | ⬜ | | computeIncentives, applyInterestSubsidy |
-| 10 | engine/financing.js | ⬜ | | computeFinancing |
-| 11 | engine/waterfall.js | ⬜ | | computeWaterfall |
-| 12 | engine/phases.js | ⬜ | | FINANCING_FIELDS + all phase functions |
-| 12b | engine/legacy/phaseWaterfalls.js | ⬜ | | DEPRECATED - quarantined |
-| 13 | engine/checks.js | ⬜ | | runChecks |
-| 14 | engine/index.js | ⬜ | | Public API barrel file |
-| 15 | tests/helpers/engine.cjs | ⬜ | | Test import shim |
-| 16 | Update App.jsx imports | ⬜ | | Replace inline functions with imports |
-| 17 | Immutability tests | ⬜ | | deepFreeze verification |
-| 18 | runFullModel orchestrator | ⬜ | | Thin wrapper, no new logic |
+| 1 | engine/math.js | ✅ | 2026-03-21 | calcIRR, calcNPV — character-exact match |
+| 2 | engine/hospitality.js | ✅ | 2026-03-21 | calcHotelEBITDA, calcMarinaEBITDA — exact match |
+| 3 | data/defaults.js | ✅ | 2026-03-21 | defaultProject, defaultHotelPL, defaultMarinaPL — exact match |
+| 4 | data/benchmarks.js | ✅ | 2026-03-21 | BENCHMARKS + 3 functions — exact match |
+| 5 | data/translations.js | ✅ | 2026-03-21 | CAT_AR, REV_AR, catL, revL — exact match |
+| 6 | utils/format.js | ✅ | 2026-03-21 | fmt, fmtPct, fmtM — exact match |
+| 7 | utils/csv.js | ✅ | 2026-03-21 | 6 functions + TEMPLATE_COLS + SAMPLE_ROWS — exact match |
+| 8 | engine/cashflow.js | ✅ | 2026-03-21 | getScenarioMults + computeAssetCapex + computeProjectCashFlows — exact match |
+| 9 | engine/incentives.js | ✅ | 2026-03-21 | computeIncentives + applyInterestSubsidy — exact match |
+| 10 | engine/financing.js | ✅ | 2026-03-21 | computeFinancing (429 lines) — exact match |
+| 11 | engine/waterfall.js | ✅ | 2026-03-21 | computeWaterfall (374 lines) — exact match |
+| 12 | engine/phases.js | ✅ | 2026-03-21 | FINANCING_FIELDS + 9 phase functions — exact match |
+| 12b | engine/legacy/phaseWaterfalls.js | ✅ | 2026-03-21 | DEPRECATED — exact match, isolated in legacy/ |
+| 13 | engine/checks.js | ✅ | 2026-03-21 | runChecks (284 lines) — exact match |
+| 14 | engine/index.js | ✅ | 2026-03-21 | Barrel file + runFullModel orchestrator |
+| 15 | tests/helpers/engine.cjs | ✅ | 2026-03-21 | New shim reads from engine/ — 633/633 pass |
+| 16 | Update App.jsx imports | ✅ | 2026-03-21 | 12901→10608 lines — Vite build + 633 tests pass |
+| 17 | Immutability tests | ✅ | 2026-03-21 | 12/12 — no mutations detected |
+| 18 | runFullModel orchestrator | ✅ | 2026-03-21 | 27/27 parity — identical to useMemo chain |
 
 **Extraction gate:** ALL 633 tests pass + ZAN benchmark 0.00% diff before proceeding.
 
@@ -121,7 +121,7 @@ git pull origin feature/engine-extraction
 
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
-| E1 | Financial Engine Extraction | ⬜ | | See extraction tracker above |
+| E1 | Financial Engine Extraction | ✅ | 2026-03-21 | 18/18 steps complete, 672 tests pass |
 | E2 | Inline Styles Strategy (src/styles.js) | ⬜ | | Shared style constants |
 | E3 | Excel Reconciliation Suite | ⬜ | | Full ZAN benchmark verification |
 | E4 | DSCR Proxy Replacement | ⬜ | | Real NOI / (Principal + Interest) |

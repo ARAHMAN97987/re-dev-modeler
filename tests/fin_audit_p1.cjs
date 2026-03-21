@@ -2,9 +2,8 @@
  * FINANCING INPUTS AUDIT - Part 1: Debt Terms + Exit Strategy
  * Tests each field individually: change value → verify engine output changes correctly
  */
-const fs = require('fs');
-const appCode = fs.readFileSync('src/App.jsx', 'utf8');
-eval(appCode.substring(appCode.indexOf('function getScenarioMults'), appCode.indexOf('function computePhaseWaterfalls')));
+const { computeProjectCashFlows, computeIncentives, computeFinancing, computeWaterfall,
+  calcIRR, calcNPV } = require('./helpers/engine.cjs');
 
 let pass = 0, fail = 0, tests = [];
 const t = (cat, name, ok, detail) => {

@@ -5,9 +5,9 @@
  * Golden scenario: Jazan Waterfront (4 assets, 15yr, fund mode)
  * Must pass 100% before any deployment.
  */
-const fs = require('fs');
-const appCode = fs.readFileSync('src/App.jsx', 'utf8');
-eval(appCode.substring(appCode.indexOf('function getScenarioMults'), appCode.indexOf('function computePhaseWaterfalls')));
+const { computeProjectCashFlows, computeIncentives, computeFinancing, computeWaterfall,
+  calcIRR, calcNPV, runChecks, computeIndependentPhaseResults,
+  buildPhaseVirtualProject, buildPhaseIncentives } = require('./helpers/engine.cjs');
 
 let pass = 0, fail = 0, tests = [];
 const t = (cat, name, ok, detail) => {
