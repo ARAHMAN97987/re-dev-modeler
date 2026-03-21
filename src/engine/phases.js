@@ -88,7 +88,11 @@ export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
   const pf = getPhaseFinancing(project, phaseName);
   const allocPct = phaseResult.allocPct || 0;
 
-  return {
+  // FIX#9: Project-level gpEquityManual/lpEquityManual must NOT leak into phases.
+  // Per-phase equity is derived from that phase's own land cap / dev cost
+  // (matching ZAN Excel per-fund behavior).
+
+  const vProject = {
     ...project,
     ...pf, // Phase financing settings override project-level
     _isPhaseVirtual: true,
@@ -104,6 +108,17 @@ export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
     // Override phases to prevent recursion
     phases: project.phases,
   };
+
+  // FIX#9: ALWAYS clear inherited manual equity overrides.
+  // Project-level gpEquityManual/lpEquityManual represent the FULL project amount
+  // and must NOT leak into per-phase virtual projects. migrateToPerPhaseFinancing
+  // also copies them to phase.financing, so hasOwnProperty checks are unreliable.
+  // Per-phase equity is derived from that phase's own land cap / dev cost
+  // (matching ZAN Excel per-fund behavior where each fund computes GP from its own land cap).
+  delete vProject.gpEquityManual;
+  delete vProject.lpEquityManual;
+
+  return vProject;
 }
 
 /** Build synthetic projectResults where "consolidated" = phase data */
@@ -147,8 +162,9 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
   return {
     mode: phaseFinancings[names[0]]?.mode || 'independent',
     totalEquity: sum('totalEquity'), gpEquity: sum('gpEquity'), lpEquity: sum('lpEquity'),
-    gpPct: sum('totalEquity') > 0 ? sum('gpEquity') / sum('totalEquity') : 0,
-    lpPct: sum('totalEquity') > 0 ? sum('lpEquity') / sum('totalEquity') : 0,
+    // FIX: bank100 has totalEquity=0, but gpPct should be 1; inherit from first phase
+    gpPct: sum('totalEquity') > 0 ? sum('gpEquity') / sum('totalEquity') : (phaseFinancings[names[0]]?.gpPct ?? 0),
+    lpPct: sum('totalEquity') > 0 ? sum('lpEquity') / sum('totalEquity') : (phaseFinancings[names[0]]?.lpPct ?? 0),
     devCostExclLand: sum('devCostExclLand'), devCostInclLand: sum('devCostInclLand'),
     maxDebt: sum('maxDebt'), totalDebt: sum('totalDebt'),
     landCapValue: sum('landCapValue'), capexGrantTotal: sum('capexGrantTotal'),
