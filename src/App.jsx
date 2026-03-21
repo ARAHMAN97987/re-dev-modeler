@@ -1554,6 +1554,17 @@ function computeFinancing(project, projectResults, incentivesResult) {
     lpEquity = totalEquity * 0.5;
   }
 
+  // FIX#9: For per-phase virtual projects in fund mode, use the project-level GP/LP ratio.
+  // A fund has ONE GP/LP split. Per-phase land cap distorts it because
+  // footprint allocation ≠ CAPEX allocation → landCap/totalEquity varies by phase.
+  // When landCap >= totalEquity, GP takes 100% and LP = 0 — wrong for a fund.
+  if (project._isPhaseVirtual && (project.finMode === "fund" || project.finMode === "jv") && totalEquity > 0) {
+    const pGpPct = project._projGpPct ?? 0.5;
+    const pLpPct = project._projLpPct ?? 0.5;
+    gpEquity = totalEquity * pGpPct;
+    lpEquity = totalEquity * pLpPct;
+  }
+
   // H6: Reconcile - GP + LP must equal totalEquity
   if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
     // If both manual, scale proportionally; otherwise adjust the non-manual one
@@ -2285,7 +2296,7 @@ function buildPhaseIncentives(projectResults, incentivesResult, phaseName) {
 }
 
 /** Build a virtual project for a single phase (uses phase financing + phase land allocation) */
-function buildPhaseVirtualProject(project, phaseName, phaseResult) {
+function buildPhaseVirtualProject(project, phaseName, phaseResult, projGpPct, projLpPct) {
   const pf = getPhaseFinancing(project, phaseName);
   const allocPct = phaseResult.allocPct || 0;
 
@@ -2294,6 +2305,9 @@ function buildPhaseVirtualProject(project, phaseName, phaseResult) {
     ...pf, // Phase financing settings override project-level
     _isPhaseVirtual: true,
     _phaseName: phaseName,
+    // FIX#9: Project-level GP/LP ratio to preserve fund-level split
+    _projGpPct: projGpPct ?? 0.5,
+    _projLpPct: projLpPct ?? 0.5,
     // Land: allocate proportionally by footprint
     landArea: (project.landArea || 0) * allocPct,
     // FIX#5: Allocate one-time land economics by phase
@@ -2305,10 +2319,6 @@ function buildPhaseVirtualProject(project, phaseName, phaseResult) {
     // Override phases to prevent recursion
     phases: project.phases,
     // FIX#9: ALWAYS clear manual equity for per-phase virtual projects.
-    // Project-level gpEquityManual is sized for the FULL project.
-    // migrateToPerPhaseFinancing copies it to each phase.financing too.
-    // Passing it unscaled causes gpEquity >= phase totalEquity → lpEquity = 0.
-    // Force auto-calculation via land cap proportional split.
     gpEquityManual: 0,
     lpEquityManual: 0,
   };
@@ -2449,11 +2459,24 @@ function computeIndependentPhaseResults(project, projectResults, incentivesResul
   const phaseFinancings = {};
   const phaseWaterfalls = {};
 
+  // FIX#9: Compute consolidated financing FIRST to get the fund-level GP/LP split.
+  // A fund has ONE GP/LP ratio — per-phase land cap distorts this ratio because
+  // landCapValue/totalEquity varies by phase (footprint vs CAPEX proportions differ).
+  // We preserve the project-level ratio for all per-phase calculations.
+  let projGpPct = 0.5, projLpPct = 0.5;
+  try {
+    const consolFin = computeFinancing(project, projectResults, incentivesResult);
+    if (consolFin && consolFin.totalEquity > 0) {
+      projGpPct = consolFin.gpPct;
+      projLpPct = consolFin.lpPct;
+    }
+  } catch (e) { /* fallback to 50/50 */ }
+
   for (const pName of phaseNames) {
     const pr = phases[pName];
     if (!pr || pr.totalCapex === 0) continue;
 
-    const vProject = buildPhaseVirtualProject(project, pName, pr);
+    const vProject = buildPhaseVirtualProject(project, pName, pr, projGpPct, projLpPct);
     const vResults = buildPhaseProjectResults(projectResults, pName);
     if (!vResults) continue;
 

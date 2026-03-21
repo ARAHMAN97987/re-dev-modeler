@@ -84,7 +84,7 @@ export function buildPhaseIncentives(projectResults, incentivesResult, phaseName
 }
 
 /** Build a virtual project for a single phase (uses phase financing + phase land allocation) */
-export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
+export function buildPhaseVirtualProject(project, phaseName, phaseResult, projGpPct, projLpPct) {
   const pf = getPhaseFinancing(project, phaseName);
   const allocPct = phaseResult.allocPct || 0;
 
@@ -93,6 +93,9 @@ export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
     ...pf, // Phase financing settings override project-level
     _isPhaseVirtual: true,
     _phaseName: phaseName,
+    // FIX#9: Project-level GP/LP ratio to preserve fund-level split
+    _projGpPct: projGpPct ?? 0.5,
+    _projLpPct: projLpPct ?? 0.5,
     // Land: allocate proportionally by footprint
     landArea: (project.landArea || 0) * allocPct,
     // FIX#5: Allocate one-time land economics by phase
@@ -104,10 +107,6 @@ export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
     // Override phases to prevent recursion
     phases: project.phases,
     // FIX#9: ALWAYS clear manual equity for per-phase virtual projects.
-    // Project-level gpEquityManual is sized for the FULL project.
-    // migrateToPerPhaseFinancing copies it to each phase.financing too.
-    // Passing it unscaled causes gpEquity >= phase totalEquity → lpEquity = 0.
-    // Force auto-calculation via land cap proportional split.
     gpEquityManual: 0,
     lpEquityManual: 0,
   };
@@ -248,11 +247,21 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   const phaseFinancings = {};
   const phaseWaterfalls = {};
 
+  // FIX#9: Compute consolidated financing FIRST to get the fund-level GP/LP split.
+  let projGpPct = 0.5, projLpPct = 0.5;
+  try {
+    const consolFin = computeFinancing(project, projectResults, incentivesResult);
+    if (consolFin && consolFin.totalEquity > 0) {
+      projGpPct = consolFin.gpPct;
+      projLpPct = consolFin.lpPct;
+    }
+  } catch (e) { /* fallback to 50/50 */ }
+
   for (const pName of phaseNames) {
     const pr = phases[pName];
     if (!pr || pr.totalCapex === 0) continue;
 
-    const vProject = buildPhaseVirtualProject(project, pName, pr);
+    const vProject = buildPhaseVirtualProject(project, pName, pr, projGpPct, projLpPct);
     const vResults = buildPhaseProjectResults(projectResults, pName);
     if (!vResults) continue;
 

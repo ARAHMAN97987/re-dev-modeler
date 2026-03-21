@@ -137,6 +137,14 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     lpEquity = totalEquity * 0.5;
   }
 
+  // FIX#9: For per-phase virtual projects in fund mode, use the project-level GP/LP ratio.
+  if (project._isPhaseVirtual && (project.finMode === "fund" || project.finMode === "jv") && totalEquity > 0) {
+    const pGpPct = project._projGpPct ?? 0.5;
+    const pLpPct = project._projLpPct ?? 0.5;
+    gpEquity = totalEquity * pGpPct;
+    lpEquity = totalEquity * pLpPct;
+  }
+
   // H6: Reconcile - GP + LP must equal totalEquity
   if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
     // If both manual, scale proportionally; otherwise adjust the non-manual one
