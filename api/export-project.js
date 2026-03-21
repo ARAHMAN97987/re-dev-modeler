@@ -26,12 +26,13 @@ export default async function handler(req, res) {
     const { key } = req.query;
 
     if (key) {
-      // Fetch specific key
-      const url = `${restUrl}?key=eq.${encodeURIComponent(key)}&select=key,value,user_id,updated_at`;
+      // Fetch specific key (optionally filtered by user_id)
+      const { uid } = req.query;
+      let url = `${restUrl}?key=eq.${encodeURIComponent(key)}&select=key,value,user_id,updated_at`;
+      if (uid) url += `&user_id=eq.${encodeURIComponent(uid)}`;
       const resp = await fetch(url, { headers });
       const data = await resp.json();
       if (!data || data.length === 0) return res.status(404).json({ error: 'Key not found' });
-      // Parse value if JSON
       const row = data[0];
       try { row.parsed = JSON.parse(row.value); } catch {}
       return res.status(200).json(row);
