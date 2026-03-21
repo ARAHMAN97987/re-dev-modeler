@@ -4930,10 +4930,26 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   // Per-phase independent financing & waterfall (new architecture - for phase tabs)
   const independentPhaseResults = useMemo(() => { try { return project && results ? computeIndependentPhaseResults(project, results, incentivesResult) : null; } catch(e) { console.error("independentPhaseResults error:", e); return null; } }, [project, results, incentivesResult]);
   // Consolidated: prefer aggregated sum of per-phase results (ensures Consolidated = ZAN1+ZAN2+ZAN3)
-  const financing = useMemo(() => independentPhaseResults?.consolidatedFinancing || _legacyFinancing, [independentPhaseResults, _legacyFinancing]);
-  const waterfall = useMemo(() => independentPhaseResults?.consolidatedWaterfall || _legacyWaterfall, [independentPhaseResults, _legacyWaterfall]);
-  // Phase waterfalls: prefer independent results for phase tabs
-  const phaseWaterfalls = useMemo(() => { try { if (independentPhaseResults?.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0) return independentPhaseResults.phaseWaterfalls; return computePhaseWaterfalls(project, results, _legacyFinancing, _legacyWaterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, _legacyFinancing, _legacyWaterfall, independentPhaseResults]);
+  // FIX#9: Only use independent consolidated if ALL phases are covered; otherwise legacy is more complete
+  const financing = useMemo(() => {
+    const indep = independentPhaseResults?.consolidatedFinancing;
+    const phaseCount = Object.keys(results?.phaseResults || {}).filter(k => (results.phaseResults[k]?.totalCapex || 0) > 0).length;
+    const indepCount = Object.keys(independentPhaseResults?.phaseFinancings || {}).length;
+    return (indep && indepCount >= phaseCount) ? indep : _legacyFinancing;
+  }, [independentPhaseResults, _legacyFinancing, results]);
+  const waterfall = useMemo(() => {
+    const indep = independentPhaseResults?.consolidatedWaterfall;
+    const phaseCount = Object.keys(results?.phaseResults || {}).filter(k => (results.phaseResults[k]?.totalCapex || 0) > 0).length;
+    const indepCount = Object.keys(independentPhaseResults?.phaseWaterfalls || {}).length;
+    return (indep && indepCount >= phaseCount) ? indep : _legacyWaterfall;
+  }, [independentPhaseResults, _legacyWaterfall, results]);
+  // Phase waterfalls: merge independent (priority) + legacy (fallback for missing phases)
+  const phaseWaterfalls = useMemo(() => { try {
+    const indep = independentPhaseResults?.phaseWaterfalls || {};
+    const legacy = computePhaseWaterfalls(project, results, _legacyFinancing, _legacyWaterfall) || {};
+    const merged = { ...legacy, ...indep }; // independent overrides legacy per phase
+    return Object.keys(merged).length > 0 ? merged : null;
+  } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, _legacyFinancing, _legacyWaterfall, independentPhaseResults]);
   // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, _legacyFinancing, _legacyWaterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, _legacyFinancing, _legacyWaterfall, incentivesResult]);
