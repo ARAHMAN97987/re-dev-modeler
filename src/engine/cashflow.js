@@ -7,7 +7,9 @@
  */
 
 import { calcIRR, calcNPV } from './math.js';
-import { calcHotelEBITDA, calcMarinaEBITDA } from './hospitality.js';
+// NOTE: calcHotelEBITDA/calcMarinaEBITDA are NOT used here.
+// Hotel/Marina EBITDA is pre-computed in the UI (HotelPLModal/MarinaPLModal)
+// and stored as asset.opEbitda before reaching this engine.
 
 export function getScenarioMults(p) {
   let cm=1,rm=1,dm=0,ea=0;
