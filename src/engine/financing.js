@@ -24,8 +24,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const effectiveLandCap = landCapValue + partnerLandValue;
   const devCostExclLand = ir ? ir.adjustedCapex.reduce((a,b) => a+b, 0) : c.totalCapex;
   const capexGrantTotal = ir?.capexGrantTotal || 0;
-  const cashLandCost = (project.landType === "purchase" && !project.landCapitalize) ? (project.landPurchasePrice ?? 0) : 0;
-  const devCostInclLand = devCostExclLand + effectiveLandCap + cashLandCost;
+  // NOTE: When landType=purchase, landPurchasePrice is ALREADY included in c.capex[0]
+  // (added by cashflow.js line 225). cashLandCost must be 0 to avoid double-counting.
+  // devCostExclLand = totalCapex (which includes land purchase when landType=purchase).
+  const cashLandCost = 0;
+  const devCostInclLand = devCostExclLand + effectiveLandCap;
 
   if (project.finMode === "self") {
     // For self-funded: use incentive-adjusted CF if available
@@ -170,8 +173,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEnd = y; break; } }
 
   // ── Debt drawdown ──
-  // FIX#2: Include cash land purchase in Y0 scheduled uses
-  const scheduledUses = c.capex.map((v, i) => v + (i === 0 ? cashLandCost : 0));
+  // scheduledUses = CAPEX schedule (land purchase already in capex[0] from cashflow.js)
+  const scheduledUses = [...c.capex];
   const totalScheduledUses = scheduledUses.reduce((a, b) => a + b, 0);
   const drawdown = new Array(h).fill(0);
   const equityCalls = new Array(h).fill(0);

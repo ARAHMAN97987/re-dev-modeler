@@ -369,15 +369,15 @@ suite('F9c-CashLandDrawdown');
   const pLand = {...D1, landType:'purchase', landPurchasePrice:5000000, landCapitalize:false};
   const r = E.computeProjectCashFlows(pLand);
   const f = E.computeFinancing(pLand, r, null);
-  t('FIX2: devCostInclLand includes land', f.devCostInclLand > f.devCostExclLand);
-  // Y0 uses should include land
+  // Land purchase is in CAPEX (cashflow.js), so devCostExclLand = totalCapex (includes land)
+  // devCostInclLand = devCostExclLand (no extra cashLandCost, no effectiveLandCap)
+  t('FIX2: devCostInclLand includes land via CAPEX', f.devCostInclLand >= 5000000);
+  // Y0 uses should include land (via CAPEX, not double-counted)
   const y0uses = f.drawdown[0] + f.equityCalls[0];
   t('FIX2: Y0 sources fund land', y0uses >= 5000000 - TOL.MONEY_LARGE, `Y0 uses: ${Math.round(y0uses)}`);
-  // Source/use reconciliation
+  // Source/use reconciliation: sources = totalCapex (no double count)
   const totalSources = sumArr(f.drawdown) + sumArr(f.equityCalls);
-  const totalUses = r.consolidated.totalCapex + 5000000 + f.upfrontFee;
-  // effectiveLandCap added to equity calls but not scheduled uses
-  t('FIX2: Sources ≈ Uses', near(totalSources, totalUses, 100000), `Sources=${Math.round(totalSources)} Uses=${Math.round(totalUses)}`);
+  t('FIX2: Sources ≈ Uses (no double count)', near(totalSources, r.consolidated.totalCapex, 100000), `Sources=${Math.round(totalSources)} Uses=${Math.round(r.consolidated.totalCapex)}`);
 }
 
 // ── F10: computeWaterfall ──
@@ -575,7 +575,8 @@ suite('BH1-LandFundingGap');
   const r = E.computeProjectCashFlows(pLand);
   const f = E.computeFinancing(pLand, r, null);
   const totalScheduledUses = sumArr(f.drawdown) + sumArr(f.equityCalls);
-  const totalNeeded = r.consolidated.totalCapex + 2000000 + f.upfrontFee;
+  // Land purchase is already in totalCapex (from cashflow.js). No double-count.
+  const totalNeeded = r.consolidated.totalCapex;
   t('No funding gap', near(totalScheduledUses, totalNeeded, 100000), `Sources=${Math.round(totalScheduledUses)} Needs=${Math.round(totalNeeded)}`);
 }
 

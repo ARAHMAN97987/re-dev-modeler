@@ -167,18 +167,19 @@ const eeIdx = 4;
 t("T6", "FIX1c: Early exit - post-exit CF = 0", fEE.leveredCF.slice(eeIdx + 1).every(v => v === 0));
 t("T6", "FIX1c: Early exit - post-exit debt = 0", fEE.debtBalClose.slice(eeIdx + 1).every(v => v === 0));
 
-// FIX#2: Cash land purchase in drawdown schedule
+// FIX#2: Cash land purchase flows through CAPEX (no double-count)
 const pLand = {...JAZAN, landType:"purchase", landPurchasePrice:80000000, landCapitalize:false};
 const rLand = computeProjectCashFlows(pLand);
 const fLand = computeFinancing(pLand, rLand, null);
-t("T6", "FIX2: Land in devCostInclLand", fLand.devCostInclLand > fLand.devCostExclLand);
-// Year 0 should have equity call or drawdown for land
+// Land purchase is in CAPEX (added by cashflow.js). devCostInclLand = devCostExclLand (no extra land cap).
+t("T6", "FIX2: devCostInclLand includes land via CAPEX", fLand.devCostInclLand >= 80000000);
+// Year 0 should have equity call or drawdown covering land (via CAPEX)
 const y0Uses = fLand.drawdown[0] + fLand.equityCalls[0];
 t("T6", "FIX2: Y0 uses include land cost", y0Uses >= 80000000 - 1, `Y0 uses: ${Math.round(y0Uses)}`);
-// Source/use reconciliation
+// Source/use reconciliation: sources = totalCapex (land NOT double-counted)
 const totalSources = fLand.drawdown.reduce((s,v)=>s+v,0) + fLand.equityCalls.reduce((s,v)=>s+v,0);
-t("T6", "FIX2: Sources ≈ Uses", Math.abs(totalSources - (rLand.consolidated.totalCapex + 80000000)) < 10000,
-  `Sources: ${Math.round(totalSources)}, Uses: ${Math.round(rLand.consolidated.totalCapex + 80000000)}`);
+t("T6", "FIX2: Sources ≈ Uses (no double count)", Math.abs(totalSources - rLand.consolidated.totalCapex) < 10000,
+  `Sources: ${Math.round(totalSources)}, Uses: ${Math.round(rLand.consolidated.totalCapex)}`);
 
 // FIX#3 Option B: GP gets pro-rata T2, catch-up adjusted
 t("T6", "FIX3B: T2 pro-rata (GP gets gpPct)", (() => {
