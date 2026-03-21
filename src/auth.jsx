@@ -141,7 +141,7 @@ export function AuthGate({ children }) {
   const dir = ar ? 'rtl' : 'ltr'
 
   return (
-    <div dir={dir} style={{minHeight:'100vh',display:'flex',flexDirection:ar?'row-reverse':'row',fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:'#0f1117'}}>
+    <div dir={dir} style={{minHeight:'100vh',display:'flex',flexDirection:ar?'row':'row-reverse',fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:'#0f1117'}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
         input::placeholder{color:#4b5060}
@@ -161,7 +161,7 @@ export function AuthGate({ children }) {
       </div>
 
       {/* ── Login Side ── */}
-      <div style={{width:420,minWidth:420,background:'#161a24',borderLeft:'1px solid #1e2230',display:'flex',flexDirection:'column',justifyContent:'center',padding:'48px 36px'}}>
+      <div style={{width:420,minWidth:420,background:'#161a24',borderInlineStart:'1px solid #1e2230',display:'flex',flexDirection:'column',justifyContent:'center',padding:'48px 36px'}}>
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:32}}>
           <div style={{fontSize:28,fontWeight:800,color:'#5fbfbf',letterSpacing:3}}>ZAN</div>

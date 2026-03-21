@@ -281,7 +281,7 @@ export function AuthGate({ children }) {
         <button onClick={()=>setLang(l=>l==='en'?'ar':'en')} style={{display:'flex',alignItems:'center',gap:5,padding:isMobile?'6px 12px':'8px 14px',borderRadius:8,border:`1px solid ${C.w15}`,background:C.w05,color:C.w70,fontSize:isMobile?12:13,cursor:'pointer',transition:'all 0.3s',fontFamily:"'Tajawal',sans-serif"}}>{IC.globe}<span style={{fontWeight:600}}>{lang==='en'?'عربي':'EN'}</span></button>
       </div>
       <div style={{position:'relative',zIndex:10,maxWidth:1400,margin:'0 auto',padding:isMobile?'0 16px 40px':'10px 32px 60px'}}>
-        {isMobile?(<div style={{display:'flex',flexDirection:'column',gap:32}}><Auth/><Showcase/></div>):(<div style={{display:'flex',gap:50,alignItems:'flex-start'}}><div style={{flex:'1 1 560px',minWidth:0,paddingTop:10}}><Showcase/></div><div style={{flex:'0 0 400px',width:400,position:'sticky',top:20}}><Auth/></div></div>)}
+        {isMobile?(<div style={{display:'flex',flexDirection:'column',gap:32}}>{Auth()}{Showcase()}</div>):(<div style={{display:'flex',gap:50,alignItems:'flex-start',flexDirection:'row-reverse'}}><div style={{flex:'1 1 560px',minWidth:0,paddingTop:10}}>{Showcase()}</div><div style={{flex:'0 0 400px',width:400,position:'sticky',top:20}}>{Auth()}</div></div>)}
       </div>
     </div>
   )

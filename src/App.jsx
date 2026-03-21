@@ -1835,7 +1835,12 @@ function FL({label,children,tip,hint}) {
   </div>);
 }
 function Inp({value,onChange,type="text",...rest}) {
-  return <input type={type} value={value??""} onChange={e=>onChange(type==="number"?+e.target.value:e.target.value)} style={_finInpSt} onFocus={e=>{e.target.style.borderColor="#2563eb";e.target.style.boxShadow="0 0 0 2px rgba(37,99,235,0.12)";e.target.style.background="#fff";}} onBlur={e=>{e.target.style.borderColor="#e0e3ea";e.target.style.boxShadow="none";e.target.style.background="#f8f9fb";}} {...rest} />;
+  const [local, setLocal] = useState(String(value??""));
+  const ref = useRef(null);
+  const committed = useRef(value);
+  useEffect(() => { if (committed.current !== value && document.activeElement !== ref.current) { setLocal(String(value??"")); committed.current = value; } }, [value]);
+  const commit = () => { const v = type==="number" ? +local : local; if (v !== committed.current) { committed.current = v; onChange(v); } };
+  return <input ref={ref} type={type} value={local} onChange={e=>setLocal(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter"){commit();e.target.blur();}}} style={_finInpSt} onFocus={e=>{e.target.style.borderColor="#2563eb";e.target.style.boxShadow="0 0 0 2px rgba(37,99,235,0.12)";e.target.style.background="#fff";}} {...rest} />;
 }
 function Drp({value,onChange,options,lang:dl}) {
   return <select value={value} onChange={e=>onChange(e.target.value)} style={_finSelSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[dl]||o.en||o.label}</option>)}</select>;
