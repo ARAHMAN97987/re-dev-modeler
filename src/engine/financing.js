@@ -108,45 +108,56 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   let totalEquity = Math.max(0, totalProjectCost - maxDebt);
   let gpEquity, lpEquity;
 
-  // GP Equity: manual > land cap value > partner equity > 50% default
-  // H15: landCapTo controls who gets land cap credit (gp/lp/split)
-  const landCapTarget = project.landCapTo || "gp";
-  if ((project.gpEquityManual ?? 0) > 0) {
-    gpEquity = Math.min(project.gpEquityManual, totalEquity);
-  } else if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
-    // Partner contributes land as equity → their agreed % takes priority over landCap split
-    gpEquity = totalEquity * ((project.partnerEquityPct || 50) / 100);
-  } else if (effectiveLandCap > 0) {
-    if (landCapTarget === "gp") gpEquity = Math.min(effectiveLandCap, totalEquity);
-    else if (landCapTarget === "lp") gpEquity = Math.max(0, totalEquity - effectiveLandCap);
-    else gpEquity = totalEquity * 0.5; // split
+  // Debt mode: developer owns 100% of equity. No LP exists.
+  // Only fund and jv modes have LP investors.
+  const hasLP = project.finMode === "fund" || project.finMode === "jv";
+
+  if (!hasLP) {
+    // debt / bank100 / any non-fund mode: GP = all equity, LP = 0
+    gpEquity = totalEquity;
+    lpEquity = 0;
   } else {
-    gpEquity = totalEquity * 0.5;
-  }
-
-  // LP Equity: manual > remainder
-  if ((project.lpEquityManual ?? 0) > 0) {
-    lpEquity = Math.min(project.lpEquityManual, Math.max(0, totalEquity - gpEquity));
-  } else {
-    lpEquity = Math.max(0, totalEquity - gpEquity);
-  }
-
-  // Safety: if fund mode and LP = 0 and no explicit manual override, force 50/50
-  if (project.finMode === "fund" && lpEquity === 0 && !(project.gpEquityManual > 0) && !(effectiveLandCap >= totalEquity)) {
-    gpEquity = totalEquity * 0.5;
-    lpEquity = totalEquity * 0.5;
-  }
-
-  // H6: Reconcile - GP + LP must equal totalEquity
-  if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
-    // If both manual, scale proportionally; otherwise adjust the non-manual one
-    if ((project.gpEquityManual ?? 0) > 0 && (project.lpEquityManual ?? 0) > 0) {
-      const sum = gpEquity + lpEquity;
-      if (sum > 0) { gpEquity = totalEquity * (gpEquity / sum); lpEquity = totalEquity - gpEquity; }
-    } else if ((project.gpEquityManual ?? 0) > 0) {
-      lpEquity = Math.max(0, totalEquity - gpEquity);
+    // Fund/JV: GP/LP split based on land cap, manual override, or 50/50 default
+    // GP Equity: manual > land cap value > partner equity > 50% default
+    // H15: landCapTo controls who gets land cap credit (gp/lp/split)
+    const landCapTarget = project.landCapTo || "gp";
+    if ((project.gpEquityManual ?? 0) > 0) {
+      gpEquity = Math.min(project.gpEquityManual, totalEquity);
+    } else if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
+      // Partner contributes land as equity → their agreed % takes priority over landCap split
+      gpEquity = totalEquity * ((project.partnerEquityPct || 50) / 100);
+    } else if (effectiveLandCap > 0) {
+      if (landCapTarget === "gp") gpEquity = Math.min(effectiveLandCap, totalEquity);
+      else if (landCapTarget === "lp") gpEquity = Math.max(0, totalEquity - effectiveLandCap);
+      else gpEquity = totalEquity * 0.5; // split
     } else {
-      gpEquity = Math.max(0, totalEquity - lpEquity);
+      gpEquity = totalEquity * 0.5;
+    }
+
+    // LP Equity: manual > remainder
+    if ((project.lpEquityManual ?? 0) > 0) {
+      lpEquity = Math.min(project.lpEquityManual, Math.max(0, totalEquity - gpEquity));
+    } else {
+      lpEquity = Math.max(0, totalEquity - gpEquity);
+    }
+
+    // Safety: if fund mode and LP = 0 and no explicit manual override, force 50/50
+    if (project.finMode === "fund" && lpEquity === 0 && !(project.gpEquityManual > 0) && !(effectiveLandCap >= totalEquity)) {
+      gpEquity = totalEquity * 0.5;
+      lpEquity = totalEquity * 0.5;
+    }
+
+    // H6: Reconcile - GP + LP must equal totalEquity
+    if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
+      // If both manual, scale proportionally; otherwise adjust the non-manual one
+      if ((project.gpEquityManual ?? 0) > 0 && (project.lpEquityManual ?? 0) > 0) {
+        const sum = gpEquity + lpEquity;
+        if (sum > 0) { gpEquity = totalEquity * (gpEquity / sum); lpEquity = totalEquity - gpEquity; }
+      } else if ((project.gpEquityManual ?? 0) > 0) {
+        lpEquity = Math.max(0, totalEquity - gpEquity);
+      } else {
+        gpEquity = Math.max(0, totalEquity - lpEquity);
+      }
     }
   }
 

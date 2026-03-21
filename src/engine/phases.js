@@ -166,6 +166,7 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
     gpPct: sum('totalEquity') > 0 ? sum('gpEquity') / sum('totalEquity') : (phaseFinancings[names[0]]?.gpPct ?? 0),
     lpPct: sum('totalEquity') > 0 ? sum('lpEquity') / sum('totalEquity') : (phaseFinancings[names[0]]?.lpPct ?? 0),
     devCostExclLand: sum('devCostExclLand'), devCostInclLand: sum('devCostInclLand'),
+    totalProjectCost: sum('devCostInclLand'),
     maxDebt: sum('maxDebt'), totalDebt: sum('totalDebt'),
     landCapValue: sum('landCapValue'), capexGrantTotal: sum('capexGrantTotal'),
     drawdown: sumArr('drawdown'), equityCalls: sumArr('equityCalls'),

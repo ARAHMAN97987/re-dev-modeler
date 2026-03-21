@@ -11,7 +11,8 @@ import { calcIRR, calcNPV } from './math.js';
 
 export function computeWaterfall(project, projectResults, financing, incentivesResult) {
   if (!project || !projectResults || !financing) return null;
-  if (project.finMode === "self" || project.finMode === "bank100") return null;
+  if (project.finMode === "self" || project.finMode === "bank100" || project.finMode === "debt") return null;
+  // Waterfall only applies to fund and jv modes (GP/LP distribution)
   const h = project.horizon || 50;
   const sy = project.startYear || 2026;
   const c = projectResults.consolidated;
