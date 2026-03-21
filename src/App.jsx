@@ -543,7 +543,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"توزيع أرباح (T4)":"Profit Split (T4)"} v={fmt(t4GPTotal)} c="#16a34a" />
               <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(_feeDev)} c="#a16207" />
               {gpIsManager && <>
-                <KR l={ar?"رسوم إدارة":"Mgmt Fee"} v={fmt(_feeMgmt)} c="#a16207" />
+                <KR l={ar?"رسوم إدارة ≈":"Mgmt Fee ≈"} v={fmt(_feeMgmt)} c="#a16207" />
                 <KR l={ar?"رسوم هيكلة":"Struct Fee"} v={fmt(_feeStruct)} c="#a16207" />
                 <KR l={ar?"ما قبل التأسيس":"Pre-Est"} v={fmt(_feePreEst)} c="#a16207" />
                 <KR l="SPV" v={fmt(_feeSpv)} c="#a16207" />
@@ -621,7 +621,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"الرسوم":"FEES"} />
               <KR l={`${ar?"اكتتاب":"Subscription"} (${ar?"مرة":"once"})`} v={fmt(_feeSub)} c="#f59e0b" />
-              <KR l={`${ar?"إدارة":"Management"} (${ar?"سنوي":"annual"})`} v={fmt(_feeMgmt)} c="#f59e0b" />
+              <KR l={`${ar?"إدارة ≈":"Management ≈"} (${ar?"سنوي":"annual"})`} v={fmt(_feeMgmt)} c="#f59e0b" />
               <KR l={`${ar?"حفظ":"Custody"} (${ar?"سنوي":"annual"})`} v={fmt(_feeCustody)} c="#f59e0b" />
               <KR l={`${ar?"تطوير":"Developer"} (${ar?"مرة":"once"})`} v={fmt(_feeDev)} c="#f59e0b" />
               <KR l={`${ar?"هيكلة":"Structuring"} (${ar?"مرة+سقف":"once+cap"})`} v={fmt(_feeStruct)} c="#f59e0b" />
@@ -719,7 +719,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <CFRow label={ar?"إجمالي خدمة الدين":"Total Debt Service"} values={f.debtService} total={f.debtService?.reduce((a,b)=>a+b,0)||0} negate bold color="#ef4444" />
         {/* DSCR */}
         {f.dscr && <tr>
-          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>DSCR</td>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>DSCR (≈)</td>
           <td style={tdN}></td>
           {years.map(y=>{const v=f.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.2?"#f59e0b":"#16a34a"}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
         </tr>}
@@ -728,7 +728,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       {/* Fees sub-section */}
       <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:9,fontWeight:700,color:"#f59e0b",background:"#fffbeb",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"الرسوم":"FEES"}</td></tr>
       {(w.feeSub||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"اكتتاب":"Subscription Fee"}`} values={w.feeSub} total={(w.feeSub||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
-      {(w.feeMgmt||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"إدارة":"Management Fee"}`} values={w.feeMgmt} total={(w.feeMgmt||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+      {(w.feeMgmt||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"إدارة ≈":"Management Fee ≈"}`} values={w.feeMgmt} total={(w.feeMgmt||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
       {(w.feeCustody||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"حفظ":"Custody Fee"}`} values={w.feeCustody} total={(w.feeCustody||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
       {(w.feeDev||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"تطوير":"Developer Fee"}`} values={w.feeDev} total={(w.feeDev||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
       {(w.feeStruct||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"هيكلة":"Structuring Fee"}`} values={w.feeStruct} total={(w.feeStruct||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
@@ -1546,7 +1546,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         {!kpiOpen.bank ? (
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge(ar?"دين":"Debt", fmtM(pf.totalDebt), "#2563eb")}
-            {badge("DSCR", dscrMin!==null?dscrMin.toFixed(2)+"x":"—", dscrMin>=1.25?"#16a34a":"#ef4444")}
+            {badge("DSCR", dscrMin!==null?"≈"+dscrMin.toFixed(2)+"x":"—", dscrMin>=1.25?"#16a34a":"#ef4444")}
             {badge(ar?"فوائد":"Interest", fmtM(pf.totalInterest), "#ef4444")}
           </div>
         ) : (
@@ -1563,9 +1563,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"رسوم مقدمة":"Upfront Fee"} v={fmtM(pf.upfrontFee||0)} c="#ef4444" />
             <KR l={ar?"إجمالي تكلفة الدين":"Total Debt Cost"} v={fmtM(totalFinCost)} c="#ef4444" bold />
             <KR l={ar?"كنسبة من التكلفة":"% of Dev Cost"} v={pf.devCostInclLand>0?fmtPct(totalFinCost/pf.devCostInclLand*100):"—"} />
-            <SecHd text="DSCR" />
-            <KR l={ar?"أدنى":"Minimum"} v={dscrMin!==null?dscrMin.toFixed(2)+"x":"—"} c={dscrMin>=1.25?"#16a34a":"#ef4444"} bold />
-            <KR l={ar?"متوسط":"Average"} v={dscrAvg!==null?dscrAvg.toFixed(2)+"x":"—"} c={dscrAvg>=1.5?"#16a34a":"#f59e0b"} />
+            <SecHd text="DSCR (≈)" />
+            <KR l={ar?"أدنى":"Minimum"} v={dscrMin!==null?"≈"+dscrMin.toFixed(2)+"x":"—"} c={dscrMin>=1.25?"#16a34a":"#ef4444"} bold />
+            <KR l={ar?"متوسط":"Average"} v={dscrAvg!==null?"≈"+dscrAvg.toFixed(2)+"x":"—"} c={dscrAvg>=1.5?"#16a34a":"#f59e0b"} />
             <KR l={ar?"ذروة الدين":"Peak Debt"} v={fmtM(peakDebt)} c="#dc2626" />
             <KR l={ar?"تصفية الدين":"Debt Cleared"} v={debtClearYr?`${debtClearYr}`:(ar?"لم يُصفَّ":"Not cleared")} c={debtClearYr?"#16a34a":"#ef4444"} />
           </div>
@@ -1755,13 +1755,13 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <CFRow label={ar?"(÷) خدمة الدين":"(÷) Debt Service"} values={pf.debtService} total={totalDS} color="#ef4444" />
       {/* DSCR = NOI / DS (highlighted) */}
       {pf.dscr && <tr style={{background:"#eff6ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:700,minWidth:200,fontSize:11,color:"#1e40af",paddingInlineStart:10}}>= DSCR (NOI ÷ DS)</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:700,minWidth:200,fontSize:11,color:"#1e40af",paddingInlineStart:10}}>= DSCR ≈ (NOI ÷ DS)</td>
         <td style={{...tdN,fontWeight:700,color:"#1e40af"}}>{dscrAvg!==null?dscrAvg.toFixed(2)+"x":""}</td>
         {years.map(y=>{const v=pf.dscr?.[y];const bg=v===null||v===undefined?"#eff6ff":v<1?"#fef2f2":v<1.25?"#fefce8":"#f0fdf4";const fg=v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.25?"#f59e0b":"#16a34a";return <td key={y} style={{...tdN,fontSize:11,fontWeight:700,color:fg,background:bg}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
       </tr>}
       {/* Min DSCR indicator */}
       <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:10,color:dscrMin>=1.25?"#16a34a":"#ef4444",background:dscrMin>=1.25?"#f0fdf4":"#fef2f2"}}>
-        {dscrMin>=1.25?"✅":"⚠️"} {ar?"الحد الأدنى":"Minimum"}: <strong>{dscrMin!==null?dscrMin.toFixed(2)+"x":"N/A"}</strong> | {ar?"المتوسط":"Average"}: <strong>{dscrAvg!==null?dscrAvg.toFixed(2)+"x":"N/A"}</strong> | {ar?"حد البنك":"Bank Req"}: <strong>1.25x</strong>
+        {dscrMin>=1.25?"✅":"⚠️"} {ar?"الحد الأدنى":"Minimum"}: <strong>{dscrMin!==null?"≈"+dscrMin.toFixed(2)+"x":"N/A"}</strong> | {ar?"المتوسط":"Average"}: <strong>{dscrAvg!==null?"≈"+dscrAvg.toFixed(2)+"x":"N/A"}</strong> | {ar?"حد البنك":"Bank Req"}: <strong>1.25x</strong>
       </td></tr>
       </>}
 
@@ -2300,7 +2300,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           <div style={{background:"#f8f9fb",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"#6b7080",display:"block"}}>{ar?"التخارج":"Exit"}</span><strong>{f.exitYear}</strong> ({cfg.exitMultiple}x)</div>
         </div>
         {/* DSCR pills */}
-        <div style={{fontSize:12,fontWeight:600,marginBottom:8}}><Tip text={ar?"صافي الدخل التشغيلي / خدمة الدين. البنوك تطلب 1.25x كحد أدنى":"NOI / Debt Service. Banks require min 1.25x"}>DSCR</Tip></div>
+        <div style={{fontSize:12,fontWeight:600,marginBottom:8}}><Tip text={ar?"صافي الدخل التشغيلي / خدمة الدين. البنوك تطلب 1.25x كحد أدنى. القيمة تقريبية":"NOI / Debt Service. Banks require min 1.25x. Values are approximate"}>DSCR (≈)</Tip></div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
           {years.filter(y=>f.dscr[y]!==null).map(y=>{
             const v = f.dscr[y];
@@ -2308,7 +2308,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             const fg = v >= 1.5 ? "#16a34a" : v >= 1.2 ? "#a16207" : v >= 1.0 ? "#c2410c" : "#ef4444";
             return <div key={y} style={{textAlign:"center",padding:"4px 8px",borderRadius:4,background:bg,minWidth:50}}>
               <div style={{fontSize:10,color:"#6b7080"}}>{sy+y}</div>
-              <div style={{fontSize:13,fontWeight:700,color:fg}}>{v.toFixed(2)}x</div>
+              <div style={{fontSize:13,fontWeight:700,color:fg}}>≈{v.toFixed(2)}x</div>
             </div>;
           })}
         </div>
@@ -2524,11 +2524,7 @@ function useIsMobile(breakpoint = 768) {
 
 function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy }) {
   const isMobile = useIsMobile();
-  // ── Public Academy Mode (no auth required) ──
   const [publicLang, setPublicLang] = useState("ar");
-  if (publicAcademy) {
-    return <LearningCenterView lang={publicLang} onBack={exitAcademy || (() => {})} onCreateDemo={null} publicMode={true} onLangToggle={() => setPublicLang(l => l === "ar" ? "en" : "ar")} />;
-  }
   const [view, setView] = useState("dashboard");
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
@@ -2559,9 +2555,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const ar = lang === "ar";
   const autoSaveTimer = useRef(null);
   const sidebarRef = useRef(null);
-
-  // Show landing page if not logged in
-  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} pendingShare={pendingShare} />;
 
   useEffect(() => { (async () => {
     const own = await loadProjectIndex();
@@ -2614,6 +2607,12 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
+
+  // ── Early returns (after ALL hooks for React Rules of Hooks safety) ──
+  if (publicAcademy) {
+    return <LearningCenterView lang={publicLang} onBack={exitAcademy || (() => {})} onCreateDemo={null} publicMode={true} onLangToggle={() => setPublicLang(l => l === "ar" ? "en" : "ar")} />;
+  }
+  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} pendingShare={pendingShare} />;
 
   const createProject = async (templateId) => {
     const p = defaultProject();
