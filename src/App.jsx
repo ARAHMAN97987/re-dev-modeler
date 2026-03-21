@@ -2603,10 +2603,10 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const financing = useMemo(() => independentPhaseResults?.consolidatedFinancing || _legacyFinancing, [independentPhaseResults, _legacyFinancing]);
   const waterfall = useMemo(() => independentPhaseResults?.consolidatedWaterfall || _legacyWaterfall, [independentPhaseResults, _legacyWaterfall]);
   // Phase waterfalls: prefer independent results for phase tabs
-  const phaseWaterfalls = useMemo(() => { try { if (independentPhaseResults?.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0) return independentPhaseResults.phaseWaterfalls; return computePhaseWaterfalls(project, results, financing, waterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, financing, waterfall, independentPhaseResults]);
+  const phaseWaterfalls = useMemo(() => { try { if (independentPhaseResults?.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0) return independentPhaseResults.phaseWaterfalls; return computePhaseWaterfalls(project, results, _legacyFinancing, _legacyWaterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, _legacyFinancing, _legacyWaterfall, independentPhaseResults]);
   // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
-  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
+  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, _legacyFinancing, _legacyWaterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, _legacyFinancing, _legacyWaterfall, incentivesResult]);
 
   // ── Early returns (after ALL hooks for React Rules of Hooks safety) ──
   if (publicAcademy) {
