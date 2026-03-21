@@ -113,6 +113,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const landCapTarget = project.landCapTo || "gp";
   if ((project.gpEquityManual ?? 0) > 0) {
     gpEquity = Math.min(project.gpEquityManual, totalEquity);
+  } else if (project._isPhaseVirtual && project._projGpPct !== undefined) {
+    // FIX#9 Layer 3: Per-phase virtual projects use the consolidated project GP/LP ratio.
+    // This prevents landCap from consuming all equity when landCap >= totalEquity per phase.
+    // Matches ZAN Excel where each fund's GP/LP split derives from the overall project structure.
+    gpEquity = totalEquity * project._projGpPct;
   } else if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
     // Partner contributes land as equity → their agreed % takes priority over landCap split
     gpEquity = totalEquity * ((project.partnerEquityPct || 50) / 100);
