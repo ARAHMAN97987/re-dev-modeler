@@ -181,7 +181,13 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
     interestSubsidySchedule: sumArr('interestSubsidySchedule'),
     leveredIRR: calcIRR(levCF),
     constrEnd: Math.max(...names.map(n => phaseFinancings[n]?.constrEnd || 0)),
-    rate: 0, tenor: 0, grace: 0, repayYears: 0, repayStart: 0,
+    // Inherit scalar debt terms from first phase with debt (typically same across phases)
+    rate: names.reduce((r, n) => r || phaseFinancings[n]?.rate, 0) || 0,
+    tenor: names.reduce((r, n) => r || phaseFinancings[n]?.tenor, 0) || 0,
+    grace: names.reduce((r, n) => r || phaseFinancings[n]?.grace, 0) || 0,
+    repayYears: names.reduce((r, n) => r || phaseFinancings[n]?.repayYears, 0) || 0,
+    repayStart: names.reduce((r, n) => r || phaseFinancings[n]?.repayStart, 0) || 0,
+    graceStartIdx: names.reduce((r, n) => r || phaseFinancings[n]?.graceStartIdx, 0) || 0,
     exitYear: Math.max(...names.map(n => phaseFinancings[n]?.exitYear || 0)),
   };
 }
@@ -241,7 +247,7 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     gpDPI: sum('gpTotalDist') / Math.max(1, sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity))),
     lpNPV10: calcNPV(lpNetCF, 0.10), lpNPV12: calcNPV(lpNetCF, 0.12), lpNPV14: calcNPV(lpNetCF, 0.14),
     gpNPV10: calcNPV(gpNetCF, 0.10), gpNPV12: calcNPV(gpNetCF, 0.12), gpNPV14: calcNPV(gpNetCF, 0.14),
-    isFund: true,
+    isFund: names.some(n => phaseWaterfalls[n]?.isFund),
   };
 }
 

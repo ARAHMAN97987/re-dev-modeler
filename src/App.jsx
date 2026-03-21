@@ -2628,7 +2628,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const phaseWaterfalls = useMemo(() => { try { if (independentPhaseResults?.phaseWaterfalls && Object.keys(independentPhaseResults.phaseWaterfalls).length > 0) return independentPhaseResults.phaseWaterfalls; return computePhaseWaterfalls(project, results, _legacyFinancing, _legacyWaterfall); } catch(e) { console.error("computePhaseWaterfalls error:", e); return null; } }, [project, results, _legacyFinancing, _legacyWaterfall, independentPhaseResults]);
   // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
-  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, _legacyFinancing, _legacyWaterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, _legacyFinancing, _legacyWaterfall, incentivesResult]);
+  const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
 
   const createProject = async (templateId) => {
     const p = defaultProject();
