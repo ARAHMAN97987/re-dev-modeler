@@ -35,8 +35,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEndSelf = y; break; } }
     const exitProceedsSelf = new Array(h).fill(0);
     const exitStrategySelf = project.exitStrategy || "sale";
-    const selfGrace = project.debtGrace ?? 3;
-    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEndSelf + selfGrace + 2);
+    // Self mode: use stabilization period (not debt grace) for auto-exit timing
+    const stabilizationYears = project.exitStabilizationYears ?? 3;
+    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEndSelf + stabilizationYears + 2);
     const selfSold = exitStrategySelf !== "hold" && exitYrSelf >= 0 && exitYrSelf < h;
     if (selfSold) {
       // FIX#1: Per-asset exit valuation - skip Sale assets (already realized)

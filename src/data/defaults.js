@@ -69,6 +69,7 @@ export const defaultProject = () => ({
   exitMultiple: 10,
   exitCapRate: 9, // NOI / Cap Rate %
   exitCostPct: 2,
+  exitStabilizationYears: 3, // Years after construction to stabilize before auto-exit (self mode). Debt/fund use debtGrace instead.
   // Waterfall (Phase 3)
   prefReturnPct: 15,
   gpCatchup: true,

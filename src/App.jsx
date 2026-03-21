@@ -3038,8 +3038,8 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
     )},
   ];
 
-  // Skip exit step for self-funded
-  const activeSteps = project.finMode === "self" ? steps.filter((_,i) => i !== 3) : steps;
+  // Exit strategy is relevant for ALL modes (self can sell or hold too)
+  const activeSteps = steps;
   const current = activeSteps[step];
   const isLast = step === activeSteps.length - 1;
   const canNext = step === 0 ? (project.name && project.name !== "New Project") : true;
