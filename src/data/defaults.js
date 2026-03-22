@@ -79,6 +79,8 @@ export const defaultProject = () => ({
   gpCatchup: true,
   carryPct: 30,
   lpProfitSplitPct: 70,
+  prefAllocation: "proRata", // proRata (GP+LP share T1+T2) | lpOnly (T2 all to LP)
+  catchupMethod: "perYear", // perYear (ZAN) | cumulative
   // Government Incentives
   incentives: {
     capexGrant: { enabled: false, grantPct: 25, maxCap: 50000000, phases: [], timing: "construction" },

@@ -182,9 +182,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   }
 
   // 4-tier waterfall
-  const prefRate = (project.prefReturnPct ?? 15) / 100;
+  const prefRate = Math.max(0, Math.min(0.5, (project.prefReturnPct ?? 15) / 100));
   const carryPct = Math.min(0.9999, Math.max(0, (project.carryPct ?? 30) / 100));
-  const lpSplitPct = (project.lpProfitSplitPct ?? 70) / 100;
+  const lpSplitPct = Math.max(0, Math.min(1, (project.lpProfitSplitPct ?? 70) / 100));
   const gpSplitPct = 1 - lpSplitPct;
 
   const tier1 = new Array(h).fill(0); // Return of Capital
