@@ -4628,85 +4628,128 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
 
   return (
     <div>
-      {/* ═══ LAND SECTION ═══ */}
-      <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",marginBottom:14,overflow:"hidden"}}>
-        <div style={{padding:"12px 16px",background:"#f8f9fb",borderBottom:"1px solid #f0f1f5",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:16}}>🏗</span>
-          <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"الأرض":"Land"}</span>
-          {project.landArea > 0 && <span style={{fontSize:10,color:"#6b7080",background:"#e5e7ec",padding:"2px 8px",borderRadius:10}}>{project.landType} · {fmt(project.landArea)} m²</span>}
+      {/* ═══ LAND SECTION — REDESIGNED ═══ */}
+      <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",marginBottom:14,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+        {/* Header */}
+        <div style={{padding:"14px 20px",background:"linear-gradient(135deg,#f8fffe 0%,#f0fdf9 100%)",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:36,height:36,borderRadius:10,background:"#ecfdf5",border:"1px solid #d1fae5",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🏗</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,fontWeight:700,color:"#1a1d23"}}>{ar?"الأرض":"Land"}</div>
+            <div style={{fontSize:11,color:"#6b7080"}}>{ar?"إعدادات الأرض وطريقة الحيازة":"Land settings and tenure type"}</div>
+          </div>
+          {project.landArea > 0 && <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:10,color:"#059669",background:"#ecfdf5",padding:"4px 10px",borderRadius:20,fontWeight:600,border:"1px solid #d1fae5"}}>
+              {LAND_TYPES.find(lt=>lt.value===project.landType)?.[ar?"ar":"en"]||project.landType}
+            </span>
+            <span style={{fontSize:10,color:"#6b7080",background:"#f3f4f6",padding:"4px 10px",borderRadius:20,fontWeight:500}}>
+              {fmt(project.landArea)} {ar?"م²":"m²"}
+            </span>
+          </div>}
         </div>
-        <div style={{padding:"12px 16px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
+
+        {/* Row 1: Tenure + Area */}
+        <div style={{padding:"16px 20px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
           <div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"نوع الحيازة":"Tenure Type"} <HelpLink contentKey="landType" lang={lang} onOpen={setLandEduModal} /></div>
-            <select value={project.landType} onChange={e=>up({landType:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:12,fontFamily:"inherit"}}>
+            <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+              {ar?"نوع الحيازة":"Tenure Type"}
+              <HelpLink contentKey="landType" lang={lang} onOpen={setLandEduModal} />
+            </div>
+            <select value={project.landType} onChange={e=>up({landType:e.target.value})} style={{width:"100%",padding:"9px 12px",border:"1px solid #d1d5db",borderRadius:8,background:"#fff",fontSize:13,fontFamily:"inherit",color:"#1a1d23",cursor:"pointer"}}>
               {LAND_TYPES.map(lt => <option key={lt.value} value={lt.value}>{ar?lt.ar:lt.en}</option>)}
             </select>
           </div>
           <div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"المساحة (م²)":"Area (sqm)"}</div>
+            <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"إجمالي المساحة":"Total Area"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"م²":"sqm"})</span></div>
             <SidebarInput type="number" value={project.landArea} onChange={v=>up({landArea:v})} />
           </div>
-          {project.landType==="purchase"&&<div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"سعر الشراء":"Purchase Price"} ({cur})</div>
-            <SidebarInput type="number" value={project.landPurchasePrice} onChange={v=>up({landPurchasePrice:v})} />
-          </div>}
-          {project.landType==="partner"&&<>
-            <div>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"تقييم الأرض":"Land Valuation"} ({cur})</div>
-              <SidebarInput type="number" value={project.landValuation} onChange={v=>up({landValuation:v})} />
-            </div>
-            <div>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"نسبة الشريك %":"Partner Equity %"}</div>
-              <SidebarInput type="number" value={project.partnerEquityPct} onChange={v=>up({partnerEquityPct:v})} />
-            </div>
-          </>}
-          {project.landType==="bot"&&<div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"فترة التشغيل (سنة)":"Operation Period (yrs)"}</div>
-            <SidebarInput type="number" value={project.botOperationYears} onChange={v=>up({botOperationYears:v})} />
-          </div>}
         </div>
-        {/* Lease-specific fields */}
-        {project.landType==="lease"&&<div style={{padding:"0 16px 12px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,borderTop:"1px solid #f0f1f5",paddingTop:10}}>
+
+        {/* Purchase-specific */}
+        {project.landType==="purchase"&&<div style={{padding:"0 20px 16px",display:"grid",gridTemplateColumns:"1fr",gap:14}}>
           <div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"الإيجار السنوي":"Annual Rent"} ({cur})</div>
-            <SidebarInput type="number" value={project.landRentAnnual} onChange={v=>up({landRentAnnual:v})} />
+            <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"سعر الشراء":"Purchase Price"} <span style={{fontWeight:400,color:"#9ca3af"}}>({cur})</span></div>
+            <SidebarInput type="number" value={project.landPurchasePrice} onChange={v=>up({landPurchasePrice:v})} />
+            {project.landPurchasePrice > 0 && project.landArea > 0 && <div style={{fontSize:10,color:"#2EC4B6",marginTop:4}}>= {fmt(Math.round(project.landPurchasePrice / project.landArea))} {cur}/{ar?"م²":"sqm"}</div>}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+        </div>}
+
+        {/* Partner-specific */}
+        {project.landType==="partner"&&<div style={{padding:"0 20px 16px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
+          <div>
+            <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"تقييم الأرض":"Land Valuation"} <span style={{fontWeight:400,color:"#9ca3af"}}>({cur})</span></div>
+            <SidebarInput type="number" value={project.landValuation} onChange={v=>up({landValuation:v})} />
+          </div>
+          <div>
+            <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"نسبة حصة الشريك":"Partner Equity"} <span style={{fontWeight:400,color:"#9ca3af"}}>(%)</span></div>
+            <SidebarInput type="number" value={project.partnerEquityPct} onChange={v=>up({partnerEquityPct:v})} />
+          </div>
+        </div>}
+
+        {/* BOT-specific */}
+        {project.landType==="bot"&&<div style={{padding:"0 20px 16px"}}>
+          <div>
+            <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"فترة التشغيل":"Operation Period"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنوات":"years"})</span></div>
+            <SidebarInput type="number" value={project.botOperationYears} onChange={v=>up({botOperationYears:v})} />
+          </div>
+        </div>}
+
+        {/* ── Lease Details ── */}
+        {project.landType==="lease"&&<>
+          {/* Sub-header: عقد الإيجار */}
+          <div style={{padding:"12px 20px 6px",borderTop:"1px solid #f0f1f5"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,display:"flex",alignItems:"center",gap:6}}>
+              <span style={{width:4,height:4,borderRadius:2,background:"#2EC4B6"}} />
+              {ar?"تفاصيل عقد الإيجار":"Lease Contract Details"}
+            </div>
+          </div>
+
+          {/* Lease Row 1: Annual Rent (full width emphasis) */}
+          <div style={{padding:"8px 20px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"2fr 1fr 1fr",gap:14}}>
             <div>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"التصاعد %":"Escalation %"}</div>
+              <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"الإيجار السنوي":"Annual Rent"} <span style={{fontWeight:400,color:"#9ca3af"}}>({cur})</span></div>
+              <SidebarInput type="number" value={project.landRentAnnual} onChange={v=>up({landRentAnnual:v})} />
+              {project.landRentAnnual > 0 && project.landArea > 0 && <div style={{fontSize:10,color:"#2EC4B6",marginTop:4}}>= {fmt(Math.round(project.landRentAnnual / project.landArea * 100)/100)} {cur}/{ar?"م²":"sqm"}/{ar?"سنة":"yr"}</div>}
+            </div>
+            <div>
+              <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"مدة العقد":"Term"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"yrs"})</span></div>
+              <SidebarInput type="number" value={project.landRentTerm} onChange={v=>up({landRentTerm:v})} />
+            </div>
+            <div>
+              <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"فترة السماح":"Grace"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"yrs"})</span></div>
+              <SidebarInput type="number" value={project.landRentGrace} onChange={v=>up({landRentGrace:v})} />
+            </div>
+          </div>
+
+          {/* Lease Row 2: Escalation */}
+          <div style={{padding:"0 20px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr 1fr",gap:14}}>
+            <div>
+              <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"نسبة الزيادة":"Escalation"} <span style={{fontWeight:400,color:"#9ca3af"}}>(%)</span></div>
               <SidebarInput type="number" value={project.landRentEscalation} onChange={v=>up({landRentEscalation:v})} />
             </div>
             <div>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"كل N سنة":"Every N yrs"}</div>
+              <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"كل":"Every"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"yrs"})</span></div>
               <SidebarInput type="number" value={project.landRentEscalationEveryN} onChange={v=>up({landRentEscalationEveryN:v})} />
             </div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
             <div>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"فترة السماح":"Grace (yrs)"}</div>
-              <SidebarInput type="number" value={project.landRentGrace} onChange={v=>up({landRentGrace:v})} />
+              <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"بداية العقد":"Lease Start"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"year"})</span></div>
+              <SidebarInput type="number" value={project.landLeaseStartYear||0} onChange={v=>up({landLeaseStartYear:v})} placeholder={String(project.startYear||2026)} />
             </div>
             <div>
-              <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"مدة العقد":"Term (yrs)"}</div>
-              <SidebarInput type="number" value={project.landRentTerm} onChange={v=>up({landRentTerm:v})} />
+              <div style={{fontSize:11,color:"#374151",marginBottom:5,fontWeight:600}}>{ar?"قاعدة بداية الإيجار":"Rent Start Rule"}</div>
+              <select value={project.landRentStartRule||"auto"} onChange={e=>up({landRentStartRule:e.target.value})} style={{width:"100%",padding:"9px 12px",border:"1px solid #d1d5db",borderRadius:8,background:"#fff",fontSize:13,fontFamily:"inherit",color:"#1a1d23",cursor:"pointer"}}>
+                <option value="auto">{ar?"تلقائي (افتراضي)":"Auto (default)"}</option>
+                <option value="grace">{ar?"بعد انتهاء السماح":"After Grace Period"}</option>
+                <option value="income">{ar?"بعد أول إيراد":"After First Income"}</option>
+              </select>
             </div>
           </div>
-          <div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"بداية العقد":"Lease Start"}</div>
-            <SidebarInput type="number" value={project.landLeaseStartYear||0} onChange={v=>up({landLeaseStartYear:v})} placeholder={String(project.startYear||2026)} />
-          </div>
-          <div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>{ar?"بداية الإيجار":"Rent Start Rule"}</div>
-            <select value={project.landRentStartRule||"auto"} onChange={e=>up({landRentStartRule:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:12,fontFamily:"inherit"}}>
-              <option value="auto">{ar?"تلقائي":"Auto"}</option>
-              <option value="grace">{ar?"بعد السماح":"After Grace"}</option>
-              <option value="income">{ar?"بعد الإيراد":"After Income"}</option>
-            </select>
-          </div>
+
           {/* Rent allocation details */}
-          {results?.landRentMeta?.rentStartYear != null && <div style={{gridColumn:"1/-1"}}>
-            <button onClick={()=>setShowLandRentDetail(!showLandRentDetail)} style={{fontSize:10,color:"#2563eb",background:"#eef2ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"4px 10px",cursor:"pointer",width:"100%",textAlign:"start",fontFamily:"inherit"}}>
-              {showLandRentDetail?"▼":"▶"} {ar?"تفاصيل توزيع الإيجار":"Land Rent Allocation Details"}
+          {results?.landRentMeta?.rentStartYear != null && <div style={{padding:"0 20px 16px"}}>
+            <button onClick={()=>setShowLandRentDetail(!showLandRentDetail)} style={{fontSize:11,color:"#2EC4B6",background:"#f0fdfa",border:"1px solid #ccfbf1",borderRadius:8,padding:"8px 14px",cursor:"pointer",width:"100%",textAlign:"start",fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:8,transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#e6fffa"} onMouseLeave={e=>e.currentTarget.style.background="#f0fdfa"}>
+              <span style={{fontSize:10}}>{showLandRentDetail?"▼":"▶"}</span>
+              {ar?"تفاصيل توزيع الإيجار بين المراحل":"Land Rent Allocation Details"}
+              {results.landRentMeta.rentStartYear != null && <span style={{marginInlineStart:"auto",fontSize:10,color:"#059669",fontWeight:500}}>{ar?"يبدأ":"Starts"} {results.landRentMeta.rentStartYear + (results?.startYear||2026)}</span>}
             </button>
             {showLandRentDetail && (() => {
               const m = results.landRentMeta;
@@ -4714,52 +4757,50 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               const phases = m.phaseShares ? Object.entries(m.phaseShares) : [];
               const isManual = !!project.landRentManualAlloc && Object.keys(project.landRentManualAlloc).length > 0;
               const manualSum = isManual ? Object.values(project.landRentManualAlloc).reduce((s,v)=>s+(Number(v)||0),0) : 0;
-              return <div style={{background:"#f8faff",border:"1px solid #e0e7ff",borderRadius:8,padding:10,marginTop:4,fontSize:10}}>
-                <div style={{marginBottom:6}}>
-                  <span style={{fontWeight:600}}>{ar?"يبدأ الإيجار: السنة":"Rent starts: Year"} {m.rentStartYear + sy}</span>
-                  <span style={{color:"#6b7080",marginInlineStart:8}}>({ar?"سنة":"yr"} {m.rentStartYear} {ar?"من المشروع":"from start"})</span>
-                </div>
-                <div style={{marginBottom:4,color:"#6b7080"}}>
-                  {ar?"بداية العقد:":"Lease starts:"} {m.leaseStartAbsolute||sy} | {ar?"السماح:":"Grace:"} {project.landRentGrace||0} {ar?"سنة":"yr"}
+              return <div style={{background:"#f8fffe",border:"1px solid #d1fae5",borderRadius:8,padding:14,marginTop:6,fontSize:11}}>
+                <div style={{display:"flex",gap:16,marginBottom:8,color:"#374151"}}>
+                  <span>{ar?"بداية العقد:":"Lease starts:"} <strong>{m.leaseStartAbsolute||sy}</strong></span>
+                  <span>{ar?"السماح:":"Grace:"} <strong>{project.landRentGrace||0} {ar?"سنة":"yr"}</strong></span>
+                  <span>{ar?"أول إيجار:":"First rent:"} <strong>{m.rentStartYear + sy}</strong></span>
                 </div>
                 {phases.length > 0 && <>
-                  <div style={{fontWeight:600,marginTop:8,marginBottom:4,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontWeight:700,marginTop:10,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11}}>
                     <span>{ar?"التوزيع بين المراحل:":"Phase allocation:"}</span>
                     <button onClick={()=>{
                       if (isManual) { up({landRentManualAlloc:null}); }
                       else { const init={}; phases.forEach(([pn,ps])=>{init[pn]=Math.round((ps.share||0)*100);}); up({landRentManualAlloc:init}); }
-                    }} style={{fontSize:9,padding:"2px 8px",borderRadius:4,border:"1px solid "+(isManual?"#f59e0b":"#d1d5db"),background:isManual?"#fffbeb":"#fff",color:isManual?"#b45309":"#6b7080",cursor:"pointer",fontFamily:"inherit"}}>
+                    }} style={{fontSize:10,padding:"3px 10px",borderRadius:6,border:"1px solid "+(isManual?"#f59e0b":"#d1d5db"),background:isManual?"#fffbeb":"#fff",color:isManual?"#b45309":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
                       {isManual ? (ar?"⚙ يدوي":"⚙ Manual") : (ar?"تلقائي":"Auto")}
                     </button>
                   </div>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
-                    <thead><tr style={{borderBottom:"1px solid #e0e7ff"}}>
-                      <th style={{textAlign:"start",padding:"2px 4px"}}>{ar?"المرحلة":"Phase"}</th>
-                      <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"المساحة":"Area"}</th>
-                      <th style={{textAlign:"right",padding:"2px 4px"}}>{ar?"الحصة":"Share"}</th>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                    <thead><tr style={{borderBottom:"2px solid #d1fae5"}}>
+                      <th style={{textAlign:"start",padding:"4px 6px",color:"#6b7080",fontWeight:600}}>{ar?"المرحلة":"Phase"}</th>
+                      <th style={{textAlign:"right",padding:"4px 6px",color:"#6b7080",fontWeight:600}}>{ar?"المساحة":"Area"}</th>
+                      <th style={{textAlign:"right",padding:"4px 6px",color:"#6b7080",fontWeight:600}}>{ar?"الحصة":"Share"}</th>
                     </tr></thead>
                     <tbody>
-                      {phases.map(([pn,ps])=><tr key={pn} style={{borderBottom:"1px solid #f0f1f5"}}>
-                        <td style={{padding:"2px 4px",fontWeight:500}}>{pn}</td>
-                        <td style={{padding:"2px 4px",textAlign:"right"}}>{(ps.footprint||0).toLocaleString()}</td>
-                        <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600}}>
-                          {isManual ? <input type="number" value={project.landRentManualAlloc?.[pn]??""} onChange={e=>{const cur={...(project.landRentManualAlloc||{})};cur[pn]=Number(e.target.value)||0;up({landRentManualAlloc:cur});}} style={{width:42,textAlign:"right",padding:"1px 3px",border:"1px solid #d1d5db",borderRadius:3,fontSize:10,fontWeight:600,fontFamily:"inherit"}} /> : <span>{((ps.share)*100).toFixed(0)}%</span>}
+                      {phases.map(([pn,ps])=><tr key={pn} style={{borderBottom:"1px solid #ecfdf5"}}>
+                        <td style={{padding:"4px 6px",fontWeight:500}}>{pn}</td>
+                        <td style={{padding:"4px 6px",textAlign:"right"}}>{(ps.footprint||0).toLocaleString()}</td>
+                        <td style={{padding:"4px 6px",textAlign:"right",fontWeight:600}}>
+                          {isManual ? <input type="number" value={project.landRentManualAlloc?.[pn]??""} onChange={e=>{const cur={...(project.landRentManualAlloc||{})};cur[pn]=Number(e.target.value)||0;up({landRentManualAlloc:cur});}} style={{width:48,textAlign:"right",padding:"2px 4px",border:"1px solid #d1d5db",borderRadius:4,fontSize:11,fontWeight:600,fontFamily:"inherit"}} /> : <span>{((ps.share)*100).toFixed(0)}%</span>}
                         </td>
                       </tr>)}
-                      {isManual && <tr style={{borderTop:"1px solid #e0e7ff",fontWeight:700}}>
-                        <td colSpan={2} style={{padding:"2px 4px",textAlign:"right",fontSize:9}}>{ar?"المجموع":"Total"}</td>
-                        <td style={{padding:"2px 4px",textAlign:"right",color:Math.abs(manualSum-100)>0.1?"#ef4444":"#059669"}}>{manualSum}%</td>
+                      {isManual && <tr style={{borderTop:"2px solid #d1fae5",fontWeight:700}}>
+                        <td colSpan={2} style={{padding:"4px 6px",textAlign:"right",fontSize:10}}>{ar?"المجموع":"Total"}</td>
+                        <td style={{padding:"4px 6px",textAlign:"right",color:Math.abs(manualSum-100)>0.1?"#ef4444":"#059669"}}>{manualSum}%</td>
                       </tr>}
                     </tbody>
                   </table>
-                  {isManual && Math.abs(manualSum-100)>0.1 && <div style={{marginTop:4,padding:"4px 8px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:4,fontSize:9,color:"#dc2626"}}>
+                  {isManual && Math.abs(manualSum-100)>0.1 && <div style={{marginTop:6,padding:"6px 10px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,fontSize:10,color:"#dc2626",fontWeight:500}}>
                     ⚠ {ar?"المجموع = "+manualSum+"% (يجب 100%)":"Total = "+manualSum+"% (should be 100%)"}
                   </div>}
                 </>}
               </div>;
             })()}
           </div>}
-        </div>}
+        </>}
       </div>
       {landEduModal && <EducationalModal contentKey={landEduModal} lang={lang} onClose={()=>setLandEduModal(null)} />}
 
