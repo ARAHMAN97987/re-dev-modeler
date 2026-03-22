@@ -2935,6 +2935,18 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [project, view]);
 
+  // ── Redirect if active tab becomes hidden (e.g. switching to self mode) ──
+  useEffect(() => {
+    if (!project || view !== "editor") return;
+    const fm = project.finMode || "self";
+    const inc = project.incentives || {};
+    const hasInc = inc.capexGrant?.enabled || inc.landRentRebate?.enabled || inc.financeSupport?.enabled || inc.feeRebates?.enabled;
+    const hidden = new Set();
+    if (fm === "self") hidden.add("financing");
+    if (!hasInc) hidden.add("incentives");
+    if (hidden.has(activeTab)) setActiveTab("dashboard");
+  }, [project?.finMode, project?.incentives, activeTab, view]);
+
   const results = useMemo(() => { try { return project ? computeProjectCashFlows(project) : null; } catch(e) { console.error("computeProjectCashFlows error:", e); return null; } }, [project]);
   const incentivesResult = useMemo(() => { try { return project && results ? computeIncentives(project, results) : null; } catch(e) { console.error("computeIncentives error:", e); return null; } }, [project, results]);
   // Consolidated financing & waterfall (legacy - full field set for UI)
@@ -3249,18 +3261,22 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             </div>
           ) : (<>
           {(() => {
-            const tabs = [
+            const fm = project?.finMode || "self";
+            const inc = project?.incentives || {};
+            const hasAnyIncentive = inc.capexGrant?.enabled || inc.landRentRebate?.enabled || inc.financeSupport?.enabled || inc.feeRebates?.enabled;
+            const allTabs = [
               {key:"dashboard",label:t.dashboard,group:"project"},
               {key:"assets",label:t.assetProgram,group:"project"},
               {key:"cashflow",label:t.cashFlow,group:"project"},
-              {key:"financing",label:lang==="ar"?"الهيكلة المالية":"Financial Structure",group:"finance"},
-              {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
+              {key:"financing",label:lang==="ar"?"الهيكلة المالية":"Financial Structure",group:"finance",hide:fm==="self"},
+              {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance",hide:!hasAnyIncentive},
               {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
               ...(project?.market?.enabled ? [{key:"market",label:lang==="ar"?"السوق":"Market",group:"analysis"}] : []),
               {key:"checks",label:lang==="ar"?"الفحوصات":"Checks",group:"analysis"},
               {key:"reports",label:lang==="ar"?"التقارير":"Reports",group:"export"},
             ];
+            const tabs = allTabs.filter(tb => !tb.hide);
             const groupColors = {project:"#2563eb",finance:"#8b5cf6",analysis:"#f59e0b",export:"#16a34a"};
             let prevGroup = null;
             return tabs.map(tb=>{
