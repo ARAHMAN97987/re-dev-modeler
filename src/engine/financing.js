@@ -261,8 +261,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   let lpPct = isBank100 ? 0 : (totalEquity > 0 ? lpEquity / totalEquity : 0);
 
   // ── Construction period ──
-  let constrEnd = 0;
-  for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEnd = y; break; } }
+  let constrStart = h, constrEnd = 0;
+  for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = Math.min(constrStart, y); constrEnd = Math.max(constrEnd, y); } }
+  // Fund start: user input or 1 year before construction (same formula as waterfall.js)
+  const computedFundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - startYear : Math.max(0, constrStart - 1);
 
   // ── Debt drawdown ──
   // scheduledUses = CAPEX schedule (land purchase already in capex[0] from cashflow.js)
@@ -314,9 +316,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const graceBasis = project.graceBasis || "cod";
   let graceStartIdx = constrEnd; // default: COD
   if (graceBasis === "fundStart") {
-    // ZAN method: grace counts from fund start year
-    const fundStartYr = (project.fundStartYear || 0) > 0 ? project.fundStartYear - startYear : Math.max(0, constrEnd - 3);
-    graceStartIdx = fundStartYr;
+    graceStartIdx = computedFundStartIdx;
   } else if (graceBasis === "firstDraw") {
     for (let y = 0; y < h; y++) { if (drawdown[y] > 0) { graceStartIdx = y; break; } }
   } else if (project.debtGraceStartYear > 0) {
@@ -530,7 +530,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     totalDebt: totalDrawn, totalInterest: adjustedInterest.reduce((a, b) => a + b, 0),
     interestSubsidyTotal: intSub.total, interestSubsidySchedule: intSub.savings,
     upfrontFee, maxDebt, rate, tenor, grace, repayYears, graceStartIdx,
-    leveredIRR: calcIRR(leveredCF), constrEnd, repayStart, exitYear: exitYr + startYear,
+    leveredIRR: calcIRR(leveredCF), constrEnd, constrStart, repayStart, exitYear: exitYr + startYear,
+    computedFundStartYear: computedFundStartIdx + startYear,
     incomeStabilizationYear: optimalExitIdx + startYear, optimalExitYear: optimalExitIdx + startYear, optimalExitIRR,
     trancheMode, tranches,
   };

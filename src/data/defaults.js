@@ -25,7 +25,6 @@ export const defaultProject = () => ({
   vehicleType: "fund", // fund | direct | spv
   gpIsFundManager: true, // true = GP manages the fund (gets all fees). false = separate financial company
   fundName: "",
-  fundStrategy: "Develop & Hold",
   fundStartYear: 0, // 0 = auto
   // Land Capitalization
   landCapitalize: false,
