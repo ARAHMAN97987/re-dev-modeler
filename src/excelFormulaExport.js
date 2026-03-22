@@ -112,7 +112,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const rEM = inp("Exit Multiple (x rent)", p.exitMultiple || 10);
   const rEC = inp("Exit Cost %", p.exitCostPct || 2, PCT, true);
 
-  sec("Waterfall / الشلال");
+  sec("Waterfall / حافز الأداء");
   const rGP = inp("GP Equity %", p.gpEquityPct || 20, PCT, true);
   const rPF = inp("Preferred Return %", p.prefReturnPct || 15, PCT, true);
   const rCR_ = inp("Carry %", p.carryPct || 25, PCT, true);
@@ -597,7 +597,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
       writeRow("Cash Available", pw.cashAvail, NUM, true);
       pr++;
 
-      secr(wsp, pr, 1, LC, "6  WATERFALL / الشلال"); pr++;
+      secr(wsp, pr, 1, LC, "6  WATERFALL / حافز الأداء"); pr++;
       writeRow("Unreturned Capital (Open)", pw.unreturnedOpen);
       writeRow("T1: Return of Capital", pw.tier1, NUM, true);
       writeRow("Unreturned Capital (Close)", pw.unreturnedClose);

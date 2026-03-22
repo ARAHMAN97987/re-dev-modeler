@@ -449,7 +449,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         </div>
         {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe",animation:"zanSlide 0.15s ease"}}>
           {/* Row 1: Waterfall Terms */}
-          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"شروط الشلال":"WATERFALL TERMS"}</div>
+          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"شروط حافز الأداء":"WATERFALL TERMS"}</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
             {[
               {l:ar?"العائد التفضيلي %":"Pref Return %",k:"prefReturnPct",v:cfg.prefReturnPct},
@@ -561,7 +561,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (GP)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (GP)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
               <SecHd text={ar?"الملخص":"NET SUMMARY"} />
               <KR l={ar?"حصة GP":"GP Equity"} v={fmt(w.gpTotalInvested)} bold />
-              <KR l={ar?"توزيعات الشلال":"Waterfall Dist"} v={fmt(w.gpTotalDist)} />
+              <KR l={ar?"توزيعات حافز الأداء":"Waterfall Dist"} v={fmt(w.gpTotalDist)} />
               <KR l={ar?"رسوم مستلمة":"Fees Received"} v={fmt(gpFeesTotal)} c="#a16207" />
               {(w.gpLandRentTotal||0)>0 && <KR l={ar?"إيجار أرض":"Land Rent"} v={`(${fmt(w.gpLandRentTotal)})`} c="#ef4444" />}
               <KR l={ar?"صافي النقد":"Net Cash"} v={fmtM(gpNetCash)} c="#16a34a" bold />
@@ -2254,9 +2254,9 @@ When to use:
         {/* ── SECTION: WATERFALL ── */}
         </SecWrap>
         <SecWrap visible={isFundMode} color="#16a34a">
-        <AH id="wf" color="#16a34a" label={ar?"الشلال":"Waterfall"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||10}% · Carry ${cfg.carryPct||20}%` : ""} visible={isFundMode} />
+        <AH id="wf" color="#16a34a" label={ar?"حافز الأداء":"Waterfall"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||10}% · Carry ${cfg.carryPct||20}%` : ""} visible={isFundMode} />
         <AB id="wf" visible={isFundMode}>
-          <div style={{gridColumn:"1/-1",marginBottom:4}}><HelpLink contentKey="waterfallConcepts" lang={lang} onOpen={setEduModal} label={ar?"اعرف أكثر عن الشلال":"Learn about Waterfall"} /></div>
+          <div style={{gridColumn:"1/-1",marginBottom:4}}><HelpLink contentKey="waterfallConcepts" lang={lang} onOpen={setEduModal} label={ar?"اعرف أكثر عن حافز الأداء":"Learn about Waterfall"} /></div>
           <div style={g2}>
             <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip={ar?"الحد الأدنى للعائد السنوي الذي يحصل عليه المستثمر (LP) قبل أن يشارك المطور (GP) بالأرباح. عادة 8-15%\nيتراكم سنوياً على رأس المال غير المسترد":"Minimum annual return for LP before GP shares profits. Usually 8-15%\nAccrues annually on unreturned capital"}><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:Math.max(0,Math.min(50,v))})} /></FL>
             <FL label={ar?"أتعاب حسن الأداء %":"Performance Carry %"} tip={ar?"نسبة من الأرباح تُدفع للمطور إذا تجاوزت أرباح الصندوق العائد التفضيلي. عادة 20-30%\nمثال: لو العائد التفضيلي 15% والأرباح تجاوزته → 25% من الفائض يروح للمطور كأتعاب حسن أداء":"GP's share of profits after LP receives preferred return. Usually 20-30%\nExample: if pref is 15% and profits exceed it → 25% of excess goes to GP as performance fee"}><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:Math.max(0,Math.min(50,v))})} /></FL>
@@ -3086,7 +3086,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               {key:"assets",label:t.assetProgram,group:"project"},
               {key:"cashflow",label:t.cashFlow,group:"project"},
               {key:"financing",label:lang==="ar"?"التمويل":"Financing",group:"finance"},
-              {key:"waterfall",label:lang==="ar"?"الشلال":"Waterfall",group:"finance"},
+              {key:"waterfall",label:lang==="ar"?"حافز الأداء":"Waterfall",group:"finance"},
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
               {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
@@ -5840,7 +5840,7 @@ const EDUCATIONAL_CONTENT = {
               "المضاعف الأعلى = سعر بيع أعلى = عائد أفضل",
               "يعتمد بشكل كبير على ظروف السوق وقت البيع",
               "يحتاج وقت لإتمام الصفقة (6-12 شهر عادة)",
-              "في الصناديق: عائدات البيع توزع حسب الشلال (Waterfall)"
+              "في الصناديق: عائدات البيع توزع حسب حافز الأداء (Waterfall)"
             ]}
           ]
         },
@@ -6016,7 +6016,7 @@ const EDUCATIONAL_CONTENT = {
   waterfallConcepts: {
     ar: {
       title: "شلال التوزيعات - المفاهيم الأساسية",
-      intro: "الشلال (Waterfall) هو الآلية التي تحدد ترتيب وأولوية توزيع الأرباح بين المطور (GP) والمستثمرين (LP). فهم كل مرحلة ضروري لتقييم عدالة الهيكل.",
+      intro: "حافز الأداء (Waterfall) هو الآلية التي تحدد ترتيب وأولوية توزيع الأرباح بين المطور (GP) والمستثمرين (LP). فهم كل مرحلة ضروري لتقييم عدالة الهيكل.",
       cta: "فهمت",
       tabs: [
         {
@@ -7449,7 +7449,7 @@ const EDUCATIONAL_CONTENT = {
           { type: "heading", text: "أهم الأرقام التي تبحث عنها:" },
           { type: "list", items: ["إجمالي CAPEX: التكلفة الإجمالية للمشروع", "IRR: العائد الداخلي - هل المشروع مجدي؟ (أعلى من 10% عادة جيد)", "NPV: صافي القيمة الحالية - هل يضيف قيمة؟ (موجب = جيد)", "DSCR: تغطية الدين - هل يقدر يسدد القرض؟ (أعلى من 1.2x)"] },
           { type: "heading", text: "التبويبات المهمة" },
-          { type: "list", items: ["التمويل: اضبط شروط القرض والصندوق", "الشلال: شاهد توزيع الأرباح بين GP و LP", "السيناريوهات: قارن 8 سيناريوهات مختلفة", "الفحوصات: تأكد من عدم وجود أخطاء", "التقارير: صدّر حزمة البنك أو تقرير المستثمر"] }
+          { type: "list", items: ["التمويل: اضبط شروط القرض والصندوق", "حافز الأداء: شاهد توزيع الأرباح بين GP و LP", "السيناريوهات: قارن 8 سيناريوهات مختلفة", "الفحوصات: تأكد من عدم وجود أخطاء", "التقارير: صدّر حزمة البنك أو تقرير المستثمر"] }
         ]},
         { id: "tips", label: "نصائح ذهبية", icon: "💡", content: [
           { type: "heading", text: "نصائح من الممارسة" },
@@ -10557,7 +10557,7 @@ function ChecksView({ checks, t, lang }) {
   const ap = checks.every(c=>c.pass);
   const fc = checks.filter(c=>!c.pass).length;
   const cats = [...new Set(checks.map(c=>c.cat||"General"))];
-  const catLabels = {T0:ar?"T0: فحص المدخلات":"T0: Input Validation",T1:ar?"T1: محرك المشروع":"T1: Project Engine",T2:ar?"T2: التمويل":"T2: Financing",T3:ar?"T3: الشلال":"T3: Waterfall",T4:ar?"T4: الحوافز":"T4: Incentives",T5:ar?"T5: التكامل":"T5: Integration",General:"General"};
+  const catLabels = {T0:ar?"T0: فحص المدخلات":"T0: Input Validation",T1:ar?"T1: محرك المشروع":"T1: Project Engine",T2:ar?"T2: التمويل":"T2: Financing",T3:ar?"T3: حافز الأداء":"T3: Waterfall",T4:ar?"T4: الحوافز":"T4: Incentives",T5:ar?"T5: التكامل":"T5: Integration",General:"General"};
   return (<div>
     <div style={{display:"flex",alignItems:"center",marginBottom:14,gap:12}}>
       <div style={{fontSize:15,fontWeight:600}}>{t.modelChecks}</div>
@@ -10850,7 +10850,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
                 </div>
               ))}
             </div>
-          ) : <div style={{color:"#6b7080",fontSize:12}}>{ar?"الشلال غير مُعدّ — اختر صندوق استثماري":"Waterfall not configured - select Fund mode"}</div>}
+          ) : <div style={{color:"#6b7080",fontSize:12}}>{ar?"حافز الأداء غير مُعدّ — اختر صندوق استثماري":"Waterfall not configured - select Fund mode"}</div>}
         </Section>
         {w && w.tier1 && (
           <Section title={ar?"شلال التوزيعات":"Distribution Waterfall"} color="#7c3aed">
