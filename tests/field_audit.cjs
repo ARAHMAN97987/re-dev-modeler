@@ -435,11 +435,10 @@ if (MPRes && MPRes.phaseFinancings) {
   t('PHASE', 'C40 per-phase results exist', false, 'computeIndependentPhaseResults returned null');
 }
 
-// Check FINANCING_FIELDS completeness
-const missingFromFF = ['capitalizeIDC','gpInvestDevFee','gpDevFeeInvestPct','gpCashInvest','gpCashInvestAmount'];
-for (const f of missingFromFF) {
-  t('PHASE', `FINANCING_FIELDS missing: ${f}`, !FINANCING_FIELDS.includes(f), `Should be missing (known issue)`);
-  disc(`${f}: NOT in FINANCING_FIELDS — won't propagate to per-phase`);
+// Verify FINANCING_FIELDS completeness — these were added in D5-D9 fix
+const shouldBeInFF = ['capitalizeIDC','gpInvestDevFee','gpDevFeeInvestPct','gpCashInvest','gpCashInvestAmount'];
+for (const f of shouldBeInFF) {
+  t('PHASE', `FINANCING_FIELDS has: ${f}`, FINANCING_FIELDS.includes(f), `Missing from FINANCING_FIELDS`);
 }
 
 console.log('');

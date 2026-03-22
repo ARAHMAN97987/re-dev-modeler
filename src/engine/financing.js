@@ -198,7 +198,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const rate = (project.financeRate ?? 6.5) / 100;
   const tenor = project.loanTenor ?? 7;
   const grace = project.debtGrace ?? 3;
-  const repayYears = tenor - grace;
+  const repayYears = Math.max(0, tenor - grace);
   const maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
   const upfrontFeePct = (project.upfrontFeePct || 0) / 100;
 

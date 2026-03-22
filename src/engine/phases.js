@@ -13,7 +13,8 @@ import { computeWaterfall } from './waterfall.js';
 export const FINANCING_FIELDS = [
   'finMode','vehicleType','debtAllowed','maxLtvPct','financeRate',
   'loanTenor','debtGrace','graceBasis','upfrontFeePct','repaymentType','debtTrancheMode',
-  'islamicMode','gpEquityManual','lpEquityManual',
+  'islamicMode','gpEquityManual','lpEquityManual','capitalizeIDC',
+  'gpInvestDevFee','gpDevFeeInvestPct','gpCashInvest','gpCashInvestAmount',
   'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
   'feeTreatment','prefAllocation','catchupMethod','subscriptionFeePct','annualMgmtFeePct','mgmtFeeCapAnnual','custodyFeeAnnual',
@@ -177,6 +178,7 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
     dscr: (() => { const ds = sumArr('debtService'); const noi = new Array(h).fill(0); names.forEach(n => { const pf = phaseFinancings[n]; if (!pf) return; for (let y = 0; y < h; y++) { if (pf.dscr && pf.dscr[y] !== null && pf.debtService[y] > 0) noi[y] += pf.dscr[y] * pf.debtService[y]; } }); return ds.map((d, y) => d > 0 ? noi[y] / d : null); })(),
     exitProceeds: sumArr('exitProceeds'),
     upfrontFee: sum('upfrontFee'),
+    devFeeTotal: sum('devFeeTotal'), devFeeSchedule: sumArr('devFeeSchedule'),
     totalInterest: sum('totalInterest'),
     interestSubsidyTotal: sum('interestSubsidyTotal'),
     interestSubsidySchedule: sumArr('interestSubsidySchedule'),
