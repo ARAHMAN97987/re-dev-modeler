@@ -2222,14 +2222,29 @@ When to use:
             {cfg.vehicleType==="fund"&&<FL label={ar?"اسم الصندوق":"Fund Name"} tip={ar?"الاسم القانوني أو التشغيلي للصندوق. للعرض والتقارير فقط":"Legal or operating fund name. For display and reports only"}><Inp value={cfg.fundName} onChange={v=>upCfg({fundName:v})} /></FL>}
           </div>
           <div style={g2}>
-            <div>
-              <FL label={ar?"سنة بداية الصندوق":"Fund Start Year"} tip={ar?"سنة بدء جمع رأس المال وتسجيل الصندوق. غالباً قبل البناء بسنة\nاتركها 0 للحساب التلقائي":"Year capital raising begins. Usually 1 year before construction.\nLeave 0 for auto-calculation"}>
-                <Inp type="number" value={cfg.fundStartYear} onChange={v=>upCfg({fundStartYear:v})} />
-              </FL>
-              {f?.computedFundStartYear > 0 && !(cfg.fundStartYear > 0) && <div style={{marginTop:-6,marginBottom:4,fontSize:10,color:"#6b7080",paddingInlineStart:2}}>
-                {ar?`تلقائي: ${f.computedFundStartYear} (سنة قبل البناء)`:`Auto: ${f.computedFundStartYear} (1yr before construction)`}
-              </div>}
-            </div>
+            {(() => {
+              // Compute auto fund start year from project data (independent of financing result)
+              const sy = project.startYear || 2026;
+              let firstCapexYr = sy;
+              if (results?.consolidated?.capex) {
+                for (let y = 0; y < (project.horizon||20); y++) {
+                  if (results.consolidated.capex[y] > 0) { firstCapexYr = sy + y; break; }
+                }
+              }
+              const autoFundStart = Math.max(sy, firstCapexYr - 1);
+              const currentVal = cfg.fundStartYear || 0;
+              const isAuto = currentVal === 0 || currentVal === autoFundStart;
+              return <div>
+                <FL label={ar?"سنة بداية الصندوق":"Fund Start Year"} tip={ar?"سنة بدء جمع رأس المال وتسجيل الصندوق. غالباً قبل البناء بسنة\nاتركها فارغة أو 0 للحساب التلقائي":"Year capital raising begins. Usually 1 year before construction.\nLeave empty or 0 for auto-calculation"}>
+                  <Inp type="number" value={currentVal > 0 ? currentVal : ""} onChange={v=>upCfg({fundStartYear:v||0})} placeholder={String(autoFundStart)} />
+                </FL>
+                <div style={{marginTop:-6,marginBottom:4,fontSize:10,color:isAuto?"#16a34a":"#6b7080",paddingInlineStart:2}}>
+                  {isAuto
+                    ? (ar?`✓ تلقائي: ${autoFundStart} (سنة قبل بداية البناء ${firstCapexYr})`:`✓ Auto: ${autoFundStart} (1yr before construction ${firstCapexYr})`)
+                    : (ar?`التلقائي سيكون: ${autoFundStart}`:`Auto would be: ${autoFundStart}`)}
+                </div>
+              </div>;
+            })()}
             <FL label={ar?"المطور = مدير الصندوق؟":"GP = Fund Manager?"} tip={ar?"نعم: المطور يدير الصندوق ويستلم كل الرسوم (تطوير + إدارة + هيكلة)\nلا: شركة مالية مستقلة تدير الصندوق. المطور يأخذ رسوم التطوير فقط":"Yes: Developer manages the fund and receives all fees\nNo: Separate financial company manages. Developer gets dev fee only"}>
               <Drp lang={lang} value={cfg.gpIsFundManager===false?"N":"Y"} onChange={v=>upCfg({gpIsFundManager:v==="Y"})} options={[{value:"Y",en:"Yes (GP = Manager)",ar:"نعم (المطور = المدير)"},{value:"N",en:"No (Separate Manager)",ar:"لا (مدير مستقل)"}]} />
             </FL>
