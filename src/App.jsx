@@ -1200,7 +1200,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
             <KR l={ar?"تكلفة التطوير":"Dev Cost"} v={fmtM(devCost)} bold />
             <KR l="CAPEX" v={fmtM(totalCapex)} />
             <KR l={ar?"إيجار الأرض":"Land Rent"} v={fmtM(c.totalLandRent)} c="#ef4444" />
-            {f?.landCapValue > 0 && <KR l={ar?"رسملة الأرض":"Land Cap"} v={fmtM(f.landCapValue)} />}
+            {f?.landCapValue > 0 && <KR l={ar?"رسملة حق الانتفاع":"Leasehold Cap"} v={fmtM(f.landCapValue)} />}
             <SecHd text={ar?"الإيرادات":"REVENUE"} />
             <KR l={ar?"إجمالي الإيرادات":"Total Revenue"} v={fmtM(totalIncome)} c="#16a34a" bold />
             <KR l={ar?"دخل مستقر (NOI)":"Stabilized NOI"} v={fmt(stabNOI)} c="#059669" />
@@ -2088,15 +2088,15 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         <SecWrap visible={hasEq} color="#8b5cf6">
         <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · GP ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
         <AB id="land" visible={hasEq}>
-          {(project.landType==="lease"||project.landType==="bot")&&<FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض المؤجرة إلى حصة Equity في الحسابات التمويلية. لا يظهر عند الشراء أو الشراكة لأن الأرض محسوبة فعلاً\nConvert leasehold land value to equity. Not available for purchase/partner — land is already in CAPEX/equity">
+          {(project.landType==="lease"||project.landType==="bot")&&<FL label={ar?"رسملة حق الانتفاع؟":"Capitalize Leasehold?"} tip={ar?"الأرض مؤجرة وليست مملوكة — لكن حق الانتفاع له قيمة مالية. رسملته تعني تحويل هذي القيمة إلى حصة Equity في الصندوق.\nمثال: أرض 50,000 م² × 800 ريال = 40 مليون تُحسب كمساهمة عينية لصاحب الأرض":"The land is leased, not owned — but the leasehold right has financial value. Capitalizing it converts this value into an equity stake in the fund.\nExample: 50,000 sqm × SAR 800 = SAR 40M counted as in-kind equity contribution"}>
             <Drp lang={lang} value={cfg.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
           </FL>}
           {cfg.landCapitalize&&(project.landType==="lease"||project.landType==="bot")&&<>
             <div style={g2}>
               <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
-              <FL label={ar?"رسملة الأرض لصالح":"Land Cap Credit To"} tip="من يحصل على حصة الأرض المرسملة كـ Equity: المطور (GP) أو المستثمر (LP) أو مقسمة بالتساوي\nWho gets land capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
+              <FL label={ar?"رسملة حق الانتفاع لصالح":"Leasehold Cap Credit To"} tip={ar?"من يُحسب له حق الانتفاع كحصة Equity: المطور أو المستثمر أو مقسمة":"Who gets the leasehold capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"}><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
             </div>
-            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip="بعد رسملة الأرض: صاحب الأرض = اللي رسمل الأرض يدفع الإيجار تلقائياً. المشروع = الكل يتحمل. أو اختر يدوياً\nAfter capitalizing: Auto = whoever capitalized pays. Project = all bear cost. Or choose manually"><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (land cap owner)",ar:"تلقائي (صاحب الأرض)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"}]} /></FL>}
+            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"}]} /></FL>}
           </>}
 
           {/* ── GP Investment Sources ── */}
@@ -2129,7 +2129,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
                 <span style={{fontWeight:700}}>{fmt(f.totalEquity)} {cur}</span>
               </div>
               {f.gpEquityBreakdown?.landCap > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?"رسملة حق الانتفاع":"Land Cap (GP)"}</span>
+                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?"رسملة حق الانتفاع":"Leasehold Cap (GP)"}</span>
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.landCap)} {cur}</span>
               </div>}
               {f.gpEquityBreakdown?.partnerLand > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -2306,7 +2306,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv") && (
         <div style={{background:"#fef3c7",borderRadius:8,border:"1px solid #fde68a",padding:"12px 16px",marginBottom:14,fontSize:12,color:"#92400e"}}>
           <strong>⚠ {ar?"LP Equity = صفر":"LP Equity = 0"}</strong><br/>
-          {ar ? "لا يوجد مستثمرين (LP). لتفعيل LP: فعّل رسملة الأرض أو أدخل GP Equity يدوياً" : "No investor equity. Enable Land Capitalization or enter GP Equity manually."}
+          {ar ? "لا يوجد مستثمرين (LP). لتفعيل LP: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}
         </div>
       )}
 
@@ -3196,7 +3196,7 @@ function FeaturesGrid({ lang }) {
   const ar = lang === "ar";
   const features = [
     { icon: "🏗", color: "#2563eb", title: ar?"نمذجة متعددة الأصول":"Multi-Asset Modeling", desc: ar?"فنادق، محلات، مكاتب، مارينا، سكني - كل أنواع العقارات في نموذج واحد مع P&L مفصّل للفنادق والمارينا":"Hotels, retail, offices, marina, residential - all property types in one model with detailed Hotel & Marina P&L" },
-    { icon: "🏦", color: "#8b5cf6", title: ar?"تمويل متقدم":"Advanced Financing", desc: ar?"تمويل بنكي، صندوق استثماري GP/LP، تمويل إسلامي (مرابحة/إجارة)، رسملة الأرض، هيكل رأس المال":"Bank debt, GP/LP fund structure, Islamic finance (Murabaha/Ijara), land capitalization, capital structure" },
+    { icon: "🏦", color: "#8b5cf6", title: ar?"تمويل متقدم":"Advanced Financing", desc: ar?"تمويل بنكي، صندوق استثماري GP/LP، تمويل إسلامي (مرابحة/إجارة)، رسملة حق الانتفاع، هيكل رأس المال":"Bank debt, GP/LP fund structure, Islamic finance (Murabaha/Ijara), leasehold capitalization, capital structure" },
     { icon: "📊", color: "#16a34a", title: ar?"شلال توزيعات 4 مراحل":"4-Tier Waterfall", desc: ar?"رد رأس المال → العائد التفضيلي → تعويض المطور → تقسيم الأرباح مع IRR وMOIC لكل طرف":"Return of Capital → Preferred Return → GP Catch-up → Profit Split with IRR & MOIC per party" },
     { icon: "📈", color: "#f59e0b", title: ar?"سيناريوهات وتحليل حساسية":"Scenarios & Sensitivity", desc: ar?"8 سيناريوهات جاهزة، جدول حساسية ثنائي المتغيرات، تحليل نقطة التعادل مع ملخص المخاطر":"8 built-in scenarios, 2-variable sensitivity table, break-even analysis with risk summary" },
     { icon: "📄", color: "#ef4444", title: ar?"تقارير جاهزة للبنك والمستثمر":"Bank & Investor Reports", desc: ar?"ملخص تنفيذي، حزمة البنك (مع DSCR)، مذكرة المستثمر - كلها بصيغة PDF وExcel":"Executive summary, Bank pack (with DSCR), Investor memo - all exportable as PDF & Excel" },
