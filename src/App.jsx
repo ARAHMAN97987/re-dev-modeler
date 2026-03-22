@@ -1445,7 +1445,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const constrEnd = pf.constrEnd || 0;
   const stableIncome = pc.income.find((v,i) => i > constrEnd && v > 0) || 0;
   const cashOnCash = pf.totalEquity > 0 && stableIncome > 0 ? stableIncome / pf.totalEquity : 0;
-  const totalFinCost = pf.totalInterest + (pf.upfrontFee||0);
+  const totalFinCost = pf.totalInterest;
   const devNetCF = pf.leveredCF ? pf.leveredCF.reduce((a,b)=>a+b,0) : 0;
 
   // Chart data
@@ -1597,7 +1597,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"نوع السداد":"Repay Type"} v={cfg.repaymentType==="bullet"?(ar?"دفعة واحدة":"Bullet"):(ar?"أقساط":"Amortizing")} />
             <SecHd text={ar?"تكلفة الدين":"DEBT COST"} />
             <KR l={ar?"إجمالي الفوائد":"Total Interest"} v={fmtM(pf.totalInterest)} c="#ef4444" bold />
-            <KR l={ar?"رسوم مقدمة":"Upfront Fee"} v={fmtM(pf.upfrontFee||0)} c="#ef4444" />
+            {(pf.upfrontFee||0) > 0 && <KR l={ar?"* تشمل رسوم قرض":"* incl. upfront fee"} v={fmtM(pf.upfrontFee)} />}
             <KR l={ar?"إجمالي تكلفة الدين":"Total Debt Cost"} v={fmtM(totalFinCost)} c="#ef4444" bold />
             <KR l={ar?"كنسبة من التكلفة":"% of Dev Cost"} v={pf.devCostInclLand>0?fmtPct(totalFinCost/pf.devCostInclLand*100):"—"} />
             <SecHd text="DSCR" />
@@ -1806,8 +1806,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <tr onClick={()=>setSecOpen(p=>({...p,s4:!p.s4}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#dc2626",background:"#fef2f2",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #ef4444",userSelect:"none"}}>{secOpen.s4?"▶":"▼"} {ar?"4. تكلفة التمويل":"4. FINANCING COST"}</td></tr>
       {!secOpen.s4 && <>
       <CFRow label={ar?"إجمالي الفوائد":"Total Interest Paid"} values={pf.interest} total={pf.totalInterest||0} color="#ef4444" />
-      {(pf.upfrontFee||0) > 0 && (() => { const uf=new Array(h).fill(0); uf[0]=pf.upfrontFee; return <CFRow label={ar?"رسوم القرض المقدمة":"Upfront Loan Fee"} values={uf} total={pf.upfrontFee} color="#ef4444" />; })()}
-      {(() => { const tc=(pf.totalInterest||0)+(pf.upfrontFee||0); const tcArr=new Array(h).fill(0); for(let y=0;y<h;y++) tcArr[y]=(pf.interest[y]||0)+(y===0?(pf.upfrontFee||0):0); return <CFRow label={ar?"= إجمالي تكلفة التمويل":"= Total Financing Cost"} values={tcArr} total={tc} bold color="#dc2626" />; })()}
+      {(pf.upfrontFee||0) > 0 && <tr style={{background:"#fef2f2"}}><td style={{...tdSt,position:"sticky",left:0,background:"#fef2f2",zIndex:1,fontSize:10,color:"#9ca3af",paddingInlineStart:20,fontStyle:"italic"}}>{ar?"* تشمل رسوم قرض":"* includes upfront fee"}: {fmt(pf.upfrontFee)}</td><td colSpan={years.length+1}></td></tr>}
       {/* As % of dev cost */}
       <tr style={{background:"#fef2f2"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#fef2f2",zIndex:1,fontSize:10,color:"#dc2626",fontWeight:600,paddingInlineStart:10}}>{ar?"كنسبة من تكلفة التطوير":"As % of Dev Cost"}</td>
@@ -2343,8 +2342,8 @@ When to use:
         unfunded: (w.unfundedFees||[]).reduce((a,b)=>a+b,0),
       } : null;
 
-      // Total financing cost = interest + fees
-      const totalFinCost = f.totalInterest + (feeData ? feeData.total : 0) + (f.upfrontFee || 0);
+      // Total financing cost = interest (includes upfront fee) + fund fees
+      const totalFinCost = f.totalInterest + (feeData ? feeData.total : 0);
       const finCostPct = f.devCostInclLand > 0 ? totalFinCost / f.devCostInclLand : 0;
 
       // Stable income for yield
@@ -2367,7 +2366,7 @@ When to use:
           <KPI label={ar?"سقف الدين":"Max Debt (LTV)"} value={fmtM(f.maxDebt)} sub={`${cfg.maxLtvPct||70}% LTV`} color="#ef4444" />
           <KPI label={ar?"إجمالي الملكية":"Total Equity"} value={fmtM(f.totalEquity)} sub={fmtPct((1-(f.totalDebt/(f.devCostInclLand||1)))*100)} color="#3b82f6" />
           <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color={f.leveredIRR>0.12?"#16a34a":"#f59e0b"} />
-          <KPI label={ar?"إجمالي تكلفة التمويل":"Total Financing Cost"} value={fmtM(totalFinCost)} sub={finCostPct>0?fmtPct(finCostPct*100)+" "+ar?"من التكلفة":"of cost":""} color="#ef4444" tip={ar?"فوائد + رسوم قرض + رسوم صندوق\nInterest + Upfront Fee + Fund Fees":""} />
+          <KPI label={ar?"إجمالي تكلفة التمويل":"Total Financing Cost"} value={fmtM(totalFinCost)} sub={finCostPct>0?fmtPct(finCostPct*100)+" "+ar?"من التكلفة":"of cost":""} color="#ef4444" tip={ar?"فوائد (شامل رسوم القرض) + رسوم صندوق\nInterest (incl. upfront fee) + Fund Fees":""} />
           <KPI label={ar?"عائد نقدي سنوي":"Cash-on-Cash Yield"} value={cashOnCash>0?fmtPct(cashOnCash*100):"—"} color={cashOnCash>0.08?"#16a34a":"#f59e0b"} />
           {isFund && feeData && <KPI label={ar?"إجمالي الرسوم":"Total Fund Fees"} value={fmtM(feeData.total)} sub={f.devCostInclLand>0?fmtPct(feeData.total/f.devCostInclLand*100)+" "+ar?"من التكلفة":"of cost":""} color="#f59e0b" />}
           <KPI label={ar?"إجمالي الفوائد":"Total Interest"} value={fmtM(f.totalInterest)} sub={cur} color="#ef4444" />
@@ -2416,13 +2415,13 @@ When to use:
             <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{ar?"تكلفة الدين":"DEBT COSTS"}</div>
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               <span style={{color:"#6b7080"}}>{ar?"إجمالي الفوائد":"Total Interest"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>{fmt(f.totalInterest)}</span>
-              <span style={{color:"#6b7080"}}>{ar?"رسوم القرض المقدمة":"Upfront Loan Fee"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.upfrontFee||0)} <span style={{fontSize:10,color:"#9ca3af"}}>{cfg.upfrontFeePct||0}%</span></span>
+              {(f.upfrontFee||0) > 0 && <><span style={{color:"#9ca3af",fontSize:10,fontStyle:"italic"}}>{ar?"* تشمل رسوم قرض":"* incl. upfront fee"}: {fmt(f.upfrontFee)} ({cfg.upfrontFeePct||0}%)</span><span></span></>}
               <span style={{color:"#6b7080"}}>{ar?"معدل التمويل":"Finance Rate"}</span><span style={{textAlign:"right",fontWeight:600}}>{cfg.financeRate||0}%</span>
               <span style={{color:"#6b7080"}}>{ar?"المدة":"Tenor"}</span><span style={{textAlign:"right",fontWeight:500}}>{cfg.loanTenor} {ar?"سنة":"yrs"} ({cfg.debtGrace} {ar?"سماح":"grace"})</span>
               <span style={{color:"#6b7080"}}>{ar?"السداد يبدأ":"Repay Starts"}</span><span style={{textAlign:"right",fontWeight:500}}>{sy + f.repayStart}</span>
               <span style={{color:"#6b7080"}}>{ar?"نوع السداد":"Repay Type"}</span><span style={{textAlign:"right",fontWeight:500}}>{cfg.repaymentType==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")}</span>
               <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700,color:"#ef4444"}}>{ar?"إجمالي تكلفة الدين":"Total Debt Cost"}</span>
-              <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700,color:"#ef4444"}}>{fmt(f.totalInterest + (f.upfrontFee||0))}</span>
+              <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700,color:"#ef4444"}}>{fmt(f.totalInterest)}</span>
             </div>
           </div>}
 
@@ -4964,7 +4963,6 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const totalEquity = f ? f.totalEquity || 0 : 0;
   const landCap = f ? f.landCapValue || 0 : 0;
   const grantTotal = ir ? ir.capexGrantTotal || 0 : 0;
-  const upfrontFee = f ? f.upfrontFee || 0 : 0;
   // devCostExclLand = construction CAPEX (includes land purchase for purchase type)
   // devCostInclLand = devCostExclLand + landCapValue (the real "total uses" base)
   // totalProjectCost = devCostInclLand + capitalizedFinCosts (when IDC is capitalized)
