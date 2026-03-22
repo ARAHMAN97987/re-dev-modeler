@@ -302,7 +302,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   let constrStart = h, constrEnd = 0;
   for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = Math.min(constrStart, y); constrEnd = Math.max(constrEnd, y); } }
   // Fund start: user input or 1 year before construction (same formula as waterfall.js)
-  const computedFundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - startYear : Math.max(0, constrStart - 1);
+  const computedFundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - startYear : constrStart;
 
   // ── Debt drawdown ──
   // scheduledUses = CAPEX schedule (land purchase already in capex[0] from cashflow.js)

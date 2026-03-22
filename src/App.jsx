@@ -2257,7 +2257,7 @@ When to use:
                   if (results.consolidated.capex[y] > 0) { firstCapexYr = sy + y; break; }
                 }
               }
-              const autoFundStart = Math.max(sy, firstCapexYr - 1);
+              const autoFundStart = firstCapexYr;
               const displayVal = (cfg.fundStartYear || 0) > 0 ? cfg.fundStartYear : autoFundStart;
               const isAuto = displayVal === autoFundStart;
               return <div>
@@ -2265,7 +2265,7 @@ When to use:
                   <Inp type="number" value={displayVal} onChange={v=>upCfg({fundStartYear:v===autoFundStart?0:v})} />
                 </FL>
                 <div style={{marginTop:-6,marginBottom:4,fontSize:10,color:"#6b7080",paddingInlineStart:2}}>
-                  {ar?`التلقائي: ${autoFundStart} (سنة قبل بداية البناء ${firstCapexYr})`:`Auto: ${autoFundStart} (1yr before construction ${firstCapexYr})`}
+                  {ar?`التلقائي: ${autoFundStart} (سنة بداية البناء)`:`Auto: ${autoFundStart} (construction start year)`}
                   {isAuto && <span style={{color:"#16a34a",marginInlineStart:6}}>✓</span>}
                 </div>
               </div>;

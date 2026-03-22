@@ -69,7 +69,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = Math.min(constrStart, y); constrEnd = Math.max(constrEnd, y); } }
 
   // Fund start year: user input or auto (1 year before construction)
-  const fundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : Math.max(0, constrStart - 1);
+  const fundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : constrStart;
 
   // Exit year — use optimal exit from financing engine (highest IRR)
   const exitStrategy = project.exitStrategy || "sale";
