@@ -18,9 +18,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   const ir = incentivesResult;
 
-  // ── Find construction end ──
-  let _constrEndEarly = 0;
-  for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { _constrEndEarly = y; break; } }
+  // ── Find construction period (early detection for scanner + IDC) ──
+  let _constrStartEarly = h, _constrEndEarly = 0;
+  for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { _constrStartEarly = Math.min(_constrStartEarly, y); _constrEndEarly = Math.max(_constrEndEarly, y); } }
 
   // ── Optimal Exit Year Scanner ──
   // يجرب كل سنة تخارج ممكنة ويحسب levered IRR لكل واحدة ويختار الأعلى
@@ -183,11 +183,30 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const grace = project.debtGrace ?? 3;
   const repayYears = tenor - grace;
   const maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
+  const upfrontFeePct = (project.upfrontFeePct || 0) / 100;
+
+  // ── Interest During Construction (IDC) estimation ──
+  // When capitalizeIDC is true: estimate financing costs during construction
+  // and add them to project cost → increases equity needed
+  // IDC = progressive debt draws × rate during construction period
+  // Upfront fees = each draw × upfront fee %
+  let estimatedIDC = 0;
+  let estimatedUpfrontFees = 0;
+  if (project.capitalizeIDC && maxDebt > 0 && rate > 0) {
+    const totalCapex = c.totalCapex || 1;
+    let cumDraw = 0;
+    for (let y = _constrStartEarly; y <= _constrEndEarly && y < h; y++) {
+      const yearDraw = maxDebt * ((c.capex[y] || 0) / totalCapex);
+      const avgBalance = cumDraw + yearDraw / 2;
+      estimatedIDC += avgBalance * rate;
+      estimatedUpfrontFees += yearDraw * upfrontFeePct;
+      cumDraw += yearDraw;
+    }
+  }
+  const capitalizedFinCosts = project.capitalizeIDC ? (estimatedIDC + estimatedUpfrontFees) : 0;
 
   // ── Equity Structure ──
-  // ZAN: upfront fee is per-draw interest cost, NOT part of project cost/equity
-  const upfrontFeePct = (project.upfrontFeePct || 0) / 100;
-  const totalProjectCost = devCostInclLand;
+  const totalProjectCost = devCostInclLand + capitalizedFinCosts;
   let totalEquity = Math.max(0, totalProjectCost - maxDebt);
   let gpEquity, lpEquity;
 
@@ -527,6 +546,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   return {
     mode: project.finMode, landCapValue, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
     gpEquity, lpEquity, totalEquity, gpPct, lpPct, gpEquityBreakdown,
+    capitalizedFinCosts, estimatedIDC, estimatedUpfrontFees,
     drawdown, equityCalls, debtBalOpen, debtBalClose,
     repayment: repay, interest: adjustedInterest, originalInterest: interest,
     debtService: adjustedDebtService, leveredCF, dscr, exitProceeds,

@@ -2054,6 +2054,57 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
               </div>
               <FL label={ar?"طريقة السحب":"Tranche Mode"} tip="Single: all debt as one block. Per Draw: each drawdown as separate tranche"><Drp lang={lang} value={cfg.debtTrancheMode||"single"} onChange={v=>upCfg({debtTrancheMode:v})} options={[{value:"single",en:"Single Block",ar:"كتلة واحدة"},{value:"perDraw",en:"Per Drawdown",ar:"لكل سحبة"}]} /></FL>
               <div style={{gridColumn:"1/-1",marginTop:-2,marginBottom:4}}><HelpLink contentKey="islamicFinance" lang={lang} onOpen={setEduModal} label={ar?"المرابحة والإجارة والتقليدي":"Murabaha vs Ijara vs Conventional"} /></div>
+              <div style={{gridColumn:"1/-1",borderTop:"1px solid #f0f1f3",paddingTop:8,marginTop:4}}>
+                <FL label={ar?"رسملة تكاليف التمويل أثناء البناء (IDC)":"Capitalize Financing Costs (IDC)"} tip={ar?
+`خلال البناء، المشروع ما يولّد دخل — لكن القرض يبدأ يراكم فوائد.
+
+السؤال: من يدفع هالفوائد؟
+
+لا (الوضع الافتراضي):
+الفوائد تتراكم وتُدفع من أول دخل تشغيلي بعد البناء.
+الـ Equity يغطي تكلفة البناء فقط.
+
+نعم (رسملة):
+الفوائد + رسوم البنك خلال البناء تُضاف على تكلفة المشروع.
+هذا يرفع الـ Equity المطلوب لأن المبلغ الإضافي لازم يجي من المطور أو المستثمر.
+
+متى تستخدمها؟
+• لما تبي تعرف التكلفة الحقيقية الكاملة للمشروع
+• لما البنك يطلب إدراج IDC بالدراسة
+• لما تقارن بين سيناريوهات تمويل مختلفة`:
+`During construction, the project generates no income — but the loan accrues interest.
+
+The question: who pays this interest?
+
+No (default):
+Interest accrues and is paid from first operating income after construction.
+Equity covers construction cost only.
+
+Yes (capitalize):
+Interest + bank fees during construction are added to project cost.
+This increases equity needed — the extra amount must come from developer or investor.
+
+When to use:
+• To see the true all-in project cost
+• When the bank requires IDC in the study
+• When comparing different financing scenarios`}>
+                  <Drp lang={lang} value={cfg.capitalizeIDC?"Y":"N"} onChange={v=>upCfg({capitalizeIDC:v==="Y"})} options={["Y","N"]} />
+                </FL>
+                {cfg.capitalizeIDC && f?.capitalizedFinCosts > 0 && <div style={{padding:"6px 10px",background:"#fef9c3",borderRadius:6,border:"1px solid #fde68a",fontSize:10,color:"#92400e",marginTop:-4}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                    <span>{ar?"فوائد أثناء البناء (IDC)":"Interest During Construction"}</span>
+                    <span style={{fontWeight:600}}>{fmt(f.estimatedIDC)} {cur}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                    <span>{ar?"رسوم بنك أولية":"Upfront Bank Fees"}</span>
+                    <span style={{fontWeight:600}}>{fmt(f.estimatedUpfrontFees)} {cur}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid #fde68a",paddingTop:2,marginTop:2}}>
+                    <span style={{fontWeight:700}}>{ar?"إجمالي مُرسمل (يُضاف على الـ Equity)":"Total Capitalized (added to Equity)"}</span>
+                    <span style={{fontWeight:700}}>{fmt(f.capitalizedFinCosts)} {cur}</span>
+                  </div>
+                </div>}
+              </div>
             </>}
           </>;
         })()}</AB>

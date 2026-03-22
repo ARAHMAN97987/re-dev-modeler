@@ -44,6 +44,7 @@ export const defaultProject = () => ({
   upfrontFeePct: 0.5,
   repaymentType: "amortizing", // amortizing | bullet
   debtTrancheMode: "single", // single | perDraw
+  capitalizeIDC: false, // Capitalize Interest During Construction + upfront fees into equity
   islamicMode: "conventional", // conventional | murabaha | ijara
   // Equity (manual override)
   gpEquityManual: 0, // 0 = auto from land cap + dev fee + cash
