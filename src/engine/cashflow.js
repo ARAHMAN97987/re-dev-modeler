@@ -48,27 +48,26 @@ export function computeProjectCashFlows(project) {
     const capexSch = new Array(horizon).fill(0);
     const revSch = new Array(horizon).fill(0);
     // ── Determine construction start and revenue start ──
-    // completionYear = سنة الافتتاح = أول سنة إيراد (الأولوية الأعلى)
-    // constrStart = override يدوي (fallback فقط إذا ما فيه completionYear)
+    // completionYear (explicit) = سنة الافتتاح = أول سنة إيراد (الأولوية الأعلى)
+    // constrStart = manual override (old projects / ZAN Excel compatibility)
+    // completionMonth = legacy field, falls back to constrStart if both exist
     let cStart, revStart;
     const assetPhase = (project.phases || []).find(ph => ph.name === (asset.phase || 'Phase 1'));
-    let phaseOpenIdx = null; // first revenue year index
-    if (assetPhase) {
-      if ((assetPhase.completionYear || 0) > 0) {
-        phaseOpenIdx = assetPhase.completionYear - startYear;
-      } else if ((assetPhase.completionMonth || 0) > 0) {
-        phaseOpenIdx = Math.ceil(assetPhase.completionMonth / 12);
-      }
-    }
 
-    if (phaseOpenIdx != null && phaseOpenIdx > 0) {
-      // Phase opening year defines first revenue year — construction works backward
+    if (assetPhase && (assetPhase.completionYear || 0) > 0) {
+      // NEW: completionYear explicitly set → opening year drives everything
+      const phaseOpenIdx = assetPhase.completionYear - startYear;
       revStart = phaseOpenIdx + delayYears;
       cStart = Math.max(0, revStart - durYears);
     } else if ((asset.constrStart || 0) > 0) {
-      // Manual override: constrStart = year number (1-based)
+      // OLD: constrStart set → forward calculation (legacy / ZAN Excel)
       cStart = (asset.constrStart - 1) + delayYears;
       revStart = cStart + durYears;
+    } else if (assetPhase && (assetPhase.completionMonth || 0) > 0) {
+      // LEGACY fallback: completionMonth without completionYear and without constrStart
+      const phaseOpenIdx = Math.ceil(assetPhase.completionMonth / 12);
+      revStart = phaseOpenIdx + delayYears;
+      cStart = Math.max(0, revStart - durYears);
     } else {
       cStart = delayYears;
       revStart = cStart + durYears;
