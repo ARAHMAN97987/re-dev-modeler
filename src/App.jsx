@@ -4999,7 +4999,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </div>
         <div>
           <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"إجمالي التكاليف":"Total CAPEX"}</div>
-          <div style={{fontSize:20,fontWeight:800,color:"#1a1d23"}}>{fmtM(hasIncentives?(totalCapex-grantTotal):totalCapex)}</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#1a1d23"}}>{fmtM(hasIncentives?(c.totalCapex-grantTotal):c.totalCapex)}</div>
           <div style={{fontSize:10,color:"#9ca3af"}}>{cur}{hasIncentives?` (${ar?"بعد المنحة":"net of grant"})`:""}</div>
         </div>
         {f && f.mode !== "self" && <div>
