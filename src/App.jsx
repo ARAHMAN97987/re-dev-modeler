@@ -4631,6 +4631,15 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             aggLR[y] += lr[y] || 0;
           }
         });
+        // Add land purchase CAPEX allocation (project-level, not in assetSchedules)
+        const _landPurchase = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
+        if (_landPurchase > 0) {
+          const _allScheds = results.assetSchedules || [];
+          const _totalFP = _allScheds.reduce((s, a) => s + (a.footprint || 0), 0);
+          const _filtFP = filteredIndices.reduce((s, i) => s + (_allScheds[i]?.footprint || 0), 0);
+          const _alloc = _totalFP > 0 ? _filtFP / _totalFP : 1;
+          aggCap[0] += _landPurchase * _alloc;
+        }
         const toggleAllCF = () => {
           const next = !cfAllOpen;
           setCfAllOpen(next);
@@ -4648,9 +4657,9 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
           const cumCF = netCF.map(v => { cum += v; return cum; });
           const rows = [
             {l: ar?"إيرادات":"Revenue", d: rev, c:"#16a34a", show:true},
-            {l: ar?"تكاليف تطوير":"CAPEX", d: cap, c:"#ef4444", neg:true, show:true},
-            {l: ar?"صافي التدفق":"Net CF", d: netCF, c:"#1a1d23", bold:true, show:true},
-            {l: ar?"إيجار أرض":"Land Rent", d: lr, c:"#f59e0b", neg:true, show:cfDetail},
+            {l: ar?"(-) إيجار أرض":"(-) Land Rent", d: lr, c:"#f59e0b", neg:true, show:true},
+            {l: ar?"(-) تكاليف تطوير":"(-) CAPEX", d: cap, c:"#ef4444", neg:true, show:true},
+            {l: ar?"= صافي التدفق":"= Net CF", d: netCF, c:"#1a1d23", bold:true, show:true},
             {l: ar?"صافي دخل":"Net Income", d: netInc, c:"#2563eb", show:cfDetail},
             {l: ar?"تراكمي":"Cumulative", d: cumCF, c:"#8b5cf6", show:cfDetail},
           ];
@@ -8157,6 +8166,9 @@ function CashFlowView({ project, results, t, incentivesResult }) {
 
   // ── Build phase data directly from asset schedules ──
   const phaseNames = (project.phases || []).map(p => p.name);
+  // Land purchase CAPEX is project-level (not in assetSchedules) — must be added back
+  const landPurchaseCapex = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
+  const totalFP = assetScheds.reduce((s, a) => s + (a.footprint || 0), 0);
   const phaseData = {};
   phaseNames.forEach(pName => {
     const phaseAssets = assetScheds.filter(a => (a.phase || "Phase 1") === pName);
@@ -8168,6 +8180,12 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         cap[y] += a.capexSchedule[y] || 0;
       }
     });
+    // Add land purchase allocation (by footprint, same as cashflow.js)
+    if (landPurchaseCapex > 0) {
+      const pFP = phaseAssets.reduce((s, a) => s + (a.footprint || 0), 0);
+      const alloc = totalFP > 0 ? pFP / totalFP : phaseNames.length > 0 ? 1 / phaseNames.length : 0;
+      cap[0] += landPurchaseCapex * alloc;
+    }
     // Land rent: read from phaseResults (allocation by footprint is already computed in cashflow.js)
     const prLand = results.phaseResults?.[pName]?.landRent || new Array(horizon).fill(0);
     const noi = new Array(horizon).fill(0);
