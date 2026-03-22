@@ -2088,10 +2088,10 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         <SecWrap visible={hasEq} color="#8b5cf6">
         <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · GP ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
         <AB id="land" visible={hasEq}>
-          <FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض إلى حصة Equity في الحسابات التمويلية\nConvert leasehold land value to equity in financing calculations">
+          {(project.landType==="lease"||project.landType==="bot")&&<FL label={ar?"رسملة الأرض؟":"Capitalize Land?"} tip="تحويل قيمة الأرض المؤجرة إلى حصة Equity في الحسابات التمويلية. لا يظهر عند الشراء أو الشراكة لأن الأرض محسوبة فعلاً\nConvert leasehold land value to equity. Not available for purchase/partner — land is already in CAPEX/equity">
             <Drp lang={lang} value={cfg.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
-          </FL>
-          {cfg.landCapitalize&&<>
+          </FL>}
+          {cfg.landCapitalize&&(project.landType==="lease"||project.landType==="bot")&&<>
             <div style={g2}>
               <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
               <FL label={ar?"رسملة الأرض لصالح":"Land Cap Credit To"} tip="من يحصل على حصة الأرض المرسملة كـ Equity: المطور (GP) أو المستثمر (LP) أو مقسمة بالتساوي\nWho gets land capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>

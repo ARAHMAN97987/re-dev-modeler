@@ -92,7 +92,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   // ── Land Capitalization ──
-  const landCapValue = project.landCapitalize ? (project.landArea || 0) * (project.landCapRate || 1000) : 0;
+  // Only for lease/bot — purchase has land in CAPEX already, partner uses landValuation
+  const canCapitalize = project.landType === "lease" || project.landType === "bot";
+  const landCapValue = (project.landCapitalize && canCapitalize) ? (project.landArea || 0) * (project.landCapRate || 1000) : 0;
   // H15: Partner land uses landValuation as equity contribution
   const partnerLandValue = project.landType === "partner" ? (project.landValuation || 0) : 0;
   const effectiveLandCap = landCapValue + partnerLandValue;

@@ -35,7 +35,6 @@ export const defaultProject = () => ({
   landRentStartRule: "auto", // auto = MIN(grace, income) | grace = grace end only | income = first income only
   landLeaseStartYear: 0, // 0 = same as project startYear. Otherwise absolute year (e.g. 2025)
   landRentManualAlloc: null, // null = auto (by footprint). Object like {"Phase 1":60,"Phase 2":40} = manual %
-  landCapGpBearRent: false, // GP bears land rent alone if capitalized
   // Debt
   debtAllowed: true,
   maxLtvPct: 70,
