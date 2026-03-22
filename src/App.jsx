@@ -1910,7 +1910,7 @@ function Drp({value,onChange,options,lang:dl}) {
   return <select value={value} onChange={e=>onChange(e.target.value)} style={_finSelSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[dl]||o.en||o.label}</option>)}</select>;
 }
 
-function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, t, up, lang, globalExpand }) {
+function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, incentivesResult, t, up, lang, globalExpand }) {
   const isMobile = useIsMobile();
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhase, setSelectedPhase] = useState("all");
@@ -1958,6 +1958,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
   const h = results.horizon;
   const sy = results.startYear;
+  const ir = incentivesResult;
   // Fee auto-default hints — shown under field as part of hint text
   const _FD = { subscriptionFeePct:2, annualMgmtFeePct:1.5, mgmtFeeCapAnnual:2000000, custodyFeeAnnual:100000, developerFeePct:10, structuringFeePct:1, structuringFeeCap:300000, preEstablishmentFee:200000, spvFee:20000, auditorFeeAnnual:50000, operatorFeePct:0.15, operatorFeeCap:600000, miscExpensePct:0.5, upfrontFeePct:2 };
   const autoHint = (field, baseHint) => { const d = _FD[field]; if (d === undefined) return baseHint; const fmt = d >= 1000 ? (d/1000).toLocaleString()+'K' : d+'%'; return baseHint + (ar ? ` · التلقائي: ${fmt}` : ` · default: ${fmt}`); };
@@ -3261,7 +3262,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           {[
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
-            ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
+            ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
             ["waterfall", <WaterfallView key="waterfall" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
             ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
