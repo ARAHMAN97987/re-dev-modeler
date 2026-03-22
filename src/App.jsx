@@ -4968,8 +4968,9 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const upfrontFee = f ? f.upfrontFee || 0 : 0;
   // devCostExclLand = construction CAPEX (includes land purchase for purchase type)
   // devCostInclLand = devCostExclLand + landCapValue (the real "total uses" base)
+  // totalProjectCost = devCostInclLand + capitalizedFinCosts (when IDC is capitalized)
   const devCostExcl = f ? f.devCostExclLand || c.totalCapex : c.totalCapex;
-  const devCostIncl = f ? f.devCostInclLand || c.totalCapex : c.totalCapex;
+  const devCostIncl = f ? (f.totalProjectCost || f.devCostInclLand || c.totalCapex) : c.totalCapex;
 
   // ── Cash flow chart data (SVG bars) ──
   const chartYears = Math.min(20, h);
@@ -5056,6 +5057,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
               <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:5,maxWidth:420}}>
                 <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(devCostExcl)}</span>
                 {landCap > 0 && [<span key="cl" style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Cap."}</span>,<span key="cv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCap)}</span>]}
+                {f && f.capitalizedFinCosts > 0 && [<span key="il" style={{color:"#6b7080"}}>{ar?"تكاليف تمويل مرسملة":"Capitalized IDC"}</span>,<span key="iv" style={{textAlign:"right",fontWeight:500}}>{fmtM(f.capitalizedFinCosts)}</span>]}
                 {upfrontFee > 0 && [<span key="fl" style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Loan Fee"}</span>,<span key="fv" style={{textAlign:"right",fontWeight:500}}>{fmtM(upfrontFee)}</span>]}
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(devCostIncl)}</span>
