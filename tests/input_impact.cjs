@@ -167,7 +167,7 @@ M=run(makeProject({mgmtFeeBase:'equity'}));chk('mgmtBase=eq',M.w&&M.w.totalFees!
 M=run(makeProject({developerFeePct:5}));chk('devFee',M.w&&M.w.totalFees<B.w.totalFees,'no impact');
 M=run(makeProject({structuringFeePct:3}));chk('structFee',M.w&&M.w.totalFees>B.w.totalFees,'no impact');
 M=run(makeProject({custodyFeeAnnual:500000}));chk('custody',M.w&&M.w.totalFees>B.w.totalFees,'no impact');
-M=run(makeProject({fundStartYear:2025}));chk('fundStart',M.w&&M.w.totalFees!==B.w.totalFees,'no impact');
+M=run(makeProject({fundStartYear:2028}));chk('fundStart',M.w&&M.w.totalFees!==B.w.totalFees,'no impact');
 M=run(makeProject({landRentPaidBy:'gp'}));chk('rentPaidBy=gp',M.w&&M.w.gpLandRentTotal>0,'GP rent=0');
 
 // [9] Incentives

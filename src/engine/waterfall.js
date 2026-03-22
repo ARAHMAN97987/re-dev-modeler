@@ -69,7 +69,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = Math.min(constrStart, y); constrEnd = Math.max(constrEnd, y); } }
 
   // Fund start year: user input or auto (1 year before construction)
-  const fundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : constrStart;
+  const fundStartIdx = Math.max(0, (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : constrStart);
 
   // Exit year — use optimal exit from financing engine (highest IRR)
   const exitStrategy = project.exitStrategy || "sale";
@@ -167,7 +167,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     lpCalls[y] = equityCalls[y] * lpPct;
   }
 
-  // Exit proceeds - use from financing engine (already net of debt)
+  // Exit proceeds - GROSS (net of exit cost only, NOT net of debt). Debt repaid via balloon in debtService.
   const exitProceeds = [...(f.exitProceeds || new Array(h).fill(0))];
 
   // Cash available for distribution - ZAN formula:
