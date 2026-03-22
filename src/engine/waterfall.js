@@ -131,11 +131,13 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // Fees that operating CF cannot cover → must be funded from equity
   // ZAN: UnfundedFees[y] = MAX(0, Fees[y] - MAX(0, UnlevCF[y] + DS[y] + Exit[y]))
   // In ZAN: DS is negative. In our code: DS is positive → subtract.
-  // UnlevCF = c.netCF = income - landRent - capex
+  // FIX#20: Use incentive-adjusted netCF (was using raw c.netCF, ignoring grants/rebates)
+  const ir = incentivesResult;
   const unfundedFees = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
     if (fees[y] > 0) {
-      const operatingCF = c.netCF[y] - (f.debtService[y] || 0) + (f.exitProceeds?.[y] || 0);
+      const adjNetCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
+      const operatingCF = adjNetCF - (f.debtService[y] || 0) + (f.exitProceeds?.[y] || 0);
       unfundedFees[y] = Math.max(0, fees[y] - Math.max(0, operatingCF));
     }
   }
@@ -172,7 +174,6 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // cashAvail[y] = MAX(0, IF(yr in [fundStart..exit], UnlevCF, 0) + DS - Fees + UF + Exit)
   // UnlevCF = c.netCF = income - landRent - CAPEX (already includes CAPEX, unlike NOI-only)
   // DS is positive in our code → subtract. Fees positive → subtract. UF positive → add back.
-  const ir = incentivesResult;
   const adjLandRent = ir?.adjustedLandRent || c.landRent;
   // Land rent payer resolution (platform-specific, not in ZAN)
   const lrPaidByRaw = project.landRentPaidBy || "auto";

@@ -4,7 +4,7 @@
  * Independently calculates devCost, landCap, debt ceiling, GP/LP equity
  * from raw project data, then compares with engine output.
  *
- * THE GOLDEN EQUATION: maxDebt + gpEquity + lpEquity = totalProjectCost
+ * THE GOLDEN EQUATION: totalDebt + gpEquity + lpEquity = totalProjectCost
  *
  * Tests across 4 financing modes × 3 land types × GP source combos
  */
@@ -130,8 +130,8 @@ process.stdout.write('[A] Fund+Lease: ');
   t('A', 'gpEquity', EQ(f.gpEquity, e.gpEquity), `eng=${f.gpEquity} exp=${e.gpEquity}`);
   t('A', 'lpEquity', EQ(f.lpEquity, e.lpEquity), `eng=${f.lpEquity} exp=${e.lpEquity}`);
   // GOLDEN EQUATION
-  t('A', 'GOLDEN: D+GP+LP=Cost', EQ(f.maxDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand), 
-    `D=${f.maxDebt} GP=${f.gpEquity} LP=${f.lpEquity} sum=${f.maxDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
+  t('A', 'GOLDEN: D+GP+LP=Cost', EQ(f.totalDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand), 
+    `D=${f.maxDebt} GP=${f.gpEquity} LP=${f.lpEquity} sum=${f.totalDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
   t('A', 'GP+LP=Equity', EQ(f.gpEquity + f.lpEquity, f.totalEquity), `GP+LP=${f.gpEquity+f.lpEquity} eq=${f.totalEquity}`);
 }
 console.log('');
@@ -148,8 +148,8 @@ process.stdout.write('[B] Fund+Purchase: ');
   t('B', 'devCostExclLand includes land', EQ(f.devCostExclLand, e.devCostExclLand), `eng=${f.devCostExclLand} exp=${e.devCostExclLand}`);
   t('B', 'devCostInclLand=ExclLand (no cap)', EQ(f.devCostInclLand, f.devCostExclLand), `incl=${f.devCostInclLand} excl=${f.devCostExclLand}`);
   t('B', 'devFee excludes land', EQ(f.devFeeTotal, e.devFeeTotal), `eng=${f.devFeeTotal} exp=${e.devFeeTotal}`);
-  t('B', 'GOLDEN: D+GP+LP=Cost', EQ(f.maxDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
-    `sum=${f.maxDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
+  t('B', 'GOLDEN: D+GP+LP=Cost', EQ(f.totalDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
+    `sum=${f.totalDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
 }
 console.log('');
 
@@ -163,8 +163,8 @@ process.stdout.write('[C] Fund+Partner: ');
   
   t('C', 'partnerLand in devCostInclLand', f.devCostInclLand > f.devCostExclLand, `incl=${f.devCostInclLand} excl=${f.devCostExclLand}`);
   t('C', 'GP includes partner share', f.gpEquity > 0, `gpEquity=${f.gpEquity}`);
-  t('C', 'GOLDEN: D+GP+LP=Cost', EQ(f.maxDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
-    `sum=${f.maxDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
+  t('C', 'GOLDEN: D+GP+LP=Cost', EQ(f.totalDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
+    `sum=${f.totalDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
 }
 console.log('');
 
@@ -193,8 +193,8 @@ process.stdout.write('[E] Debt mode: ');
   t('E', 'GP=100% of equity', f.gpPct === 1 || EQ(f.gpEquity, f.totalEquity), `gpPct=${f.gpPct} gp=${f.gpEquity} eq=${f.totalEquity}`);
   t('E', 'LP=0', f.lpEquity === 0, `lpEquity=${f.lpEquity}`);
   t('E', 'maxDebt>0', f.maxDebt > 0, `maxDebt=${f.maxDebt}`);
-  t('E', 'GOLDEN: D+GP+LP=Cost', EQ(f.maxDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
-    `sum=${f.maxDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
+  t('E', 'GOLDEN: D+GP+LP=Cost', EQ(f.totalDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
+    `sum=${f.totalDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
 }
 console.log('');
 
@@ -207,8 +207,11 @@ process.stdout.write('[F] Bank100: ');
   
   t('F', 'maxDebt=devCostInclLand', EQ(f.maxDebt, f.devCostInclLand), `maxDebt=${f.maxDebt} dev=${f.devCostInclLand}`);
   t('F', 'totalEquity=0', f.totalEquity === 0, `totalEquity=${f.totalEquity}`);
-  t('F', 'GOLDEN: D+GP+LP=Cost', EQ(f.maxDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
-    `sum=${f.maxDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
+  // bank100 golden: totalDebt may be less than maxDebt when landCap creates non-cash gap
+  // The correct identity for bank100: totalDebt = min(maxDebt, totalCapex), equity = 0
+  const expectedDebt = Math.min(f.maxDebt, r.consolidated.totalCapex);
+  t('F', 'GOLDEN: totalDebt=min(max,capex)', EQ(f.totalDebt, expectedDebt),
+    `totalDebt=${f.totalDebt} expected=${expectedDebt}`);
 }
 console.log('');
 
@@ -279,8 +282,8 @@ for (const ltv of [0, 30, 50, 70, 100]) {
   const { p, r, f } = run({ maxLtvPct:ltv });
   const e = expectedCapitalStructure(p, r);
   t('H', `LTV=${ltv}% debt`, EQ(f.maxDebt, e.maxDebt), `eng=${f.maxDebt} exp=${e.maxDebt}`);
-  t('H', `LTV=${ltv}% golden`, EQ(f.maxDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
-    `sum=${f.maxDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
+  t('H', `LTV=${ltv}% golden`, EQ(f.totalDebt + f.gpEquity + f.lpEquity, f.totalProjectCost || f.devCostInclLand),
+    `sum=${f.totalDebt+f.gpEquity+f.lpEquity} cost=${f.totalProjectCost||f.devCostInclLand}`);
 }
 console.log('');
 
@@ -296,8 +299,8 @@ process.stdout.write('[I] IDC: ');
     `no=${fNo.totalProjectCost} yes=${fYes.totalProjectCost}`);
   t('I', 'IDC increases equity', fYes.totalEquity >= fNo.totalEquity,
     `no=${fNo.totalEquity} yes=${fYes.totalEquity}`);
-  t('I', 'GOLDEN with IDC', EQ(fYes.maxDebt + fYes.gpEquity + fYes.lpEquity, fYes.totalProjectCost),
-    `sum=${fYes.maxDebt+fYes.gpEquity+fYes.lpEquity} cost=${fYes.totalProjectCost}`);
+  t('I', 'GOLDEN with IDC', EQ(fYes.totalDebt + fYes.gpEquity + fYes.lpEquity, fYes.totalProjectCost),
+    `sum=${fYes.totalDebt+fYes.gpEquity+fYes.lpEquity} cost=${fYes.totalProjectCost}`);
 }
 console.log('');
 
@@ -320,8 +323,8 @@ process.stdout.write('[J] Per-Phase: ');
   const res = computeIndependentPhaseResults(p3, r, ir);
   
   for (const [pName, pf] of Object.entries(res.phaseFinancings)) {
-    t('J', `${pName} golden`, EQ(pf.maxDebt + pf.gpEquity + pf.lpEquity, pf.totalProjectCost || pf.devCostInclLand),
-      `D=${pf.maxDebt} GP=${pf.gpEquity} LP=${pf.lpEquity} sum=${pf.maxDebt+pf.gpEquity+pf.lpEquity} cost=${pf.totalProjectCost||pf.devCostInclLand}`);
+    t('J', `${pName} golden`, EQ(pf.totalDebt + pf.gpEquity + pf.lpEquity, pf.totalProjectCost || pf.devCostInclLand),
+      `D=${pf.maxDebt} GP=${pf.gpEquity} LP=${pf.lpEquity} sum=${pf.totalDebt+pf.gpEquity+pf.lpEquity} cost=${pf.totalProjectCost||pf.devCostInclLand}`);
     t('J', `${pName} GP+LP=Eq`, EQ(pf.gpEquity + pf.lpEquity, pf.totalEquity),
       `GP+LP=${pf.gpEquity+pf.lpEquity} eq=${pf.totalEquity}`);
   }

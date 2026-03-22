@@ -338,11 +338,27 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   if (!isBank100 && totalDrawn < maxDebt && totalProjectCost > 0) {
     const prevEquity = totalEquity;
     totalEquity = Math.max(0, totalProjectCost - totalDrawn);
-    if (prevEquity > 0 && totalEquity !== prevEquity) {
-      // Scale GP/LP proportionally to preserve split ratio
-      const scale = totalEquity / prevEquity;
-      gpEquity *= scale;
-      lpEquity = totalEquity - gpEquity;
+    if (totalEquity !== prevEquity) {
+      if (prevEquity > 0) {
+        // Scale GP/LP proportionally to preserve split ratio
+        const scale = totalEquity / prevEquity;
+        gpEquity *= scale;
+        lpEquity = totalEquity - gpEquity;
+      } else {
+        // BUG#21 fix: prevEquity=0 but totalEquity>0 → recompute GP/LP from scratch
+        // This happens when maxDebt ≥ TPC but actual draws < TPC (e.g. landCap + high LTV)
+        const landCapTarget = project.landCapTo || "gp";
+        let gpFromLandCap = 0;
+        if (effectiveLandCap > 0) {
+          if (landCapTarget === "gp") gpFromLandCap = effectiveLandCap;
+          else if (landCapTarget === "split") gpFromLandCap = effectiveLandCap * 0.5;
+        }
+        gpEquity = Math.min(gpFromLandCap + gpDevFeeInvest + gpCashInvest, totalEquity);
+        lpEquity = Math.max(0, totalEquity - gpEquity);
+        if (hasLP && lpEquity === 0 && gpEquity === 0 && totalEquity > 0) {
+          lpEquity = totalEquity;
+        }
+      }
       gpPct = totalEquity > 0 ? gpEquity / totalEquity : 0;
       lpPct = totalEquity > 0 ? lpEquity / totalEquity : 0;
     }
