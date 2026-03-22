@@ -1545,13 +1545,24 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
                 <option value="caprate">Cap Rate</option>
               </select>
             </div>
-            {[
-              {l:ar?"المضاعف":"Multiple",k:"exitMultiple",v:cfg.exitMultiple},
-              {l:ar?"تكلفة %":"Cost %",k:"exitCostPct",v:cfg.exitCostPct},
-            ].map(fld=><div key={fld.k} style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{fld.l}</span>
-              <input type="number" value={fld.v||""} onChange={e=>upCfg({[fld.k]:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
-            </div>)}
+            {(cfg.exitStrategy||"sale")!=="hold"&&<>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"السنة":"Year"}</span>
+                <input type="number" value={cfg.exitYear||""} onChange={e=>upCfg({exitYear:parseFloat(e.target.value)||0})} placeholder="auto" style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              </div>
+              {(cfg.exitStrategy||"sale")==="sale"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"المضاعف":"Multiple"}</span>
+                <input type="number" value={cfg.exitMultiple||""} onChange={e=>upCfg({exitMultiple:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              </div>}
+              {cfg.exitStrategy==="caprate"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"رسملة %":"Cap %"}</span>
+                <input type="number" value={cfg.exitCapRate||""} onChange={e=>upCfg({exitCapRate:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              </div>}
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"تكلفة %":"Cost %"}</span>
+                <input type="number" value={cfg.exitCostPct||""} onChange={e=>upCfg({exitCostPct:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              </div>
+            </>}
           </div>
         </div>}
       </div>

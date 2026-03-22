@@ -37,6 +37,8 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
   });
   if (project.exitStrategy === "caprate" && (project.exitCapRate??9) === 0)
     add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
+  if ((project.exitStrategy||"sale") === "sale" && (project.exitMultiple??10) === 0)
+    add("T0","Exit Multiple = 0", false, "Sale exit with 0x multiple produces zero exit value");
   if (f && project.debtAllowed && (project.loanTenor??7) <= (project.debtGrace??3))
     add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${project.loanTenor??7}, Grace: ${project.debtGrace??3}`);
   // K1-K7: Additional validation checks from code audit
@@ -52,7 +54,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
 
   // H11: Exit during ramp-up warning
   if (f && project.exitStrategy !== "hold") {
-    const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2025) : 0;
+    const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2026) : 0;
     const maxRamp = Math.max(...as.map(a => {
       const lastCapex = a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0);
       return lastCapex + (a.rampUpYears??3);
