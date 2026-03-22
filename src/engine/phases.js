@@ -299,6 +299,20 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   }
 
   const consolidatedFinancing = aggregatePhaseFinancings(phaseFinancings, h);
+  // FIX: Consolidated DSCR must use total NOI / total DS across ALL phases
+  // The weighted-average method in aggregatePhaseFinancings misses NOI from phases
+  // whose debt is fully repaid (DS=0 → DSCR=null → excluded from weighted avg).
+  // Correct: total NOI includes income from ALL phases (even those without active debt).
+  if (consolidatedFinancing && projectResults?.consolidated) {
+    const c = projectResults.consolidated;
+    const adjLR = incentivesResult?.adjustedLandRent || c.landRent;
+    const ds = consolidatedFinancing.debtService;
+    const fixedDscr = new Array(h).fill(null);
+    for (let y = 0; y < h; y++) {
+      if (ds[y] > 0) fixedDscr[y] = (c.income[y] - adjLR[y]) / ds[y];
+    }
+    consolidatedFinancing.dscr = fixedDscr;
+  }
   const consolidatedWaterfall = aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h);
 
   return { phaseFinancings, phaseWaterfalls, consolidatedFinancing, consolidatedWaterfall };
