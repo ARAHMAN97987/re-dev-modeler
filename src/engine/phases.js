@@ -192,7 +192,7 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
     exitYear: Math.max(...names.map(n => phaseFinancings[n]?.exitYear || 0)),
     incomeStabilizationYear: Math.max(...names.map(n => phaseFinancings[n]?.incomeStabilizationYear || 0)),
     optimalExitYear: Math.max(...names.map(n => phaseFinancings[n]?.optimalExitYear || 0)),
-    optimalExitIRR: Math.max(...names.map(n => phaseFinancings[n]?.optimalExitIRR ?? -Infinity)),
+    optimalExitIRR: (() => { const irrs = names.map(n => phaseFinancings[n]?.optimalExitIRR).filter(v => v != null && isFinite(v)); return irrs.length > 0 ? Math.max(...irrs) : null; })(),
   };
 }
 

@@ -1552,7 +1552,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"السنة":"Year"}</span>
                 <input type="number" value={cfg.exitYear||""} onChange={e=>upCfg({exitYear:parseFloat(e.target.value)||0})} placeholder="auto" style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
-                {pf?.optimalExitYear > 0 && <span style={{fontSize:10,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.optimalExitYear}{pf.optimalExitIRR!=null?` (${(pf.optimalExitIRR*100).toFixed(1)}%)`:""}</span>}
+                {pf?.optimalExitYear > 0 && pf?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && <span style={{fontSize:10,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.optimalExitYear} ({(pf.optimalExitIRR*100).toFixed(1)}%)</span>}
               </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"المضاعف":"Multiple"}</span>
@@ -2071,9 +2071,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             <div style={g2}>
               <div>
                 <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto" tip="سنة بيع الأصل. عادة 5-10 سنوات بعد الاستقرار التشغيلي. 0 = تلقائي\nYear of asset sale. Usually 5-10 years after stabilization. 0 = auto"><Inp type="number" value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} /></FL>
-                {f?.optimalExitYear > 0 && <div style={{marginTop:-6,marginBottom:4,padding:"4px 8px",background:"#fef9c3",borderRadius:5,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:4}}>
+                {f?.optimalExitYear > 0 && f?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && <div style={{marginTop:-6,marginBottom:4,padding:"4px 8px",background:"#fef9c3",borderRadius:5,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:4}}>
                   <span style={{fontSize:11}}>💡</span>
-                  <span style={{fontSize:10,color:"#92400e"}}>{ar?`لتحقيق أعلى IRR${f.optimalExitIRR!=null?` (${(f.optimalExitIRR*100).toFixed(1)}%)`:""} يوصى: ${f.optimalExitYear}`:`For highest IRR${f.optimalExitIRR!=null?` (${(f.optimalExitIRR*100).toFixed(1)}%)`:""}, recommended: ${f.optimalExitYear}`}</span>
+                  <span style={{fontSize:10,color:"#92400e"}}>{ar?`لتحقيق أعلى IRR (${(f.optimalExitIRR*100).toFixed(1)}%) يوصى: ${f.optimalExitYear}`:`For highest IRR (${(f.optimalExitIRR*100).toFixed(1)}%), recommended: ${f.optimalExitYear}`}</span>
                 </div>}
               </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="قيمة البيع = الإيجار × المضاعف. عادة 8x-15x\nSale price = Rent × Multiple. Usually 8x-15x"><Inp type="number" value={cfg.exitMultiple} onChange={v=>upCfg({exitMultiple:v})} /></FL>}

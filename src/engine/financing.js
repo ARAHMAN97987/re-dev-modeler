@@ -27,18 +27,17 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // Uses a lightweight simulation: exit proceeds + balloon repay at each candidate year
   const exitStrategy = project.exitStrategy || "sale";
   const assetScheds = projectResults.assetSchedules || [];
-  let optimalExitIdx = _constrEndEarly + 3; // fallback
+  let optimalExitIdx = null;
   let optimalExitIRR = null;
 
-  if (exitStrategy !== "hold" && (project.exitYear || 0) === 0) {
-    // Scan range: first year after construction → min(constrEnd+20, horizon-1)
+  if (exitStrategy !== "hold") {
+    // Always scan as advisory — recommendation shows regardless of manual exitYear
     const scanStart = _constrEndEarly + 1;
     const scanEnd = Math.min(_constrEndEarly + 25, h - 1);
     let bestIRR = -Infinity;
-    let bestIdx = scanStart;
+    let bestIdx = -1;
 
     for (let tryExit = scanStart; tryExit <= scanEnd; tryExit++) {
-      // Calculate exit value at this year
       let exitVal = 0;
       const exitIdx = Math.min(tryExit, h - 1);
       if (assetScheds.length > 0) {
@@ -72,7 +71,6 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       const exitCost = exitVal * (project.exitCostPct ?? 2) / 100;
       const netExit = Math.max(0, exitVal - exitCost);
 
-      // Build simplified CF: income - land - capex + incentives + exit, zero after
       const tryCF = new Array(h).fill(0);
       const adjLR = ir?.adjustedLandRent || c.landRent;
       for (let y = 0; y <= tryExit && y < h; y++) {
@@ -82,14 +80,19 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       tryCF[tryExit] += netExit;
 
       const tryIRR = calcIRR(tryCF);
-      if (tryIRR !== null && tryIRR > bestIRR) {
+      if (tryIRR !== null && isFinite(tryIRR) && tryIRR > bestIRR) {
         bestIRR = tryIRR;
         bestIdx = tryExit;
       }
     }
-    optimalExitIdx = bestIdx;
-    optimalExitIRR = bestIRR > -Infinity ? bestIRR : null;
+    if (bestIdx >= 0 && bestIRR > -Infinity && isFinite(bestIRR)) {
+      optimalExitIdx = bestIdx;
+      optimalExitIRR = bestIRR;
+    }
   }
+
+  // For auto exit year (exitYear=0): use optimal if found, else constrEnd+3
+  const autoExitIdx = optimalExitIdx ?? (_constrEndEarly + 3);
 
   // ── Land Capitalization ──
   // Only for lease/bot — purchase has land in CAPEX already, partner uses landValuation
@@ -115,7 +118,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     const exitProceedsSelf = new Array(h).fill(0);
     const exitStrategySelf = project.exitStrategy || "sale";
     // Auto exit: optimal year for highest IRR (scanned above)
-    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : optimalExitIdx);
+    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : autoExitIdx);
     const selfSold = exitStrategySelf !== "hold" && exitYrSelf >= 0 && exitYrSelf < h;
     if (selfSold) {
       // FIX#1: Per-asset exit valuation - skip Sale assets (already realized)
@@ -169,7 +172,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       totalDebt: 0, totalInterest: 0, interestSubsidyTotal: 0, interestSubsidySchedule: new Array(h).fill(0),
       upfrontFee: 0, leveredIRR: selfIRR, exitProceeds: exitProceedsSelf,
       maxDebt: 0, rate: 0, tenor: 0, grace: 0, repayYears: 0, constrEnd: constrEndSelf, repayStart: 0, exitYear: exitYrSelf + startYear,
-      optimalExitYear: optimalExitIdx + startYear, optimalExitIRR,
+      optimalExitYear: optimalExitIdx != null ? optimalExitIdx + startYear : null, optimalExitIRR,
     };
   }
 
@@ -421,7 +424,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // ── Exit ──
   const exitProceeds = new Array(h).fill(0);
-  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : optimalExitIdx);
+  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : autoExitIdx);
 
   if (exitStrategy !== "hold" && exitYr >= 0 && exitYr < h) {
     // H8: Per-component exit valuation
@@ -532,7 +535,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     upfrontFee, maxDebt, rate, tenor, grace, repayYears, graceStartIdx,
     leveredIRR: calcIRR(leveredCF), constrEnd, constrStart, repayStart, exitYear: exitYr + startYear,
     computedFundStartYear: computedFundStartIdx + startYear,
-    incomeStabilizationYear: optimalExitIdx + startYear, optimalExitYear: optimalExitIdx + startYear, optimalExitIRR,
+    incomeStabilizationYear: autoExitIdx + startYear, optimalExitYear: optimalExitIdx != null ? optimalExitIdx + startYear : null, optimalExitIRR,
     trancheMode, tranches,
   };
 }
