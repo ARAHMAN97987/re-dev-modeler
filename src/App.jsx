@@ -2611,6 +2611,113 @@ When to use:
       </>;
     })()}
     </>)}
+
+    {/* ═══ LEVERED CF TRACER — formula transparency like Excel ═══ */}
+    {f && f.leveredCF && (() => {
+      const [tracerOpen, setTracerOpen] = useState(false);
+      const c = pc; // phase or consolidated
+      const adjLR = ir?.adjustedLandRent || c.landRent;
+      const isSelfMode = f.mode === "self";
+      const exitYrIdx = f.exitYear ? f.exitYear - sy : -1;
+      const fSold = (cfg.exitStrategy || "sale") !== "hold" && exitYrIdx >= 0 && exitYrIdx < h;
+      const tracerYears = Array.from({length:Math.min(15,h)},(_,i)=>i);
+      const tdS = {padding:"3px 6px",fontSize:10,fontFamily:"monospace",textAlign:"right",borderBottom:"1px solid #f0f1f5",whiteSpace:"nowrap"};
+      const tdH = {...tdS,fontWeight:700,background:"#f8f9fb",textAlign:"center",fontSize:9,position:"sticky",top:0,zIndex:1};
+      const tdL = {...tdS,textAlign:"left",fontWeight:600,position:"sticky",left:0,background:"#fff",zIndex:1,minWidth:180};
+      const fmtC = v => v === 0 ? "—" : (v > 0 ? "+" : "") + (Math.abs(v) >= 1e6 ? (v/1e6).toFixed(2)+"M" : Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+"K" : v.toFixed(0));
+      const rowColor = (v) => v > 0 ? "#16a34a" : v < 0 ? "#ef4444" : "#9ca3af";
+
+      return <div style={{marginTop:20}}>
+        <div onClick={()=>setTracerOpen(!tracerOpen)} style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"linear-gradient(135deg,#1e3a5f,#2563eb)",borderRadius:10,color:"#fff",userSelect:"none"}}>
+          <span style={{fontSize:16}}>🔍</span>
+          <span style={{fontSize:13,fontWeight:700,flex:1}}>{ar?"تتبع التدفق الممول — شفافية كاملة":"Levered CF Tracer — Full Transparency"}</span>
+          <span style={{fontSize:10,opacity:0.7}}>{ar?"مثل خلية إكسل — شوف من وين جاي كل رقم":"Like an Excel cell — see where every number comes from"}</span>
+          <span style={{fontSize:12}}>{tracerOpen?"▼":"▶"}</span>
+        </div>
+        {tracerOpen && <div style={{border:"1px solid #e5e7ec",borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"auto",maxHeight:600}}>
+          {/* FORMULA */}
+          <div style={{padding:"12px 16px",background:"#f0f4ff",borderBottom:"2px solid #2563eb"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#1e3a5f",marginBottom:6}}>{ar?"المعادلة:":"FORMULA:"}</div>
+            <div style={{fontFamily:"monospace",fontSize:12,color:"#1e3a5f",lineHeight:1.8}}>
+              {isSelfMode
+                ? <>{ar?"التدفق الممول":"Levered CF"} = <span style={{color:"#16a34a"}}>{ar?"الدخل":"Income"}</span> − <span style={{color:"#ef4444"}}>{ar?"إيجار أرض (معدّل)":"Adj Land Rent"}</span> − <span style={{color:"#ef4444"}}>CAPEX</span> + <span style={{color:"#16a34a"}}>{ar?"منحة":"Grant"}</span> + <span style={{color:"#16a34a"}}>{ar?"خصم رسوم":"Fee Rebate"}</span> − <span style={{color:"#ef4444"}}>{ar?"رسم المطور":"Dev Fee"}</span> + <span style={{color:"#16a34a"}}>{ar?"تخارج":"Exit"}</span></>
+                : <>{ar?"التدفق الممول":"Levered CF"} = <span style={{color:"#16a34a"}}>{ar?"الدخل":"Income"}</span> − <span style={{color:"#ef4444"}}>{ar?"إيجار أرض (معدّل)":"Adj Land Rent"}</span> − <span style={{color:"#ef4444"}}>CAPEX</span> + <span style={{color:"#16a34a"}}>{ar?"منحة":"Grant"}</span> + <span style={{color:"#16a34a"}}>{ar?"خصم رسوم":"Fee Rebate"}</span> − <span style={{color:"#ef4444"}}>{ar?"خدمة دين (معدّلة)":"Adj Debt Service"}</span> + <span style={{color:"#16a34a"}}>{ar?"سحب":"Drawdown"}</span> + <span style={{color:"#16a34a"}}>{ar?"تخارج":"Exit"}</span> − <span style={{color:"#ef4444"}}>{ar?"رسم المطور":"Dev Fee"}</span></>
+              }
+            </div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:6}}>
+              {ar?"المصدر: financing.js سطر ":"Source: financing.js L"}{isSelfMode?"128-177":"545-553"} → {ar?"يُخزن بـ":"stored in "} f.leveredCF → {ar?"يُقرأ مباشرة بكل الصفحات":"read directly by all views"}
+            </div>
+          </div>
+          {/* TABLE */}
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+            <thead>
+              <tr>
+                <th style={tdH}>{ar?"المكوّن":"Component"}</th>
+                <th style={tdH}>{ar?"المصدر":"Source"}</th>
+                {tracerYears.map(y=><th key={y} style={tdH}>{sy+y}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style={{...tdL,color:"#16a34a"}}>{ar?"الدخل":"Income"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>c.income</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#16a34a"}}>{fmtC(c.income[y])}</td>)}</tr>
+              <tr><td style={{...tdL,color:"#ef4444"}}>{ar?"(−) إيجار أرض":"(−) Land Rent"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>{ir?.adjustedLandRent?"ir.adjLR":"c.landRent"}</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#ef4444"}}>{fmtC(-adjLR[y])}</td>)}</tr>
+              <tr><td style={{...tdL,color:"#ef4444"}}>{ar?"(−) CAPEX":"(−) CAPEX"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>c.capex</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#ef4444"}}>{fmtC(-c.capex[y])}</td>)}</tr>
+              {(ir?.capexGrantSchedule||[]).some(v=>v>0) && <tr><td style={{...tdL,color:"#16a34a"}}>{ar?"(+) منحة CAPEX":"(+) CAPEX Grant"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>ir.capexGrant</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#16a34a"}}>{fmtC(ir?.capexGrantSchedule?.[y]||0)}</td>)}</tr>}
+              {(ir?.feeRebateSchedule||[]).some(v=>v>0) && <tr><td style={{...tdL,color:"#16a34a"}}>{ar?"(+) خصم رسوم":"(+) Fee Rebate"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>ir.feeRebate</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#16a34a"}}>{fmtC(ir?.feeRebateSchedule?.[y]||0)}</td>)}</tr>}
+              {!isSelfMode && <tr><td style={{...tdL,color:"#ef4444"}}>{ar?"(−) خدمة الدين":"(−) Debt Service"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>f.debtService</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#ef4444"}}>{fmtC(-(f.debtService[y]||0))}</td>)}</tr>}
+              {!isSelfMode && <tr><td style={{...tdL,color:"#3b82f6"}}>{ar?"(+) سحب القرض":"(+) Drawdown"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>f.drawdown</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#3b82f6"}}>{fmtC(f.drawdown[y]||0)}</td>)}</tr>}
+              <tr><td style={{...tdL,color:"#16a34a"}}>{ar?"(+) حصيلة التخارج":"(+) Exit Proceeds"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>f.exitProceeds</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:f.exitProceeds[y]>0?"#16a34a":"#9ca3af"}}>{fmtC(f.exitProceeds[y]||0)}</td>)}</tr>
+              <tr><td style={{...tdL,color:"#ef4444"}}>{ar?"(−) رسم المطور":"(−) Dev Fee"}</td><td style={{...tdS,fontSize:9,color:"#9ca3af"}}>f.devFeeSchedule</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,color:"#ef4444"}}>{fmtC(-(f.devFeeSchedule?.[y]||0))}</td>)}</tr>
+              {/* RESULT */}
+              <tr style={{background:"#1e3a5f"}}>
+                <td style={{...tdL,background:"#1e3a5f",color:"#fff",fontWeight:700,borderTop:"2px solid #2563eb"}}>{ar?"= التدفق الممول":"= Levered CF"}</td>
+                <td style={{...tdS,background:"#1e3a5f",color:"#93c5fd",fontSize:9,borderTop:"2px solid #2563eb"}}>f.leveredCF</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,background:"#1e3a5f",color:f.leveredCF[y]>0?"#86efac":f.leveredCF[y]<0?"#fca5a5":"#6b7280",fontWeight:700,borderTop:"2px solid #2563eb"}}>{fmtC(f.leveredCF[y])}</td>)}
+              </tr>
+              {/* VERIFICATION */}
+              <tr style={{background:"#fefce8"}}>
+                <td style={{...tdL,background:"#fefce8",color:"#92400e",fontSize:9}}>{ar?"✓ تحقق (حساب مستقل)":"✓ Verify (independent calc)"}</td>
+                <td style={{...tdS,background:"#fefce8",fontSize:8,color:"#9ca3af"}}>{ar?"يدوي":"manual"}</td>
+                {tracerYears.map(y=>{
+                  let exp;
+                  if (fSold && y > exitYrIdx) { exp = 0; }
+                  else if (isSelfMode) {
+                    const adjNetCF = ir?.adjustedNetCF?.[y] ?? (c.income[y] - c.landRent[y] - c.capex[y]);
+                    exp = adjNetCF - (f.devFeeSchedule?.[y]||0) + (f.exitProceeds[y]||0);
+                  } else {
+                    exp = c.income[y] - adjLR[y] - c.capex[y] + (ir?.capexGrantSchedule?.[y]||0) + (ir?.feeRebateSchedule?.[y]||0) - (f.debtService[y]||0) + (f.drawdown[y]||0) + (f.exitProceeds[y]||0) - (f.devFeeSchedule?.[y]||0);
+                  }
+                  const match = Math.abs((f.leveredCF[y]||0) - exp) < 1;
+                  return <td key={y} style={{...tdS,background:match?"#fefce8":"#fef2f2",color:match?"#16a34a":"#ef4444",fontWeight:700,fontSize:9}}>{match?"✓":"✗ "+fmtC(exp)}</td>;
+                })}
+              </tr>
+              {/* CUMULATIVE */}
+              {(() => { let cum = 0; return <tr style={{background:"#f0f4ff"}}>
+                <td style={{...tdL,background:"#f0f4ff",color:"#2563eb",fontWeight:600}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
+                <td style={{...tdS,background:"#f0f4ff"}}></td>
+                {tracerYears.map(y => { cum += f.leveredCF[y]||0; return <td key={y} style={{...tdS,background:"#f0f4ff",color:cum>0?"#16a34a":"#ef4444",fontWeight:600}}>{fmtC(cum)}</td>; })}
+              </tr>; })()}
+            </tbody>
+          </table>
+          {/* FOOTER */}
+          <div style={{padding:"10px 16px",background:"#f8f9fb",borderTop:"1px solid #e5e7ec",display:"flex",gap:20,flexWrap:"wrap",fontSize:10,color:"#6b7080"}}>
+            <span>IRR: <strong style={{color:"#2563eb"}}>{f.leveredIRR!==null?(f.leveredIRR*100).toFixed(2)+"%":"N/A"}</strong> <span style={{fontSize:9}}>(calcIRR(f.leveredCF))</span></span>
+            <span>{ar?"مجموع":"Sum"}: <strong>{fmtC(f.leveredCF.reduce((a,b)=>a+b,0))}</strong></span>
+            {fSold && <span>{ar?"تخارج سنة":"Exit Yr"}: <strong>{f.exitYear}</strong> ({ar?"بعدها = صفر":"post-exit = 0"})</span>}
+            <span style={{marginInlineStart:"auto",fontSize:9,color:"#9ca3af"}}>{ar?"كل الأرقام من f.* (financing engine) مباشرة — لا إعادة حساب":"All numbers from f.* (financing engine) directly — no recomputation"}</span>
+          </div>
+        </div>}
+      </div>;
+    })()}
+
     {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
