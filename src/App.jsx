@@ -2869,6 +2869,16 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const [aiOpen, setAiOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  // ── Toast Notification System ──
+  const [toasts, setToasts] = useState([]);
+  const addToast = useCallback((message, type = "success", duration = 3500) => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev.slice(-4), { id, message, type, exiting: false }]);
+    setTimeout(() => {
+      setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t));
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 350);
+    }, duration);
+  }, []);
   // ── Share Link Detection ──
   const [pendingShare, setPendingShare] = useState(() => {
     if (typeof window === "undefined") return null;
@@ -2920,7 +2930,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(async () => {
       try { await saveProject(project); setProjectIndex(await loadProjectIndex()); setSaveStatus("saved"); }
-      catch { setSaveStatus("error"); }
+      catch { setSaveStatus("error"); addToast(ar?"فشل الحفظ التلقائي":"Auto-save failed","error"); }
     }, 2000);
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [project, view]);
@@ -2954,8 +2964,8 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); window.scrollTo(0,0);
   };
   const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); window.scrollTo(0,0); } setLoading(false); };
-  const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); }};
-  const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} };
+  const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); addToast(ar?"تم نسخ المشروع":"Project duplicated","success"); }};
+  const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} addToast(ar?"تم حذف المشروع":"Project deleted","info"); };
 
   // ── Undo History (last 30 states) ──
   const undoStack = useRef([]);
@@ -3040,6 +3050,8 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       <style>{`
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(40px); } }
         .hero-kpi { animation: fadeInUp 0.4s ease-out both; }
         .hero-kpi:nth-child(1) { animation-delay: 0s; }
         .hero-kpi:nth-child(2) { animation-delay: 0.08s; }
@@ -3091,6 +3103,21 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         /* Smooth sidebar transition */
         .sidebar-slide { transition: transform 0.25s cubic-bezier(0.4,0,0.2,1); }
       `}</style>
+      {/* ── Toast Container ── */}
+      {toasts.length > 0 && (
+        <div style={{position:"fixed",top:16,right:16,zIndex:99999,display:"flex",flexDirection:"column",gap:8,maxWidth:360,pointerEvents:"none"}}>
+          {toasts.map(t=>{
+            const bg = {success:"#065f46",error:"#991b1b",warning:"#92400e",info:"#1e40af"}[t.type]||"#065f46";
+            const icon = {success:"✓",error:"✕",warning:"⚠",info:"ℹ"}[t.type]||"✓";
+            return (
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",borderRadius:10,background:bg,color:"#fff",fontSize:13,fontWeight:500,boxShadow:"0 8px 24px rgba(0,0,0,0.3)",animation:t.exiting?"toastOut 0.35s ease forwards":"toastIn 0.3s ease",pointerEvents:"auto",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
+                <span style={{fontSize:15,fontWeight:700,flexShrink:0,width:22,height:22,borderRadius:"50%",background:"rgba(255,255,255,0.2)",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{icon}</span>
+                <span style={{flex:1,lineHeight:1.4}}>{t.message}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {sidebarOpen && !presentMode && (
         <>
         {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:90,backdropFilter:"blur(2px)"}} />}
@@ -4708,7 +4735,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         <button onClick={()=>generateTemplate()} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
           {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
-        <button onClick={()=>exportAssetsToExcel(project, results)} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
+        <button onClick={()=>{exportAssetsToExcel(project, results);addToast(ar?"تم تصدير الأصول":"Assets exported","success");}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
           {lang==='ar'?'⬇ تصدير':'⬇ Export'}
         </button>
         <input type="file" accept=".csv,.tsv" ref={fileRef} onChange={handleUpload} style={{display:"none"}} />
@@ -9039,6 +9066,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    addToast(ar?"تم تحميل التقرير":"Report downloaded","success");
   };
 
   // 10-year CF for bank pack
@@ -9079,10 +9107,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
       {activeReport && <button onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#5fbfbf)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
-      <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);}catch(e){console.error("Formula Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
+      <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"تم تصدير النموذج الكامل (Excel)":"Full Model exported (Excel)","success");}catch(e){console.error("Formula Excel error:",e);addToast((ar?"خطأ في التصدير: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
         {ar?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
       </button>
-      <button onClick={async()=>{try{await generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks);}catch(e){console.error("Data Excel error:",e);alert("Export error: "+e.message);}}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500,borderRadius:8}}>
+      <button onClick={async()=>{try{await generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks);addToast(ar?"تم تصدير تقرير البيانات (Excel)":"Data Report exported (Excel)","success");}catch(e){console.error("Data Excel error:",e);addToast((ar?"خطأ في التصدير: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500,borderRadius:8}}>
         {ar?"⬇ تقرير بيانات (Excel)":"⬇ Data Report (Excel)"}
       </button>
     </div>
