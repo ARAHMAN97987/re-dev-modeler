@@ -119,6 +119,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     // Operator fee: annual, starts after construction ends (operating period only)
     if (hasRentalAssets && operatorFeeBase > 0 && y > constrEnd) {
       feeOperator[y] = operatorFeeBase * operatorFeePct;
+      const operatorCap = project.operatorFeeCap || 0;
+      if (operatorCap > 0 && feeOperator[y] > operatorCap) feeOperator[y] = operatorCap;
     }
   }
   for (let y = 0; y < h; y++) fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] + feeStruct[y] + feePreEst[y] + feeSpv[y] + feeAuditor[y] + feeOperator[y] + feeMisc[y];

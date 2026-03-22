@@ -20,7 +20,7 @@ export const FINANCING_FIELDS = [
   'feeTreatment','prefAllocation','catchupMethod','subscriptionFeePct','annualMgmtFeePct','mgmtFeeCapAnnual','custodyFeeAnnual',
   'developerFeePct','structuringFeePct','structuringFeeCap','mgmtFeeBase',
   'preEstablishmentFee','spvFee','auditorFeeAnnual',
-  'operatorFeePct','miscExpensePct',
+  'operatorFeePct','operatorFeeCap','miscExpensePct',
   'fundStartYear','fundName','gpIsFundManager','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
 ];
 

@@ -68,6 +68,7 @@ export const defaultProject = () => ({
   spvFee: 20000, // One-time SPV setup fee
   auditorFeeAnnual: 50000, // Annual auditor fee
   operatorFeePct: 0.15, // Annual operator fee % of completed asset value (only for rental/hold projects)
+  operatorFeeCap: 600000, // Max annual operator fee (0 = no cap)
   miscExpensePct: 0.5, // One-time miscellaneous expenses % of total assets
   // Exit
   exitStrategy: "sale", // sale | hold | caprate
