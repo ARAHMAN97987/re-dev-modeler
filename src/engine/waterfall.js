@@ -42,6 +42,15 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const spvSetupFee = isFund ? (project.spvFee || 0) : 0;
   const auditorAnnual = isFund ? (project.auditorFeeAnnual || 0) : 0;
 
+  // Operator fee: 0.15% of completed asset value, annual, only for rental/hold projects (not pure sale)
+  const hasRentalAssets = (project.assets || []).some(a => a.revType !== "Sale");
+  const operatorFeePct = (project.operatorFeePct || 0) / 100;
+  const operatorFeeBase = hasRentalAssets ? f.devCostExclLand : 0; // Completed asset value ≈ construction cost
+
+  // Miscellaneous expenses: 0.5% of total assets, one-time at fund start
+  const miscExpensePct = (project.miscExpensePct || 0) / 100;
+  const miscExpenseTotal = isFund ? f.devCostExclLand * miscExpensePct : 0;
+
   // Fee schedule
   const fees = new Array(h).fill(0);
   const feeSub = new Array(h).fill(0);
@@ -52,6 +61,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const feePreEst = new Array(h).fill(0);
   const feeSpv = new Array(h).fill(0);
   const feeAuditor = new Array(h).fill(0);
+  const feeOperator = new Array(h).fill(0);
+  const feeMisc = new Array(h).fill(0);
 
   // Find construction period
   let constrStart = h, constrEnd = 0;
@@ -75,6 +86,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     feeStruct[fundStartIdx] = structFee;
     feePreEst[fundStartIdx] = preEstFee;
     feeSpv[fundStartIdx] = spvSetupFee;
+    if (miscExpenseTotal > 0) feeMisc[fundStartIdx] = miscExpenseTotal;
   }
   // Developer fee spread over construction
   for (let y = constrStart; y <= constrEnd && y < h; y++) {
@@ -104,8 +116,12 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     }
     feeCustody[y] = annualCustody;
     feeAuditor[y] = auditorAnnual;
+    // Operator fee: annual, starts after construction ends (operating period only)
+    if (hasRentalAssets && operatorFeeBase > 0 && y > constrEnd) {
+      feeOperator[y] = operatorFeeBase * operatorFeePct;
+    }
   }
-  for (let y = 0; y < h; y++) fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] + feeStruct[y] + feePreEst[y] + feeSpv[y] + feeAuditor[y];
+  for (let y = 0; y < h; y++) fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] + feeStruct[y] + feePreEst[y] + feeSpv[y] + feeAuditor[y] + feeOperator[y] + feeMisc[y];
 
   const totalFees = fees.reduce((a, b) => a + b, 0);
 
@@ -348,7 +364,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   return {
     gpEquity, lpEquity, totalEquity, gpPct, lpPct,
-    fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, feePreEst, feeSpv, feeAuditor, totalFees, unfundedFees,
+    fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, feePreEst, feeSpv, feeAuditor, feeOperator, feeMisc, totalFees, unfundedFees,
     equityCalls, exitProceeds, cashAvail,
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,

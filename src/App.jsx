@@ -363,7 +363,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     ..._pw,
     feeSub: _pw.feeSub || h0, feeMgmt: _pw.feeMgmt || h0, feeCustody: _pw.feeCustody || h0,
     feeDev: _pw.feeDev || h0, feeStruct: _pw.feeStruct || h0,
-    feePreEst: _pw.feePreEst || h0, feeSpv: _pw.feeSpv || h0, feeAuditor: _pw.feeAuditor || h0, fees: _pw.fees || h0,
+    feePreEst: _pw.feePreEst || h0, feeSpv: _pw.feeSpv || h0, feeAuditor: _pw.feeAuditor || h0,
+    feeOperator: _pw.feeOperator || h0, feeMisc: _pw.feeMisc || h0, fees: _pw.fees || h0,
     totalFees: _pw.totalFees ?? 0,
     totalEquity: _pw.totalEquity || _pw.equity || 0,
     exitYear: _pw.exitYear || waterfall.exitYear || 0,
@@ -506,7 +507,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const _feePreEst = (w.feePreEst||[]).reduce((a,b)=>a+b,0);
       const _feeSpv = (w.feeSpv||[]).reduce((a,b)=>a+b,0);
       const _feeAuditor = (w.feeAuditor||[]).reduce((a,b)=>a+b,0);
-      const gpFeesTotal = gpIsManager ? _feeDev+_feeMgmt+_feeStruct+_feeCustody+_feePreEst+_feeSpv+_feeAuditor : _feeDev;
+      const _feeOperator = (w.feeOperator||[]).reduce((a,b)=>a+b,0);
+      const _feeMisc = (w.feeMisc||[]).reduce((a,b)=>a+b,0);
+      const gpFeesTotal = gpIsManager ? _feeDev+_feeMgmt+_feeStruct+_feeCustody+_feePreEst+_feeSpv+_feeAuditor+_feeOperator+_feeMisc : _feeDev;
       const gpNetCash = (w.gpTotalDist||0) + gpFeesTotal - (w.gpLandRentTotal||0);
       const gpNetProfit = gpNetCash - (w.gpTotalInvested||0);
       // Project-level land rent for this phase (shown when not GP-specific obligation)
@@ -744,6 +747,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       {(w.feePreEst||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"ما قبل التأسيس":"Pre-Establishment"}`} values={w.feePreEst} total={(w.feePreEst||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
       {(w.feeSpv||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"SPV":"SPV Setup"}`} values={w.feeSpv} total={(w.feeSpv||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
       {(w.feeAuditor||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"مراجع حسابات":"Auditor Fee"}`} values={w.feeAuditor} total={(w.feeAuditor||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+      {(w.feeOperator||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"أتعاب المشغل":"Operator Fee"}`} values={w.feeOperator} total={(w.feeOperator||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+      {(w.feeMisc||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"مصروفات أخرى":"Misc. Expenses"}`} values={w.feeMisc} total={(w.feeMisc||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
       <CFRow label={ar?"إجمالي الرسوم":"Total Fees"} values={w.fees} total={w.totalFees} bold negate color="#f59e0b" />
       {(w.unfundedFees||[]).reduce((a,b)=>a+b,0)>0 && <CFRow label={`  ${ar?"رسوم ممولة من Equity":"Unfunded Fees (Equity)"}`} values={w.unfundedFees} total={(w.unfundedFees||[]).reduce((a,b)=>a+b,0)} color="#92400e" />}
       <CFRow label={ar?"حصيلة التخارج":"Exit Proceeds"} values={w.exitProceeds} total={exitProc} color="#16a34a" />
@@ -2287,6 +2292,8 @@ When to use:
               <FL label={ar?"سقف الإدارة/سنة":"Mgmt Cap/yr"} tip="الحد الأقصى لرسوم الإدارة سنوياً. 0 = بدون سقف\nMax annual management fee. 0 = no cap" hint={ar?"حد أقصى سنوي · 0 = بدون سقف":"Max annual · 0 = no cap"}><Inp type="number" value={cfg.mgmtFeeCapAnnual} onChange={v=>upCfg({mgmtFeeCapAnnual:v})} /></FL>
               <FL label={ar?"رسوم الحفظ/سنة":"Custody/yr"} tip="رسوم سنوية لأمين الحفظ. تُدفع نصف سنوي\nAnnual custody fee. Paid semi-annually" hint={ar?"سنوي · نصف سنوي":"Annual · semi-annual"}><Inp type="number" value={cfg.custodyFeeAnnual} onChange={v=>upCfg({custodyFeeAnnual:v})} /></FL>
               <FL label={ar?"مراجع حسابات/سنة":"Auditor/yr"} tip="أتعاب سنوية لمراجع الحسابات. تُدفع نصف سنوي بعد كل تقييم\nAnnual auditor fee. Paid semi-annually after each valuation" hint={ar?"سنوي":"Annual"}><Inp type="number" value={cfg.auditorFeeAnnual} onChange={v=>upCfg({auditorFeeAnnual:v})} /></FL>
+              <FL label={ar?"أتعاب المشغل %":"Operator Fee %"} tip="أتعاب سنوية لمشغل المشروع. تُحسب كنسبة من حجم الأصول المنفذة. تبدأ بعد انتهاء البناء تلقائياً للمشاريع التأجيرية\nAnnual operator fee as % of completed asset value. Starts after construction. Auto-applied for rental projects" hint={ar?"سنوي · تأجير فقط":"Annual · rental only"}><Inp type="number" value={cfg.operatorFeePct} onChange={v=>upCfg({operatorFeePct:v})} step={0.01} /></FL>
+              <FL label={ar?"مصروفات أخرى %":"Misc. Expenses %"} tip="مصروفات متنوعة (تقييم، رقابة شرعية، مجلس إدارة، وغيرها). تُحسب كنسبة من إجمالي الأصول وتُدفع مرة واحدة عند بداية الصندوق\nMiscellaneous expenses (valuation, Sharia, board, etc.). One-time at fund start as % of total assets" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.miscExpensePct} onChange={v=>upCfg({miscExpensePct:v})} step={0.1} /></FL>
             </div>
             <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
@@ -2338,6 +2345,8 @@ When to use:
         preEst: (w.feePreEst||[]).reduce((a,b)=>a+b,0),
         spv: (w.feeSpv||[]).reduce((a,b)=>a+b,0),
         auditor: (w.feeAuditor||[]).reduce((a,b)=>a+b,0),
+        operator: (w.feeOperator||[]).reduce((a,b)=>a+b,0),
+        misc: (w.feeMisc||[]).reduce((a,b)=>a+b,0),
         total: w.totalFees || 0,
         unfunded: (w.unfundedFees||[]).reduce((a,b)=>a+b,0),
       } : null;
@@ -2438,6 +2447,8 @@ When to use:
                 {l:ar?"ما قبل التأسيس":"Pre-Establishment",v:feeData.preEst,hint:ar?"مرة واحدة":"one-time"},
                 {l:ar?"إنشاء SPV":"SPV Setup",v:feeData.spv,hint:ar?"مرة واحدة":"one-time"},
                 {l:ar?"مراجع حسابات":"Auditor",v:feeData.auditor,hint:ar?"سنوي":"annual"},
+                {l:ar?"أتعاب المشغل":"Operator Fee",v:feeData.operator,pct:cfg.operatorFeePct,hint:ar?"سنوي · بعد البناء":"annual · post-constr."},
+                {l:ar?"مصروفات أخرى":"Misc. Expenses",v:feeData.misc,pct:cfg.miscExpensePct,hint:ar?"مرة واحدة":"one-time"},
               ].filter(x=>x.v>0).map((x,i)=>[
                 <span key={i+"l"} style={{color:"#6b7080"}}>{x.l} <span style={{fontSize:9,color:"#b0b5c0"}}>{x.hint}</span></span>,
                 <span key={i+"v"} style={{textAlign:"right",fontWeight:500}}>{fmt(x.v)} {x.pct?<span style={{fontSize:10,color:"#9ca3af"}}>{x.pct}%</span>:""}</span>
@@ -2535,6 +2546,8 @@ When to use:
               {(w.feePreEst||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) ما قبل التأسيس":"(-) Pre-Establishment"} values={w.feePreEst} total={(w.feePreEst||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
               {(w.feeSpv||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) إنشاء SPV":"(-) SPV Setup"} values={w.feeSpv} total={(w.feeSpv||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
               {(w.feeAuditor||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) مراجع حسابات":"(-) Auditor"} values={w.feeAuditor} total={(w.feeAuditor||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+              {(w.feeOperator||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) أتعاب المشغل":"(-) Operator Fee"} values={w.feeOperator} total={(w.feeOperator||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
+              {(w.feeMisc||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) مصروفات أخرى":"(-) Misc. Expenses"} values={w.feeMisc} total={(w.feeMisc||[]).reduce((a,b)=>a+b,0)} color="#a16207" negate />}
               <CFRow label={ar?"= إجمالي الرسوم":"= Total Fees"} values={w.fees||[]} total={w.totalFees||0} color="#f59e0b" negate bold />
               {(w.unfundedFees||[]).reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"رسوم ممولة من Equity":"Unfunded Fees (Equity)"} values={w.unfundedFees} total={(w.unfundedFees||[]).reduce((a,b)=>a+b,0)} color="#92400e" />}
             </>}

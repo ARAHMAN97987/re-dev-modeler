@@ -20,6 +20,7 @@ export const FINANCING_FIELDS = [
   'feeTreatment','prefAllocation','catchupMethod','subscriptionFeePct','annualMgmtFeePct','mgmtFeeCapAnnual','custodyFeeAnnual',
   'developerFeePct','structuringFeePct','structuringFeeCap','mgmtFeeBase',
   'preEstablishmentFee','spvFee','auditorFeeAnnual',
+  'operatorFeePct','miscExpensePct',
   'fundStartYear','fundName','gpIsFundManager','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
 ];
 
@@ -224,6 +225,7 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     feeSub: sumArr('feeSub'), feeMgmt: sumArr('feeMgmt'), feeCustody: sumArr('feeCustody'),
     feeDev: sumArr('feeDev'), feeStruct: sumArr('feeStruct'),
     feePreEst: sumArr('feePreEst'), feeSpv: sumArr('feeSpv'), feeAuditor: sumArr('feeAuditor'),
+    feeOperator: sumArr('feeOperator'), feeMisc: sumArr('feeMisc'),
     totalFees: sum('totalFees'), unfundedFees: sumArr('unfundedFees'),
     gpLandRentTotal: sum('gpLandRentTotal'),
     exitProceeds: sumArr('exitProceeds'), exitYear: Math.max(...names.map(n => phaseWaterfalls[n]?.exitYear || 0)),
