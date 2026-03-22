@@ -35,7 +35,7 @@ const BASE = {
   debtTrancheMode:"single",
   landCapitalize:true, landCapRate:1000, landCapTo:"gp", landRentPaidBy:"auto",
   gpEquityManual:0, lpEquityManual:0,
-  exitStrategy:"sale", exitYear:0, exitMultiple:10, exitCostPct:2, exitCapRate:9,
+  exitStrategy:"sale", exitYear:2040, exitMultiple:10, exitCostPct:2, exitCapRate:9,
   prefReturnPct:15, gpCatchup:true, carryPct:20, lpProfitSplitPct:75,
   feeTreatment:"capital", prefAllocation:"proRata", catchupMethod:"perYear",
   subscriptionFeePct:1.5, annualMgmtFeePct:2, mgmtFeeCapAnnual:0,

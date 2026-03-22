@@ -191,6 +191,8 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
     graceStartIdx: names.reduce((r, n) => r || phaseFinancings[n]?.graceStartIdx, 0) || 0,
     exitYear: Math.max(...names.map(n => phaseFinancings[n]?.exitYear || 0)),
     incomeStabilizationYear: Math.max(...names.map(n => phaseFinancings[n]?.incomeStabilizationYear || 0)),
+    optimalExitYear: Math.max(...names.map(n => phaseFinancings[n]?.optimalExitYear || 0)),
+    optimalExitIRR: Math.max(...names.map(n => phaseFinancings[n]?.optimalExitIRR ?? -Infinity)),
   };
 }
 

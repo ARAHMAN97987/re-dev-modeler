@@ -59,15 +59,15 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // Fund start year: user input or auto (1 year before construction)
   const fundStartIdx = (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : Math.max(0, constrStart - 1);
 
-  // Exit year — use income stabilization from financing engine
+  // Exit year — use optimal exit from financing engine (highest IRR)
   const exitStrategy = project.exitStrategy || "sale";
-  const stabIdx = financing.incomeStabilizationYear ? financing.incomeStabilizationYear - sy : constrEnd + 3;
-  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : stabIdx + 1);
+  const optIdx = financing.optimalExitYear ? financing.optimalExitYear - sy : constrEnd + 3;
+  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : optIdx);
   const operYears = exitYr - constrStart + 1;
 
   // Fee period end
   const feeEndYr = exitStrategy === "hold"
-    ? stabIdx + 2
+    ? optIdx + 2
     : exitYr;
 
   // One-time fees at fund start

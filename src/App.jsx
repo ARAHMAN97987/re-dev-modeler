@@ -1549,7 +1549,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"السنة":"Year"}</span>
                 <input type="number" value={cfg.exitYear||""} onChange={e=>upCfg({exitYear:parseFloat(e.target.value)||0})} placeholder="auto" style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
-                {pf?.incomeStabilizationYear > 0 && <span style={{fontSize:10,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.incomeStabilizationYear + 1}</span>}
+                {pf?.optimalExitYear > 0 && <span style={{fontSize:10,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.optimalExitYear}{pf.optimalExitIRR!=null?` (${(pf.optimalExitIRR*100).toFixed(1)}%)`:""}</span>}
               </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"المضاعف":"Multiple"}</span>
@@ -2061,14 +2061,16 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           <div style={{gridColumn:"1/-1",marginTop:-6,marginBottom:4}}><HelpLink contentKey="exitStrategy" lang={lang} onOpen={setEduModal} /></div>
           {notHold&&<>
             <div style={g2}>
-              <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto" tip="سنة بيع الأصل. عادة 5-10 سنوات بعد الاستقرار التشغيلي. 0 = تلقائي\nYear of asset sale. Usually 5-10 years after stabilization. 0 = auto"><Inp type="number" value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} /></FL>
+              <div>
+                <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto" tip="سنة بيع الأصل. عادة 5-10 سنوات بعد الاستقرار التشغيلي. 0 = تلقائي\nYear of asset sale. Usually 5-10 years after stabilization. 0 = auto"><Inp type="number" value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} /></FL>
+                {f?.optimalExitYear > 0 && <div style={{marginTop:-6,marginBottom:4,padding:"4px 8px",background:"#fef9c3",borderRadius:5,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontSize:11}}>💡</span>
+                  <span style={{fontSize:10,color:"#92400e"}}>{ar?`لتحقيق أعلى IRR${f.optimalExitIRR!=null?` (${(f.optimalExitIRR*100).toFixed(1)}%)`:""} يوصى: ${f.optimalExitYear}`:`For highest IRR${f.optimalExitIRR!=null?` (${(f.optimalExitIRR*100).toFixed(1)}%)`:""}, recommended: ${f.optimalExitYear}`}</span>
+                </div>}
+              </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="قيمة البيع = الإيجار × المضاعف. عادة 8x-15x\nSale price = Rent × Multiple. Usually 8x-15x"><Inp type="number" value={cfg.exitMultiple} onChange={v=>upCfg({exitMultiple:v})} /></FL>}
               {cfg.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="قيمة التخارج = NOI / Cap Rate. في السعودية 7-10% للأصول المستقرة\nExit = NOI / Cap Rate. Saudi stabilized: 7-10%"><Inp type="number" value={cfg.exitCapRate} onChange={v=>upCfg({exitCapRate:v})} /></FL>}
             </div>
-            {f?.incomeStabilizationYear > 0 && <div style={{gridColumn:"1/-1",marginTop:-4,marginBottom:6,padding:"6px 10px",background:"#fef9c3",borderRadius:6,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:12}}>💡</span>
-              <span style={{fontSize:11,color:"#92400e"}}>{ar?`بناءً على استقرار الإيراد، يوصى بسنة تخارج: ${f.incomeStabilizationYear + 1}`:`Based on income stabilization, recommended exit year: ${f.incomeStabilizationYear + 1}`}</span>
-            </div>}
             <FL label={ar?"تكاليف التخارج %":"Exit Cost %"} tip="تكاليف البيع مثل السمسرة والاستشارات القانونية. عادة 1.5-3% من سعر البيع\nSale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp type="number" value={cfg.exitCostPct} onChange={v=>upCfg({exitCostPct:v})} /></FL>
           </>}
         </AB>
@@ -2723,7 +2725,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     id: crypto.randomUUID(), phase: prev.phases[0]?.name||"Phase 1", category:"Retail", name:"", code:"", notes:"",
     plotArea:0, footprint:0, gfa:0, revType:"Lease", efficiency: prev.defaultEfficiency||85,
     leaseRate:0, opEbitda:0, escalation: prev.rentEscalation||0.75, rampUpYears:3, stabilizedOcc:100,
-    costPerSqm:0, constrStart:1, constrDuration:12, hotelPL:null, marinaPL:null,
+    costPerSqm:0, constrStart:0, constrDuration:12, hotelPL:null, marinaPL:null,
   }]}; }), [pushUndo]);
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
@@ -4232,7 +4234,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
       let updatedPhases = [...project.phases];
       if (newPhases.length > 0) {
         newPhases.forEach((pName, i) => {
-          updatedPhases.push({ name: pName, startYearOffset: updatedPhases.length + 1, completionMonth: 36, footprint: 0 });
+          updatedPhases.push({ name: pName, startYearOffset: updatedPhases.length + 1, completionYear: (project.startYear||2026) + 3, footprint: 0 });
         });
       }
       updateProject({ assets: [...project.assets, ...imported], phases: updatedPhases });
@@ -4316,7 +4318,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   const visibleCols = cols.filter(c => !hiddenCols.has(c.key));
 
   // Phase management
-  const addPhase = () => { const n = project.phases.length + 1; const prevMonth = project.phases[project.phases.length-1]?.completionMonth || 36; updateProject({ phases: [...project.phases, { name: `Phase ${n}`, startYearOffset: n, completionMonth: prevMonth + 24, footprint: 0 }] }); };
+  const addPhase = () => { const n = project.phases.length + 1; const prevYear = project.phases[project.phases.length-1]?.completionYear || ((project.startYear||2026) + 3); updateProject({ phases: [...project.phases, { name: `Phase ${n}`, startYearOffset: n, completionYear: prevYear + 2, footprint: 0 }] }); };
   const renamePhase = (i, name) => { const ph = [...project.phases]; ph[i] = { ...ph[i], name }; updateProject({ phases: ph }); };
   const rmPhase = (i) => { if (project.phases.length <= 1) return; updateProject({ phases: project.phases.filter((_, j) => j !== i) }); };
 
@@ -4353,9 +4355,8 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                   <span onClick={() => setEditingPhase(i)} style={{fontSize:11,fontWeight:600,color:"#1a1d23",cursor:"pointer"}} title={ar?"اضغط لإعادة التسمية":"Click to rename"}>{ph.name}</span>
                 )}
                 <span style={{fontSize:9,color:"#9ca3af",background:"#e5e7ec",borderRadius:8,padding:"1px 5px"}}>{assetCount}</span>
-                <span style={{fontSize:9,color:"#6b7080",marginInlineStart:2}} title={ar?"شهر اكتمال المرحلة":"Phase completion month"}>{ar?"افتتاح:":"Opens:"}</span>
-                <input type="number" value={ph.completionMonth||36} onChange={e=>{const ph2=[...project.phases];ph2[i]={...ph2[i],completionMonth:parseInt(e.target.value)||36};updateProject({phases:ph2});}} style={{width:38,fontSize:10,fontWeight:600,border:"1px solid #e5e7ec",borderRadius:3,padding:"1px 4px",textAlign:"center",fontFamily:"inherit",background:"#fff"}} min={1} />
-                <span style={{fontSize:8,color:"#9ca3af"}}>{ar?"شهر":"mo"}</span>
+                <span style={{fontSize:9,color:"#6b7080",marginInlineStart:2}} title={ar?"سنة افتتاح المرحلة":"Phase opening year"}>{ar?"افتتاح:":"Opens:"}</span>
+                <input type="number" value={ph.completionYear||(project.startYear||2026)+Math.ceil((ph.completionMonth||36)/12)} onChange={e=>{const ph2=[...project.phases];ph2[i]={...ph2[i],completionYear:parseInt(e.target.value)||2030};updateProject({phases:ph2});}} style={{width:48,fontSize:10,fontWeight:600,border:"1px solid #e5e7ec",borderRadius:3,padding:"1px 4px",textAlign:"center",fontFamily:"inherit",background:"#fff"}} min={project.startYear||2026} />
                 {project.phases.length > 1 && (
                   <button onClick={()=>rmPhase(i)} style={{background:"none",border:"none",color:"#d0d4dc",padding:0,fontSize:11,cursor:"pointer",lineHeight:1,fontFamily:"inherit"}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#d0d4dc"} title={ar?"حذف":"Delete"}>✕</button>
                 )}

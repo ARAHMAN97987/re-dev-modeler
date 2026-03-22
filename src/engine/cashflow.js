@@ -48,15 +48,25 @@ export function computeProjectCashFlows(project) {
     const capexSch = new Array(horizon).fill(0);
     const revSch = new Array(horizon).fill(0);
     const cStart = (() => {
-      // Use asset's own constrStart if set (matches ZAN Excel per-asset timing)
+      // Priority 1: asset's own constrStart if explicitly set (>0 = manual override)
       if ((asset.constrStart || 0) > 0) {
         return (asset.constrStart - 1) + delayYears;
       }
-      // Fallback: derive from phase completionMonth if available
+      // Priority 2: derive from phase completionYear (absolute year, e.g. 2030)
+      // All assets in the same phase finish construction at completionYear → start at different times
       const assetPhase = (project.phases || []).find(ph => ph.name === (asset.phase || 'Phase 1'));
-      if (assetPhase?.completionMonth) {
-        const phaseEndYear = Math.ceil(assetPhase.completionMonth / 12);
-        return Math.max(0, phaseEndYear - durYears) + delayYears;
+      if (assetPhase) {
+        let phaseEndIdx;
+        if ((assetPhase.completionYear || 0) > 0) {
+          // Absolute year → convert to index
+          phaseEndIdx = assetPhase.completionYear - startYear;
+        } else if ((assetPhase.completionMonth || 0) > 0) {
+          // Legacy: months from project start → convert to year index
+          phaseEndIdx = Math.ceil(assetPhase.completionMonth / 12);
+        }
+        if (phaseEndIdx != null && phaseEndIdx > 0) {
+          return Math.max(0, phaseEndIdx - durYears) + delayYears;
+        }
       }
       return delayYears; // Last resort
     })();
@@ -125,7 +135,9 @@ export function computeProjectCashFlows(project) {
     // Phase completion years
     const phaseCompYrs = {};
     (project.phases || []).forEach(ph => {
-      if (ph.completionMonth && ph.completionMonth > 0) {
+      if ((ph.completionYear || 0) > 0) {
+        phaseCompYrs[ph.name] = ph.completionYear - startYear;
+      } else if (ph.completionMonth && ph.completionMonth > 0) {
         phaseCompYrs[ph.name] = Math.ceil(ph.completionMonth / 12);
       } else {
         const pa = assetSchedules.filter(a => (a.phase || 'Phase 1') === ph.name);

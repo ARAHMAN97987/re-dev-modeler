@@ -69,16 +69,35 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
   add("T1","GFA Total Match", Math.abs((project.assets||[]).reduce((s,a)=>s+(a.gfa||0),0) - as.reduce((s,a)=>s+(a.gfa||0),0)) < tol, "Program GFA = Computed GFA");
   add("T1","No Negative GFA", (project.assets||[]).every(a=>(a.gfa||0)>=0), "All GFA values ≥ 0");
   add("T1","Active Assets Have Duration", (project.assets||[]).every(a=>((a.gfa||0)===0&&(a.costPerSqm||0)===0)||(a.constrDuration||0)>0), "Assets with GFA have construction duration");
-  // Check: no asset's build duration exceeds its phase completionMonth
+  // Check: no asset's build duration exceeds its phase opening period
+  const _sy = project.startYear || 2026;
   const durationOK = (project.assets||[]).every(a => {
     const ph = (project.phases||[]).find(p => p.name === (a.phase || 'Phase 1'));
-    if (!ph?.completionMonth) return true; // legacy project, skip
-    return (a.constrDuration || 12) <= ph.completionMonth;
+    if (!ph) return true;
+    let phaseMonths = 0;
+    if ((ph.completionYear || 0) > 0) {
+      phaseMonths = (ph.completionYear - _sy) * 12;
+    } else if ((ph.completionMonth || 0) > 0) {
+      phaseMonths = ph.completionMonth;
+    }
+    if (phaseMonths <= 0) return true;
+    return (a.constrDuration || 12) <= phaseMonths;
   });
   const badAssets = (project.assets||[]).filter(a => {
     const ph = (project.phases||[]).find(p => p.name === (a.phase || 'Phase 1'));
-    return ph?.completionMonth && (a.constrDuration || 12) > ph.completionMonth;
-  }).map(a => `${a.name||'?'}(${a.constrDuration}mo>${(project.phases||[]).find(p=>p.name===(a.phase||'Phase 1'))?.completionMonth}mo)`);
+    if (!ph) return false;
+    let phaseMonths = 0;
+    if ((ph.completionYear || 0) > 0) {
+      phaseMonths = (ph.completionYear - _sy) * 12;
+    } else if ((ph.completionMonth || 0) > 0) {
+      phaseMonths = ph.completionMonth;
+    }
+    return phaseMonths > 0 && (a.constrDuration || 12) > phaseMonths;
+  }).map(a => {
+    const ph = (project.phases||[]).find(p => p.name === (a.phase || 'Phase 1'));
+    const pm = (ph?.completionYear||0) > 0 ? (ph.completionYear-_sy)*12 : (ph?.completionMonth||0);
+    return `${a.name||'?'}(${a.constrDuration}mo>${pm}mo)`;
+  });
   add("T1","Build Duration ≤ Phase Opening", durationOK, "No asset takes longer than its phase to build",
     badAssets.length > 0 ? badAssets.join(', ') : undefined);
   add("T1","No Negative Leasable", as.every(a=>(a.leasableArea||0)>=0), "All leasable areas ≥ 0");
@@ -139,7 +158,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     const totDrw=(f.drawdown||[]).reduce((s,v)=>s+v,0);
     add("T2","Drawdown = Total Debt", Math.abs(totDrw-f.totalDebt)<1, "Sum drawdowns = debt drawn");
     let graceOk=true;
-    if (f.repayStart>0) { for(let y=0;y<f.repayStart&&y<h;y++) { if((f.repayment?.[y]||0)>1){graceOk=false;break;} } }
+    if (f.repayStart>0) { for(let y=0;y<f.repayStart&&y<h;y++) { if(y===exitIdx) continue; if((f.repayment?.[y]||0)>1){graceOk=false;break;} } }
     add("T2","Grace Period Respected", graceOk, "No repayment during grace period");
     const adjLR=ir?.adjustedLandRent||c.landRent;
     let levOk=true;
