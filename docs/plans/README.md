@@ -105,10 +105,10 @@ git pull origin feature/engine-extraction
 
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
-| 1 | Toast System | ⬜ | | 4 types: success/error/warning/info |
+| 1 | Toast System | ✅ | 2026-03-22 | 4 types, wired to 7 operations, exit animation |
 | 2 | Error Messages | ⬜ | | Replace generic "حدث خطأ" |
 | 3 | Empty States + Progress Tracker | ⬜ | | Per-section empty states + dashboard tracker |
-| 4 | Auth Page Redesign | ⬜ | | Split-screen hero + form |
+| 4 | Auth Page Redesign | ✅ | pre-plan | Already split-screen with FeaturesPanel |
 | 5 | Google Login Visibility | ⬜ | | Prominent Google button on auth |
 | 6 | Background Gradients | ⬜ | | Subtle gradients + depth |
 | 7 | Skeleton Loaders | ⬜ | | Loading placeholders |
