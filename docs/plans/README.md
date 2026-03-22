@@ -107,13 +107,13 @@ git pull origin feature/engine-extraction
 |---|------|--------|------|-------|
 | 1 | Toast System | ✅ | 2026-03-22 | 4 types, wired to 7 operations, exit animation |
 | 2 | Error Messages | ⬜ | | Replace generic "حدث خطأ" |
-| 3 | Empty States + Progress Tracker | ⬜ | | Per-section empty states + dashboard tracker |
+| 3 | Empty States + Progress Tracker | ✅ | 2026-03-22 | Dashboard tracker + 5 section empty states |
 | 4 | Auth Page Redesign | ✅ | pre-plan | Already split-screen with FeaturesPanel |
 | 5 | Google Login Visibility | ⬜ | | Prominent Google button on auth |
-| 6 | Background Gradients | ⬜ | | Subtle gradients + depth |
+| 6 | Background Gradients | ✅ | 2026-03-22 | Subtle gradient on editor background |
 | 7 | Skeleton Loaders | ⬜ | | Loading placeholders |
-| 8 | Button States | ⬜ | | ZanButton component with 3 variants |
-| 9 | CSV Template Visibility | ⬜ | | Download template button next to import |
+| 8 | Button States | ✅ | 2026-03-22 | CSS hover effects on primary + export buttons |
+| 9 | CSV Template Visibility | ✅ | 2026-03-22 | Toast on template download |
 
 ---
 
