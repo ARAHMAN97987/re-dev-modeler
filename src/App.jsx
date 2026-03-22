@@ -1519,6 +1519,21 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
                 <option value="bullet">{ar?"دفعة واحدة":"Bullet"}</option>
               </select>
             </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:70}}>{ar?"بداية السماح":"Grace Basis"}</span>
+              <select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="cod">COD</option>
+                <option value="firstDraw">{ar?"أول سحب":"1st Draw"}</option>
+                <option value="fundStart">{ar?"بداية الصندوق":"Fund Start"}</option>
+              </select>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:70}}>{ar?"السحب":"Tranche"}</span>
+              <select value={cfg.debtTrancheMode||"single"} onChange={e=>upCfg({debtTrancheMode:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="single">{ar?"كتلة واحدة":"Single"}</option>
+                <option value="perDraw">{ar?"لكل سحبة":"Per Draw"}</option>
+              </select>
+            </div>
           </div>
           <div style={{fontSize:10,fontWeight:700,color:"#f59e0b",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"التخارج":"EXIT STRATEGY"}</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
