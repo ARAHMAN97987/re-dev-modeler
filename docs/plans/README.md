@@ -134,7 +134,7 @@ git pull origin feature/engine-extraction
 
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
-| 10 | Dynamic Tab Visibility | ⬜ | | Hide tabs by finMode |
+| 10 | Dynamic Tab Visibility | ✅ | 2026-03-22 | self: hides Financing, Incentives: conditional, auto-redirect |
 | 11 | Asset Templates | ⬜ | | 6 templates with Saudi defaults |
 | 12 | Asset Data Prep Guide | ⬜ | | Checklist banner in Assets tab |
 | 13 | Asset Modal Field Grouping | ⬜ | | 4 collapsible groups |
