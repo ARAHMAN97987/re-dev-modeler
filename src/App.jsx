@@ -3225,7 +3225,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               {key:"assets",label:t.assetProgram,group:"project"},
               {key:"cashflow",label:t.cashFlow,group:"project"},
               {key:"financing",label:lang==="ar"?"الهيكلة المالية":"Financial Structure",group:"finance"},
-              {key:"waterfall",label:lang==="ar"?"حافز الأداء":"Waterfall",group:"finance"},
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
               {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
@@ -3264,7 +3263,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
-            ["waterfall", <WaterfallView key="waterfall" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
             ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />],
@@ -3909,7 +3907,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
     if (f && project.exitStrategy !== "hold") {
       const exitYr = f.exitYear ? f.exitYear - (project.startYear || 2026) : 0;
       const maxRamp = results?.assetSchedules ? Math.max(0, ...results.assetSchedules.map(a => a.capexSchedule.reduce((l,v,i)=>v>0?i+1:l,0) + (a.rampUpYears||3))) : 0;
-      if (exitYr > 0 && exitYr < maxRamp) warnings.push({ icon: "🚪", text: ar ? "التخارج قبل استقرار الإشغال" : "Exit before stabilization", tab: "waterfall", sev: "warn" });
+      if (exitYr > 0 && exitYr < maxRamp) warnings.push({ icon: "🚪", text: ar ? "التخارج قبل استقرار الإشغال" : "Exit before stabilization", tab: "results", sev: "warn" });
     }
   }
   if (npvVal < 0) warnings.push({ icon: "📉", text: ar ? `NPV سالب (${fmtM(npvVal)})` : `Negative NPV (${fmtM(npvVal)})`, tab: "dashboard", sev: "error" });
