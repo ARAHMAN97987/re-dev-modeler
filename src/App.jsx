@@ -8299,61 +8299,22 @@ function CashFlowView({ project, results, t, incentivesResult }) {
   const {horizon,startYear}=results;
   const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
   const ar = t.dashboard === "لوحة التحكم";
-  const assetScheds = results.assetSchedules || [];
 
-  // ── Build phase data directly from asset schedules ──
-  const phaseNames = (project.phases || []).map(p => p.name);
-  // Land purchase CAPEX is project-level (not in assetSchedules) — must be added back
-  const landPurchaseCapex = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
-  const totalFP = assetScheds.reduce((s, a) => s + (a.footprint || 0), 0);
-  const phaseData = {};
-  phaseNames.forEach(pName => {
-    const phaseAssets = assetScheds.filter(a => (a.phase || "Phase 1") === pName);
-    const inc = new Array(horizon).fill(0);
-    const cap = new Array(horizon).fill(0);
-    phaseAssets.forEach(a => {
-      for (let y = 0; y < horizon; y++) {
-        inc[y] += a.revenueSchedule[y] || 0;
-        cap[y] += a.capexSchedule[y] || 0;
-      }
-    });
-    // Add land purchase allocation (by footprint, same as cashflow.js)
-    if (landPurchaseCapex > 0) {
-      const pFP = phaseAssets.reduce((s, a) => s + (a.footprint || 0), 0);
-      const alloc = totalFP > 0 ? pFP / totalFP : phaseNames.length > 0 ? 1 / phaseNames.length : 0;
-      cap[0] += landPurchaseCapex * alloc;
-    }
-    // Land rent: read from phaseResults (allocation by footprint is already computed in cashflow.js)
-    const prLand = results.phaseResults?.[pName]?.landRent || new Array(horizon).fill(0);
+  // ── Read directly from engine results (single source of truth) ──
+  const phaseNames = Object.keys(results.phaseResults || {});
+  const phases = phaseNames.map(pName => {
+    const pr = results.phaseResults[pName];
+    // NOI = income - landRent (derived, not stored in engine)
     const noi = new Array(horizon).fill(0);
-    const net = new Array(horizon).fill(0);
-    for (let y = 0; y < horizon; y++) {
-      noi[y] = inc[y] - prLand[y];
-      net[y] = inc[y] - prLand[y] - cap[y];
-    }
-    phaseData[pName] = {
-      income: inc, capex: cap, landRent: prLand, noi, netCF: net,
-      totalIncome: inc.reduce((a,b)=>a+b,0), totalCapex: cap.reduce((a,b)=>a+b,0),
-      totalLandRent: prLand.reduce((a,b)=>a+b,0), totalNOI: noi.reduce((a,b)=>a+b,0),
-      totalNetCF: net.reduce((a,b)=>a+b,0),
-      irr: calcIRR(net), assetCount: phaseAssets.length,
-    };
+    for (let y = 0; y < horizon; y++) noi[y] = (pr.income[y]||0) - (pr.landRent[y]||0);
+    return [pName, { ...pr, noi, totalNOI: noi.reduce((a,b)=>a+b,0) }];
   });
-  const phases = phaseNames.map(n => [n, phaseData[n]]);
-
-  // ── Consolidated = sum of all phases ──
-  const ci = new Array(horizon).fill(0), cc = new Array(horizon).fill(0), cl = new Array(horizon).fill(0), cn = new Array(horizon).fill(0);
-  phases.forEach(([, pr]) => { for (let y = 0; y < horizon; y++) { ci[y]+=pr.income[y]; cc[y]+=pr.capex[y]; cl[y]+=pr.landRent[y]; cn[y]+=pr.netCF[y]; }});
   const c = {
-    income:ci, capex:cc, landRent:cl, netCF:cn,
-    totalCapex:cc.reduce((a,b)=>a+b,0), totalIncome:ci.reduce((a,b)=>a+b,0),
-    totalLandRent:cl.reduce((a,b)=>a+b,0), totalNetCF:cn.reduce((a,b)=>a+b,0),
-    irr: results.consolidated.irr, npv10: results.consolidated.npv10,
-    npv12: results.consolidated.npv12, npv14: results.consolidated.npv14,
-    paybackYear: results.consolidated.paybackYear,
-    peakNegative: results.consolidated.peakNegative,
-    peakNegativeYear: results.consolidated.peakNegativeYear,
+    ...results.consolidated,
+    // NOI derived from consolidated arrays
+    noi: new Array(horizon).fill(0),
   };
+  for (let y = 0; y < horizon; y++) c.noi[y] = (c.income[y]||0) - (c.landRent[y]||0);
 
   // ── Period detection: construction vs operating years ──
   let constrEnd = 0;
@@ -8361,9 +8322,8 @@ function CashFlowView({ project, results, t, incentivesResult }) {
   const isConstrYear = y => c.capex[y] > 0;
   const isIncomeYear = y => c.income[y] > 0;
 
-  // ── NOI = Income - Land Rent ──
-  const noiArr = new Array(horizon).fill(0);
-  for (let y = 0; y < horizon; y++) noiArr[y] = c.income[y] - c.landRent[y];
+  // ── NOI already computed as c.noi ──
+  const noiArr = c.noi;
   const totalNOI = noiArr.reduce((a,b)=>a+b,0);
 
   // ── Yield on Cost = Stabilized NOI / Total CAPEX ──
