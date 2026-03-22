@@ -1132,7 +1132,7 @@ function buildBankSummary(wb, project, results, financing, cur, h, sy) {
   // Read from financing object (single source of truth)
   const usesDevExcl = f.devCostExclLand || c?.totalCapex || 0;
   const usesLandCap = f.landCapValue || 0;
-  const usesTotal = f.devCostInclLand || usesDevExcl + usesLandCap;
+  const usesTotal = f.totalProjectCost || f.devCostInclLand || usesDevExcl + usesLandCap;
   dataRow(ws, row, [null, "Construction CAPEX  تكاليف البناء", null, fm(usesDevExcl), usesTotal > 0 ? usesDevExcl / usesTotal : 0], { numFmt: { 3: "#,##0", 4: "0.0%" } });
   row++;
   if (usesLandCap > 0) {

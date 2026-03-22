@@ -2393,7 +2393,6 @@ When to use:
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction Cost"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.devCostExclLand)}</span>
               {f.landCapValue > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Capitalization"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.landCapValue)}</span></>}
-              {f.upfrontFee > 0 && <><span style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Upfront Fee"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.upfrontFee)}</span></>}
               <span style={{borderTop:"2px solid #ef4444",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
               <span style={{borderTop:"2px solid #ef4444",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmt(f.devCostInclLand)}</span>
             </div>
@@ -5058,7 +5057,6 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
                 <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(devCostExcl)}</span>
                 {landCap > 0 && [<span key="cl" style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Cap."}</span>,<span key="cv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCap)}</span>]}
                 {f && f.capitalizedFinCosts > 0 && [<span key="il" style={{color:"#6b7080"}}>{ar?"تكاليف تمويل مرسملة":"Capitalized IDC"}</span>,<span key="iv" style={{textAlign:"right",fontWeight:500}}>{fmtM(f.capitalizedFinCosts)}</span>]}
-                {upfrontFee > 0 && [<span key="fl" style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Loan Fee"}</span>,<span key="fv" style={{textAlign:"right",fontWeight:500}}>{fmtM(upfrontFee)}</span>]}
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(devCostIncl)}</span>
               </div>
