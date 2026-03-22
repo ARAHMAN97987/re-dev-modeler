@@ -7,7 +7,7 @@ import { embeddedFontCSS } from "./embeddedFonts";
 import AiAssistant from "./AiAssistant";
 
 // ═══════════════════════════════════════════════════════════════
-// Haseef Financial Modeler — Project Engine v3 (Stable)
+// ZAN Financial Modeler — Project Engine v3 (Stable)
 // ═══════════════════════════════════════════════════════════════
 
 // ── Error Boundary — prevents white screen on runtime errors ─
@@ -21,7 +21,7 @@ class AppErrorBoundary extends Component {
       return (
         <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",color:"#d0d4dc"}}>
           <div style={{textAlign:"center",maxWidth:460,padding:32}}>
-            <div style={{fontSize:28,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",marginBottom:8}}>حصيف</div>
+            <div style={{fontSize:28,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",marginBottom:8}}>ZAN</div>
             <div style={{fontSize:16,fontWeight:600,color:"#f87171",marginBottom:16}}>{isAr?"حدث خطأ غير متوقع":"An unexpected error occurred"}</div>
             <div style={{fontSize:12,color:"#6b7080",marginBottom:24,lineHeight:1.6}}>{isAr?"يمكنك إعادة المحاولة أو تحميل الصفحة من جديد. بياناتك محفوظة.":"You can retry or reload the page. Your data is saved."}</div>
             <div style={{display:"flex",gap:12,justifyContent:"center"}}>
@@ -48,7 +48,7 @@ const PROJECT_PREFIX = "redev:project:";
 
 const L = {
   en: {
-    title: "Haseef", subtitle: "Real Estate Development Financial Modeling Platform",
+    title: "ZAN", subtitle: "Real Estate Development Financial Modeling Platform",
     newProject: "+ New Project", projects: "projects", noProjects: "No projects yet",
     noProjectsSub: "Create your first project to get started",
     back: "← Back", saved: "Saved", saving: "Saving...", error: "Error",
@@ -115,7 +115,7 @@ const L = {
     partner: "Land as Equity (Partner)", bot: "Land Swap / BOT",
   },
   ar: {
-    title: "Haseef", subtitle: "منصة النمذجة المالية لمشاريع التطوير العقاري",
+    title: "ZAN", subtitle: "منصة النمذجة المالية لمشاريع التطوير العقاري",
     newProject: "+ مشروع جديد", projects: "مشاريع", noProjects: "لا توجد مشاريع",
     noProjectsSub: "أنشئ مشروعك الأول للبدء",
     back: "→ رجوع", saved: "تم الحفظ", saving: "جاري الحفظ...", error: "خطأ",
@@ -3030,7 +3030,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
 
-  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>حصيف</span><span style={{width:1,height:30,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:12,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div></div></div>;
+  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>ZAN</span><span style={{width:1,height:30,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:12,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div></div></div>;
   if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); window.scrollTo(0,0); }} onCreateDemo={async (demo) => {
     const p = defaultProject();
     const ar = lang === "ar";
@@ -3137,7 +3137,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:90,backdropFilter:"blur(2px)"}} />}
         <div className="sidebar-slide" style={{width:isMobile?"88vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?400:340,background:"#0f1117",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.4)"}:{})}}>
           <div style={{padding:isMobile?"12px 14px":"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
-            <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>حصيف</span><span style={{width:1,height:18,background:"#5fbfbf",opacity:0.5}} /><span style={{fontSize:9,color:"#5fbfbf",lineHeight:1.3,fontWeight:300}}>{lang==="ar"?"النمذجة":"Financial"}<br/>{lang==="ar"?"المالية":"Modeler"}</span></div>
+            <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,fontWeight:900,color:"#fff",letterSpacing:2}}>ZAN</span><span style={{width:1,height:18,background:"#2EC4B6",opacity:0.6}} /><span style={{fontSize:9,color:"#2EC4B6",lineHeight:1.3,fontWeight:400}}>{lang==="ar"?"النمذجة":"Financial"}<br/>{lang==="ar"?"المالية":"Modeler"}</span></div>
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#dcfce7":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
             {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"#1e2230",border:"none",borderRadius:6,color:"#9ca3af",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
           </div>
@@ -3232,7 +3232,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                     </button>
                     {/* Academy */}
                     <button onClick={()=>{setView("academy");setMenuOpen(false);window.scrollTo(0,0);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
-                      <span style={{fontSize:14}}>📚</span> {lang==="ar"?"أكاديمية حصيف":"Haseef Academy"}
+                      <span style={{fontSize:14}}>📚</span> {lang==="ar"?"أكاديمية زان":"ZAN Academy"}
                     </button>
                     {/* Divider */}
                     <div style={{height:1,background:"#f0f1f5",margin:"4px 0"}} />
@@ -3264,6 +3264,8 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             const fm = project?.finMode || "self";
             const inc = project?.incentives || {};
             const hasAnyIncentive = inc.capexGrant?.enabled || inc.landRentRebate?.enabled || inc.financeSupport?.enabled || inc.feeRebates?.enabled;
+            const hasFund = fm === "fund";
+            const hasDebt = fm === "debt" || fm === "bank100" || fm === "fund";
             const allTabs = [
               {key:"dashboard",label:t.dashboard,group:"project"},
               {key:"assets",label:t.assetProgram,group:"project"},
@@ -3278,15 +3280,20 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ];
             const tabs = allTabs.filter(tb => !tb.hide);
             const groupColors = {project:"#2563eb",finance:"#8b5cf6",analysis:"#f59e0b",export:"#16a34a"};
+            const groupLabels = {project:lang==="ar"?"المشروع":"Project",finance:lang==="ar"?"المالية":"Finance",analysis:lang==="ar"?"التحليل":"Analysis",export:lang==="ar"?"التصدير":"Export"};
             let prevGroup = null;
             return tabs.map(tb=>{
               const gc = groupColors[tb.group];
               const isActive = activeTab===tb.key;
               const showSep = prevGroup && prevGroup !== tb.group;
+              const groupLabel = showSep ? groupLabels[tb.group] : null;
               prevGroup = tb.group;
               return <span key={tb.key} style={{display:"inline-flex",alignItems:"center"}}>
-                {showSep && <span style={{width:1,height:20,background:"#d1d5db",margin:"0 6px",flexShrink:0}} />}
-                <button onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} style={{padding:isMobile?"10px 8px":"10px 12px",fontSize:isMobile?10:11,fontWeight:isActive?600:500,border:"none",cursor:"pointer",background:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2px solid ${gc}`:"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
+                {showSep && <span style={{display:"inline-flex",alignItems:"center",margin:"0 4px",gap:4,flexShrink:0}}>
+                  <span style={{width:1,height:20,background:"#e5e7ec"}} />
+                  {!isMobile && groupLabel && <span style={{fontSize:9,fontWeight:700,color:gc,letterSpacing:0.5,textTransform:"uppercase",opacity:0.6,padding:"0 2px"}}>{groupLabel}</span>}
+                </span>}
+                <button onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} style={{padding:isMobile?"10px 8px":"10px 12px",fontSize:isMobile?10:11,fontWeight:isActive?700:500,border:"none",cursor:"pointer",background:isActive?`${gc}08`:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2.5px solid ${gc}`:"2.5px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s",borderRadius:"4px 4px 0 0"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
               </span>;
             });
           })()}
@@ -3504,11 +3511,11 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
           <div style={{maxWidth:560}}>
             {/* Badge */}
             <div style={{display:"inline-block",padding:"6px 16px",background:"rgba(95,191,191,0.12)",border:"1px solid rgba(95,191,191,0.25)",borderRadius:20,marginBottom:20}}>
-              <span style={{fontSize:12,color:"#5fbfbf",fontWeight:500}}>{ar?"حصيف للنمذجة المالية":"Haseef Financial Modeler"}</span>
+              <span style={{fontSize:12,color:"#5fbfbf",fontWeight:500}}>{ar?"زان للنمذجة المالية":"ZAN Financial Modeler"}</span>
             </div>
             {/* Logo */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-              <span style={{fontSize:48,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",letterSpacing:-1}}>حصيف</span>
+              <span style={{fontSize:48,fontWeight:900,color:"#fff",letterSpacing:3}}>ZAN</span>
               <span style={{width:1,height:32,background:"rgba(95,191,191,0.4)"}} />
               <span style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.4,fontWeight:300}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
             </div>
@@ -3541,11 +3548,11 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
       <div style={{width:isMobile?"100%":420,minWidth:isMobile?"auto":380,flex:isMobile?1:"none",background:isMobile?"#0f1117":"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:isMobile?"32px 24px":"48px 36px",borderInlineStart:isMobile?"none":(ar?"none":"1px solid rgba(95,191,191,0.1)"),borderInlineEnd:isMobile?"none":(ar?"1px solid rgba(95,191,191,0.1)":"none")}}>
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
-            <span style={{fontSize:32,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>حصيف</span>
-            <span style={{width:1,height:22,background:"rgba(95,191,191,0.4)"}} />
+            <span style={{fontSize:32,fontWeight:900,color:"#fff",letterSpacing:2}}>ZAN</span>
+            <span style={{width:1.5,height:22,background:"rgba(46,196,182,0.5)",borderRadius:1}} />
             <span style={{fontSize:11,color:"#5fbfbf",lineHeight:1.3,fontWeight:300,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
-          {isMobile && <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:4}}>{ar?"حصيف للنمذجة المالية":"Haseef Financial Modeler"}</div>}
+          {isMobile && <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:4}}>{ar?"زان للنمذجة المالية":"ZAN Financial Modeler"}</div>}
           <div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
         </div>
         {/* Pending share invite banner */}
@@ -3581,7 +3588,7 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
           <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"rgba(255,255,255,0.5)",padding:"6px 16px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
         </div>
         {/* Powered by */}
-        <div style={{marginTop:24,textAlign:"center",fontSize:10,color:"rgba(255,255,255,0.2)"}}>{ar?"حصيف للنمذجة المالية":"Haseef Financial Modeler"}</div>
+        <div style={{marginTop:24,textAlign:"center",fontSize:10,color:"rgba(255,255,255,0.2)"}}>{ar?"زان للنمذجة المالية":"ZAN Financial Modeler"}</div>
       </div>
     </div>
   );
@@ -3603,16 +3610,16 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
         <div style={{display:"flex",flexDirection:isMobile?"column":"row",justifyContent:"space-between",alignItems:isMobile?"stretch":"flex-start",gap:isMobile?14:0,marginBottom:isMobile?20:32}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-              <span style={{fontSize:32,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif"}}>حصيف</span>
-              <span style={{width:1,height:24,background:"#5fbfbf"}} />
-              <span style={{fontSize:11,color:"#0f1117",lineHeight:1.3,fontWeight:400}}>{ar?"حصيف":"Haseef"}<br/>{ar?"النمذجة المالية":"Financial Modeler"}</span>
+              <span style={{fontSize:32,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>ZAN</span>
+              <span style={{width:1.5,height:24,background:"#2EC4B6",borderRadius:1}} />
+              <span style={{fontSize:11,color:"#6b7080",lineHeight:1.3,fontWeight:500}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
             </div>
             <div style={{fontSize:isMobile?22:28,fontWeight:900,color:"#0f1117",letterSpacing:-0.5,fontFamily:"'Tajawal',sans-serif"}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
             <div style={{fontSize:isMobile?11:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#5fbfbf",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:600,border:"none",borderRadius:6}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
-            {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:6}} title={ar?"أكاديمية حصيف":"Haseef Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
+            {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:6}} title={ar?"أكاديمية زان":"ZAN Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
             {!isMobile && user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} style={{...btnSm,background:"#fef2f2",color:"#ef4444",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#e8e5e0",color:"#4b5060",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
@@ -3696,7 +3703,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                 <div style={{display:"flex",alignItems:"center",gap:14}}>
                   <span style={{fontSize:32}}>📚</span>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:16,fontWeight:700,color:"#C8A96E",fontFamily:"'Tajawal',sans-serif",marginBottom:4}}>{ar?"أكاديمية حصيف المالية":"Haseef Academy"}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:"#C8A96E",fontFamily:"'Tajawal',sans-serif",marginBottom:4}}>{ar?"أكاديمية زان المالية":"ZAN Academy"}</div>
                     <div style={{fontSize:12,color:"rgba(255,255,255,0.55)",lineHeight:1.6}}>{ar?"جديد على النمذجة المالية؟ ابدأ بالتعلم أولاً - محتوى عملي + نماذج تفاعلية جاهزة":"New to financial modeling? Start learning first - practical content + ready interactive demos"}</div>
                   </div>
                   <span style={{fontSize:14,color:"#2EC4B6",fontWeight:600,flexShrink:0}}>{ar?"ادخل ←":"Enter →"}</span>
@@ -3783,8 +3790,8 @@ function ShareModal({ project, up, lang, user, onClose }) {
     const assets = (project?.assets || []).length;
     const phases = [...new Set((project?.assets || []).map(a => a.phase))].length;
     const text = ar
-      ? `مرحباً،\nأود مشاركة نموذج مالي معك على منصة Haseef Financial Modeler.\n\n📋 المشروع: ${projName}\n📊 عدد الأصول: ${assets} | المراحل: ${phases}\n\n🔗 رابط الوصول:\n${shareUrl}\n\nإذا ما عندك حساب، سجّل من نفس الرابط وبيظهر لك المشروع تلقائي.`
-      : `Hi,\nI'd like to share a financial model with you on Haseef Financial Modeler.\n\n📋 Project: ${projName}\n📊 Assets: ${assets} | Phases: ${phases}\n\n🔗 Access link:\n${shareUrl}\n\nIf you don't have an account, register from the same link and the project will appear automatically.`;
+      ? `مرحباً،\nأود مشاركة نموذج مالي معك على منصة ZAN Financial Modeler.\n\n📋 المشروع: ${projName}\n📊 عدد الأصول: ${assets} | المراحل: ${phases}\n\n🔗 رابط الوصول:\n${shareUrl}\n\nإذا ما عندك حساب، سجّل من نفس الرابط وبيظهر لك المشروع تلقائي.`
+      : `Hi,\nI'd like to share a financial model with you on ZAN Financial Modeler.\n\n📋 Project: ${projName}\n📊 Assets: ${assets} | Phases: ${phases}\n\n🔗 Access link:\n${shareUrl}\n\nIf you don't have an account, register from the same link and the project will appear automatically.`;
     navigator.clipboard?.writeText(text).then(() => { setCopied("invite"); setTimeout(() => setCopied(""), 2000); });
   };
 
@@ -7913,7 +7920,7 @@ function EducationalModal({ contentKey, lang, onClose }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ZAN ACADEMY — أكاديمية حصيف المالية
+// ZAN ACADEMY — أكاديمية زان المالية
 // Consolidated Learning Center — reads from EDUCATIONAL_CONTENT
 // ═══════════════════════════════════════════════════════════════
 
@@ -8349,7 +8356,7 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
           )}
           <div style={{ flex: 1 }} />
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: isMobile ? 20 : 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>حصيف</span>
+            <span style={{ fontSize: isMobile ? 20 : 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>ZAN</span>
             {!isMobile && <>
               <span style={{ width: 1, height: 18, background: "rgba(46,196,182,0.35)" }} />
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{ar ? "النمذجة" : "Financial"}<br />{ar ? "المالية" : "Modeler"}</span>
@@ -8359,7 +8366,7 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
         {/* Title */}
         <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
           <div style={{ display: "inline-block", padding: "6px 18px", background: "rgba(46,196,182,0.1)", border: "1px solid rgba(46,196,182,0.2)", borderRadius: 20, marginBottom: 16 }}>
-            <span style={{ fontSize: 12, color: "#2EC4B6", fontWeight: 600 }}>📚 {ar ? "أكاديمية حصيف المالية" : "Haseef Academy"}</span>
+            <span style={{ fontSize: 12, color: "#2EC4B6", fontWeight: 600 }}>📚 {ar ? "أكاديمية زان المالية" : "ZAN Academy"}</span>
           </div>
           <h1 style={{ fontSize: isMobile ? 22 : 36, fontWeight: 900, color: "#fff", lineHeight: 1.25, marginBottom: 10, fontFamily: "'Tajawal',sans-serif" }}>
             {ar ? "تعلّم النمذجة المالية العقارية" : "Learn Real Estate Financial Modeling"}
@@ -8555,7 +8562,7 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
         {/* Footer */}
         <div style={{ textAlign: "center", marginTop: 40, fontSize: 11, color: "#9ca3af" }}>
-          {ar ? "أكاديمية حصيف المالية - محتوى تعليمي مصمم للسوق السعودي" : "Haseef Academy - Educational content designed for the Saudi market"}
+          {ar ? "أكاديمية زان المالية - محتوى تعليمي مصمم للسوق السعودي" : "ZAN Academy - Educational content designed for the Saudi market"}
         </div>
       </div>
     </div>
@@ -9152,16 +9159,16 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   @media print { .no-print { display: none !important; } }
 </style></head><body>
 <div class="zan-cover">
-  <div class="logo-group"><span class="logo-name">${ar?'حصيف':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'حصيف':'Haseef'}<br>${ar?'لتطوير الوجهات':'Destination Development'}</span></div>
+  <div class="logo-group"><span class="logo-name">${ar?'ZAN':'ZAN'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'ZAN':'ZAN'}<br>${ar?'لتطوير الوجهات':'Destination Development'}</span></div>
   <div class="sub">Financial Modeler</div>
   <div class="rtype">${reportTitle}</div>
   <div class="pname">${project.name}</div>
   <div class="ploc">${project.location||""} &middot; ${cur} &middot; ${dateStr}</div>
   <div class="conf">${ar?'سري':'CONFIDENTIAL'}</div>
 </div>
-<div class="zan-hdr"><div class="logo-group"><span class="logo-name">${ar?'حصيف':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div class="title">${reportTitle} &mdash; ${project.name}</div></div>
+<div class="zan-hdr"><div class="logo-group"><span class="logo-name">${ar?'ZAN':'ZAN'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div class="title">${reportTitle} &mdash; ${project.name}</div></div>
 <div class="report-body">${el.innerHTML}</div>
-<div class="zan-ftr"><div class="logo-group"><span class="logo-name">${ar?'حصيف':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div>${dateStr} &middot; ${ar?'سري':'Confidential'}</div></div>
+<div class="zan-ftr"><div class="logo-group"><span class="logo-name">${ar?'ZAN':'ZAN'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div>${dateStr} &middot; ${ar?'سري':'Confidential'}</div></div>
 </body></html>`;
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -9226,7 +9233,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {activeReport === "exec" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"حصيف":"Haseef"}</span>
+            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"ZAN"}</span>
             <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
             <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
@@ -9395,7 +9402,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {activeReport === "bank" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"حصيف":"Haseef"}</span>
+            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"ZAN"}</span>
             <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
             <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
@@ -9624,7 +9631,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {activeReport === "investor" && (
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"حصيف":"Haseef"}</span>
+            <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"ZAN"}</span>
             <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
             <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
@@ -9828,7 +9835,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     {!activeReport && (
       <div style={{textAlign:"center",padding:"56px 24px",background:"#0f1117",borderRadius:12,border:"1px solid #1e2230"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:16}}>
-          <span style={{fontSize:40,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>{ar?"حصيف":"Haseef"}</span>
+          <span style={{fontSize:40,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>{ar?"زان":"ZAN"}</span>
           <span style={{width:1,height:36,background:"#5fbfbf",opacity:0.4}} />
           <span style={{fontSize:13,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
         </div>
@@ -10931,7 +10938,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
         <div style={{position:"absolute",top:0,right:0,width:200,height:200,background:"radial-gradient(circle,rgba(95,191,191,0.08) 0%,transparent 70%)",pointerEvents:"none"}} />
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
           <div>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>حصيف</span><span style={{width:1,height:14,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:9,color:"#5fbfbf",fontWeight:300}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>ZAN</span><span style={{width:1,height:14,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:9,color:"#5fbfbf",fontWeight:300}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</span></div>
             <div style={{fontSize:24,fontWeight:700,letterSpacing:-0.5}}>{project.name || "Untitled"}</div>
             {project.location && <div style={{fontSize:12,color:"#8b90a0",marginTop:4}}>{project.location}</div>}
           </div>

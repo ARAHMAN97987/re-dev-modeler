@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// Haseef (حصيف) — Professional Excel Export
+// ZAN (زان) — Professional Excel Export
 // Matches ZAN Waterfront file structure & formatting
 // ═══════════════════════════════════════════════════════════════
 import ExcelJS from "exceljs";
@@ -145,7 +145,7 @@ const fp = v => typeof v === "number" ? v : 0;
 // ═══════════════════════════════════════════════════════════════
 export async function generateProfessionalExcel(project, results, financing, waterfall, incentives, checks) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Haseef Financial Modeler";
+  wb.creator = "ZAN Financial Modeler";
   wb.created = new Date();
 
   const h = results?.horizon || 50;
@@ -352,7 +352,7 @@ function buildDashboard(wb, project, results, financing, waterfall, cur, h, sy) 
   row += 2;
   ws.mergeCells(row, 3, row, 14);
   const footer = ws.getCell(row, 3);
-  footer.value = "Confidential  |  " + (project.name || "Project") + "  |  Haseef حصيف";
+  footer.value = "Confidential  |  " + (project.name || "Project") + "  |  ZAN زان";
   footer.font = { name: FONT_MAIN, size: 8, italic: true, color: { argb: C.grayText } };
   footer.alignment = { horizontal: "center" };
 }
@@ -1292,11 +1292,11 @@ function buildDocumentation(wb, project, cur, h, sy) {
   const doc = [
     ["Project  المشروع", project.name || "-"],
     ["Model Type  نوع النموذج", project.finMode === "self" ? "Pure Development Model (Unlevered)" : "Development + Fund Model (Levered)"],
-    ["Version  الإصدار", "Haseef v5"],
+    ["Version  الإصدار", "ZAN v5"],
     ["Generated  تاريخ التصدير", new Date().toISOString().split("T")[0]],
     ["Currency  العملة", cur],
     ["Horizon  الأفق", h + " years (" + sy + "–" + (sy + h - 1) + ")"],
-    ["Platform  المنصة", "Haseef Financial Modeler (حصيف)"],
+    ["Platform  المنصة", "ZAN Financial Modeler (زان)"],
     ["", ""],
     ["CALCULATION METHODOLOGY  منهجية الحساب", ""],
     ["IRR", "Newton-Raphson iterative method (tolerance 1e-7)"],
