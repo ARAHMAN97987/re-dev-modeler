@@ -1527,7 +1527,6 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
               <select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
                 <option value="cod">COD</option>
                 <option value="firstDraw">{ar?"أول سحب":"1st Draw"}</option>
-                <option value="fundStart">{ar?"بداية الصندوق":"Fund Start"}</option>
               </select>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -1879,7 +1878,6 @@ function Drp({value,onChange,options,lang:dl}) {
 function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, t, up, lang, globalExpand }) {
   const isMobile = useIsMobile();
   const [showYrs, setShowYrs] = useState(15);
-  const [showConfig, setShowConfig] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState("all");
   const [collapsed, setCollapsed] = useState({});
   const [cfgSec, setCfgSec] = useState({}); // accordion sections: {debt:false} = collapsed
@@ -1890,7 +1888,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const [secOpen, setSecOpen] = useState({});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowConfig(expand); setCollapsed({}); setCfgSec(expand ? {} : {debt:true,exit:true,land:true,fund:true,wf:true,fees:true}); setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); }}, [globalExpand]); // educational modal content key
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCollapsed({}); setCfgSec(expand ? {} : {debt:true,exit:true,land:true,fund:true,wf:true,fees:true}); setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); }}, [globalExpand]);
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
   const toggle = (id) => setCollapsed(prev => ({...prev, [id]: !prev[id]}));
@@ -1974,19 +1972,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       </div>
     )}
 
-    {/* ═══ FINANCING CONFIGURATION PANEL ═══ */}
-    <div style={{background:showConfig?"#fff":"#f8f9fb",borderRadius:12,border:showConfig?"2px solid #2563eb":"1px solid #e5e7ec",marginBottom:18,overflow:showConfig?"visible":"hidden",boxShadow:showConfig?"0 2px 12px rgba(37,99,235,0.08)":"none",transition:"all 0.2s"}}>
-      <div onClick={()=>setShowConfig(!showConfig)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:showConfig?"linear-gradient(135deg, #eff6ff, #f0f4ff)":"#f8f9fb",borderBottom:showConfig?"1px solid #dbeafe":"none"}}>
-        <div style={{width:32,height:32,borderRadius:8,background:showConfig?"#2563eb":"#e5e7ec",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:showConfig?"#fff":"#6b7080",transition:"all 0.2s"}}>⚙</div>
-        <div style={{flex:1}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#1a1d23"}}>{isPhaseView ? (ar?`إعدادات ${selectedPhase}`:`${selectedPhase} Settings`) : (ar?"إعدادات التمويل والتخارج":"Financing & Exit Settings")}</div>
-          {!showConfig && <div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{({self:ar?"ذاتي":"Self-Funded",bank100:ar?"بنكي 100%":"Bank 100%",debt:ar?"دين + ملكية":"Debt + Equity",fund:ar?"صندوق":"Fund"})[cfg.finMode]||""}{cfg.finMode!=="self"?` · ${cfg.maxLtvPct||70}% LTV · ${cfg.financeRate||6.5}%`:""}</div>}
-        </div>
-        <button onClick={e=>{e.stopPropagation();setShowConfig(!showConfig);}} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:showConfig?"#fff":"#2563eb",color:showConfig?"#6b7080":"#fff",border:showConfig?"1px solid #e5e7ec":"none",borderRadius:6}}>
-          {showConfig?(ar?"▲ إغلاق":"▲ Close"):(ar?"✎ تعديل":"✎ Edit")}
-        </button>
-      </div>
-      {showConfig && (() => {
+    {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
+    {(() => {
         const hasDbt = cfg.finMode !== "self";
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
         const isFundMode = cfg.finMode === "fund";
@@ -2012,11 +1999,11 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           if (visible === false) return null;
           return <div style={{borderRadius:8,border:`1px solid ${color||"#e5e7ec"}40`,borderTop:`3px solid ${color||"#e5e7ec"}`,overflow:"hidden",background:"#fafbfc",transition:"border-color 0.2s"}}>{children}</div>;
         };
-        return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
+        return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:18}}>
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff"}}>
           <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasF=cfg.finMode==="fund";const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const fundReset=wasF&&v!=="fund"?{subscriptionFeePct:0,structuringFeePct:0,structuringFeeCap:0,preEstablishmentFee:0,spvFee:0,auditorFeeAnnual:0,mgmtFeeCapAnnual:0,custodyFeeAnnual:0}:{};upCfg({finMode:v,...extras,...bank100Reset,...fundReset});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
@@ -2044,7 +2031,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
               <div style={g3}>
                 <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years"><Inp type="number" value={cfg.loanTenor} onChange={v=>upCfg({loanTenor:v})} /></FL>
                 <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years"><Inp type="number" value={cfg.debtGrace} onChange={v=>upCfg({debtGrace:v})} /></FL>
-                <FL label={ar?"بداية السماح":"Grace Basis"} tip="متى تبدأ فترة السماح: من اكتمال البناء أو أول سحب أو بداية الصندوق\nWhen grace starts: completion of development (COD), first drawdown, or fund start year"><select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (COD)":"COD (Completion)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option><option value="fundStart">{ar?"بداية الصندوق":"Fund Start Year"}</option></select></FL>
+                <FL label={ar?"بداية السماح":"Grace Basis"} tip={ar?"متى تبدأ فترة السماح: من اكتمال البناء أو أول سحب"+(isFundMode?" أو بداية الصندوق":""):"When grace starts: COD, first drawdown"+(isFundMode?", or fund start year":"")}><select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (COD)":"COD (Completion)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option>{isFundMode&&<option value="fundStart">{ar?"بداية الصندوق":"Fund Start Year"}</option>}</select></FL>
               </div>
               <div style={g2}>
                 <FL label={ar?"رسوم %":"Upfront Fee %"} tip="رسوم القرض المقدمة كنسبة من مبلغ التمويل. تُدفع مرة واحدة عند السحب\nUpfront loan fee as percentage of debt amount. Paid once at drawdown"><Inp type="number" value={cfg.upfrontFeePct} onChange={v=>upCfg({upfrontFeePct:v})} /></FL>
@@ -2311,12 +2298,9 @@ When to use:
           return <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>;
         })()}</AB>
 
-        {/* Self-funded message */}
         </SecWrap>
-        {cfg.finMode === "self" && <div style={{padding:"20px 18px",textAlign:"center",color:"#9ca3af",fontSize:12,gridColumn:"1/-1",borderRadius:8,border:"1px solid #e5e7ec",background:"#fafbfc"}}>{ar?"لا يوجد تمويل خارجي":"No external financing"}</div>}
         </div>;
       })()}
-    </div>
 
 
     {/* ═══ FINANCING RESULTS (KPIs + tables) ═══ */}
@@ -3085,7 +3069,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               {key:"dashboard",label:t.dashboard,group:"project"},
               {key:"assets",label:t.assetProgram,group:"project"},
               {key:"cashflow",label:t.cashFlow,group:"project"},
-              {key:"financing",label:lang==="ar"?"التمويل":"Financing",group:"finance"},
+              {key:"financing",label:lang==="ar"?"الهيكلة المالية":"Financial Structure",group:"finance"},
               {key:"waterfall",label:lang==="ar"?"حافز الأداء":"Waterfall",group:"finance"},
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
               {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
