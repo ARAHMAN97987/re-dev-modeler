@@ -340,7 +340,7 @@ async function saveProject(project) {
   } else {
     await storage.set(PROJECT_PREFIX + project.id, JSON.stringify(project));
     const index = await loadProjectIndex();
-    const meta = { id: project.id, name: project.name, status: project.status, updatedAt: project.updatedAt, createdAt: project.createdAt };
+    const meta = { id: project.id, name: project.name, status: project.status, updatedAt: project.updatedAt, createdAt: project.createdAt, assetCount: (project.assets||[]).length, finMode: project.finMode||"self", landType: project.landType||"lease", location: project.location||"" };
     const idx = index.findIndex(p => p.id === project.id);
     if (idx >= 0) index[idx] = meta; else index.push(meta);
     await saveProjectIndex(index);
@@ -3590,9 +3590,13 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
 function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut, onOpenAcademy }) {
   const [confirmDel, setConfirmDel] = useState(null);
   const [showFeatures, setShowFeatures] = useState(false);
+  const [search, setSearch] = useState("");
   const isMobile = useIsMobile();
-  const sorted = [...index].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
   const ar = lang === "ar";
+  const filtered = index.filter(p => !search || (p.name||"").toLowerCase().includes(search.toLowerCase()) || (p.location||"").toLowerCase().includes(search.toLowerCase()));
+  const sorted = [...filtered].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+  const totalAssets = index.reduce((s,p) => s + (p.assetCount||0), 0);
+  const finModes = index.reduce((m,p) => { const k = p.finMode||"self"; m[k] = (m[k]||0)+1; return m; }, {});
   return (
     <div style={{minHeight:"100vh",background:"#f5f3f0",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",color:"#1a1d23"}}>
       <div style={{maxWidth:900,margin:"0 auto",padding:isMobile?"20px 14px":"48px 24px"}}>
@@ -3627,12 +3631,47 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           </div></>
         )}
 
-        <div style={{display:"flex",gap:12,marginBottom:32}}>
+        {/* KPI Strip (only when projects exist) */}
+        {index.length > 0 && !isMobile && (
+          <div style={{display:"flex",gap:10,marginBottom:20}}>
+            {[
+              {label:ar?"المشاريع":"Projects",value:index.length,icon:"📁",color:"#2563eb"},
+              {label:ar?"الأصول":"Assets",value:totalAssets,icon:"🏗",color:"#0f766e"},
+              ...(finModes.fund?[{label:ar?"صناديق":"Funds",value:finModes.fund,icon:"🏦",color:"#8b5cf6"}]:[]),
+              ...(finModes.debt?[{label:ar?"تمويل بنكي":"Bank",value:finModes.debt+(finModes.bank100||0),icon:"💳",color:"#f59e0b"}]:[]),
+            ].map((kpi,i)=>(
+              <div key={i} style={{flex:1,background:"#fff",borderRadius:10,border:"1px solid #e5e0d8",padding:"14px 16px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:18}}>{kpi.icon}</span>
+                  <div>
+                    <div style={{fontSize:20,fontWeight:800,color:kpi.color}}>{kpi.value}</div>
+                    <div style={{fontSize:10,color:"#6b7080"}}>{kpi.label}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
           <button className="zan-btn-prim" onClick={()=>onCreate()} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
+          {index.length > 2 && (
+            <div style={{flex:1,minWidth:160,maxWidth:320,position:"relative"}}>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={ar?"🔍 بحث بالاسم أو الموقع...":"🔍 Search by name or location..."} style={{width:"100%",padding:"9px 14px",borderRadius:8,border:"1px solid #e5e0d8",background:"#fff",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",transition:"border-color 0.15s"}} onFocus={e=>e.target.style.borderColor="#5fbfbf"} onBlur={e=>e.target.style.borderColor="#e5e0d8"} />
+              {search && <button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9ca3af",fontSize:14,cursor:"pointer",padding:0}}>✕</button>}
+            </div>
+          )}
           <div style={{flex:1}} />
-          <div style={{fontSize:12,color:"#6b7080",alignSelf:"center"}}>{sorted.length} {t.projects}</div>
+          <div style={{fontSize:12,color:"#6b7080",alignSelf:"center"}}>{sorted.length}{sorted.length!==index.length?` / ${index.length}`:""} {t.projects}</div>
         </div>
-        {sorted.length===0 ? (
+        {sorted.length===0 && search ? (
+          <div style={{textAlign:"center",padding:48}}>
+            <div style={{fontSize:36,marginBottom:12,opacity:0.5}}>🔍</div>
+            <div style={{fontSize:16,fontWeight:600,color:"#1a1d23",marginBottom:6}}>{ar?"لا توجد نتائج":"No results"}</div>
+            <div style={{fontSize:12,color:"#6b7080"}}>{ar?`لم يتم العثور على مشاريع تطابق "${search}"`:`No projects matching "${search}"`}</div>
+            <button onClick={()=>setSearch("")} style={{...btnS,marginTop:16,padding:"8px 20px",fontSize:12,background:"#f0f1f5",color:"#4b5060",border:"1px solid #e5e7ec",borderRadius:6}}>{ar?"مسح البحث":"Clear search"}</button>
+          </div>
+        ) : sorted.length===0 ? (
           <div style={{textAlign:"center",padding:48}}>
             <div style={{fontSize:48,marginBottom:16,opacity:0.6}}>🏗</div>
             <div style={{fontSize:20,fontWeight:700,color:"#0f1117",marginBottom:8}}>{lang==="ar"?"ابدأ مشروعك الأول":"Start Your First Project"}</div>
@@ -3675,7 +3714,11 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:isMobile?13:14,fontWeight:600,color:"#0f1117",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.name}{p._shared?<span style={{fontSize:10,color:"#2563eb",marginInlineStart:8,fontWeight:500}}>{lang==="ar"?"(مشارك)":"(Shared)"}</span>:null}</div>
-                  <div style={{fontSize:isMobile?10:11,color:"#6b7080",marginTop:2}}>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",...(!isMobile?{year:"numeric",hour:"2-digit",minute:"2-digit"}:{})})}</div>
+                  <div style={{fontSize:isMobile?10:11,color:"#6b7080",marginTop:2,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <span>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",...(!isMobile?{year:"numeric",hour:"2-digit",minute:"2-digit"}:{})})}</span>
+                    {!isMobile && p.assetCount > 0 && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:"#f0f1f5",color:"#6b7080"}}>{p.assetCount} {ar?"أصل":"assets"}</span>}
+                    {!isMobile && p.finMode && p.finMode !== "self" && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:p.finMode==="fund"?"#f3e8ff":"#dbeafe",color:p.finMode==="fund"?"#7c3aed":"#2563eb"}}>{p.finMode==="fund"?(ar?"صندوق":"Fund"):p.finMode==="bank100"?(ar?"بنك 100%":"Bank 100%"):(ar?"بنكي":"Bank")}</span>}
+                  </div>
                 </div>
                 <span style={{fontSize:isMobile?9:10,padding:"3px 8px",borderRadius:4,fontWeight:500,background:p._shared?"#dbeafe":p.status==="Complete"?"#dcfce7":p.status==="In Progress"?"#dbeafe":"#f0f1f5",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af",flexShrink:0}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة":"View"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
                 {!isMobile && !p._shared && <button onClick={e=>{e.stopPropagation();onDup(p.id);}} style={{...btnSm,background:"#f0f1f5",color:"#6b7080",padding:"4px 10px"}} title="Duplicate">{lang==="ar"?"نسخ":"Copy"}</button>}
