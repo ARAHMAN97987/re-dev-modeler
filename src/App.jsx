@@ -4338,7 +4338,6 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   });
   const isFiltered = filterPhase !== "all" || filterCat !== "all" || filterRev !== "all";
 
-  const ar = lang === "ar";
   const up = updateProject;
   const cur = project.currency || "SAR";
 
