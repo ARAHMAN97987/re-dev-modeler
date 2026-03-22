@@ -4761,9 +4761,13 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
       {/* CARD VIEW */}
       {viewMode === "cards" && (<div>
         {assets.length===0 ? (
-          <div style={{textAlign:"center",padding:48,color:"#9ca3af",background:"#fff",borderRadius:12,border:"2px dashed #e5e7ec"}}>
-            <div style={{fontSize:32,marginBottom:8}}>🏗</div><div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{lang==="ar"?"لا توجد أصول":"No assets yet"}</div>
-            <div style={{fontSize:12}}>{lang==="ar"?"اضغط '+ إضافة أصل' أو استخدم المساعد الذكي":"Click '+ Add Asset' or use the AI Assistant"}</div>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:48,background:"rgba(95,191,191,0.03)",borderRadius:12,border:"1px dashed rgba(95,191,191,0.2)",textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏗</div>
+            <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"لا توجد أصول بعد":"No Assets Yet"}</div>
+            <div style={{fontSize:12,color:"#6b7080",marginBottom:20,maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أضف أصول مشروعك لتبدأ تشوف التدفقات والتحليلات. استخدم الزر أدناه أو استورد من ملف.":"Add your project assets to start seeing cash flows and analytics. Use the button below or import from file."}</div>
+            <button onClick={handleAddAsset} style={{background:"linear-gradient(135deg,#0f766e,#5fbfbf)",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+              ➕ {lang==="ar"?"أضف أول أصل":"Add First Asset"}
+            </button>
           </div>
         ) : (
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill, minmax(280px, 1fr))",gap:isMobile?8:12}}>
@@ -5159,6 +5163,37 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const cfRange = Math.max(maxCF, Math.abs(minCF), 1);
 
   return (<div>
+    {/* ═══ Progress Tracker (shows until user completes key steps) ═══ */}
+    {(() => {
+      const steps = [
+        { id:"assets", labelAr:"إضافة أصول", labelEn:"Add Assets", done: (project.assets||[]).length > 0, tab:"assets" },
+        { id:"review", labelAr:"مراجعة التدفقات", labelEn:"Review Cash Flows", done: (project.assets||[]).length >= 2 && c.totalCapex > 0, tab:"cashflow" },
+        { id:"financing", labelAr:"إعداد التمويل", labelEn:"Setup Financing", done: project.finMode !== "self" || (f && f.totalDebt > 0), tab:"financing" },
+        { id:"export", labelAr:"تصدير التقارير", labelEn:"Export Reports", done: false, tab:"reports" },
+      ];
+      const doneCount = steps.filter(s => s.done).length;
+      if (doneCount >= 3) return null;
+      return (
+        <div style={{background:"rgba(95,191,191,0.04)",border:"1px solid rgba(95,191,191,0.15)",borderRadius:12,padding:"14px 20px",marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+            <span style={{fontSize:11,fontWeight:600,color:"#0f766e"}}>{ar?`${doneCount}/4 خطوات مكتملة`:`${doneCount}/4 steps complete`}</span>
+            <div style={{flex:1,height:4,background:"rgba(0,0,0,0.06)",borderRadius:2}}>
+              <div style={{width:`${(doneCount/4)*100}%`,height:"100%",background:"linear-gradient(90deg,#0f766e,#5fbfbf)",borderRadius:2,transition:"width 0.4s ease"}} />
+            </div>
+          </div>
+          <div style={{display:"flex",gap:isMobile?8:10,flexWrap:"wrap"}}>
+            {steps.map((step,i) => (
+              <button key={step.id} onClick={()=>setActiveTab(step.tab)} style={{flex:1,minWidth:isMobile?120:140,padding:"10px 12px",background:step.done?"rgba(16,185,129,0.06)":"#fff",border:`1px solid ${step.done?"rgba(16,185,129,0.25)":"#e5e7ec"}`,borderRadius:8,cursor:"pointer",textAlign:"center",transition:"all 0.15s",fontFamily:"inherit"}}
+                onMouseEnter={e=>{if(!step.done){e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.background="rgba(95,191,191,0.04)";}}}
+                onMouseLeave={e=>{if(!step.done){e.currentTarget.style.borderColor="#e5e7ec";e.currentTarget.style.background="#fff";}}}>
+                <div style={{fontSize:16,marginBottom:4}}>{step.done?"✅":`${i+1}`}</div>
+                <div style={{fontSize:11,fontWeight:step.done?600:500,color:step.done?"#16a34a":"#4b5060"}}>{ar?step.labelAr:step.labelEn}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    })()}
     {/* ═══ SECTION 1: Decision Summary ═══ */}
     <div style={{background:`linear-gradient(135deg, ${healthColor}08, ${healthColor}18)`,borderRadius:14,border:`2px solid ${healthColor}30`,padding:isMobile?"16px 14px":"22px 26px",marginBottom:20,display:"flex",flexDirection:isMobile?"column":"row",alignItems:isMobile?"stretch":"center",gap:isMobile?14:20,flexWrap:"wrap"}}>
       {/* Health badge */}
@@ -8909,7 +8944,13 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const reportRef = useRef(null);
   const [activeReport, setActiveReport] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
-  if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
+  if (!project || !results) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(95,191,191,0.03)",border:"1px dashed rgba(95,191,191,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📄</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"التقارير تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Reports need project data. Add assets from the Program tab."}</div>
+    </div>
+  );
 
   const ar = lang === "ar";
   const c = results.consolidated;
@@ -9760,7 +9801,13 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
   const [sensCol, setSensCol] = useState("softCostPct");
   const [selectedPhases, setSelectedPhases] = useState([]);
   const [eduModal, setEduModal] = useState(null);
-  if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
+  if (!project || !results) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(95,191,191,0.03)",border:"1px dashed rgba(95,191,191,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📊</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"السيناريوهات تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Scenarios need project data. Add assets from the Program tab."}</div>
+    </div>
+  );
 
   const cur = project.currency || "SAR";
   const ar = lang === "ar";
@@ -10283,7 +10330,13 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
 function IncentivesView({ project, results, incentivesResult, financing, lang, up }) {
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
-  if (!project || !results) return <div style={{color:"#9ca3af"}}>Add assets first.</div>;
+  if (!project || !results) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(95,191,191,0.03)",border:"1px dashed rgba(95,191,191,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏛</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Incentives need project data. Add assets from the Program tab."}</div>
+    </div>
+  );
   const ir = incentivesResult;
   const inc = project.incentives || {};
   const cur = project.currency || "SAR";
