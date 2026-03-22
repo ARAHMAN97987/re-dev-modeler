@@ -47,8 +47,12 @@ export const defaultProject = () => ({
   debtTrancheMode: "single", // single | perDraw
   islamicMode: "conventional", // conventional | murabaha | ijara
   // Equity (manual override)
-  gpEquityManual: 0, // 0 = auto from land cap
+  gpEquityManual: 0, // 0 = auto from land cap + dev fee + cash
   lpEquityManual: 0, // 0 = auto (remainder)
+  gpInvestDevFee: false, // Developer invests dev fee back into fund as equity
+  gpDevFeeInvestPct: 100, // % of dev fee to invest (default 100%)
+  gpCashInvest: false, // Developer adds cash investment
+  gpCashInvestAmount: 0, // Cash amount (SAR)
   // Fund Fees (only when vehicleType = fund)
   subscriptionFeePct: 2,
   annualMgmtFeePct: 1.5,

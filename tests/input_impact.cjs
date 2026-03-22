@@ -147,7 +147,8 @@ M=run(makeProject({exitCostPct:5}));chk('exitCostPct',M.f.exitProceeds.reduce((a
 M=run(makeProject({landCapitalize:false}));chk('landCap=off',M.f.landCapValue===0,'still has cap');
 M=run(makeProject({landCapRate:1200}));chk('landCapRate',M.f.landCapValue>B.f.landCapValue,'no impact');
 M=run(makeProject({landCapTo:'lp'}));chk('landCapTo',M.f.gpEquity!==B.f.gpEquity,'no impact');
-M=run(makeProject({gpEquityManual:100000000}));chk('gpEquityManual',M.f.gpEquity!==B.f.gpEquity,'no impact');
+M=run(makeProject({gpCashInvest:true,gpCashInvestAmount:50000000}));chk('gpCashInvest',M.f.gpEquity!==B.f.gpEquity,'no impact');
+M=run(makeProject({gpInvestDevFee:true}));chk('gpInvestDevFee',M.f.gpEquity!==B.f.gpEquity,'no impact');
 
 // [8] Waterfall
 process.stdout.write('\n[8] Waterfall: ');

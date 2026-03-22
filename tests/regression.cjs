@@ -46,7 +46,7 @@ const JAZAN = {
   financeRate:7, loanTenor:8, debtGrace:3, upfrontFeePct:0.5,
   repaymentType:"amortizing", landCapitalize:false, landCapTo:"gp",
   graceBasis:"cod", feeTreatment:"capital",
-  gpEquityManual:0, lpEquityManual:0,
+  gpEquityManual:0, lpEquityManual:0, gpInvestDevFee:true, gpDevFeeInvestPct:100,
   prefReturnPct:15, gpCatchup:true, carryPct:25, lpProfitSplitPct:75,
   exitStrategy:"sale", exitYear:0, exitMultiple:10, exitCostPct:2,
   subscriptionFeePct:2, annualMgmtFeePct:0.9, custodyFeeAnnual:130000,
@@ -73,7 +73,7 @@ t("T1", "2 phases", Object.keys(r.phaseResults).length === 2);
 // ── T2: Financing ──
 t("T2", "Max Debt = 217,532,700", tol(f.maxDebt, 217532700, 0.01), `Got: ${Math.round(f.maxDebt)}`);
 t("T2", "Total Equity (excl upfront fee)", tol(f.totalEquity, 145021800, 0.1), `Got: ${Math.round(f.totalEquity)}`);
-t("T2", "GP = LP (50/50)", Math.abs(f.gpEquity - f.lpEquity) < 1);
+t("T2", "GP from dev fee (not 50/50)", f.gpEquity > 0 && f.gpEquity < f.lpEquity, `GP: ${Math.round(f.gpEquity)}, LP: ${Math.round(f.lpEquity)}`);
 t("T2", "Levered IRR > 25%", f.leveredIRR > 0.25, `Got: ${(f.leveredIRR*100).toFixed(2)}%`);
 t("T2", "DSCR all > 0 during repayment", f.dscr.filter(d => d !== null && d > 0).length > 0);
 t("T2", "Debt fully repaid", f.debtBalClose[f.repayStart + f.repayYears] === 0 || f.debtBalClose[14] < 1);
@@ -82,7 +82,7 @@ t("T2", "Debt fully repaid", f.debtBalClose[f.repayStart + f.repayYears] === 0 |
 t("T3", "Catch-up < Pref (C5 fix)", w.tier3.reduce((s,v)=>s+v,0) < w.tier2.reduce((s,v)=>s+v,0));
 t("T3", "LP IRR > 20%", w.lpIRR > 0.20, `Got: ${(w.lpIRR*100).toFixed(2)}%`);
 t("T3", "GP IRR > 15%", w.gpIRR > 0.15, `Got: ${(w.gpIRR*100).toFixed(2)}%`);
-t("T3", "LP MOIC > 3.5x", w.lpMOIC > 3.5, `Got: ${w.lpMOIC.toFixed(2)}x`);
+t("T3", "LP MOIC > 3x", w.lpMOIC > 3, `Got: ${w.lpMOIC.toFixed(2)}x`);
 t("T3", "DPI exists", w.lpDPI > 0 && w.gpDPI > 0);
 t("T3", "LP+GP dist = total distributable", Math.abs(w.lpTotalDist + w.gpTotalDist - (w.tier1.reduce((s,v)=>s+v,0) + w.tier2.reduce((s,v)=>s+v,0) + w.tier3.reduce((s,v)=>s+v,0) + w.tier4LP.reduce((s,v)=>s+v,0) + w.tier4GP.reduce((s,v)=>s+v,0))) < 1);
 

@@ -192,54 +192,70 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // Only fund and jv modes have LP investors.
   const hasLP = project.finMode === "fund" || project.finMode === "jv";
 
+  // Dev fee amount (for GP investment calculation — same formula as waterfall)
+  const devFeeTotal = devCostExclLand * (project.developerFeePct ?? 10) / 100;
+  // GP investment from dev fee
+  const gpDevFeeInvest = project.gpInvestDevFee ? devFeeTotal * ((project.gpDevFeeInvestPct ?? 100) / 100) : 0;
+  // GP cash investment
+  const gpCashInvest = project.gpCashInvest ? (project.gpCashInvestAmount || 0) : 0;
+
   if (!hasLP) {
     // debt / bank100 / any non-fund mode: GP = all equity, LP = 0
     gpEquity = totalEquity;
     lpEquity = 0;
   } else {
-    // Fund/JV: GP/LP split based on land cap, manual override, or 50/50 default
-    // GP Equity: manual > land cap value > partner equity > 50% default
-    // H15: landCapTo controls who gets land cap credit (gp/lp/split)
+    // Fund/JV: GP equity = sum of 3 sources, LP = remainder
+    // Source 1: Land capitalization credit
+    let gpFromLandCap = 0;
     const landCapTarget = project.landCapTo || "gp";
-    if ((project.gpEquityManual ?? 0) > 0) {
-      gpEquity = Math.min(project.gpEquityManual, totalEquity);
-    } else if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
-      // Partner contributes land as equity → their agreed % takes priority over landCap split
-      gpEquity = totalEquity * ((project.partnerEquityPct || 50) / 100);
+    if (project.landType === "partner" && (project.partnerEquityPct || 0) > 0) {
+      gpFromLandCap = totalEquity * ((project.partnerEquityPct || 50) / 100);
     } else if (effectiveLandCap > 0) {
-      if (landCapTarget === "gp") gpEquity = Math.min(effectiveLandCap, totalEquity);
-      else if (landCapTarget === "lp") gpEquity = Math.max(0, totalEquity - effectiveLandCap);
-      else gpEquity = totalEquity * 0.5; // split
-    } else {
-      gpEquity = totalEquity * 0.5;
+      if (landCapTarget === "gp") gpFromLandCap = effectiveLandCap;
+      else if (landCapTarget === "split") gpFromLandCap = effectiveLandCap * 0.5;
+      // lp → gpFromLandCap = 0
     }
 
-    // LP Equity: manual > remainder
+    // Source 2: Dev fee as investment
+    const gpFromDevFee = gpDevFeeInvest;
+
+    // Source 3: Cash investment
+    const gpFromCash = gpCashInvest;
+
+    // Legacy fallback: if old project has gpEquityManual > 0 and no new flags
+    const hasNewFlags = project.gpInvestDevFee || project.gpCashInvest || effectiveLandCap > 0;
+    if (!hasNewFlags && (project.gpEquityManual ?? 0) > 0) {
+      gpEquity = Math.min(project.gpEquityManual, totalEquity);
+    } else {
+      gpEquity = Math.min(gpFromLandCap + gpFromDevFee + gpFromCash, totalEquity);
+    }
+
+    // LP Equity: manual override > remainder
     if ((project.lpEquityManual ?? 0) > 0) {
       lpEquity = Math.min(project.lpEquityManual, Math.max(0, totalEquity - gpEquity));
     } else {
       lpEquity = Math.max(0, totalEquity - gpEquity);
     }
 
-    // Safety: if fund mode and LP = 0 and no explicit manual override, force 50/50
-    if (project.finMode === "fund" && lpEquity === 0 && !(project.gpEquityManual > 0) && !(effectiveLandCap >= totalEquity)) {
-      gpEquity = totalEquity * 0.5;
-      lpEquity = totalEquity * 0.5;
+    // Safety: if fund mode and both GP and LP = 0, force LP = 100%
+    if (project.finMode === "fund" && lpEquity === 0 && gpEquity === 0 && totalEquity > 0) {
+      lpEquity = totalEquity;
     }
 
-    // H6: Reconcile - GP + LP must equal totalEquity
+    // Reconcile - GP + LP must equal totalEquity
     if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
-      // If both manual, scale proportionally; otherwise adjust the non-manual one
-      if ((project.gpEquityManual ?? 0) > 0 && (project.lpEquityManual ?? 0) > 0) {
-        const sum = gpEquity + lpEquity;
-        if (sum > 0) { gpEquity = totalEquity * (gpEquity / sum); lpEquity = totalEquity - gpEquity; }
-      } else if ((project.gpEquityManual ?? 0) > 0) {
-        lpEquity = Math.max(0, totalEquity - gpEquity);
-      } else {
-        gpEquity = Math.max(0, totalEquity - lpEquity);
-      }
+      lpEquity = Math.max(0, totalEquity - gpEquity);
     }
   }
+
+  // GP equity breakdown (for UI display)
+  const gpEquityBreakdown = {
+    landCap: hasLP ? Math.min(effectiveLandCap > 0 ? (landCapValue * ((project.landCapTo||"gp")==="gp"?1:(project.landCapTo||"gp")==="split"?0.5:0)) : 0, totalEquity) : 0,
+    partnerLand: hasLP && project.landType === "partner" ? totalEquity * ((project.partnerEquityPct || 50) / 100) : 0,
+    devFee: hasLP ? gpDevFeeInvest : 0,
+    cash: hasLP ? gpCashInvest : 0,
+    devFeeTotal,
+  };
 
   let gpPct = isBank100 ? 1 : (totalEquity > 0 ? gpEquity / totalEquity : 0);
   let lpPct = isBank100 ? 0 : (totalEquity > 0 ? lpEquity / totalEquity : 0);
@@ -507,7 +523,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   return {
     mode: project.finMode, landCapValue, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
-    gpEquity, lpEquity, totalEquity, gpPct, lpPct,
+    gpEquity, lpEquity, totalEquity, gpPct, lpPct, gpEquityBreakdown,
     drawdown, equityCalls, debtBalOpen, debtBalClose,
     repayment: repay, interest: adjustedInterest, originalInterest: interest,
     debtService: adjustedDebtService, leveredCF, dscr, exitProceeds,

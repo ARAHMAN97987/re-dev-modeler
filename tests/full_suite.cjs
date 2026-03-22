@@ -431,7 +431,7 @@ suite('F10-computeWaterfall');
   t('LP netCF = -calls*lpPct + dist', ncfOk);
   // K: MOIC = dist / paid-in (actual equity called × share)
   t('LP MOIC = dist/paidIn', near(w.lpMOIC, w.lpNetDist/w.lpTotalCalled, 0.01));
-  t('GP MOIC = dist/paidIn', near(w.gpMOIC, w.gpNetDist/w.gpTotalCalled, 0.01));
+  t('GP MOIC = dist/paidIn or 0 if no GP equity', w.gpTotalCalled > 0 ? near(w.gpMOIC, w.gpNetDist/w.gpTotalCalled, 0.01) : w.gpMOIC === 0);
 }
 
 // ── F10b: Waterfall oracle comparison ──
@@ -465,7 +465,7 @@ suite('F10c-MOIC-PaidInVsCommitted');
   // Paid-in MOIC = dist / totalCalled
   t('MOIC paid-in = dist/called', near(w.lpMOIC, w.lpNetDist / w.lpTotalCalled, 0.01));
   // Committed MOIC = dist / original equity (may differ if not all equity called)
-  t('CommittedMOIC exists', w.lpCommittedMOIC > 0 && w.gpCommittedMOIC > 0);
+  t('CommittedMOIC exists', w.lpCommittedMOIC > 0 && (w.gpCommittedMOIC > 0 || w.gpEquity === 0));
 }
 
 // ── F11: getPhaseFinancing ──
