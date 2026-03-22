@@ -285,6 +285,34 @@ async function loadProject(id, ownerId, permission) {
     const p = JSON.parse(r.value);
     const def = defaultProject();
     const migrated = { ...def, ...p };
+    // Fee migration: old projects may have fee fields = 0 or missing.
+    // Apply defaults for fees that were never explicitly set by the user.
+    // We detect "never set" by checking if the field is 0/undefined AND the project
+    // was created before these fields existed (no _feesVersion flag).
+    if (!migrated._feesVersion) {
+      const feeDefaults = {
+        subscriptionFeePct: def.subscriptionFeePct,
+        annualMgmtFeePct: def.annualMgmtFeePct,
+        mgmtFeeCapAnnual: def.mgmtFeeCapAnnual,
+        custodyFeeAnnual: def.custodyFeeAnnual,
+        developerFeePct: def.developerFeePct,
+        structuringFeePct: def.structuringFeePct,
+        structuringFeeCap: def.structuringFeeCap,
+        preEstablishmentFee: def.preEstablishmentFee,
+        spvFee: def.spvFee,
+        auditorFeeAnnual: def.auditorFeeAnnual,
+        operatorFeePct: def.operatorFeePct,
+        miscExpensePct: def.miscExpensePct,
+        upfrontFeePct: def.upfrontFeePct,
+        mgmtFeeBase: def.mgmtFeeBase,
+      };
+      for (const [k, v] of Object.entries(feeDefaults)) {
+        if (migrated[k] === undefined || migrated[k] === null || migrated[k] === '') {
+          migrated[k] = v;
+        }
+      }
+      migrated._feesVersion = 2;
+    }
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
     if (ownerId) migrated._permission = permission || "edit";
@@ -1929,6 +1957,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
   const h = results.horizon;
   const sy = results.startYear;
+  // Fee auto-default hints
+  const _FD = { subscriptionFeePct:2, annualMgmtFeePct:1.5, mgmtFeeCapAnnual:2000000, custodyFeeAnnual:100000, developerFeePct:10, structuringFeePct:1, structuringFeeCap:300000, preEstablishmentFee:200000, spvFee:20000, auditorFeeAnnual:50000, operatorFeePct:0.15, miscExpensePct:0.5, upfrontFeePct:2 };
+  const autoTag = (field) => { const d = _FD[field]; if (d === undefined) return null; const v = cfg[field]; return (v === d) ? <span style={{fontSize:9,color:"#16a34a",marginInlineStart:4}}>({ar?"تلقائي":"auto"})</span> : null; };
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
   const phaseNames = Object.keys(results.phaseResults || {});
   const hasPhases = phaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
@@ -2275,27 +2306,27 @@ When to use:
           if (isFundMode && cfg.vehicleType==="fund") return <>
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم لمرة واحدة":"One-time"}</div>
             <div style={g3}>
-              <FL label={ar?"اكتتاب %":"Subscription %"} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر\nOne-time entry fee at subscription. Usually 1-2% of invested capital" hint={ar?"مرة واحدة · عند الاكتتاب":"One-time · at subscription"}><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
-              <FL label={ar?"هيكلة %":"Structuring %"} tip="نسبة من حجم الصندوق تُدفع لمرة واحدة لمدير الصندوق مقابل ترتيب الفرصة ودراسات الجدوى\nOne-time fee for deal sourcing, due diligence, and fund setup" hint={ar?"مرة واحدة · من حجم الصندوق":"One-time · % of fund size"}><Inp type="number" value={cfg.structuringFeePct} onChange={v=>upCfg({structuringFeePct:v})} /></FL>
-              <FL label={ar?"سقف الهيكلة":"Structuring Cap"} tip="الحد الأقصى لرسوم الهيكلة. 0 = بدون سقف\nMax structuring fee amount. 0 = no cap" hint={ar?"حد أقصى · 0 = بدون سقف":"Max amount · 0 = no cap"}><Inp type="number" value={cfg.structuringFeeCap} onChange={v=>upCfg({structuringFeeCap:v})} /></FL>
+              <FL label={<>{ar?"اكتتاب %":"Subscription %"}{autoTag("subscriptionFeePct")}</>} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر\nOne-time entry fee at subscription. Usually 1-2% of invested capital" hint={ar?"مرة واحدة · عند الاكتتاب":"One-time · at subscription"}><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
+              <FL label={<>{ar?"هيكلة %":"Structuring %"}{autoTag("structuringFeePct")}</>} tip="نسبة من حجم الصندوق تُدفع لمرة واحدة لمدير الصندوق مقابل ترتيب الفرصة ودراسات الجدوى\nOne-time fee for deal sourcing, due diligence, and fund setup" hint={ar?"مرة واحدة · من حجم الصندوق":"One-time · % of fund size"}><Inp type="number" value={cfg.structuringFeePct} onChange={v=>upCfg({structuringFeePct:v})} /></FL>
+              <FL label={<>{ar?"سقف الهيكلة":"Structuring Cap"}{autoTag("structuringFeeCap")}</>} tip="الحد الأقصى لرسوم الهيكلة. 0 = بدون سقف\nMax structuring fee amount. 0 = no cap" hint={ar?"حد أقصى · 0 = بدون سقف":"Max amount · 0 = no cap"}><Inp type="number" value={cfg.structuringFeeCap} onChange={v=>upCfg({structuringFeeCap:v})} /></FL>
             </div>
             <div style={g3}>
-              <FL label={ar?"ما قبل التأسيس":"Pre-Establishment"} tip="مصاريف إعداد مستندات الصندوق وتقديمها لهيئة السوق المالية. تُدفع مرة واحدة بعد الإقفال الأولي\nFund document preparation and CMA filing. One-time after initial closing" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.preEstablishmentFee} onChange={v=>upCfg({preEstablishmentFee:v})} /></FL>
-              <FL label={ar?"إنشاء SPV":"SPV Fee"} tip="رسوم تأسيس الشركة ذات الغرض الخاص. تُدفع مرة واحدة عند بدء التأسيس\nSPV incorporation fee. One-time at setup" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.spvFee} onChange={v=>upCfg({spvFee:v})} /></FL>
+              <FL label={<>{ar?"ما قبل التأسيس":"Pre-Establishment"}{autoTag("preEstablishmentFee")}</>} tip="مصاريف إعداد مستندات الصندوق وتقديمها لهيئة السوق المالية. تُدفع مرة واحدة بعد الإقفال الأولي\nFund document preparation and CMA filing. One-time after initial closing" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.preEstablishmentFee} onChange={v=>upCfg({preEstablishmentFee:v})} /></FL>
+              <FL label={<>{ar?"إنشاء SPV":"SPV Fee"}{autoTag("spvFee")}</>} tip="رسوم تأسيس الشركة ذات الغرض الخاص. تُدفع مرة واحدة عند بدء التأسيس\nSPV incorporation fee. One-time at setup" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.spvFee} onChange={v=>upCfg({spvFee:v})} /></FL>
               <div />
             </div>
             <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم سنوية":"Annual"}</div>
             <div style={g2}>
-              <FL label={ar?"إدارة %":"Management %"} tip="أتعاب إدارية سنوية من صافي أصول الصندوق (NAV). تُستحق وتسدد بشكل ربع سنوي\nAnnual management fee based on fund NAV. Paid quarterly" hint={ar?"سنوي · من صافي الأصول":"Annual · based on NAV"}><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
-              <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="أساس حساب رسوم الإدارة:\n- صافي الأصول (NAV): القيمة الصافية للصندوق\n- CAPEX تراكمي: المبالغ المنفذة فعلياً\n- تكلفة التطوير: إجمالي التكلفة\n- رأس المال: الملكية الإجمالية"><Drp lang={lang} value={cfg.mgmtFeeBase||"nav"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"nav",en:"Fund NAV",ar:"صافي أصول الصندوق"},{value:"deployed",en:"Deployed CAPEX",ar:"CAPEX المنفذ"},{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
+              <FL label={<>{ar?"إدارة %":"Management %"}{autoTag("annualMgmtFeePct")}</>} tip="أتعاب إدارية سنوية من صافي أصول الصندوق (NAV). تُستحق وتسدد بشكل ربع سنوي\nAnnual management fee based on fund NAV. Paid quarterly" hint={ar?"سنوي · من صافي الأصول":"Annual · based on NAV"}><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
+              <FL label={<>{ar?"أساس رسوم الإدارة":"Mgmt Fee Base"}{autoTag("mgmtFeeBase")}</>} tip="أساس حساب رسوم الإدارة:\n- صافي الأصول (NAV): القيمة الصافية للصندوق\n- CAPEX تراكمي: المبالغ المنفذة فعلياً\n- تكلفة التطوير: إجمالي التكلفة\n- رأس المال: الملكية الإجمالية"><Drp lang={lang} value={cfg.mgmtFeeBase||"nav"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"nav",en:"Fund NAV (auto)",ar:"صافي أصول الصندوق (تلقائي)"},{value:"deployed",en:"Deployed CAPEX",ar:"CAPEX المنفذ"},{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
             </div>
             <div style={g3}>
-              <FL label={ar?"سقف الإدارة/سنة":"Mgmt Cap/yr"} tip="الحد الأقصى لرسوم الإدارة سنوياً. 0 = بدون سقف\nMax annual management fee. 0 = no cap" hint={ar?"حد أقصى سنوي · 0 = بدون سقف":"Max annual · 0 = no cap"}><Inp type="number" value={cfg.mgmtFeeCapAnnual} onChange={v=>upCfg({mgmtFeeCapAnnual:v})} /></FL>
-              <FL label={ar?"رسوم الحفظ/سنة":"Custody/yr"} tip="رسوم سنوية لأمين الحفظ. تُدفع نصف سنوي\nAnnual custody fee. Paid semi-annually" hint={ar?"سنوي · نصف سنوي":"Annual · semi-annual"}><Inp type="number" value={cfg.custodyFeeAnnual} onChange={v=>upCfg({custodyFeeAnnual:v})} /></FL>
-              <FL label={ar?"مراجع حسابات/سنة":"Auditor/yr"} tip="أتعاب سنوية لمراجع الحسابات. تُدفع نصف سنوي بعد كل تقييم\nAnnual auditor fee. Paid semi-annually after each valuation" hint={ar?"سنوي":"Annual"}><Inp type="number" value={cfg.auditorFeeAnnual} onChange={v=>upCfg({auditorFeeAnnual:v})} /></FL>
-              <FL label={ar?"أتعاب المشغل %":"Operator Fee %"} tip="أتعاب سنوية لمشغل المشروع. تُحسب كنسبة من حجم الأصول المنفذة. تبدأ بعد انتهاء البناء تلقائياً للمشاريع التأجيرية\nAnnual operator fee as % of completed asset value. Starts after construction. Auto-applied for rental projects" hint={ar?"سنوي · تأجير فقط":"Annual · rental only"}><Inp type="number" value={cfg.operatorFeePct} onChange={v=>upCfg({operatorFeePct:v})} step={0.01} /></FL>
-              <FL label={ar?"مصروفات أخرى %":"Misc. Expenses %"} tip="مصروفات متنوعة (تقييم، رقابة شرعية، مجلس إدارة، وغيرها). تُحسب كنسبة من إجمالي الأصول وتُدفع مرة واحدة عند بداية الصندوق\nMiscellaneous expenses (valuation, Sharia, board, etc.). One-time at fund start as % of total assets" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.miscExpensePct} onChange={v=>upCfg({miscExpensePct:v})} step={0.1} /></FL>
+              <FL label={<>{ar?"سقف الإدارة/سنة":"Mgmt Cap/yr"}{autoTag("mgmtFeeCapAnnual")}</>} tip="الحد الأقصى لرسوم الإدارة سنوياً. 0 = بدون سقف\nMax annual management fee. 0 = no cap" hint={ar?"حد أقصى سنوي · 0 = بدون سقف":"Max annual · 0 = no cap"}><Inp type="number" value={cfg.mgmtFeeCapAnnual} onChange={v=>upCfg({mgmtFeeCapAnnual:v})} /></FL>
+              <FL label={<>{ar?"رسوم الحفظ/سنة":"Custody/yr"}{autoTag("custodyFeeAnnual")}</>} tip="رسوم سنوية لأمين الحفظ. تُدفع نصف سنوي\nAnnual custody fee. Paid semi-annually" hint={ar?"سنوي · نصف سنوي":"Annual · semi-annual"}><Inp type="number" value={cfg.custodyFeeAnnual} onChange={v=>upCfg({custodyFeeAnnual:v})} /></FL>
+              <FL label={<>{ar?"مراجع حسابات/سنة":"Auditor/yr"}{autoTag("auditorFeeAnnual")}</>} tip="أتعاب سنوية لمراجع الحسابات. تُدفع نصف سنوي بعد كل تقييم\nAnnual auditor fee. Paid semi-annually after each valuation" hint={ar?"سنوي":"Annual"}><Inp type="number" value={cfg.auditorFeeAnnual} onChange={v=>upCfg({auditorFeeAnnual:v})} /></FL>
+              <FL label={<>{ar?"أتعاب المشغل %":"Operator Fee %"}{autoTag("operatorFeePct")}</>} tip="أتعاب سنوية لمشغل المشروع. تُحسب كنسبة من حجم الأصول المنفذة. تبدأ بعد انتهاء البناء تلقائياً للمشاريع التأجيرية\nAnnual operator fee as % of completed asset value. Starts after construction. Auto-applied for rental projects" hint={ar?"سنوي · تأجير فقط":"Annual · rental only"}><Inp type="number" value={cfg.operatorFeePct} onChange={v=>upCfg({operatorFeePct:v})} step={0.01} /></FL>
+              <FL label={<>{ar?"مصروفات أخرى %":"Misc. Expenses %"}{autoTag("miscExpensePct")}</>} tip="مصروفات متنوعة (تقييم، رقابة شرعية، مجلس إدارة، وغيرها). تُحسب كنسبة من إجمالي الأصول وتُدفع مرة واحدة عند بداية الصندوق\nMiscellaneous expenses (valuation, Sharia, board, etc.). One-time at fund start as % of total assets" hint={ar?"مرة واحدة":"One-time"}><Inp type="number" value={cfg.miscExpensePct} onChange={v=>upCfg({miscExpensePct:v})} step={0.1} /></FL>
             </div>
             <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>

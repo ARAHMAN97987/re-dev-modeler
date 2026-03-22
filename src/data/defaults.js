@@ -115,4 +115,5 @@ export const defaultProject = () => ({
     conversionFactors: { sqmPerKey: 45, sqmPerUnit: 200, sqmPerBerth: 139 },
     notes: "",
   },
+  _feesVersion: 2, // Migration flag for auto-populated fees
 });
