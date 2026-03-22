@@ -141,8 +141,8 @@ git pull origin feature/engine-extraction
 | 14 | Financing Settings Visible | ⬜ | | Quick settings at top of tab |
 | 15 | Financing KPI Strip | ⬜ | | Total Debt / Equity / LTV / DSCR |
 | 16 | Financing Charts | ⬜ | | Pie + Line + Bar charts |
-| 17 | Dashboard KPIs | ⬜ | | Project count / CAPEX / IRR / updated |
-| 18 | Dashboard Filters | ⬜ | | Search + type filter |
+| 17 | Dashboard KPIs | ✅ | 2026-03-22 | Projects/Assets/Fund/Bank strip |
+| 18 | Dashboard Filters | ✅ | 2026-03-22 | Search by name/location + no-results state |
 | 19 | Functional Colors Audit | ⬜ | | Green/yellow/red on all metrics |
 | 20 | Input Validation | ⬜ | | Inline red border + message |
 | 21 | Checks Fix Buttons | ⬜ | | Navigate to problem field |
