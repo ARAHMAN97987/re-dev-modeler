@@ -319,7 +319,7 @@ async function saveProject(project) {
 }
 async function deleteProjectStorage(id) { await storage.delete(PROJECT_PREFIX + id); const index = await loadProjectIndex(); await saveProjectIndex(index.filter(p => p.id !== id)); }
 
-function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up }) {
+function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -328,6 +328,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [wSec, setWSec] = useState({});  // chart toggle state
   const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false}); // expandable KPI cards
   const [eduModal, setEduModal] = useState(null);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand}); }}, [globalExpand]);
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
@@ -1073,7 +1074,7 @@ function IncentivesImpact({ project, results, financing, incentivesResult, lang 
 // ═══════════════════════════════════════════════════════════════
 // RESULTS VIEW - Dynamic smart results page based on financing mode
 // ═══════════════════════════════════════════════════════════════
-function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up }) {
+function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
   const ar = lang === "ar";
   if (!project || !results) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"أضف أصول لرؤية النتائج":"Add assets to see results"}</div>;
 
@@ -1081,22 +1082,22 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
   if (mode === "fund") {
-    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} />;
+    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
   }
 
   // ── BANK DEBT / BANK 100%: Full bank results ──
   if (mode === "debt" || mode === "bank100") {
-    return <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} />;
+    return <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
   }
 
   // ── SELF: Full self-funded results ──
-  return <SelfResultsView project={project} results={results} financing={financing} incentivesResult={incentivesResult} t={t} lang={lang} up={up} />;
+  return <SelfResultsView project={project} results={results} financing={financing} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // SELF-FUNDED RESULTS VIEW
 // ═══════════════════════════════════════════════════════════════
-function SelfResultsView({ project, results, financing, incentivesResult, t, lang, up }) {
+function SelfResultsView({ project, results, financing, incentivesResult, t, lang, up, globalExpand }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -1104,6 +1105,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
   const [secOpen, setSecOpen] = useState({});
   const [kpiOpen, setKpiOpen] = useState({proj:false,cap:false,ret:false});
   const [eduModal, setEduModal] = useState(null);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowChart(expand); setKpiOpen({proj:expand,cap:expand,ret:expand}); }}, [globalExpand]);
 
   const f = financing;
   const c = results.consolidated;
@@ -1387,7 +1389,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
 // ═══════════════════════════════════════════════════════════════
 // BANK RESULTS VIEW - For debt & bank100 modes
 // ═══════════════════════════════════════════════════════════════
-function BankResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up }) {
+function BankResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -1397,6 +1399,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const [secOpen, setSecOpen] = useState({});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); }}, [globalExpand]);
 
   const f = financing;
   if (!f) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
@@ -1873,7 +1876,7 @@ function Drp({value,onChange,options,lang:dl}) {
   return <select value={value} onChange={e=>onChange(e.target.value)} style={_finSelSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[dl]||o.en||o.label}</option>)}</select>;
 }
 
-function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, t, up, lang }) {
+function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, t, up, lang, globalExpand }) {
   const isMobile = useIsMobile();
   const [showYrs, setShowYrs] = useState(15);
   const [showConfig, setShowConfig] = useState(false);
@@ -1882,7 +1885,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const [cfgSec, setCfgSec] = useState({}); // accordion sections: {debt:false} = collapsed
   const cfgToggle = (id) => setCfgSec(prev => ({...prev, [id]: !prev[id]}));
   const cfgOpen = (id) => !cfgSec[id]; // all open by default
-  const [eduModal, setEduModal] = useState(null); // educational modal content key
+  const [eduModal, setEduModal] = useState(null);
+  const [showTerms, setShowTerms] = useState(false);
+  const [secOpen, setSecOpen] = useState({});
+  const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
+  const [showChart, setShowChart] = useState(false);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowConfig(expand); setCollapsed({}); setCfgSec(expand ? {} : {debt:true,exit:true,land:true,fund:true,wf:true,fees:true}); setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); }}, [globalExpand]); // educational modal content key
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
   const toggle = (id) => setCollapsed(prev => ({...prev, [id]: !prev[id]}));
@@ -2583,6 +2591,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false); // default closed (mobile-friendly)
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [globalExpand, setGlobalExpand] = useState(0); // increment to toggle; odd=expand, even=collapse
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
@@ -2976,12 +2985,18 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             <PresentationView project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} audienceView={audienceView} liveSliders={liveSliders} setLiveSliders={setLiveSliders} checks={checks} />
             </div>
           ) : (<>
+          {/* Global Expand/Collapse toggle */}
+          {activeTab !== "dashboard" && <div style={{padding:isMobile?"4px 10px":"4px 18px",borderBottom:"1px solid #f0f1f3",display:"flex",justifyContent:"flex-end"}}>
+            <button onClick={()=>setGlobalExpand(p=>p+1)} style={{fontSize:9,padding:"3px 12px",borderRadius:5,border:"1px solid #e5e7ec",background:globalExpand%2===1?"#eff6ff":"#f8f9fb",color:globalExpand%2===1?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
+              {globalExpand%2===1?(lang==="ar"?"▲ طي الكل":"▲ Collapse All"):(lang==="ar"?"▼ توسيع الكل":"▼ Expand All")}
+            </button>
+          </div>}
           {[
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
-            ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} />],
-            ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} up={up} lang={lang} />],
-            ["waterfall", <WaterfallView key="waterfall" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} />],
-            ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} />],
+            ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
+            ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
+            ["waterfall", <WaterfallView key="waterfall" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
+            ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />],
             ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],
@@ -4185,7 +4200,7 @@ function ScoreCell({ sc, name, ar }) {
 // ═══════════════════════════════════════════════════════════════
 // ASSET PROGRAM TABLE
 // ═══════════════════════════════════════════════════════════════
-function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject }) {
+function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject, globalExpand }) {
   const isMobile = useIsMobile();
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
@@ -4317,6 +4332,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   const [cfAllOpen, setCfAllOpen] = useState(false); // global toggle
   const [cfDetail, setCfDetail] = useState(false); // show detail rows
   const [cfYrs, setCfYrs] = useState(15);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCfAllOpen(expand); setCfDetail(expand); const obj = {}; (project?.assets||[]).forEach((_, i) => { obj[i] = expand; }); setCfOpen(obj); }}, [globalExpand]);
   const ar = lang === "ar";
   const toggleCol = (key) => { setHiddenCols(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); };
   const visibleCols = cols.filter(c => !hiddenCols.has(c.key));
