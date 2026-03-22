@@ -98,7 +98,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     const pm = (ph?.completionYear||0) > 0 ? (ph.completionYear-_sy)*12 : (ph?.completionMonth||0);
     return `${a.name||'?'}(${a.constrDuration}mo>${pm}mo)`;
   });
-  add("T1","Build Duration ≤ Phase Opening", durationOK, "No asset takes longer than its phase to build",
+  add("T0","Build Duration ≤ Phase Opening", durationOK, "Asset build exceeds phase opening — adjust build duration or opening year",
     badAssets.length > 0 ? badAssets.join(', ') : undefined);
   add("T1","No Negative Leasable", as.every(a=>(a.leasableArea||0)>=0), "All leasable areas ≥ 0");
   add("T1","CAPEX Reconciles", Math.abs(as.reduce((s,a)=>s+a.totalCapex,0) - c.totalCapex) < tol, "Sum asset CAPEX = consolidated",

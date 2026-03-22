@@ -4313,6 +4313,10 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   const [filterRev, setFilterRev] = useState("all");
   const [hiddenCols, setHiddenCols] = useState(() => new Set(["plotArea","footprint","esc","ramp","occ"]));
   const [showColPicker, setShowColPicker] = useState(false);
+  const [cfOpen, setCfOpen] = useState({}); // which asset CFs are expanded
+  const [cfAllOpen, setCfAllOpen] = useState(false); // global toggle
+  const [cfDetail, setCfDetail] = useState(false); // show detail rows
+  const [cfYrs, setCfYrs] = useState(15);
   const ar = lang === "ar";
   const toggleCol = (key) => { setHiddenCols(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); };
   const visibleCols = cols.filter(c => !hiddenCols.has(c.key));
@@ -4598,6 +4602,137 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         </div>
       </div>
       </>)}
+
+      {/* ═══ ASSET CASH FLOW TABLE ═══ */}
+      {results?.assetSchedules?.length > 0 && (() => {
+        const h = results.horizon;
+        const sy = results.startYear;
+        const yrs = Array.from({length: Math.min(cfYrs, h)}, (_, i) => i);
+        const phaseRes = results.phaseResults || {};
+        // Compute per-asset land rent (proportional by footprint within phase)
+        const getAssetLandRent = (idx) => {
+          const a = results.assetSchedules[idx];
+          const pName = a.phase || "Phase 1";
+          const pr = phaseRes[pName];
+          if (!pr || !pr.landRent) return new Array(h).fill(0);
+          const pFP = pr.footprint || 1;
+          const aFP = a.footprint || 0;
+          const ratio = pFP > 0 ? aFP / pFP : 0;
+          return pr.landRent.map(v => v * ratio);
+        };
+        // Aggregate for filtered assets
+        const aggRev = new Array(h).fill(0), aggCap = new Array(h).fill(0), aggLR = new Array(h).fill(0);
+        filteredIndices.forEach(i => {
+          const a = results.assetSchedules[i];
+          const lr = getAssetLandRent(i);
+          if (a) for (let y = 0; y < h; y++) {
+            aggRev[y] += a.revenueSchedule[y] || 0;
+            aggCap[y] += a.capexSchedule[y] || 0;
+            aggLR[y] += lr[y] || 0;
+          }
+        });
+        const toggleAllCF = () => {
+          const next = !cfAllOpen;
+          setCfAllOpen(next);
+          const obj = {};
+          filteredIndices.forEach(i => { obj[i] = next; });
+          setCfOpen(obj);
+        };
+        const tdS = {padding:"3px 6px",fontSize:10,textAlign:"right",borderBottom:"1px solid #f0f1f3",whiteSpace:"nowrap"};
+        const hdS = {padding:"3px 6px",fontSize:9,fontWeight:600,color:"#6b7080",textAlign:"right",borderBottom:"1px solid #e5e7ec",whiteSpace:"nowrap",position:"sticky",top:0,background:"#fafbfc",zIndex:1};
+        const lblS = {padding:"3px 8px",fontSize:10,fontWeight:500,textAlign:"left",borderBottom:"1px solid #f0f1f3",whiteSpace:"nowrap",position:"sticky",left:0,background:"#fff",zIndex:1};
+        const renderCFRows = (rev, cap, lr, label, color) => {
+          const netInc = rev.map((v, y) => v - (lr[y]||0));
+          const netCF = rev.map((v, y) => v - (lr[y]||0) - (cap[y]||0));
+          let cum = 0;
+          const cumCF = netCF.map(v => { cum += v; return cum; });
+          const rows = [
+            {l: ar?"إيرادات":"Revenue", d: rev, c:"#16a34a", show:true},
+            {l: ar?"تكاليف تطوير":"CAPEX", d: cap, c:"#ef4444", neg:true, show:true},
+            {l: ar?"صافي التدفق":"Net CF", d: netCF, c:"#1a1d23", bold:true, show:true},
+            {l: ar?"إيجار أرض":"Land Rent", d: lr, c:"#f59e0b", neg:true, show:cfDetail},
+            {l: ar?"صافي دخل":"Net Income", d: netInc, c:"#2563eb", show:cfDetail},
+            {l: ar?"تراكمي":"Cumulative", d: cumCF, c:"#8b5cf6", show:cfDetail},
+          ];
+          return rows.filter(r => r.show).map((r, ri) => (
+            <tr key={ri} style={r.bold?{background:"#f8f9fb"}:undefined}>
+              <td style={{...lblS,color:r.c,fontWeight:r.bold?700:500,fontSize:r.bold?11:10}}>{r.l}</td>
+              {yrs.map(y => {
+                const v = r.d[y]||0;
+                return <td key={y} style={{...tdS,color:v<0?"#ef4444":v>0?r.c:"#d0d4dc",fontWeight:r.bold?600:400}}>{v===0?"—":r.neg?fmt(-v):fmt(v)}</td>;
+              })}
+            </tr>
+          ));
+        };
+        return (
+          <div style={{marginTop:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <span style={{fontSize:12,fontWeight:700,color:"#1a1d23"}}>{ar?"التدفق النقدي للأصول":"Asset Cash Flows"}</span>
+              <button onClick={toggleAllCF} style={{fontSize:9,padding:"3px 10px",borderRadius:5,border:"1px solid #e5e7ec",background:cfAllOpen?"#eff6ff":"#f8f9fb",color:cfAllOpen?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
+                {cfAllOpen?(ar?"طي الكل":"Collapse All"):(ar?"توسيع الكل":"Expand All")}
+              </button>
+              <button onClick={()=>setCfDetail(!cfDetail)} style={{fontSize:9,padding:"3px 10px",borderRadius:5,border:"1px solid #e5e7ec",background:cfDetail?"#fef9c3":"#f8f9fb",color:cfDetail?"#92400e":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
+                {cfDetail?(ar?"إخفاء التفاصيل":"Hide Details"):(ar?"عرض التفاصيل":"Show Details")}
+              </button>
+              <div style={{flex:1}}/>
+              <select value={cfYrs} onChange={e=>setCfYrs(+e.target.value)} style={{fontSize:9,padding:"2px 6px",borderRadius:4,border:"1px solid #e5e7ec",background:"#fff",fontFamily:"inherit"}}>
+                {[10,15,20,30,50].map(n=><option key={n} value={n}>{n} {ar?"سنة":"yrs"}</option>)}
+              </select>
+            </div>
+
+            {filteredIndices.map(i => {
+              const a = results.assetSchedules[i];
+              if (!a) return null;
+              const asset = assets[i];
+              const lr = getAssetLandRent(i);
+              const isOpen = cfOpen[i] || false;
+              const totalRev = a.revenueSchedule.reduce((s,v)=>s+v,0);
+              const totalCap = a.totalCapex||0;
+              return (
+                <div key={i} style={{marginBottom:6,border:"1px solid #e5e7ec",borderRadius:8,overflow:"hidden",background:"#fff"}}>
+                  <div onClick={()=>setCfOpen(p=>({...p,[i]:!p[i]}))} style={{padding:"6px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:isOpen?"#f0f4ff":"#fafbfc",userSelect:"none"}}>
+                    <span style={{fontSize:10,color:"#9ca3af"}}>{isOpen?"▼":"▶"}</span>
+                    <span style={{fontSize:11,fontWeight:600,color:"#1a1d23",flex:1}}>{asset?.name||`Asset ${i+1}`}</span>
+                    <span style={{fontSize:9,color:"#6b7080",background:"#e5e7ec",borderRadius:8,padding:"1px 6px"}}>{asset?.phase}</span>
+                    <span style={{fontSize:10,color:"#16a34a"}}>{fmtM(totalRev)}</span>
+                    <span style={{fontSize:10,color:"#ef4444"}}>{fmtM(totalCap)}</span>
+                  </div>
+                  {isOpen && (
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse"}}>
+                        <thead><tr>
+                          <th style={{...hdS,textAlign:"left",minWidth:80}}>{ar?"البند":"Item"}</th>
+                          {yrs.map(y=><th key={y} style={hdS}>{sy+y}</th>)}
+                        </tr></thead>
+                        <tbody>{renderCFRows(a.revenueSchedule, a.capexSchedule, lr, asset?.name, "#1a1d23")}</tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* ── Aggregated Totals ── */}
+            <div style={{marginTop:8,border:"2px solid #2563eb",borderRadius:8,overflow:"hidden",background:"#fff"}}>
+              <div style={{padding:"6px 12px",background:"#eff6ff",display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:11,fontWeight:700,color:"#1e40af"}}>{ar?`إجمالي (${filteredIndices.length} أصل)`:`Total (${filteredIndices.length} assets)`}</span>
+                <div style={{flex:1}}/>
+                <span style={{fontSize:10,color:"#16a34a",fontWeight:600}}>{fmtM(aggRev.reduce((s,v)=>s+v,0))}</span>
+                <span style={{fontSize:10,color:"#ef4444",fontWeight:600}}>{fmtM(aggCap.reduce((s,v)=>s+v,0))}</span>
+              </div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr>
+                    <th style={{...hdS,textAlign:"left",minWidth:80}}>{ar?"البند":"Item"}</th>
+                    {yrs.map(y=><th key={y} style={hdS}>{sy+y}</th>)}
+                  </tr></thead>
+                  <tbody>{renderCFRows(aggRev, aggCap, aggLR, "Total", "#1e40af")}</tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Hotel P&L Modal */}
       {modal?.type==="hotel"&&<HotelPLModal

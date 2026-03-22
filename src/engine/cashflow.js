@@ -75,11 +75,8 @@ export function computeProjectCashFlows(project) {
     }
 
     if (durYears > 0 && totalCapex > 0) {
-      // CAPEX must end before revStart (no overlap with revenue)
-      const capEnd = Math.min(cStart + durYears, revStart);
-      const effectiveDur = Math.max(1, capEnd - cStart);
-      const ann = totalCapex / effectiveDur;
-      for (let y = cStart; y < capEnd && y < horizon; y++) if (y >= 0) capexSch[y] = ann;
+      const ann = totalCapex / durYears;
+      for (let y = cStart; y < cStart + durYears && y < horizon; y++) if (y >= 0) capexSch[y] = ann;
     }
 
     // H15: BOT limits revenue to operation period
