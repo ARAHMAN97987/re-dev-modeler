@@ -640,6 +640,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={`${ar?"ما قبل التأسيس":"Pre-Est"} (${ar?"مرة":"once"})`} v={fmt(_feePreEst)} c="#f59e0b" />
               <KR l={`SPV (${ar?"مرة":"once"})`} v={fmt(_feeSpv)} c="#f59e0b" />
               <KR l={`${ar?"مراجع":"Auditor"} (${ar?"سنوي":"annual"})`} v={fmt(_feeAuditor)} c="#f59e0b" />
+              {_feeOperator > 0 && <KR l={`${ar?"مشغل":"Operator"} (${ar?"سنوي":"annual"})`} v={fmt(_feeOperator)} c="#f59e0b" />}
+              {_feeMisc > 0 && <KR l={`${ar?"أخرى":"Misc."} (${ar?"مرة":"once"})`} v={fmt(_feeMisc)} c="#f59e0b" />}
               <div style={{gridColumn:"1/-1",borderTop:"1px solid #fde68a",paddingTop:4,marginTop:2,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px"}}>
                 <KR l={ar?"إجمالي الرسوم":"Total Fees"} v={fmtM(w.totalFees)} c="#f59e0b" bold />
               </div>

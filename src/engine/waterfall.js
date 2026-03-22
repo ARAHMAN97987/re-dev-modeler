@@ -49,7 +49,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   // Miscellaneous expenses: 0.5% of total assets, one-time at fund start
   const miscExpensePct = (project.miscExpensePct || 0) / 100;
-  const miscExpenseTotal = isFund ? f.devCostExclLand * miscExpensePct : 0;
+  const miscExpenseTotal = (isFund || project.finMode === "jv") ? f.devCostExclLand * miscExpensePct : 0;
 
   // Fee schedule
   const fees = new Array(h).fill(0);
