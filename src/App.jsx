@@ -4430,6 +4430,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [showLandRentDetail, setShowLandRentDetail] = useState(false);
   const [landEduModal, setLandEduModal] = useState(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [landOpen, setLandOpen] = useState(true);
   const fileRef = useRef(null);
   if (!project) return null;
   const assets = project.assets || [];
@@ -4630,22 +4631,24 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
     <div>
       {/* ═══ LAND SECTION — REDESIGNED ═══ */}
       <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7ec",marginBottom:14,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-        {/* Header */}
-        <div style={{padding:"10px 14px",background:"linear-gradient(135deg,#f8fffe 0%,#f0fdf9 100%)",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:28,height:28,borderRadius:10,background:"#ecfdf5",border:"1px solid #d1fae5",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🏗</div>
+        {/* Header — clickable to collapse */}
+        <div onClick={()=>setLandOpen(!landOpen)} style={{padding:"10px 14px",background:"#f8f9fb",borderBottom:landOpen?"1px solid #e5e7ec":"none",display:"flex",alignItems:"center",gap:6,cursor:"pointer",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#f0f4f8"} onMouseLeave={e=>e.currentTarget.style.background="#f8f9fb"}>
+          <span style={{fontSize:10,color:"#9ca3af",transition:"transform 0.2s",transform:landOpen?"rotate(90deg)":"rotate(0deg)"}}>▶</span>
+          <span style={{fontSize:14}}>🏗</span>
           <div style={{flex:1}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#1a1d23"}}>{ar?"الأرض":"Land"}</div>
-            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"إعدادات الأرض وطريقة الحيازة":"Land settings and tenure type"}</div>
+            <span style={{fontSize:12,fontWeight:700,color:"#1a1d23"}}>{ar?"الأرض":"Land"}</span>
           </div>
-          {project.landArea > 0 && <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <span style={{fontSize:10,color:"#059669",background:"#ecfdf5",padding:"4px 10px",borderRadius:20,fontWeight:600,border:"1px solid #d1fae5"}}>
+          {project.landArea > 0 && <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{fontSize:9,color:"#059669",background:"#ecfdf5",padding:"2px 8px",borderRadius:10,fontWeight:600}}>
               {LAND_TYPES.find(lt=>lt.value===project.landType)?.[ar?"ar":"en"]||project.landType}
             </span>
-            <span style={{fontSize:10,color:"#6b7080",background:"#f3f4f6",padding:"4px 10px",borderRadius:20,fontWeight:500}}>
+            <span style={{fontSize:9,color:"#6b7080",background:"#f3f4f6",padding:"2px 8px",borderRadius:10,fontWeight:500}}>
               {fmt(project.landArea)} {ar?"م²":"m²"}
             </span>
           </div>}
         </div>
+
+        {landOpen && <>
 
         {/* Row 1: Tenure + Area */}
         <div style={{padding:"10px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8}}>
@@ -4660,7 +4663,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           </div>
           <div>
             <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"إجمالي المساحة":"Total Area"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"م²":"sqm"})</span></div>
-            <SidebarInput type="number" value={project.landArea} onChange={v=>up({landArea:v})} />
+            <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landArea} onChange={v=>up({landArea:v})} />
           </div>
         </div>
 
@@ -4668,7 +4671,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         {project.landType==="purchase"&&<div style={{padding:"0 14px 10px",display:"grid",gridTemplateColumns:"1fr",gap:8}}>
           <div>
             <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"سعر الشراء":"Purchase Price"} <span style={{fontWeight:400,color:"#9ca3af"}}>({cur})</span></div>
-            <SidebarInput type="number" value={project.landPurchasePrice} onChange={v=>up({landPurchasePrice:v})} />
+            <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landPurchasePrice} onChange={v=>up({landPurchasePrice:v})} />
             {project.landPurchasePrice > 0 && project.landArea > 0 && <div style={{fontSize:10,color:"#2EC4B6",marginTop:4}}>= {fmt(Math.round(project.landPurchasePrice / project.landArea))} {cur}/{ar?"م²":"sqm"}</div>}
           </div>
         </div>}
@@ -4677,11 +4680,11 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         {project.landType==="partner"&&<div style={{padding:"0 14px 10px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8}}>
           <div>
             <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"تقييم الأرض":"Land Valuation"} <span style={{fontWeight:400,color:"#9ca3af"}}>({cur})</span></div>
-            <SidebarInput type="number" value={project.landValuation} onChange={v=>up({landValuation:v})} />
+            <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landValuation} onChange={v=>up({landValuation:v})} />
           </div>
           <div>
             <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"نسبة حصة الشريك":"Partner Equity"} <span style={{fontWeight:400,color:"#9ca3af"}}>(%)</span></div>
-            <SidebarInput type="number" value={project.partnerEquityPct} onChange={v=>up({partnerEquityPct:v})} />
+            <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.partnerEquityPct} onChange={v=>up({partnerEquityPct:v})} />
           </div>
         </div>}
 
@@ -4689,7 +4692,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         {project.landType==="bot"&&<div style={{padding:"0 14px 10px"}}>
           <div>
             <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"فترة التشغيل":"Operation Period"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنوات":"years"})</span></div>
-            <SidebarInput type="number" value={project.botOperationYears} onChange={v=>up({botOperationYears:v})} />
+            <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.botOperationYears} onChange={v=>up({botOperationYears:v})} />
           </div>
         </div>}
 
@@ -4707,16 +4710,16 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           <div style={{padding:"6px 14px 10px",display:"grid",gridTemplateColumns:isMobile?"1fr":"2fr 1fr 1fr",gap:8}}>
             <div>
               <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"الإيجار السنوي":"Annual Rent"} <span style={{fontWeight:400,color:"#9ca3af"}}>({cur})</span></div>
-              <SidebarInput type="number" value={project.landRentAnnual} onChange={v=>up({landRentAnnual:v})} />
+              <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landRentAnnual} onChange={v=>up({landRentAnnual:v})} />
               {project.landRentAnnual > 0 && project.landArea > 0 && <div style={{fontSize:10,color:"#2EC4B6",marginTop:4}}>= {fmt(Math.round(project.landRentAnnual / project.landArea * 100)/100)} {cur}/{ar?"م²":"sqm"}/{ar?"سنة":"yr"}</div>}
             </div>
             <div>
               <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"مدة العقد":"Term"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"yrs"})</span></div>
-              <SidebarInput type="number" value={project.landRentTerm} onChange={v=>up({landRentTerm:v})} />
+              <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landRentTerm} onChange={v=>up({landRentTerm:v})} />
             </div>
             <div>
               <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"فترة السماح":"Grace"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"yrs"})</span></div>
-              <SidebarInput type="number" value={project.landRentGrace} onChange={v=>up({landRentGrace:v})} />
+              <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landRentGrace} onChange={v=>up({landRentGrace:v})} />
             </div>
           </div>
 
@@ -4724,15 +4727,15 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           <div style={{padding:"0 14px 10px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr 1fr",gap:8}}>
             <div>
               <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"نسبة الزيادة":"Escalation"} <span style={{fontWeight:400,color:"#9ca3af"}}>(%)</span></div>
-              <SidebarInput type="number" value={project.landRentEscalation} onChange={v=>up({landRentEscalation:v})} />
+              <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landRentEscalation} onChange={v=>up({landRentEscalation:v})} />
             </div>
             <div>
               <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"كل":"Every"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"yrs"})</span></div>
-              <SidebarInput type="number" value={project.landRentEscalationEveryN} onChange={v=>up({landRentEscalationEveryN:v})} />
+              <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landRentEscalationEveryN} onChange={v=>up({landRentEscalationEveryN:v})} />
             </div>
             <div>
               <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"بداية العقد":"Lease Start"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"سنة":"year"})</span></div>
-              <SidebarInput type="number" value={project.landLeaseStartYear||0} onChange={v=>up({landLeaseStartYear:v})} placeholder={String(project.startYear||2026)} />
+              <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landLeaseStartYear||0} onChange={v=>up({landLeaseStartYear:v})} placeholder={String(project.startYear||2026)} />
             </div>
             <div>
               <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"قاعدة بداية الإيجار":"Rent Start Rule"}</div>
@@ -4800,6 +4803,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               </div>;
             })()}
           </div>}
+        </>}
         </>}
       </div>
       {landEduModal && <EducationalModal contentKey={landEduModal} lang={lang} onClose={()=>setLandEduModal(null)} />}
