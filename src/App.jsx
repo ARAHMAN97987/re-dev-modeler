@@ -3761,7 +3761,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
   const totalLandRent = isPhase ? (pd?.totalLandRent||0) : c.totalLandRent;
   const netCF = isPhase ? (pd?.netCF||[]) : c.netCF;
   const phaseIRR = isPhase ? (pd?.irr||null) : null;
-  const irrVal = isPhase ? phaseIRR : (f && f.mode !== "self" && f.leveredIRR !== null ? f.leveredIRR : (ir && ir.adjustedIRR !== null && ir.totalIncentiveValue > 0) ? ir.adjustedIRR : c.irr);
+  const irrVal = isPhase ? phaseIRR : (f && f.leveredIRR !== null ? f.leveredIRR : (ir && ir.adjustedIRR !== null && ir.totalIncentiveValue > 0) ? ir.adjustedIRR : c.irr);
   const npvVal = isPhase ? calcNPV(netCF, 0.10) : ((ir && ir.totalIncentiveValue > 0) ? ir.adjustedNPV10 : (c.npv10 || 0));
   const dscrVals = !isPhase && f && f.dscr ? f.dscr.filter(d => d !== null) : [];
   const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
