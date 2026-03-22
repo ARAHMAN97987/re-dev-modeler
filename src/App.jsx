@@ -5036,9 +5036,9 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
               <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:5,maxWidth:420}}>
                 {totalDebt > 0 && [<span key="dl" style={{color:"#6b7080"}}>{ar?"قرض بنكي":"Bank Debt"}</span>,<span key="dv" style={{textAlign:"right",fontWeight:500}}>{fmtM(totalDebt)}</span>]}
                 <span style={{color:"#6b7080"}}>{ar?"حقوق ملكية":"Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(totalEquity)}</span>
-                {grantTotal > 0 && [<span key="gl" style={{color:"#6b7080"}}>{ar?"منحة حكومية":"CAPEX Grant"}</span>,<span key="gv" style={{textAlign:"right",fontWeight:500,color:"#16a34a"}}>{fmtM(grantTotal)}</span>]}
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
-                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(totalDebt + totalEquity + grantTotal)}</span>
+                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(totalDebt + totalEquity)}</span>
+                {grantTotal > 0 && [<span key="gl" style={{color:"#16a34a",fontSize:10,fontStyle:"italic"}}>{ar?"* تم خصم منحة حكومية":"* CAPEX grant deducted"}: {fmtM(grantTotal)}</span>]}
               </div>
               {/* LTV bar */}
               {totalDebt > 0 && (() => {
