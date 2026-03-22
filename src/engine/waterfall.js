@@ -28,7 +28,10 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   // Fee calculations (only Fund type gets full fees)
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
-  const devFeeTotal = c.totalCapex * (project.developerFeePct || 0) / 100;
+  // DevFee base = construction CAPEX only (exclude land purchase — developer builds, doesn't buy land)
+  const landPurchaseInCapex = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
+  const buildCapex = Math.max(0, c.totalCapex - landPurchaseInCapex);
+  const devFeeTotal = buildCapex * (project.developerFeePct || 0) / 100;
   // Structuring fee: % of development cost (CAPEX), not equity — matches ZAN Fund Model
   let structFee = isFund ? f.devCostExclLand * (project.structuringFeePct || 0) / 100 : 0;
   const structFeeCap = project.structuringFeeCap || 0;
@@ -65,10 +68,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : optIdx);
   const operYears = exitYr - constrStart + 1;
 
-  // Fee period end
-  const feeEndYr = exitStrategy === "hold"
-    ? optIdx + 2
-    : exitYr;
+  // Fee period end: hold = full horizon, sale/caprate = exit year
+  const feeEndYr = exitStrategy === "hold" ? h - 1 : exitYr;
 
   // One-time fees at fund start
   if (fundStartIdx < h) {

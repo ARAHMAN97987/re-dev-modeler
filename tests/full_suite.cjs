@@ -339,7 +339,7 @@ suite('F9-computeFinancing');
     if (sold && y > exitYrIdx) { if (!near(f.leveredCF[y], 0, TOL.MONEY_SMALL)) { lcfOk=false; break; } continue; }
     const exp = r.consolidated.income[y] - adjLR[y] - r.consolidated.capex[y]
       + (i?.capexGrantSchedule?.[y]||0) + (i?.feeRebateSchedule?.[y]||0)
-      - f.debtService[y] + f.drawdown[y] + (f.exitProceeds[y]||0);
+      - f.debtService[y] + f.drawdown[y] + (f.exitProceeds[y]||0) - (f.devFeeSchedule?.[y]||0);
     if (!near(f.leveredCF[y], exp, TOL.MONEY_LARGE)) { lcfOk=false; break; }
   }
   t('Levered CF equation (year-by-year)', lcfOk);

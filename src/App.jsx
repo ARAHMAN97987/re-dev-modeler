@@ -2276,9 +2276,9 @@ When to use:
           </div>
         </AB>
         </SecWrap>
-        <SecWrap visible={hasEq || isFundMode} color="#f59e0b">
-        <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : hasEq ? (ar?"رسوم التطوير":"Dev Fee") : ""} visible={hasEq || isFundMode} />
-        <AB id="fees" visible={hasEq || isFundMode}>{(() => {
+        <SecWrap visible={true} color="#f59e0b">
+        <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : `${ar?"رسوم تطوير":"Dev Fee"} ${cfg.developerFeePct||10}%`} visible={true} />
+        <AB id="fees" visible={true}>{(() => {
           if (isFundMode && cfg.vehicleType==="fund") return <>
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم لمرة واحدة":"One-time"}</div>
             <div style={g3}>

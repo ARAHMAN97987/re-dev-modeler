@@ -109,9 +109,25 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const cashLandCost = 0;
   const devCostInclLand = devCostExclLand + effectiveLandCap;
 
+  // ── Dev fee (computed early — needed by ALL modes including self) ──
+  const _landInCapex = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
+  const _buildCapex = Math.max(0, c.totalCapex - _landInCapex);
+  const devFeeTotal = _buildCapex * (project.developerFeePct ?? 10) / 100;
+  // DevFee schedule: spread over construction proportional to CAPEX
+  const devFeeSchedule = new Array(h).fill(0);
+  {
+    let _cS = h, _cE = 0;
+    for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { _cS = Math.min(_cS, y); _cE = Math.max(_cE, y); } }
+    for (let y = _cS; y <= _cE && y < h; y++) {
+      if (c.totalCapex > 0) devFeeSchedule[y] = devFeeTotal * (c.capex[y] / c.totalCapex);
+    }
+  }
+
   if (project.finMode === "self") {
     // For self-funded: use incentive-adjusted CF if available
     const selfCF = ir && ir.adjustedNetCF ? [...ir.adjustedNetCF] : [...c.netCF];
+    // Deduct dev fee during construction (real cost to the project)
+    for (let y = 0; y < h; y++) selfCF[y] -= devFeeSchedule[y];
     // ── Self-funded Exit ──
     let constrEndSelf = 0;
     for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEndSelf = y; break; } }
@@ -173,6 +189,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       upfrontFee: 0, leveredIRR: selfIRR, exitProceeds: exitProceedsSelf,
       maxDebt: 0, rate: 0, tenor: 0, grace: 0, repayYears: 0, constrEnd: constrEndSelf, repayStart: 0, exitYear: exitYrSelf + startYear,
       optimalExitYear: optimalExitIdx != null ? optimalExitIdx + startYear : null, optimalExitIRR,
+      devFeeTotal, devFeeSchedule,
     };
   }
 
@@ -214,8 +231,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // Only fund and jv modes have LP investors.
   const hasLP = project.finMode === "fund" || project.finMode === "jv";
 
-  // Dev fee amount (for GP investment calculation — same formula as waterfall)
-  const devFeeTotal = devCostExclLand * (project.developerFeePct ?? 10) / 100;
+  // Dev fee already computed above (line ~115) — reuse devFeeTotal
   // GP investment from dev fee
   const gpDevFeeInvest = project.gpInvestDevFee ? devFeeTotal * ((project.gpDevFeeInvestPct ?? 100) / 100) : 0;
   // GP cash investment
@@ -532,7 +548,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     if (sold && y > exitYr) { leveredCF[y] = 0; continue; }
     leveredCF[y] = c.income[y] - adjustedLandRent[y] - c.capex[y]
       + (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0)
-      - adjustedDebtService[y] + drawdown[y] + exitProceeds[y];
+      - adjustedDebtService[y] + drawdown[y] + exitProceeds[y]
+      - devFeeSchedule[y]; // Dev fee is a real cost during construction
   }
 
   // ── DSCR (using adjusted interest) ──
@@ -557,5 +574,6 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     computedFundStartYear: computedFundStartIdx + startYear,
     incomeStabilizationYear: autoExitIdx + startYear, optimalExitYear: optimalExitIdx != null ? optimalExitIdx + startYear : null, optimalExitIRR,
     trancheMode, tranches,
+    devFeeTotal, devFeeSchedule,
   };
 }

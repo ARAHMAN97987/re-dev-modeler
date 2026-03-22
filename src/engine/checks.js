@@ -169,10 +169,10 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     for(let y=0;y<h;y++){
       let exp;
       if(fSold&&y>fExitYrIdx){exp=0;}
-      else{exp=c.income[y]-adjLR[y]-c.capex[y]+(ir?.capexGrantSchedule?.[y]||0)+(ir?.feeRebateSchedule?.[y]||0)-f.debtService[y]+f.drawdown[y]+(f.exitProceeds?.[y]||0);}
+      else{exp=c.income[y]-adjLR[y]-c.capex[y]+(ir?.capexGrantSchedule?.[y]||0)+(ir?.feeRebateSchedule?.[y]||0)-f.debtService[y]+f.drawdown[y]+(f.exitProceeds?.[y]||0)-(f.devFeeSchedule?.[y]||0);}
       if(Math.abs(f.leveredCF[y]-exp)>tol){levOk=false;break;}
     }
-    add("T2","Levered CF Equation", levOk, "LevCF = Income - Land - CAPEX + Grants - DS + Draw + Exit");
+    add("T2","Levered CF Equation", levOk, "LevCF = Income - Land - CAPEX + Grants - DS + Draw + Exit - DevFee");
     let dscrOk=true;
     for(let y=0;y<h;y++){
       if(f.debtService[y]>0&&f.dscr[y]!==null){
