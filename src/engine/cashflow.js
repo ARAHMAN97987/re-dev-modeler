@@ -47,36 +47,41 @@ export function computeProjectCashFlows(project) {
     const opEbitda = (asset.opEbitda || 0) * rm;
     const capexSch = new Array(horizon).fill(0);
     const revSch = new Array(horizon).fill(0);
-    const cStart = (() => {
-      // Priority 1: asset's own constrStart if explicitly set (>0 = manual override)
-      if ((asset.constrStart || 0) > 0) {
-        return (asset.constrStart - 1) + delayYears;
+    // ── Determine construction start and revenue start ──
+    // completionYear = سنة الافتتاح = أول سنة إيراد (الأولوية الأعلى)
+    // constrStart = override يدوي (fallback فقط إذا ما فيه completionYear)
+    let cStart, revStart;
+    const assetPhase = (project.phases || []).find(ph => ph.name === (asset.phase || 'Phase 1'));
+    let phaseOpenIdx = null; // first revenue year index
+    if (assetPhase) {
+      if ((assetPhase.completionYear || 0) > 0) {
+        phaseOpenIdx = assetPhase.completionYear - startYear;
+      } else if ((assetPhase.completionMonth || 0) > 0) {
+        phaseOpenIdx = Math.ceil(assetPhase.completionMonth / 12);
       }
-      // Priority 2: derive from phase completionYear (absolute year, e.g. 2030)
-      // All assets in the same phase finish construction at completionYear → start at different times
-      const assetPhase = (project.phases || []).find(ph => ph.name === (asset.phase || 'Phase 1'));
-      if (assetPhase) {
-        let phaseEndIdx;
-        if ((assetPhase.completionYear || 0) > 0) {
-          // Absolute year → convert to index
-          phaseEndIdx = assetPhase.completionYear - startYear;
-        } else if ((assetPhase.completionMonth || 0) > 0) {
-          // Legacy: months from project start → convert to year index
-          phaseEndIdx = Math.ceil(assetPhase.completionMonth / 12);
-        }
-        if (phaseEndIdx != null && phaseEndIdx > 0) {
-          return Math.max(0, phaseEndIdx - durYears) + delayYears;
-        }
-      }
-      return delayYears; // Last resort
-    })();
-
-    if (durYears > 0 && totalCapex > 0) {
-      const ann = totalCapex / durYears;
-      for (let y = cStart; y < cStart + durYears && y < horizon; y++) if (y >= 0) capexSch[y] = ann;
     }
 
-    const revStart = cStart + durYears;
+    if (phaseOpenIdx != null && phaseOpenIdx > 0) {
+      // Phase opening year defines first revenue year — construction works backward
+      revStart = phaseOpenIdx + delayYears;
+      cStart = Math.max(0, revStart - durYears);
+    } else if ((asset.constrStart || 0) > 0) {
+      // Manual override: constrStart = year number (1-based)
+      cStart = (asset.constrStart - 1) + delayYears;
+      revStart = cStart + durYears;
+    } else {
+      cStart = delayYears;
+      revStart = cStart + durYears;
+    }
+
+    if (durYears > 0 && totalCapex > 0) {
+      // CAPEX must end before revStart (no overlap with revenue)
+      const capEnd = Math.min(cStart + durYears, revStart);
+      const effectiveDur = Math.max(1, capEnd - cStart);
+      const ann = totalCapex / effectiveDur;
+      for (let y = cStart; y < capEnd && y < horizon; y++) if (y >= 0) capexSch[y] = ann;
+    }
+
     // H15: BOT limits revenue to operation period
     const botYrs = project.landType === "bot" ? (project.botOperationYears || horizon) : horizon;
     const revEnd = Math.min(revStart + botYrs, horizon);
