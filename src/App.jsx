@@ -2013,6 +2013,32 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       </div>
     )}
 
+    {/* ═══ QUICK FINANCING SETTINGS ═══ */}
+    {(() => {
+      const hasDbt = cfg.finMode !== "self";
+      const notHold = (cfg.exitStrategy||"sale") !== "hold";
+      const isFundMode = cfg.finMode === "fund";
+      if (!hasDbt) return null;
+      const QF = ({label,value,onChange,suffix,hint}) => (
+        <div style={{flex:"1 1 110px",minWidth:100,background:"#f8f9fb",borderRadius:8,border:"1px solid #e5e7ec",padding:"8px 10px"}}>
+          <div style={{fontSize:9,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:3}}>
+            <input type="number" value={value||""} onChange={e=>onChange(parseFloat(e.target.value)||0)} style={{width:"100%",border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#1a1d23",outline:"none",fontFamily:"inherit",padding:0}} />
+            {suffix && <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,flexShrink:0}}>{suffix}</span>}
+          </div>
+          {hint && <div style={{fontSize:8,color:"#9ca3af",marginTop:2}}>{hint}</div>}
+        </div>
+      );
+      return <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+        {cfg.finMode!=="bank100" && <QF label={ar?"الحد الأقصى LTV":"Max LTV"} value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} suffix="%" hint={ar?"نسبة الدين":"Debt ratio"} />}
+        <QF label={ar?"معدل الربح":"Profit Rate"} value={cfg.financeRate} onChange={v=>upCfg({financeRate:v})} suffix="%" hint={ar?"سنوي":"Annual"} />
+        <QF label={ar?"مدة القرض":"Tenor"} value={cfg.loanTenor} onChange={v=>upCfg({loanTenor:v})} suffix={ar?"سنة":"yr"} />
+        <QF label={ar?"فترة السماح":"Grace"} value={cfg.debtGrace} onChange={v=>upCfg({debtGrace:v})} suffix={ar?"سنة":"yr"} />
+        {notHold && <QF label={ar?"سنة التخارج":"Exit Year"} value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} suffix="" hint="0 = auto" />}
+        {isFundMode && <QF label={ar?"العائد التفضيلي":"Pref Return"} value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:v})} suffix="%" />}
+      </div>;
+    })()}
+
     {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
     {(() => {
         const hasDbt = cfg.finMode !== "self";
