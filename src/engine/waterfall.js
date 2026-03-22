@@ -28,10 +28,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   // Fee calculations (only Fund type gets full fees)
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
-  // DevFee base = construction CAPEX only (exclude land purchase — developer builds, doesn't buy land)
-  const landPurchaseInCapex = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
-  const buildCapex = Math.max(0, c.totalCapex - landPurchaseInCapex);
-  const devFeeTotal = buildCapex * (project.developerFeePct || 0) / 100;
+  // DevFee: read from financing (single source — computed in financing.js)
+  const devFeeTotal = f.devFeeTotal || 0;
   // Structuring fee: % of development cost (CAPEX), not equity — matches ZAN Fund Model
   let structFee = isFund ? f.devCostExclLand * (project.structuringFeePct || 0) / 100 : 0;
   const structFeeCap = project.structuringFeeCap || 0;

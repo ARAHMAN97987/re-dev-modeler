@@ -1129,15 +1129,17 @@ function buildBankSummary(wb, project, results, financing, cur, h, sy) {
 
   tableHeader(ws, row, [null, "Uses  الاستخدامات", null, cur, "%"]);
   row++;
-  dataRow(ws, row, [null, "Construction CAPEX  تكاليف البناء", null, fm(c?.totalCapex), totalSources > 0 ? (c?.totalCapex || 0) / totalSources : 0], { numFmt: { 3: "#,##0", 4: "0.0%" } });
+  // Read from financing object (single source of truth)
+  const usesDevExcl = f.devCostExclLand || c?.totalCapex || 0;
+  const usesLandCap = f.landCapValue || 0;
+  const usesTotal = f.devCostInclLand || usesDevExcl + usesLandCap;
+  dataRow(ws, row, [null, "Construction CAPEX  تكاليف البناء", null, fm(usesDevExcl), usesTotal > 0 ? usesDevExcl / usesTotal : 0], { numFmt: { 3: "#,##0", 4: "0.0%" } });
   row++;
-  const landCost = f.landCapValue || 0;
-  dataRow(ws, row, [null, "Land Cost (Allocated)  تكلفة الأرض", null, fm(landCost), totalSources > 0 ? landCost / totalSources : 0], { numFmt: { 3: "#,##0", 4: "0.0%" } });
-  row++;
-  const fees = totalSources - (c?.totalCapex || 0) - landCost;
-  dataRow(ws, row, [null, "Fees & Structuring  الرسوم والهيكلة", null, fm(Math.max(0, fees)), totalSources > 0 ? Math.max(0, fees) / totalSources : 0], { numFmt: { 3: "#,##0", 4: "0.0%" } });
-  row++;
-  totalRow(ws, row, [null, "Total Uses  إجمالي الاستخدامات", null, fm(totalSources), 1], { 3: "#,##0", 4: "0%" });
+  if (usesLandCap > 0) {
+    dataRow(ws, row, [null, "Land Capitalization  رسملة الأرض", null, fm(usesLandCap), usesTotal > 0 ? usesLandCap / usesTotal : 0], { numFmt: { 3: "#,##0", 4: "0.0%" } });
+    row++;
+  }
+  totalRow(ws, row, [null, "Total Uses  إجمالي الاستخدامات", null, fm(usesTotal), 1], { 3: "#,##0", 4: "0%" });
 
   // Footer
   row += 3;

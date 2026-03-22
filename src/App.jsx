@@ -4960,15 +4960,16 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
   const healthColor = {strong:'#16a34a',good:'#22c55e',moderate:'#f59e0b',weak:'#ef4444'}[health];
   const healthLabel = {strong:ar?'قوي':'Strong',good:ar?'جيد':'Good',moderate:ar?'متوسط':'Moderate',weak:ar?'ضعيف':'Weak'}[health];
 
-  // ── Sources & Uses ──
-  const totalCapex = c.totalCapex;
-  const landCost = project.landType === 'purchase' ? (project.landPurchasePrice || 0) : 0;
+  // ── Sources & Uses (read from financing object — single source of truth) ──
+  const totalDebt = f ? f.totalDebt || 0 : 0;
+  const totalEquity = f ? f.totalEquity || 0 : 0;
   const landCap = f ? f.landCapValue || 0 : 0;
   const grantTotal = ir ? ir.capexGrantTotal || 0 : 0;
   const upfrontFee = f ? f.upfrontFee || 0 : 0;
-  const totalUses = totalCapex + landCost + landCap + upfrontFee;
-  const totalDebt = f ? f.totalDebt || 0 : 0;
-  const totalEquity = f ? f.totalEquity || 0 : 0;
+  // devCostExclLand = construction CAPEX (includes land purchase for purchase type)
+  // devCostInclLand = devCostExclLand + landCapValue (the real "total uses" base)
+  const devCostExcl = f ? f.devCostExclLand || c.totalCapex : c.totalCapex;
+  const devCostIncl = f ? f.devCostInclLand || c.totalCapex : c.totalCapex;
 
   // ── Cash flow chart data (SVG bars) ──
   const chartYears = Math.min(20, h);
@@ -5053,12 +5054,11 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
             <div>
               <div style={{fontSize:10,fontWeight:600,color:"#ef4444",textTransform:"uppercase",letterSpacing:0.6,marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fee2e2"}}>{ar?"الاستخدامات":"USES"}</div>
               <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"3px 16px",rowGap:5,maxWidth:420}}>
-                <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(totalCapex)}</span>
-                {landCost > 0 && [<span key="ll" style={{color:"#6b7080"}}>{ar?"شراء الأرض":"Land Purchase"}</span>,<span key="lv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCost)}</span>]}
+                <span style={{color:"#6b7080"}}>{ar?"تكاليف البناء":"Construction"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(devCostExcl)}</span>
                 {landCap > 0 && [<span key="cl" style={{color:"#6b7080"}}>{ar?"رسملة الأرض":"Land Cap."}</span>,<span key="cv" style={{textAlign:"right",fontWeight:500}}>{fmtM(landCap)}</span>]}
                 {upfrontFee > 0 && [<span key="fl" style={{color:"#6b7080"}}>{ar?"رسوم القرض":"Loan Fee"}</span>,<span key="fv" style={{textAlign:"right",fontWeight:500}}>{fmtM(upfrontFee)}</span>]}
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
-                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(totalUses)}</span>
+                <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(devCostIncl)}</span>
               </div>
             </div>
           </div>
