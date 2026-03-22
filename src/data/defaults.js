@@ -45,6 +45,7 @@ export const defaultProject = () => ({
   debtGraceStartYear: 0, // 0 = auto (first drawdown year), or specific calendar year e.g. 2027
   upfrontFeePct: 0.5,
   repaymentType: "amortizing", // amortizing | bullet
+  debtTrancheMode: "single", // single | perDraw
   islamicMode: "conventional", // conventional | murabaha | ijara
   // Equity (manual override)
   gpEquityManual: 0, // 0 = auto from land cap

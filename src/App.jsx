@@ -1992,7 +1992,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
         {/* ── SECTION: DEBT TERMS ── */}
         <SecWrap visible={hasDbt} color="#2563eb">
-        <AH id="debt" color="#2563eb" label={ar?"شروط القرض":"Debt Terms"} summary={hasDbt && (cfg.debtAllowed || cfg.finMode==="bank100") ? `${cfg.finMode!=="bank100"?(cfg.maxLtvPct||70)+"% LTV · ":""}${cfg.financeRate||6.5}% · ${cfg.loanTenor||12}yr` : ""} visible={hasDbt} />
+        <AH id="debt" color="#2563eb" label={ar?"شروط القرض":"Debt Terms"} summary={hasDbt && (cfg.debtAllowed || cfg.finMode==="bank100") ? `${cfg.finMode!=="bank100"?(cfg.maxLtvPct||70)+"% LTV · ":""}${cfg.financeRate||6.5}% · ${cfg.loanTenor||7}yr` : ""} visible={hasDbt} />
         <AB id="debt" visible={hasDbt}>{(() => {
           const showDebtFields = cfg.debtAllowed || cfg.finMode === "bank100";
           return <>
@@ -2009,7 +2009,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
               <div style={g3}>
                 <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years"><Inp type="number" value={cfg.loanTenor} onChange={v=>upCfg({loanTenor:v})} /></FL>
                 <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years"><Inp type="number" value={cfg.debtGrace} onChange={v=>upCfg({debtGrace:v})} /></FL>
-                <FL label={ar?"بداية السماح":"Grace Basis"} tip="متى تبدأ فترة السماح: من أول سحب أو من اكتمال البناء\nWhen grace starts: first drawdown or completion of development (COD)"><select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (COD)":"COD (Completion)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option></select></FL>
+                <FL label={ar?"بداية السماح":"Grace Basis"} tip="متى تبدأ فترة السماح: من اكتمال البناء أو أول سحب أو بداية الصندوق\nWhen grace starts: completion of development (COD), first drawdown, or fund start year"><select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (COD)":"COD (Completion)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option><option value="fundStart">{ar?"بداية الصندوق":"Fund Start Year"}</option></select></FL>
               </div>
               <div style={g2}>
                 <FL label={ar?"رسوم %":"Upfront Fee %"} tip="رسوم القرض المقدمة كنسبة من مبلغ التمويل. تُدفع مرة واحدة عند السحب\nUpfront loan fee as percentage of debt amount. Paid once at drawdown"><Inp type="number" value={cfg.upfrontFeePct} onChange={v=>upCfg({upfrontFeePct:v})} /></FL>
