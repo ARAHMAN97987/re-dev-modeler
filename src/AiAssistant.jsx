@@ -328,7 +328,7 @@ function renderMarkdown(text) {
     if (numMatch) {
       elements.push(
         <div key={key++} style={{ display: "flex", gap: 8, padding: "2px 0", marginRight: 8 }}>
-          <span style={{ color: "#5fbfbf", fontWeight: 600, minWidth: 18 }}>{numMatch[1]}</span>
+          <span style={{ color: "#2EC4B6", fontWeight: 600, minWidth: 18 }}>{numMatch[1]}</span>
           <span>{renderInline(numMatch[2])}</span>
         </div>
       );
@@ -340,7 +340,7 @@ function renderMarkdown(text) {
     if (bulletMatch) {
       elements.push(
         <div key={key++} style={{ display: "flex", gap: 8, padding: "2px 0", paddingRight: 4, marginRight: 8 }}>
-          <span style={{ color: "#5fbfbf", marginTop: 2 }}>●</span>
+          <span style={{ color: "#2EC4B6", marginTop: 2 }}>●</span>
           <span>{renderInline(bulletMatch[1])}</span>
         </div>
       );
@@ -388,7 +388,7 @@ function renderInline(text) {
     if (codeMatch) {
       const idx = remaining.indexOf(codeMatch[0]);
       if (idx > 0) parts.push(<span key={k++}>{remaining.substring(0, idx)}</span>);
-      parts.push(<span key={k++} style={{ background: "#1e2230", padding: "1px 5px", borderRadius: 3, fontSize: "0.9em", color: "#5fbfbf" }}>{codeMatch[1]}</span>);
+      parts.push(<span key={k++} style={{ background: "#1e2230", padding: "1px 5px", borderRadius: 3, fontSize: "0.9em", color: "#2EC4B6" }}>{codeMatch[1]}</span>);
       remaining = remaining.substring(idx + codeMatch[0].length);
       continue;
     }
@@ -862,7 +862,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         {/* Header */}
         <div style={headerStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #5fbfbf, #2563eb)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #2EC4B6, #2563eb)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🤖</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{isAr ? "مساعد الذكاء الاصطناعي" : "AI Assistant"}</div>
               <div style={{ fontSize: 10, color: "#6b7080" }}>{isAr ? "وصف مشروعك وسأعبّي البيانات" : "Describe your project to auto-fill"}</div>
@@ -922,7 +922,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
               <div style={{ display: "flex", gap: 4 }}>
                 {[0, 1, 2].map(i => (
                   <div key={i} style={{
-                    width: 6, height: 6, borderRadius: 3, background: "#5fbfbf",
+                    width: 6, height: 6, borderRadius: 3, background: "#2EC4B6",
                     animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
                   }} />
                 ))}
@@ -1030,7 +1030,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
             disabled={(!input.trim() && attachments.length === 0) || loading}
             style={{
               ...btnStyle,
-              background: (input.trim() || attachments.length > 0) && !loading ? "linear-gradient(135deg, #5fbfbf, #2563eb)" : "#1a1f2e",
+              background: (input.trim() || attachments.length > 0) && !loading ? "linear-gradient(135deg, #2EC4B6, #2563eb)" : "#1a1f2e",
               color: (input.trim() || attachments.length > 0) && !loading ? "#fff" : "#4a4f5e",
               padding: "10px 14px", fontSize: 14, fontWeight: 700,
               transition: "all 0.2s",

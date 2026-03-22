@@ -3018,16 +3018,17 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     setProject(prev => { pushUndo(prev); const a=[...prev.assets]; a[i]={...a[i],...u}; return {...prev,assets:a}; });
     if (scrollTop != null) requestAnimationFrame(() => { if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop; });
   }, [pushUndo]);
-  const addAsset = useCallback(() => setProject(prev => { pushUndo(prev); return {...prev, assets:[...prev.assets, {
+  const addAsset = useCallback((tmplDefaults) => setProject(prev => { pushUndo(prev); const base = {
     id: crypto.randomUUID(), phase: prev.phases[0]?.name||"Phase 1", category:"Retail", name:"", code:"", notes:"",
     plotArea:0, footprint:0, gfa:0, revType:"Lease", efficiency: prev.defaultEfficiency||85,
     leaseRate:0, opEbitda:0, escalation: prev.rentEscalation||0.75, rampUpYears:3, stabilizedOcc:100,
     costPerSqm:0, constrStart:0, constrDuration:12, hotelPL:null, marinaPL:null,
-  }]}; }), [pushUndo]);
+  }; return {...prev, assets:[...prev.assets, tmplDefaults ? {...base,...tmplDefaults} : base]}; }), [pushUndo]);
+  const dupAsset = useCallback((i) => setProject(prev => { pushUndo(prev); const src = prev.assets[i]; if(!src) return prev; const copy = {...src, id:crypto.randomUUID(), name:(src.name||"")+" (Copy)"}; return {...prev, assets:[...prev.assets, copy]}; }), [pushUndo]);
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
 
-  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>ZAN</span><span style={{width:1,height:30,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:12,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div></div></div>;
+  if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><div style={{textAlign:"center"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>ZAN</span><span style={{width:1,height:30,background:"rgba(46,196,182,0.4)"}} /><span style={{fontSize:12,color:"#2EC4B6",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div></div></div>;
   if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); window.scrollTo(0,0); }} onCreateDemo={async (demo) => {
     const p = defaultProject();
     const ar = lang === "ar";
@@ -3305,7 +3306,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           </div>}
           {[
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
-            ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
+            ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
             ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
@@ -3502,13 +3503,13 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
         <div style={{position:"relative",zIndex:1,padding:"48px 48px"}}>
           <div style={{maxWidth:560}}>
             {/* Badge */}
-            <div style={{display:"inline-block",padding:"6px 16px",background:"rgba(95,191,191,0.12)",border:"1px solid rgba(95,191,191,0.25)",borderRadius:20,marginBottom:20}}>
-              <span style={{fontSize:12,color:"#5fbfbf",fontWeight:500}}>{ar?"زان للنمذجة المالية":"ZAN Financial Modeler"}</span>
+            <div style={{display:"inline-block",padding:"6px 16px",background:"rgba(46,196,182,0.12)",border:"1px solid rgba(46,196,182,0.25)",borderRadius:20,marginBottom:20}}>
+              <span style={{fontSize:12,color:"#2EC4B6",fontWeight:500}}>{ar?"زان للنمذجة المالية":"ZAN Financial Modeler"}</span>
             </div>
             {/* Logo */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
               <span style={{fontSize:48,fontWeight:900,color:"#fff",letterSpacing:3}}>ZAN</span>
-              <span style={{width:1,height:32,background:"rgba(95,191,191,0.4)"}} />
+              <span style={{width:1,height:32,background:"rgba(46,196,182,0.4)"}} />
               <span style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.4,fontWeight:300}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
             </div>
             {/* Title */}
@@ -3537,21 +3538,21 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
       </div>
       )}
       {/* ── Right: Auth Form ── */}
-      <div style={{width:isMobile?"100%":420,minWidth:isMobile?"auto":380,flex:isMobile?1:"none",background:isMobile?"#0f1117":"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:isMobile?"32px 24px":"48px 36px",borderInlineStart:isMobile?"none":(ar?"none":"1px solid rgba(95,191,191,0.1)"),borderInlineEnd:isMobile?"none":(ar?"1px solid rgba(95,191,191,0.1)":"none")}}>
+      <div style={{width:isMobile?"100%":420,minWidth:isMobile?"auto":380,flex:isMobile?1:"none",background:isMobile?"#0f1117":"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:isMobile?"32px 24px":"48px 36px",borderInlineStart:isMobile?"none":(ar?"none":"1px solid rgba(46,196,182,0.1)"),borderInlineEnd:isMobile?"none":(ar?"1px solid rgba(46,196,182,0.1)":"none")}}>
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
             <span style={{fontSize:32,fontWeight:900,color:"#fff",letterSpacing:2}}>ZAN</span>
             <span style={{width:1.5,height:22,background:"rgba(46,196,182,0.5)",borderRadius:1}} />
-            <span style={{fontSize:11,color:"#5fbfbf",lineHeight:1.3,fontWeight:300,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+            <span style={{fontSize:11,color:"#2EC4B6",lineHeight:1.3,fontWeight:300,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           {isMobile && <div style={{fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:4}}>{ar?"زان للنمذجة المالية":"ZAN Financial Modeler"}</div>}
           <div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>{mode==="signin"?(ar?"تسجيل الدخول":"Sign In"):(ar?"إنشاء حساب":"Create Account")}</div>
         </div>
         {/* Pending share invite banner */}
         {pendingShare && (
-          <div style={{background:"rgba(95,191,191,0.08)",border:"1px solid rgba(95,191,191,0.2)",borderRadius:10,padding:"14px 16px",marginBottom:18,textAlign:"center"}}>
+          <div style={{background:"rgba(46,196,182,0.08)",border:"1px solid rgba(46,196,182,0.2)",borderRadius:10,padding:"14px 16px",marginBottom:18,textAlign:"center"}}>
             <div style={{fontSize:14,marginBottom:6}}>📬</div>
-            <div style={{fontSize:13,fontWeight:600,color:"#5fbfbf",marginBottom:4}}>{ar?"تمت دعوتك لمشروع مشترك":"You've been invited to a shared project"}</div>
+            <div style={{fontSize:13,fontWeight:600,color:"#2EC4B6",marginBottom:4}}>{ar?"تمت دعوتك لمشروع مشترك":"You've been invited to a shared project"}</div>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>{ar?"سجّل دخول أو أنشئ حساب جديد عشان تشوف المشروع":"Sign in or create an account to access the project"}</div>
           </div>
         )}
@@ -3565,14 +3566,14 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #1e2230",background:"rgba(11,35,65,0.6)",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           {error && <div style={{fontSize:11,color:"#f87171",background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",padding:"8px 12px",borderRadius:6}}>{error}</div>}
-          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:8,border:"none",background:"#5fbfbf",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"wait":"pointer",fontFamily:"'Tajawal',sans-serif",transition:"all 0.2s",letterSpacing:0.3}} onMouseEnter={e=>e.currentTarget.style.background="#0f766e"} onMouseLeave={e=>e.currentTarget.style.background="#5fbfbf"}>
+          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:8,border:"none",background:"#2EC4B6",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"wait":"pointer",fontFamily:"'Tajawal',sans-serif",transition:"all 0.2s",letterSpacing:0.3}} onMouseEnter={e=>e.currentTarget.style.background="#0f766e"} onMouseLeave={e=>e.currentTarget.style.background="#2EC4B6"}>
             {loading?"...":(mode==="signin"?(ar?"دخول":"Sign In"):(ar?"إنشاء حساب":"Create Account"))}
           </button>
           <div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.4)"}}>
             {mode==="signin"?(
-              <span>{ar?"ما عندك حساب؟":"Don't have an account?"} <button onClick={()=>setMode("signup")} style={{color:"#5fbfbf",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"سجّل الآن":"Sign up"}</button></span>
+              <span>{ar?"ما عندك حساب؟":"Don't have an account?"} <button onClick={()=>setMode("signup")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"سجّل الآن":"Sign up"}</button></span>
             ):(
-              <span>{ar?"عندك حساب؟":"Already have an account?"} <button onClick={()=>setMode("signin")} style={{color:"#5fbfbf",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"دخول":"Sign in"}</button></span>
+              <span>{ar?"عندك حساب؟":"Already have an account?"} <button onClick={()=>setMode("signin")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"دخول":"Sign in"}</button></span>
             )}
           </div>
         </div>
@@ -3610,7 +3611,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <div style={{fontSize:isMobile?11:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#5fbfbf",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:600,border:"none",borderRadius:6}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
+            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#2EC4B6",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:600,border:"none",borderRadius:6}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
             {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:6}} title={ar?"أكاديمية زان":"ZAN Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
             {!isMobile && user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} style={{...btnSm,background:"#fef2f2",color:"#ef4444",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
@@ -3656,7 +3657,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           <button className="zan-btn-prim" onClick={()=>onCreate()} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
           {index.length > 2 && (
             <div style={{flex:1,minWidth:160,maxWidth:320,position:"relative"}}>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={ar?"🔍 بحث بالاسم أو الموقع...":"🔍 Search by name or location..."} style={{width:"100%",padding:"9px 14px",borderRadius:8,border:"1px solid #e5e0d8",background:"#fff",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",transition:"border-color 0.15s"}} onFocus={e=>e.target.style.borderColor="#5fbfbf"} onBlur={e=>e.target.style.borderColor="#e5e0d8"} />
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={ar?"🔍 بحث بالاسم أو الموقع...":"🔍 Search by name or location..."} style={{width:"100%",padding:"9px 14px",borderRadius:8,border:"1px solid #e5e0d8",background:"#fff",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",transition:"border-color 0.15s"}} onFocus={e=>e.target.style.borderColor="#2EC4B6"} onBlur={e=>e.target.style.borderColor="#e5e0d8"} />
               {search && <button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#9ca3af",fontSize:14,cursor:"pointer",padding:0}}>✕</button>}
             </div>
           )}
@@ -3679,7 +3680,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(180px, 1fr))",gap:12,maxWidth:700,margin:"0 auto"}}>
               {PROJECT_TEMPLATES.map((tmpl)=>(
                 <div key={tmpl.id} onClick={()=>onCreate(tmpl.id)} style={{background:"#fff",border:"1px solid #e5e0d8",borderRadius:10,padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.boxShadow="0 4px 12px rgba(95,191,191,0.12)";}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.boxShadow="0 4px 12px rgba(46,196,182,0.12)";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";}}>
                   <div style={{fontSize:28,marginBottom:8}}>{tmpl.icon}</div>
                   <div style={{fontSize:13,fontWeight:600,color:"#0f1117",marginBottom:4}}>{ar?tmpl.ar:tmpl.en}</div>
@@ -3707,7 +3708,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {sorted.map(p=>(
               <div key={p.id} style={{background:"#fff",borderRadius:10,padding:isMobile?"12px 14px":"16px 20px",display:"flex",alignItems:"center",gap:isMobile?10:14,border:"1px solid #e5e0d8",cursor:"pointer",transition:"all 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.boxShadow="0 4px 12px rgba(95,191,191,0.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";}} onClick={()=>onOpen(p.id)}>
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.boxShadow="0 4px 12px rgba(46,196,182,0.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";}} onClick={()=>onOpen(p.id)}>
                 <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:6,background:p._shared?"#dbeafe":p.status==="Complete"?"#dcfce7":p.status==="In Progress"?"#dbeafe":"#f0f1f5",display:"flex",alignItems:"center",justifyContent:"center",fontSize:isMobile?13:15,flexShrink:0}}>
                   {p._shared?"👤":p.status==="Complete"?"✓":p.status==="In Progress"?"▶":"◇"}
                 </div>
@@ -4105,7 +4106,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
           {/* ── Phase Tabs ── */}
           {phaseNames.length > 1 && (
             <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
-              <button onClick={() => setAdvPhase("all")} style={{ ...btnS, padding: "4px 10px", fontSize: 9, fontWeight: 600, borderRadius: 10, background: advPhase === "all" ? "#5fbfbf20" : "#1e2230", color: advPhase === "all" ? "#5fbfbf" : "#6b7080", border: advPhase === "all" ? "1px solid #5fbfbf40" : "1px solid #282d3a" }}>
+              <button onClick={() => setAdvPhase("all")} style={{ ...btnS, padding: "4px 10px", fontSize: 9, fontWeight: 600, borderRadius: 10, background: advPhase === "all" ? "#2EC4B620" : "#1e2230", color: advPhase === "all" ? "#2EC4B6" : "#6b7080", border: advPhase === "all" ? "1px solid #2EC4B640" : "1px solid #282d3a" }}>
                 {ar ? "الكل" : "All"}
               </button>
               {phaseNames.map(pn => {
@@ -4392,7 +4393,7 @@ function ScoreCell({ sc, name, ar }) {
       <span style={{fontSize:9,padding:"1px 5px",borderRadius:3,background:vCfg.bg,color:vCfg.color,fontWeight:700}}>{vCfg.label}{yocPct>0?` ${yocPct}%`:""}</span>
       <span style={{fontSize:9,color:iCfg.color,fontWeight:600}}>{iCfg.label}{wPct}%</span>
       {show && <div style={{position:"fixed",top:pos.top,left:Math.max(10, Math.min(pos.left - 150, (typeof window!=="undefined"?window.innerWidth:800) - 310)),transform:"translateY(-100%)",width:300,background:"#1a1d23",color:"#e5e7ec",padding:"14px 16px",borderRadius:10,fontSize:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"start",pointerEvents:"none"}}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#5fbfbf",borderBottom:"1px solid #282d3a",paddingBottom:6}}>{name || (ar?"أصل":"Asset")}</div>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#2EC4B6",borderBottom:"1px solid #282d3a",paddingBottom:6}}>{name || (ar?"أصل":"Asset")}</div>
         <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"4px 12px",marginBottom:8}}>
           <span style={{color:"#6b7080"}}>{ar?"الجدوى":"Viability"}</span>
           <span style={{fontWeight:600,color:vCfg.color}}>{vCfg.t}</span>
@@ -4420,7 +4421,7 @@ function ScoreCell({ sc, name, ar }) {
 // ═══════════════════════════════════════════════════════════════
 // ASSET PROGRAM TABLE
 // ═══════════════════════════════════════════════════════════════
-function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, updateProject, globalExpand }) {
+function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t, lang, updateProject, globalExpand }) {
   const isMobile = useIsMobile();
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
@@ -4428,16 +4429,60 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
   const [editIdx, setEditIdx] = useState(null);
   const [showLandRentDetail, setShowLandRentDetail] = useState(false);
   const [landEduModal, setLandEduModal] = useState(null);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const fileRef = useRef(null);
   if (!project) return null;
   const assets = project.assets || [];
   const phaseNames = project.phases.map(p => p.name);
 
+  // ── Asset Templates (Saudi market defaults) ──
+  const _ar = lang === "ar";
+  const ASSET_TEMPLATES = [
+    { id:"hotel5", icon:"🏨", label:_ar?"فندق 5 نجوم":"5-Star Hotel", defaults:{
+      name:_ar?"فندق 5 نجوم":"5-Star Hotel", category:"Hospitality", revType:"Operating", code:"H5",
+      plotArea:12000, footprint:5000, gfa:35000, efficiency:0, leaseRate:0,
+      costPerSqm:12000, constrStart:1, constrDuration:30, rampUpYears:4, stabilizedOcc:100, escalation:0.75,
+      opEbitda:47630685, hotelPL:{keys:200, adr:920, stabOcc:73, daysYear:365, roomsPct:64, fbPct:25, micePct:7, otherPct:4, roomExpPct:20, fbExpPct:60, miceExpPct:58, otherExpPct:55, undistPct:28, fixedPct:9},
+    }},
+    { id:"hotel4", icon:"🏢", label:_ar?"فندق 4 نجوم":"4-Star Hotel", defaults:{
+      name:_ar?"فندق 4 نجوم":"4-Star Hotel", category:"Hospitality", revType:"Operating", code:"H4",
+      plotArea:5000, footprint:2000, gfa:16000, efficiency:0, leaseRate:0,
+      costPerSqm:8000, constrStart:1, constrDuration:30, rampUpYears:4, stabilizedOcc:100, escalation:0.75,
+      opEbitda:13901057, hotelPL:{keys:230, adr:548, stabOcc:70, daysYear:365, roomsPct:72, fbPct:22, micePct:4, otherPct:2, roomExpPct:20, fbExpPct:60, miceExpPct:58, otherExpPct:50, undistPct:29, fixedPct:9},
+    }},
+    { id:"mall", icon:"🛍️", label:_ar?"مول تجاري":"Retail Mall", defaults:{
+      name:_ar?"مول تجاري":"Retail Mall", category:"Retail", revType:"Lease", code:"RM",
+      plotArea:28000, footprint:20000, gfa:40000, efficiency:80, leaseRate:2100,
+      costPerSqm:3900, constrStart:1, constrDuration:36, rampUpYears:4, stabilizedOcc:100, escalation:0.75,
+    }},
+    { id:"office", icon:"🏛️", label:_ar?"برج مكاتب":"Office Tower", defaults:{
+      name:_ar?"برج مكاتب":"Office Tower", category:"Office", revType:"Lease", code:"OF",
+      plotArea:5500, footprint:2700, gfa:16000, efficiency:90, leaseRate:900,
+      costPerSqm:2600, constrStart:1, constrDuration:36, rampUpYears:2, stabilizedOcc:100, escalation:0.75,
+    }},
+    { id:"resi", icon:"🏠", label:_ar?"سكني (أبراج)":"Residential Tower", defaults:{
+      name:_ar?"برج سكني":"Residential Tower", category:"Residential", revType:"Lease", code:"R1",
+      plotArea:4000, footprint:2000, gfa:14000, efficiency:85, leaseRate:800,
+      costPerSqm:2800, constrStart:1, constrDuration:30, rampUpYears:2, stabilizedOcc:92, escalation:0.75,
+    }},
+    { id:"marina", icon:"⚓", label:_ar?"مارينا":"Marina", defaults:{
+      name:_ar?"مارينا":"Marina", category:"Marina", revType:"Operating", code:"MAR",
+      plotArea:3000, footprint:0, gfa:2400, efficiency:0, leaseRate:0,
+      costPerSqm:16000, constrStart:1, constrDuration:12, rampUpYears:4, stabilizedOcc:90, escalation:0.75,
+      opEbitda:1129331, marinaPL:{berths:80, avgLength:14, unitPrice:2063, stabOcc:90, fuelPct:25, otherRevPct:10, berthingOpexPct:58, fuelOpexPct:96, otherOpexPct:30},
+    }},
+    { id:"custom", icon:"✏️", label:_ar?"مخصص (فارغ)":"Custom (Empty)", defaults:{} },
+  ];
+
+  const handleTemplateSelect = (defaults) => {
+    addAsset(Object.keys(defaults).length > 0 ? defaults : undefined);
+    setShowTemplatePicker(false);
+    setTimeout(() => setEditIdx(assets.length), 50);
+  };
+
   // Auto-open detail modal after adding a new asset
   const handleAddAsset = () => {
-    addAsset();
-    // Open the newly added asset (will be at end of list)
-    setTimeout(() => setEditIdx(assets.length), 50);
+    setShowTemplatePicker(true);
   };
 
   // Auto-fill defaults when category changes (Sprint 1B)
@@ -4821,11 +4866,11 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
       {/* CARD VIEW */}
       {viewMode === "cards" && (<div>
         {assets.length===0 ? (
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:48,background:"rgba(95,191,191,0.03)",borderRadius:12,border:"1px dashed rgba(95,191,191,0.2)",textAlign:"center"}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:48,background:"rgba(46,196,182,0.03)",borderRadius:12,border:"1px dashed rgba(46,196,182,0.2)",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏗</div>
             <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"لا توجد أصول بعد":"No Assets Yet"}</div>
             <div style={{fontSize:12,color:"#6b7080",marginBottom:20,maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أضف أصول مشروعك لتبدأ تشوف التدفقات والتحليلات. استخدم الزر أدناه أو استورد من ملف.":"Add your project assets to start seeing cash flows and analytics. Use the button below or import from file."}</div>
-            <button onClick={handleAddAsset} style={{background:"linear-gradient(135deg,#0f766e,#5fbfbf)",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+            <button onClick={handleAddAsset} style={{background:"linear-gradient(135deg,#0f766e,#2EC4B6)",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
               ➕ {lang==="ar"?"أضف أول أصل":"Add First Asset"}
             </button>
           </div>
@@ -4847,6 +4892,24 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             </div>;})}
           </div>
         )}
+        {/* ═══ TEMPLATE PICKER MODAL ═══ */}
+        {showTemplatePicker && (<>
+          <div onClick={()=>setShowTemplatePicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9990}} />
+          <div style={{position:"fixed",zIndex:9991,top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:520,maxWidth:"94vw",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",overflow:"hidden"}}>
+            <div style={{padding:"20px 24px 12px",borderBottom:"1px solid #f0f1f5"}}>
+              <div style={{fontSize:18,fontWeight:700,color:"#1a1d23"}}>{ar?"اختر نوع الأصل":"Choose Asset Type"}</div>
+              <div style={{fontSize:12,color:"#6b7080",marginTop:4}}>{ar?"اختر قالب جاهز بقيم السوق السعودي، أو ابدأ فارغ":"Pick a template with Saudi market defaults, or start empty"}</div>
+            </div>
+            <div style={{padding:"16px 24px 24px",display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)",gap:10}}>
+              {ASSET_TEMPLATES.map(tmpl=>(
+                <button key={tmpl.id} onClick={()=>handleTemplateSelect(tmpl.defaults)} style={{padding:"16px 12px",background:"#fafbfc",border:"2px solid #e5e7ec",borderRadius:12,cursor:"pointer",textAlign:"center",transition:"all 0.15s",fontFamily:"inherit"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.background="#f0fdfa";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7ec";e.currentTarget.style.background="#fafbfc";}}>
+                  <div style={{fontSize:28,marginBottom:6}}>{tmpl.icon}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#1a1d23"}}>{tmpl.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>)}
         {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isSale=a.revType==="Sale",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
         const F2=({label,children})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>;
         const g3=isMobile?"1fr 1fr":"1fr 1fr 1fr";
@@ -4855,6 +4918,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
         <div style={{position:"fixed",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden",background:"#fff",boxShadow:"0 20px 60px rgba(0,0,0,0.15)",...(isMobile?{inset:0,borderRadius:0}:{top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",borderRadius:16})}}>
           <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
             <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"#9ca3af"}}>{catL(a.category,ar)} · {a.phase}</div></div>
+            <button onClick={()=>{dupAsset(i);setEditIdx(null);setTimeout(()=>setEditIdx(assets.length),80);}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"6px 12px",fontSize:11}} title={ar?"تكرار":"Duplicate"}>{ar?"📋 تكرار":"📋 Duplicate"}</button>
             <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>{ar?"حذف":"Delete"}</button>
             <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
           </div>
@@ -4977,7 +5041,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
                         const sc = getAssetScore(a, comp);
                         return <ScoreCell sc={sc} name={a.name} ar={ar} />;
                       })()}</td>
-                      <td style={{...tdSt,...hd("ops")}}><button onClick={()=>rmAsset(i)} style={{...btnSm,background:"#fef2f2",color:"#ef4444",fontSize:10}}>✕</button></td>
+                      <td style={{...tdSt,...hd("ops")}}><div style={{display:"flex",gap:3}}><button onClick={(e)=>{e.stopPropagation();dupAsset(i);}} style={{...btnSm,background:"#eff6ff",color:"#2563eb",fontSize:10}} title={ar?"تكرار":"Dup"}>📋</button><button onClick={()=>rmAsset(i)} style={{...btnSm,background:"#fef2f2",color:"#ef4444",fontSize:10}}>✕</button></div></td>
                     </tr>
                   );
                 })
@@ -5238,17 +5302,17 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
       const doneCount = steps.filter(s => s.done).length;
       if (doneCount >= 3) return null;
       return (
-        <div style={{background:"rgba(95,191,191,0.04)",border:"1px solid rgba(95,191,191,0.15)",borderRadius:12,padding:"14px 20px",marginBottom:16}}>
+        <div style={{background:"rgba(46,196,182,0.04)",border:"1px solid rgba(46,196,182,0.15)",borderRadius:12,padding:"14px 20px",marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
             <span style={{fontSize:11,fontWeight:600,color:"#0f766e"}}>{ar?`${doneCount}/4 خطوات مكتملة`:`${doneCount}/4 steps complete`}</span>
             <div style={{flex:1,height:4,background:"rgba(0,0,0,0.06)",borderRadius:2}}>
-              <div style={{width:`${(doneCount/4)*100}%`,height:"100%",background:"linear-gradient(90deg,#0f766e,#5fbfbf)",borderRadius:2,transition:"width 0.4s ease"}} />
+              <div style={{width:`${(doneCount/4)*100}%`,height:"100%",background:"linear-gradient(90deg,#0f766e,#2EC4B6)",borderRadius:2,transition:"width 0.4s ease"}} />
             </div>
           </div>
           <div style={{display:"flex",gap:isMobile?8:10,flexWrap:"wrap"}}>
             {steps.map((step,i) => (
               <button key={step.id} onClick={()=>setActiveTab(step.tab)} style={{flex:1,minWidth:isMobile?120:140,padding:"10px 12px",background:step.done?"rgba(16,185,129,0.06)":"#fff",border:`1px solid ${step.done?"rgba(16,185,129,0.25)":"#e5e7ec"}`,borderRadius:8,cursor:"pointer",textAlign:"center",transition:"all 0.15s",fontFamily:"inherit"}}
-                onMouseEnter={e=>{if(!step.done){e.currentTarget.style.borderColor="#5fbfbf";e.currentTarget.style.background="rgba(95,191,191,0.04)";}}}
+                onMouseEnter={e=>{if(!step.done){e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.background="rgba(46,196,182,0.04)";}}}
                 onMouseLeave={e=>{if(!step.done){e.currentTarget.style.borderColor="#e5e7ec";e.currentTarget.style.background="#fff";}}}>
                 <div style={{fontSize:16,marginBottom:4}}>{step.done?"✅":`${i+1}`}</div>
                 <div style={{fontSize:11,fontWeight:step.done?600:500,color:step.done?"#16a34a":"#4b5060"}}>{ar?step.labelAr:step.labelEn}</div>
@@ -9009,7 +9073,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const [activeReport, setActiveReport] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
   if (!project || !results) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(95,191,191,0.03)",border:"1px dashed rgba(95,191,191,0.2)",borderRadius:12,textAlign:"center"}}>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
       <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📄</div>
       <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
       <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"التقارير تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Reports need project data. Add assets from the Program tab."}</div>
@@ -9084,11 +9148,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   };
 
   // ── ZAN Brand Styles ──
-  const zanSec = {fontSize:14,fontWeight:700,color:"#0f1117",marginTop:22,marginBottom:10,paddingBottom:6,...(ar?{paddingRight:10,borderRight:"3px solid #5fbfbf"}:{paddingLeft:10,borderLeft:"3px solid #5fbfbf"}),borderBottom:"1px solid #e5e7ec"};
+  const zanSec = {fontSize:14,fontWeight:700,color:"#0f1117",marginTop:22,marginBottom:10,paddingBottom:6,...(ar?{paddingRight:10,borderRight:"3px solid #2EC4B6"}:{paddingLeft:10,borderLeft:"3px solid #2EC4B6"}),borderBottom:"1px solid #e5e7ec"};
   const zanTh = {color:"#fff",padding:"6px 8px",textAlign:ar?"right":"left",fontSize:9,textTransform:"uppercase",letterSpacing:0.5};
   const zanTd = {padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:11};
   const numA = ar ? "left" : "right"; // numbers align opposite to text direction
-  const zanKpi = (accent) => ({border:"1px solid #e5e7ec",borderRadius:8,padding:"10px 12px",borderTop:`3px solid ${accent||"#5fbfbf"}`});
+  const zanKpi = (accent) => ({border:"1px solid #e5e7ec",borderRadius:8,padding:"10px 12px",borderTop:`3px solid ${accent||"#2EC4B6"}`});
 
   const reportLabels = {
     exec: {label:ar?"ملخص تنفيذي":"Executive Summary", desc:ar?"نظرة عامة على المشروع والمؤشرات الرئيسية":"Project overview and key metrics", icon:"📋"},
@@ -9110,20 +9174,20 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   [dir=rtl] th { text-align: right; }
   [dir=rtl] .zan-hdr { flex-direction: row-reverse; }
   [dir=rtl] .zan-ftr { flex-direction: row-reverse; }
-  [dir=rtl] h2.zan-sec { border-left: none; border-right: 3px solid #5fbfbf; padding-left: 0; padding-right: 10px; }
+  [dir=rtl] h2.zan-sec { border-left: none; border-right: 3px solid #2EC4B6; padding-left: 0; padding-right: 10px; }
   .zan-cover { page-break-after: always; min-height: 100vh; background: #0f1117; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 60px 40px; position: relative; overflow: hidden; }
-  .zan-cover::before { content: ''; position: absolute; top: -120px; right: -120px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(95,191,191,0.15) 0%, transparent 60%); }
+  .zan-cover::before { content: ''; position: absolute; top: -120px; right: -120px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(46,196,182,0.15) 0%, transparent 60%); }
   .zan-cover::after { content: ''; position: absolute; bottom: -100px; left: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(15,118,110,0.12) 0%, transparent 60%); }
   .zan-cover .logo-group { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; margin-bottom: 4px; justify-content: center; }
   .zan-cover .logo-name { font-size: 48px; font-weight: 900; color: #fff; font-family: 'Tajawal',sans-serif; letter-spacing: -0.5px; }
-  .zan-cover .logo-div { width: 1px; height: 40px; background: rgba(95,191,191,0.4); }
-  .zan-cover .logo-sub { font-size: 14px; color: #5fbfbf; font-weight: 300; line-height: 1.3; text-align: ${ar?'right':'left'}; }
-  .zan-cover .sub { font-size: 12px; color: #5fbfbf; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; opacity: 0.7; margin-bottom: 56px; position: relative; z-index: 1; }
+  .zan-cover .logo-div { width: 1px; height: 40px; background: rgba(46,196,182,0.4); }
+  .zan-cover .logo-sub { font-size: 14px; color: #2EC4B6; font-weight: 300; line-height: 1.3; text-align: ${ar?'right':'left'}; }
+  .zan-cover .sub { font-size: 12px; color: #2EC4B6; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; opacity: 0.7; margin-bottom: 56px; position: relative; z-index: 1; }
   .zan-cover .rtype { font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 14px; position: relative; z-index: 1; letter-spacing: -0.3px; }
   .zan-cover .pname { font-size: 20px; color: #d0d4dc; font-weight: 500; margin-bottom: 6px; position: relative; z-index: 1; }
   .zan-cover .ploc { font-size: 13px; color: #6b7080; position: relative; z-index: 1; margin-bottom: 56px; }
-  .zan-cover .conf { display: inline-block; padding: 8px 28px; border: 1px solid rgba(95,191,191,0.25); border-radius: 4px; color: #5fbfbf; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; font-weight: 600; position: relative; z-index: 1; }
-  .zan-hdr { background: linear-gradient(135deg, #0f766e, #5fbfbf); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-radius: 0; }
+  .zan-cover .conf { display: inline-block; padding: 8px 28px; border: 1px solid rgba(46,196,182,0.25); border-radius: 4px; color: #2EC4B6; font-size: 10px; letter-spacing: 4px; text-transform: uppercase; font-weight: 600; position: relative; z-index: 1; }
+  .zan-hdr { background: linear-gradient(135deg, #0f766e, #2EC4B6); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-radius: 0; }
   .zan-hdr .logo-group { display: flex; align-items: center; gap: 8px; }
   .zan-hdr .logo-name { font-size: 22px; font-weight: 900; color: #fff; font-family: 'Tajawal',sans-serif; }
   .zan-hdr .logo-div { width: 1px; height: 20px; background: rgba(255,255,255,0.4); }
@@ -9132,16 +9196,16 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   .zan-ftr { margin-top: 36px; padding-top: 14px; border-top: 1px solid #e5e7ec; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #9ca3af; }
   .zan-ftr .logo-group { display: flex; align-items: center; gap: 6px; }
   .zan-ftr .logo-name { font-size: 16px; font-weight: 900; color: #0f1117; font-family: 'Tajawal',sans-serif; }
-  .zan-ftr .logo-div { width: 1px; height: 14px; background: rgba(95,191,191,0.4); }
-  .zan-ftr .logo-sub { font-size: 8px; color: #5fbfbf; font-weight: 300; line-height: 1.3; }
+  .zan-ftr .logo-div { width: 1px; height: 14px; background: rgba(46,196,182,0.4); }
+  .zan-ftr .logo-sub { font-size: 8px; color: #2EC4B6; font-weight: 300; line-height: 1.3; }
   .report-body { padding: 0 20px 20px 20px; }
-  h2.zan-sec { font-size: 14px; font-weight: 700; color: #0f1117; margin: 22px 0 10px 0; padding: 0 0 6px 10px; border-left: 3px solid #5fbfbf; border-bottom: 1px solid #e5e7ec; }
+  h2.zan-sec { font-size: 14px; font-weight: 700; color: #0f1117; margin: 22px 0 10px 0; padding: 0 0 6px 10px; border-left: 3px solid #2EC4B6; border-bottom: 1px solid #e5e7ec; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
   th { background: #0f1117; color: #fff; padding: 6px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
   td { padding: 5px 8px; border-bottom: 1px solid #f0f1f5; font-size: 11px; }
   tr:nth-child(even) { background: #fafbfc; }
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0 18px 0; }
-  .kpi-box { border: 1px solid #e5e7ec; border-radius: 8px; padding: 10px 12px; border-top: 3px solid #5fbfbf; }
+  .kpi-box { border: 1px solid #e5e7ec; border-radius: 8px; padding: 10px 12px; border-top: 3px solid #2EC4B6; }
   .kpi-box .lbl { font-size: 9px; color: #6b7080; text-transform: uppercase; letter-spacing: 0.3px; }
   .kpi-box .val { font-size: 16px; font-weight: 700; margin-top: 2px; }
   .tier-strip { display: flex; gap: 8px; margin: 8px 0 16px 0; }
@@ -9182,9 +9246,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18}}>
       {Object.entries(reportLabels).map(([key,r]) => (
         <button key={key} onClick={() => setActiveReport(key)}
-          style={{background:activeReport===key?"linear-gradient(135deg,#0f766e,#5fbfbf)":"#fff",color:activeReport===key?"#fff":"#1a1d23",
+          style={{background:activeReport===key?"linear-gradient(135deg,#0f766e,#2EC4B6)":"#fff",color:activeReport===key?"#fff":"#1a1d23",
             border:activeReport===key?"none":"1px solid #e5e7ec",borderRadius:10,padding:"18px",cursor:"pointer",textAlign:"start",transition:"all 0.2s",
-            boxShadow:activeReport===key?"0 4px 16px rgba(95,191,191,0.25)":"0 1px 3px rgba(0,0,0,0.04)"}}>
+            boxShadow:activeReport===key?"0 4px 16px rgba(46,196,182,0.25)":"0 1px 3px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:26,marginBottom:8}}>{r.icon}</div>
           <div style={{fontSize:14,fontWeight:700,marginBottom:3}}>{r.label}</div>
           <div style={{fontSize:11,opacity:0.75,fontWeight:400}}>{r.desc}</div>
@@ -9211,7 +9275,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
-      {activeReport && <button className="zan-btn-prim" onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#5fbfbf)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
+      {activeReport && <button className="zan-btn-prim" onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#2EC4B6)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
       <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"تم تصدير النموذج الكامل (Excel)":"Full Model exported (Excel)","success");}catch(e){console.error("Formula Excel error:",e);addToast((ar?"خطأ في التصدير: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
         {ar?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
       </button>
@@ -9226,11 +9290,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
             <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"ZAN"}</span>
-            <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
-            <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+            <span style={{width:1,height:28,background:"#2EC4B6",opacity:0.5}} />
+            <span style={{fontSize:11,color:"#2EC4B6",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4,borderBottom:"none"}}>{project.name}</h1>
-          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.location} | {cur} | {sy} - {sy + h} ({h} {ar?"سنة":"years"}) | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
+          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #2EC4B6"}}>{project.location} | {cur} | {sy} - {sy + h} ({h} {ar?"سنة":"years"}) | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
 
           <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4, 1fr)",gap:8,marginBottom:20}}>
             {[
@@ -9339,7 +9403,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             filteredAssets.forEach(a => { const cat = a.category||"Other"; catMap[cat] = (catMap[cat]||0) + (a.totalRevenue||0); });
             const cats = Object.entries(catMap).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
             const total = cats.reduce((s,[,v])=>s+v,0) || 1;
-            const colors = ["#0f766e","#5fbfbf","#2563eb","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#ec4899"];
+            const colors = ["#0f766e","#2EC4B6","#2563eb","#8b5cf6","#f59e0b","#ef4444","#06b6d4","#ec4899"];
             return <div style={{marginBottom:16}}>
               <div style={{display:"flex",height:24,borderRadius:6,overflow:"hidden",marginBottom:10}}>
                 {cats.map(([cat,val],i) => (
@@ -9364,7 +9428,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           {(() => {
             const phases = Object.entries(results.phaseResults).filter(([name])=>activePh.includes(name));
             const total = phases.reduce((s,[,pr])=>s+(pr.totalCapex||0),0) || 1;
-            const colors = ["#0f1117","#0f766e","#5fbfbf","#2563eb","#8b5cf6"];
+            const colors = ["#0f1117","#0f766e","#2EC4B6","#2563eb","#8b5cf6"];
             return <div style={{marginBottom:16}}>
               <div style={{display:"flex",height:24,borderRadius:6,overflow:"hidden",marginBottom:10}}>
                 {phases.map(([name,pr],i) => (
@@ -9395,11 +9459,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
             <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"ZAN"}</span>
-            <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
-            <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+            <span style={{width:1,height:28,background:"#2EC4B6",opacity:0.5}} />
+            <span style={{fontSize:11,color:"#2EC4B6",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"حزمة تقديم البنك":"Bank Submission Pack"}</h1>
-          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.name} | {project.location} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
+          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #2EC4B6"}}>{project.name} | {project.location} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
 
           {/* ── Bank Hero Strip: What the credit committee sees first ── */}
           {f && f.mode !== "self" && <div style={{background:"#f8f9fb",borderRadius:10,padding:16,marginBottom:22,border:"1px solid #e5e7ec"}}>
@@ -9624,11 +9688,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
         <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
             <span style={{fontSize:30,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"زان":"ZAN"}</span>
-            <span style={{width:1,height:28,background:"#5fbfbf",opacity:0.5}} />
-            <span style={{fontSize:11,color:"#5fbfbf",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+            <span style={{width:1,height:28,background:"#2EC4B6",opacity:0.5}} />
+            <span style={{fontSize:11,color:"#2EC4B6",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"#0f1117",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"مذكرة المستثمر":"Investor Memo"} - {project.name}</h1>
-          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #5fbfbf"}}>{project.location} | {cur} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})} | {ar?"سري":"CONFIDENTIAL"}</div>
+          <div style={{fontSize:12,color:"#6b7080",marginBottom:20,paddingBottom:12,borderBottom:"2px solid #2EC4B6"}}>{project.location} | {cur} | {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})} | {ar?"سري":"CONFIDENTIAL"}</div>
 
           <div style={zanSec}>{ar?"أبرز المؤشرات":"Investment Highlights"}</div>
           {/* Primary LP metrics - big and prominent */}
@@ -9739,7 +9803,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                         <span style={{fontSize:8,color:"#8b5cf6",whiteSpace:"nowrap"}}>{fmtM(d.lp)}</span>
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <div style={{width:Math.max(2,d.gp/maxCum*100)+"%",height:7,background:"linear-gradient(90deg,#0f766e,#5fbfbf)",borderRadius:3}} />
+                        <div style={{width:Math.max(2,d.gp/maxCum*100)+"%",height:7,background:"linear-gradient(90deg,#0f766e,#2EC4B6)",borderRadius:3}} />
                         <span style={{fontSize:8,color:"#0f766e",whiteSpace:"nowrap"}}>{fmtM(d.gp)}</span>
                       </div>
                     </div>
@@ -9828,8 +9892,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       <div style={{textAlign:"center",padding:"56px 24px",background:"#0f1117",borderRadius:12,border:"1px solid #1e2230"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:16}}>
           <span style={{fontSize:40,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>{ar?"زان":"ZAN"}</span>
-          <span style={{width:1,height:36,background:"#5fbfbf",opacity:0.4}} />
-          <span style={{fontSize:13,color:"#5fbfbf",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
+          <span style={{width:1,height:36,background:"#2EC4B6",opacity:0.4}} />
+          <span style={{fontSize:13,color:"#2EC4B6",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
         </div>
         <div style={{fontSize:13,color:"#4b5060"}}>
           {ar?"اختر تقريراً من الأعلى":"Select a report above to preview and download"}
@@ -9866,7 +9930,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
   const [selectedPhases, setSelectedPhases] = useState([]);
   const [eduModal, setEduModal] = useState(null);
   if (!project || !results) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(95,191,191,0.03)",border:"1px dashed rgba(95,191,191,0.2)",borderRadius:12,textAlign:"center"}}>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
       <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📊</div>
       <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
       <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"السيناريوهات تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Scenarios need project data. Add assets from the Program tab."}</div>
@@ -10395,7 +10459,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
   if (!project || !results) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(95,191,191,0.03)",border:"1px dashed rgba(95,191,191,0.2)",borderRadius:12,textAlign:"center"}}>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
       <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏛</div>
       <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
       <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Incentives need project data. Add assets from the Program tab."}</div>
@@ -10927,10 +10991,10 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
     <div style={{maxWidth:1100,margin:"0 auto",paddingBottom:120}}>
       {/* ── Executive Summary Card ── */}
       <div style={{background:"linear-gradient(135deg,#0f1117 0%,#1a1d2e 100%)",borderRadius:16,padding:"28px 32px",marginBottom:24,color:"#fff",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",top:0,right:0,width:200,height:200,background:"radial-gradient(circle,rgba(95,191,191,0.08) 0%,transparent 70%)",pointerEvents:"none"}} />
+        <div style={{position:"absolute",top:0,right:0,width:200,height:200,background:"radial-gradient(circle,rgba(46,196,182,0.08) 0%,transparent 70%)",pointerEvents:"none"}} />
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
           <div>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>ZAN</span><span style={{width:1,height:14,background:"rgba(95,191,191,0.4)"}} /><span style={{fontSize:9,color:"#5fbfbf",fontWeight:300}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>ZAN</span><span style={{width:1,height:14,background:"rgba(46,196,182,0.4)"}} /><span style={{fontSize:9,color:"#2EC4B6",fontWeight:300}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</span></div>
             <div style={{fontSize:24,fontWeight:700,letterSpacing:-0.5}}>{project.name || "Untitled"}</div>
             {project.location && <div style={{fontSize:12,color:"#8b90a0",marginTop:4}}>{project.location}</div>}
           </div>
@@ -11196,19 +11260,19 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
       {/* ── Live Scenario Sliders ── */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(15,17,23,0.95)",backdropFilter:"blur(8px)",borderTop:"1px solid #282d3a",padding:"12px 24px",display:"flex",alignItems:"center",gap:24,justifyContent:"center",zIndex:9000,flexWrap:"wrap"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>CAPEX</span>
+          <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>CAPEX</span>
           <input type="range" min={80} max={120} value={liveSliders.capex} onChange={e=>setLiveSliders(s=>({...s,capex:+e.target.value}))} style={{width:120,accentColor:"#2563eb"}} />
           <span style={{fontSize:11,color:liveSliders.capex!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.capex}%</span>
         </div>
         <div style={{width:1,height:24,background:"#282d3a"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>{ar?"الإيجار":"Rent"}</span>
+          <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>{ar?"الإيجار":"Rent"}</span>
           <input type="range" min={80} max={120} value={liveSliders.rent} onChange={e=>setLiveSliders(s=>({...s,rent:+e.target.value}))} style={{width:120,accentColor:"#16a34a"}} />
           <span style={{fontSize:11,color:liveSliders.rent!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.rent}%</span>
         </div>
         <div style={{width:1,height:24,background:"#282d3a"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:10,color:"#5fbfbf",fontWeight:600,minWidth:50}}>{ar?"المضاعف":"Exit ×"}</span>
+          <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>{ar?"المضاعف":"Exit ×"}</span>
           <input type="range" min={6} max={15} step={0.5} value={liveSliders.exitMult} onChange={e=>setLiveSliders(s=>({...s,exitMult:+e.target.value}))} style={{width:120,accentColor:"#f59e0b"}} />
           <span style={{fontSize:11,color:liveSliders.exitMult!==(project.exitMultiple||10)?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.exitMult}x</span>
         </div>
