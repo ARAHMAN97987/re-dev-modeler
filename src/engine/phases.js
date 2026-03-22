@@ -190,6 +190,7 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
     repayStart: names.reduce((r, n) => r || phaseFinancings[n]?.repayStart, 0) || 0,
     graceStartIdx: names.reduce((r, n) => r || phaseFinancings[n]?.graceStartIdx, 0) || 0,
     exitYear: Math.max(...names.map(n => phaseFinancings[n]?.exitYear || 0)),
+    incomeStabilizationYear: Math.max(...names.map(n => phaseFinancings[n]?.incomeStabilizationYear || 0)),
   };
 }
 

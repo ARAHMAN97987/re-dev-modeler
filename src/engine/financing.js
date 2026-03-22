@@ -17,6 +17,26 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const c = projectResults.consolidated;
 
   const ir = incentivesResult;
+
+  // ── Income Stabilization Year ──
+  // أول سنة يكتمل فيها ramp-up لكل الأصول غير البيع = الإيراد مستقر بالكامل
+  const assetScheds = projectResults.assetSchedules || [];
+  let incomeStabilizationIdx = 0;
+  for (const as of assetScheds) {
+    if (as.revType === "Sale") continue;
+    const ramp = Math.max(1, as.rampUpYears ?? 3);
+    let revStartIdx = -1;
+    for (let y = 0; y < h; y++) { if (as.revenueSchedule[y] > 0) { revStartIdx = y; break; } }
+    if (revStartIdx < 0) continue;
+    incomeStabilizationIdx = Math.max(incomeStabilizationIdx, revStartIdx + ramp - 1);
+  }
+  // Fallback: إذا ما فيه أصول إيرادية، نستخدم آخر سنة بناء + 3
+  if (incomeStabilizationIdx === 0) {
+    let ce = 0;
+    for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { ce = y; break; } }
+    incomeStabilizationIdx = Math.min(ce + 3, h - 1);
+  }
+
   // ── Land Capitalization ──
   const landCapValue = project.landCapitalize ? (project.landArea || 0) * (project.landCapRate || 1000) : 0;
   // H15: Partner land uses landValuation as equity contribution
@@ -38,9 +58,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEndSelf = y; break; } }
     const exitProceedsSelf = new Array(h).fill(0);
     const exitStrategySelf = project.exitStrategy || "sale";
-    // Self mode: use stabilization period (not debt grace) for auto-exit timing
-    const stabilizationYears = project.exitStabilizationYears ?? 3;
-    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEndSelf + stabilizationYears + 2);
+    // Auto exit: first year income stabilizes (based on asset ramp-up completion)
+    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : incomeStabilizationIdx + 1);
     const selfSold = exitStrategySelf !== "hold" && exitYrSelf >= 0 && exitYrSelf < h;
     if (selfSold) {
       // FIX#1: Per-asset exit valuation - skip Sale assets (already realized)
@@ -94,6 +113,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       totalDebt: 0, totalInterest: 0, interestSubsidyTotal: 0, interestSubsidySchedule: new Array(h).fill(0),
       upfrontFee: 0, leveredIRR: selfIRR, exitProceeds: exitProceedsSelf,
       maxDebt: 0, rate: 0, tenor: 0, grace: 0, repayYears: 0, constrEnd: constrEndSelf, repayStart: 0, exitYear: exitYrSelf + startYear,
+      incomeStabilizationYear: incomeStabilizationIdx + startYear,
     };
   }
 
@@ -330,7 +350,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // ── Exit ──
   const exitProceeds = new Array(h).fill(0);
   const exitStrategy = project.exitStrategy || "sale";
-  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : constrEnd + grace + 2);
+  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : incomeStabilizationIdx + 1);
 
   if (exitStrategy !== "hold" && exitYr >= 0 && exitYr < h) {
     // H8: Per-component exit valuation
@@ -440,6 +460,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     interestSubsidyTotal: intSub.total, interestSubsidySchedule: intSub.savings,
     upfrontFee, maxDebt, rate, tenor, grace, repayYears, graceStartIdx,
     leveredIRR: calcIRR(leveredCF), constrEnd, repayStart, exitYear: exitYr + startYear,
+    incomeStabilizationYear: incomeStabilizationIdx + startYear,
     trancheMode, tranches,
   };
 }

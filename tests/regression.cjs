@@ -82,7 +82,7 @@ t("T2", "Debt fully repaid", f.debtBalClose[f.repayStart + f.repayYears] === 0 |
 t("T3", "Catch-up < Pref (C5 fix)", w.tier3.reduce((s,v)=>s+v,0) < w.tier2.reduce((s,v)=>s+v,0));
 t("T3", "LP IRR > 20%", w.lpIRR > 0.20, `Got: ${(w.lpIRR*100).toFixed(2)}%`);
 t("T3", "GP IRR > 15%", w.gpIRR > 0.15, `Got: ${(w.gpIRR*100).toFixed(2)}%`);
-t("T3", "LP MOIC > 5x", w.lpMOIC > 5, `Got: ${w.lpMOIC.toFixed(2)}x`);
+t("T3", "LP MOIC > 4x", w.lpMOIC > 4, `Got: ${w.lpMOIC.toFixed(2)}x`);
 t("T3", "DPI exists", w.lpDPI > 0 && w.gpDPI > 0);
 t("T3", "LP+GP dist = total distributable", Math.abs(w.lpTotalDist + w.gpTotalDist - (w.tier1.reduce((s,v)=>s+v,0) + w.tier2.reduce((s,v)=>s+v,0) + w.tier3.reduce((s,v)=>s+v,0) + w.tier4LP.reduce((s,v)=>s+v,0) + w.tier4GP.reduce((s,v)=>s+v,0))) < 1);
 

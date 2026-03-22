@@ -1549,6 +1549,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"السنة":"Year"}</span>
                 <input type="number" value={cfg.exitYear||""} onChange={e=>upCfg({exitYear:parseFloat(e.target.value)||0})} placeholder="auto" style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+                {pf?.incomeStabilizationYear > 0 && <span style={{fontSize:10,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.incomeStabilizationYear + 1}</span>}
               </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"المضاعف":"Multiple"}</span>
@@ -2064,6 +2065,10 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
               {(cfg.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="قيمة البيع = الإيجار × المضاعف. عادة 8x-15x\nSale price = Rent × Multiple. Usually 8x-15x"><Inp type="number" value={cfg.exitMultiple} onChange={v=>upCfg({exitMultiple:v})} /></FL>}
               {cfg.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="قيمة التخارج = NOI / Cap Rate. في السعودية 7-10% للأصول المستقرة\nExit = NOI / Cap Rate. Saudi stabilized: 7-10%"><Inp type="number" value={cfg.exitCapRate} onChange={v=>upCfg({exitCapRate:v})} /></FL>}
             </div>
+            {f?.incomeStabilizationYear > 0 && <div style={{gridColumn:"1/-1",marginTop:-4,marginBottom:6,padding:"6px 10px",background:"#fef9c3",borderRadius:6,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:12}}>💡</span>
+              <span style={{fontSize:11,color:"#92400e"}}>{ar?`بناءً على استقرار الإيراد، يوصى بسنة تخارج: ${f.incomeStabilizationYear + 1}`:`Based on income stabilization, recommended exit year: ${f.incomeStabilizationYear + 1}`}</span>
+            </div>}
             <FL label={ar?"تكاليف التخارج %":"Exit Cost %"} tip="تكاليف البيع مثل السمسرة والاستشارات القانونية. عادة 1.5-3% من سعر البيع\nSale costs like brokerage and legal fees. Typically 1.5-3% of sale price"><Inp type="number" value={cfg.exitCostPct} onChange={v=>upCfg({exitCostPct:v})} /></FL>
           </>}
         </AB>

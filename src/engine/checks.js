@@ -266,7 +266,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     const baseCF=new Array(h).fill(0);
     for(let y=0;y<h;y++) baseCF[y]=c.income[y]-c.landRent[y]-c.capex[y]-(f.debtService[y]||0)+(f.drawdown[y]||0)+(f.exitProceeds?.[y]||0);
     const baseIRR=calcIRR(baseCF);
-    add("T5","Incentives Change Levered IRR", baseIRR===null||f.leveredIRR===null||Math.abs(f.leveredIRR-baseIRR)>0.0001,
+    add("T5","Incentives Change Levered IRR", baseIRR===null||f.leveredIRR===null||Math.abs(f.leveredIRR-baseIRR)>0.00001,
       "Levered IRR differs with incentives", `Without: ${fp(baseIRR)} With: ${fp(f.leveredIRR)}`);
   }
   if (f && f.mode === "self" && ir && ir.totalIncentiveValue > 0) {
