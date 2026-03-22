@@ -207,20 +207,25 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // and add them to project cost → increases equity needed
   // IDC = progressive debt draws × rate during construction period
   // Upfront fees = each draw × upfront fee %
+  // FIX#17: Use min(maxDebt, totalCapex) — actual drawable, not theoretical maxDebt.
+  // maxDebt can exceed totalCapex when landCap inflates devCostInclLand.
   let estimatedIDC = 0;
   let estimatedUpfrontFees = 0;
   if (project.capitalizeIDC && maxDebt > 0 && rate > 0) {
     const totalCapex = c.totalCapex || 1;
+    const drawableDebt = Math.min(maxDebt, totalCapex); // Actual draws capped to CAPEX
     let cumDraw = 0;
     for (let y = _constrStartEarly; y <= _constrEndEarly && y < h; y++) {
-      const yearDraw = maxDebt * ((c.capex[y] || 0) / totalCapex);
+      const yearDraw = drawableDebt * ((c.capex[y] || 0) / totalCapex);
       const avgBalance = cumDraw + yearDraw / 2;
       estimatedIDC += avgBalance * rate;
       estimatedUpfrontFees += yearDraw * upfrontFeePct;
       cumDraw += yearDraw;
     }
   }
-  const capitalizedFinCosts = project.capitalizeIDC ? (estimatedIDC + estimatedUpfrontFees) : 0;
+  const capitalizedFinCosts = (project.capitalizeIDC && !isBank100) ? (estimatedIDC + estimatedUpfrontFees) : 0;
+  // NOTE: bank100 ignores capitalizeIDC because 100% debt financing inherently
+  // includes construction interest in the loan — no separate capitalization needed.
 
   // ── Equity Structure ──
   const totalProjectCost = devCostInclLand + capitalizedFinCosts;

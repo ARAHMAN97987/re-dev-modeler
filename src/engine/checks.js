@@ -16,7 +16,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
   const tol = 1;
   const phases = results.phaseResults || {};
   const checks = [];
-  const add = (cat, name, pass, desc, detail) => checks.push({ cat, name, pass, desc, detail: detail || "" });
+  const add = (cat, name, pass, desc, detail, sev) => checks.push({ cat, name, pass, desc, detail: detail || "", sev: sev || "error" });
   const fmt = n => n != null ? Math.round(n).toLocaleString() : "N/A";
   const fp = n => n != null ? (n*100).toFixed(2)+"%" : "N/A";
 
@@ -237,6 +237,26 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
       `ROC: ${fmt(totROC)} vs Called: ${fmt(totCalled)}`);
     add("T3","LP IRR Computed", w.lpIRR!==null||w.lpTotalDist===0, "LP IRR computed", `${fp(w.lpIRR)}`);
     add("T3","GP IRR Computed", w.gpIRR!==null||w.gpTotalInvested===0||w.gpTotalDist===0||w.gpTotalDist<w.gpTotalInvested, "GP IRR computed (N/A if GP has no equity or return < equity)", `${fp(w.gpIRR)}`);
+
+    // FIX#18: Warn if perYear + proRata — GP gets investor share of T2 AND catch-up (potential overallocation)
+    const prefAlloc = project.prefAllocation || "proRata";
+    const catchMethod = project.catchupMethod || "perYear";
+    if (project.gpCatchup && prefAlloc === "proRata" && catchMethod === "perYear" && f.gpPct > 0.01 && f.lpPct > 0.01) {
+      add("T3","GP Catch-up Convention", false, "perYear + proRata: GP receives both investor pref share and catch-up. Consider lpOnly or cumulative for stricter allocation.",
+        `GP gets ${(f.gpPct*100).toFixed(0)}% of Pref + separate Catch-up`, "warn");
+    }
+
+    // FIX#19: Warn if any operating year has negative CF before MAX(0) — hidden capital requirement
+    let deficitYears = 0; let maxDeficit = 0;
+    for (let y = 0; y < h; y++) {
+      const adjCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
+      const raw = adjCF - (f.debtService[y]||0) - (w.fees[y]||0) + (w.unfundedFees[y]||0) + (f.exitProceeds?.[y]||0);
+      if (raw < -tol && c.income[y] > 0) { deficitYears++; maxDeficit = Math.min(maxDeficit, raw); }
+    }
+    if (deficitYears > 0) {
+      add("T3","Operating Deficit", false, "Operating CF negative in "+deficitYears+" year(s) after debt service + fees. MAX(0) hides "+fmt(Math.abs(maxDeficit))+" peak deficit. Consider reserve or additional equity.",
+        `${deficitYears} year(s), peak: ${fmt(Math.abs(maxDeficit))}`, "warn");
+    }
   }
 
   // ═══════════════════════════════════════════════

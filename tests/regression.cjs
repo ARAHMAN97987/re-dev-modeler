@@ -127,7 +127,7 @@ const wExp = computeWaterfall({...JAZAN, feeTreatment:"expense"}, r, f, i);
 t("T4", "H14: expense waterfall runs", wExp !== null && wExp.lpIRR !== undefined);
 
 // ── T5: Integrity Checks ──
-const failedChecks = checks.filter(c => !c.pass && c.cat !== "T0");
+const failedChecks = checks.filter(c => !c.pass && c.cat !== "T0" && c.sev !== "warn");
 t("T5", "All integrity checks pass", failedChecks.length === 0, failedChecks.map(c => c.name).join(", "));
 
 // C8: Incentives

@@ -662,7 +662,7 @@ suite('INT1-FullChain');
   const w = E.computeWaterfall(D2, r, f, i);
   const checks = E.runChecks(D2, r, f, w, i);
   t('Checks array returned', Array.isArray(checks) && checks.length > 0);
-  const failures = checks.filter(c => !c.pass && c.cat !== 'T0');
+  const failures = checks.filter(c => !c.pass && c.cat !== 'T0' && c.sev !== 'warn');
   t('No non-T0 failures', failures.length === 0, failures.map(c=>c.name).join(', '));
 }
 

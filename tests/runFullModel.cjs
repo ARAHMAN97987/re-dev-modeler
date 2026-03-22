@@ -133,7 +133,7 @@ t("self mode: totalDebt = 0", fmSelf.financing.totalDebt === 0);
 const DEBT = { ...JAZAN, finMode: "debt", id: "debt-test" };
 const fmDebt = runFullModel(DEBT);
 t("debt mode: financing exists", fmDebt.financing !== null);
-t("debt mode: waterfall computed (engine allows it)", fmDebt.waterfall !== null || fmDebt._legacyWaterfall !== null);
+t("debt mode: waterfall null (non-fund)", fmDebt.waterfall === null);
 t("debt mode: totalDebt > 0", fmDebt.financing.totalDebt > 0);
 
 // ═══ Null project ═══

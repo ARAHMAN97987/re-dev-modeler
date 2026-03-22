@@ -144,13 +144,25 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // "capital" = fees count as invested capital (earn ROC + Pref) - default, current behavior
   // "expense" = fees are expenses (outside capital base - don't earn Pref, smaller unreturned capital)
   const feeTreatment = project.feeTreatment || "capital";
-  // ZAN Equity Calls: (CAPEX_yr / Total_CAPEX) × TotalEquity + UnfundedFees
+  // ── Equity Calls: ZAN formula (pro-rata to CAPEX × totalEquity + unfundedFees) ──
+  // NOTE: This matches ZAN Excel behavior where:
+  //   equityCalls = (CAPEX_yr / Total_CAPEX) × TotalEquity + UnfundedFees
+  //   LP pays lpPct of each call → sum(LP calls) = lpEquity + lpPct×UF
+  //   GP pays gpPct of each call → sum(GP calls) = gpEquity + gpPct×UF
+  // LandCap is embedded in totalEquity and distributed pro-rata across construction,
+  // not as a lump-sum at Y0. This is the ZAN convention.
   const equityCalls = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
-    // Base: equity pro-rata to CAPEX spending
     const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
-    // Add unfunded fees (fees not covered by operating CF)
     equityCalls[y] = capexPortion + unfundedFees[y];
+  }
+
+  // GP/LP call split (for transparency and proper net CF calculation)
+  const gpCalls = new Array(h).fill(0);
+  const lpCalls = new Array(h).fill(0);
+  for (let y = 0; y < h; y++) {
+    gpCalls[y] = equityCalls[y] * gpPct;
+    lpCalls[y] = equityCalls[y] * lpPct;
   }
 
   // Exit proceeds - use from financing engine (already net of debt)
@@ -327,8 +339,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const gpLandRentTotal = gpLandRentObligation.reduce((a,b) => a+b, 0);
   const lpLandRentTotal = lpLandRentObligation.reduce((a,b) => a+b, 0);
   for (let y = 0; y < h; y++) {
-    lpNetCF[y] = -equityCalls[y] * lpPct + lpDist[y] - lpLandRentObligation[y];
-    gpNetCF[y] = -equityCalls[y] * gpPct + gpDist[y] - gpLandRentObligation[y];
+    lpNetCF[y] = -lpCalls[y] + lpDist[y] - lpLandRentObligation[y];
+    gpNetCF[y] = -gpCalls[y] + gpDist[y] - gpLandRentObligation[y];
   }
 
   const lpIRR = calcIRR(lpNetCF);
@@ -341,8 +353,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
   const lpNetDist = lpTotalDist - lpLandRentTotal;
   const gpNetDist = gpTotalDist - gpLandRentTotal;
-  const lpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * lpPct;
-  const gpTotalCalled = equityCalls.reduce((a, b) => a + b, 0) * gpPct;
+  const lpTotalCalled = lpCalls.reduce((a, b) => a + b, 0);
+  const gpTotalCalled = gpCalls.reduce((a, b) => a + b, 0);
   // Default MOIC = Paid-In basis (actual cash contributed)
   const lpMOIC = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpMOIC = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
@@ -367,7 +379,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   return {
     gpEquity, lpEquity, totalEquity, gpPct, lpPct,
     fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, feePreEst, feeSpv, feeAuditor, feeOperator, feeMisc, totalFees, unfundedFees,
-    equityCalls, exitProceeds, cashAvail,
+    equityCalls, gpCalls, lpCalls, exitProceeds, cashAvail,
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
