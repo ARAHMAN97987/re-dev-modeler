@@ -3046,7 +3046,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const dir = lang === "ar" ? "rtl" : "ltr";
 
   return (
-    <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:"#f8f9fb",color:"#1a1d23",fontSize:13}}>
+    <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:"linear-gradient(180deg, #f8f9fb 0%, #f0f2f5 100%)",color:"#1a1d23",fontSize:13}}>
       <style>{`
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -3059,6 +3059,8 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         .hero-kpi:nth-child(4) { animation-delay: 0.24s; }
         .asset-card { animation: fadeInUp 0.3s ease-out both; transition: box-shadow 0.15s, border-color 0.15s; }
         .kpi-secondary { animation: fadeIn 0.5s ease-out both; animation-delay: 0.3s; }
+        .zan-btn-prim:hover { filter: brightness(1.1); box-shadow: 0 4px 12px rgba(37,99,235,0.25); }
+        .zan-btn-export:hover { filter: brightness(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         table tbody tr { transition: background 0.1s; }
         [dir="rtl"] { text-align: right; }
         [dir="rtl"] th, [dir="rtl"] td { text-align: start; }
@@ -3610,7 +3612,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
         )}
 
         <div style={{display:"flex",gap:12,marginBottom:32}}>
-          <button onClick={()=>onCreate()} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
+          <button className="zan-btn-prim" onClick={()=>onCreate()} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
           <div style={{flex:1}} />
           <div style={{fontSize:12,color:"#6b7080",alignSelf:"center"}}>{sorted.length} {t.projects}</div>
         </div>
@@ -4732,7 +4734,7 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             <button onClick={()=>setHiddenCols(new Set(["plotArea","footprint","esc","ramp","occ"]))} style={{width:"100%",padding:"5px 14px",fontSize:10,color:"#6b7080",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"الافتراضي":"Default"}</button>
           </div>}
         </div>}
-        <button onClick={()=>generateTemplate()} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
+        <button onClick={()=>{generateTemplate();addToast(ar?"تم تحميل النموذج":"Template downloaded","success");}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
           {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
         <button onClick={()=>{exportAssetsToExcel(project, results);addToast(ar?"تم تصدير الأصول":"Assets exported","success");}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
@@ -4866,7 +4868,11 @@ function AssetTable({ project, upAsset, addAsset, rmAsset, results, t, lang, upd
             </thead>
             <tbody>
               {assets.length===0?(
-                <tr><td colSpan={visibleCols.length} style={{...tdSt,textAlign:"center",color:"#9ca3af",padding:32}}>{t.noAssets}</td></tr>
+                <tr><td colSpan={visibleCols.length} style={{...tdSt,textAlign:"center",color:"#6b7080",padding:"40px 20px"}}>
+                  <div style={{fontSize:32,marginBottom:8,opacity:0.5}}>🏗</div>
+                  <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>{lang==="ar"?"لا توجد أصول":"No assets yet"}</div>
+                  <div style={{fontSize:11,color:"#9ca3af"}}>{lang==="ar"?"اضغط '+ إضافة أصل' للبدء":"Click '+ Add Asset' to start"}</div>
+                </td></tr>
               ):(
                 filteredIndices.map(i=>{
                   const a = assets[i];
@@ -9147,7 +9153,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
     {/* Export buttons */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
-      {activeReport && <button onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#5fbfbf)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
+      {activeReport && <button className="zan-btn-prim" onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#5fbfbf)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
       <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"تم تصدير النموذج الكامل (Excel)":"Full Model exported (Excel)","success");}catch(e){console.error("Formula Excel error:",e);addToast((ar?"خطأ في التصدير: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
         {ar?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
       </button>
