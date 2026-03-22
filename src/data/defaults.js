@@ -18,7 +18,7 @@ export const defaultProject = () => ({
   softCostPct: 10, contingencyPct: 5,
   rentEscalation: 0.75, vacancyPct: 0, defaultEfficiency: 85, defaultLeaseRate: 700, defaultCostPerSqm: 3500,
   activeScenario: "Base Case", customCapexMult: 100, customRentMult: 100, customDelay: 0, customEscAdj: 0,
-  phases: [{ name: "Phase 1", startYearOffset: 1, completionMonth: 36, footprint: 0 }],
+  phases: [{ name: "Phase 1", startYearOffset: 1, completionYear: new Date().getFullYear() + 3, footprint: 0 }],
   assets: [],
   // Financing (Phase 2)
   finMode: "self", // self | debt | fund
