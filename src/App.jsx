@@ -2258,16 +2258,15 @@ When to use:
                 }
               }
               const autoFundStart = Math.max(sy, firstCapexYr - 1);
-              const currentVal = cfg.fundStartYear || 0;
-              const isAuto = currentVal === 0 || currentVal === autoFundStart;
+              const displayVal = (cfg.fundStartYear || 0) > 0 ? cfg.fundStartYear : autoFundStart;
+              const isAuto = displayVal === autoFundStart;
               return <div>
-                <FL label={ar?"سنة بداية الصندوق":"Fund Start Year"} tip={ar?"سنة بدء جمع رأس المال وتسجيل الصندوق. غالباً قبل البناء بسنة\nاتركها فارغة أو 0 للحساب التلقائي":"Year capital raising begins. Usually 1 year before construction.\nLeave empty or 0 for auto-calculation"}>
-                  <Inp type="number" value={currentVal > 0 ? currentVal : ""} onChange={v=>upCfg({fundStartYear:v||0})} placeholder={String(autoFundStart)} />
+                <FL label={ar?"سنة بداية الصندوق":"Fund Start Year"} tip={ar?"سنة بدء جمع رأس المال وتسجيل الصندوق. غالباً قبل البناء بسنة":"Year capital raising begins. Usually 1 year before construction."}>
+                  <Inp type="number" value={displayVal} onChange={v=>upCfg({fundStartYear:v===autoFundStart?0:v})} />
                 </FL>
-                <div style={{marginTop:-6,marginBottom:4,fontSize:10,color:isAuto?"#16a34a":"#6b7080",paddingInlineStart:2}}>
-                  {isAuto
-                    ? (ar?`✓ تلقائي: ${autoFundStart} (سنة قبل بداية البناء ${firstCapexYr})`:`✓ Auto: ${autoFundStart} (1yr before construction ${firstCapexYr})`)
-                    : (ar?`التلقائي سيكون: ${autoFundStart}`:`Auto would be: ${autoFundStart}`)}
+                <div style={{marginTop:-6,marginBottom:4,fontSize:10,color:"#6b7080",paddingInlineStart:2}}>
+                  {ar?`التلقائي: ${autoFundStart} (سنة قبل بداية البناء ${firstCapexYr})`:`Auto: ${autoFundStart} (1yr before construction ${firstCapexYr})`}
+                  {isAuto && <span style={{color:"#16a34a",marginInlineStart:6}}>✓</span>}
                 </div>
               </div>;
             })()}
