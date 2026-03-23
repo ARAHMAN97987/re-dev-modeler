@@ -3,6 +3,7 @@ import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLin
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
 import { generateFormulaExcel } from "./excelFormulaExport";
+import { generateTemplateExcel } from "./excelTemplateExport";
 import { embeddedFontCSS } from "./embeddedFonts";
 import AiAssistant from "./AiAssistant";
 
@@ -9977,6 +9978,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       {activeReport && <button className="zan-btn-prim" onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#2EC4B6)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"⬇ تحميل التقرير (HTML/PDF)":"⬇ Download Report (HTML/PDF)"}</button>}
       <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"تم تصدير النموذج الكامل (Excel)":"Full Model exported (Excel)","success");}catch(e){console.error("Formula Excel error:",e);addToast((ar?"خطأ في التصدير: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
         {ar?"⬇ النموذج الكامل (Excel + معادلات)":"⬇ Full Model (Excel + Formulas)"}
+      </button>
+      <button onClick={async()=>{try{await generateTemplateExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"تم تصدير النموذج الديناميكي (Excel)":"Dynamic Model exported (Excel)","success");}catch(e){console.error("Template Excel error:",e);addToast((ar?"خطأ في التصدير: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#1B4F72",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
+        {ar?"⬇ النموذج الديناميكي (15 شيت)":"⬇ Dynamic Model (15 sheets)"}
       </button>
       <button onClick={async()=>{try{await generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks);addToast(ar?"تم تصدير تقرير البيانات (Excel)":"Data Report exported (Excel)","success");}catch(e){console.error("Data Excel error:",e);addToast((ar?"خطأ في التصدير: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500,borderRadius:8}}>
         {ar?"⬇ تقرير بيانات (Excel)":"⬇ Data Report (Excel)"}
