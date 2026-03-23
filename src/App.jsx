@@ -2155,6 +2155,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         <QF label={ar?"مدة القرض":"Tenor"} value={cfg.loanTenor} onChange={v=>upCfg({loanTenor:v})} suffix={ar?"سنة":"yr"} />
         <QF label={ar?"فترة السماح":"Grace"} value={cfg.debtGrace} onChange={v=>upCfg({debtGrace:v})} suffix={ar?"سنة":"yr"} />
         {notHold && <QF label={ar?"سنة التخارج":"Exit Year"} value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} suffix="" hint="0 = auto" />}
+        {notHold && (cfg.exitStrategy||"sale")==="sale" && <QF label={ar?"مضاعف التخارج":"Exit Multiple"} value={cfg.exitMultiple} onChange={v=>upCfg({exitMultiple:v})} suffix="x" />}
+        {notHold && (cfg.exitStrategy||"sale")==="caprate" && <QF label={ar?"معدل الرسملة":"Cap Rate"} value={cfg.exitCapRate} onChange={v=>upCfg({exitCapRate:v})} suffix="%" />}
+        {isFundMode && <QF label={ar?"سنة الصندوق":"Fund Start"} value={cfg.fundStartYear||0} onChange={v=>upCfg({fundStartYear:v})} suffix="" hint="0 = auto" />}
         {isFundMode && <QF label={ar?"العائد التفضيلي":"Pref Return"} value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:v})} suffix="%" />}
       </div>;
     })()}
