@@ -3804,7 +3804,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#2EC4B6",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:600,border:"none",borderRadius:6}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
             {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:6}} title={ar?"أكاديمية زان":"ZAN Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
             {!isMobile && user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
-            {signOut && <button onClick={signOut} style={{...btnSm,background:"#fef2f2",color:"#ef4444",padding:"6px 14px",fontSize:11,fontWeight:500}}>Sign Out</button>}
+            {signOut && <button onClick={signOut} style={{...btnSm,background:"#fef2f2",color:"#ef4444",padding:"6px 14px",fontSize:11,fontWeight:500}}>{ar?"خروج":"Sign Out"}</button>}
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#e8e5e0",color:"#4b5060",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>
@@ -4431,7 +4431,8 @@ Default construction cost for new assets in SAR/sqm"><SidebarInput type="number"
 // ═══════════════════════════════════════════════════════════════
 // HOTEL P&L MODAL
 // ═══════════════════════════════════════════════════════════════
-function HotelPLModal({ data, onSave, onClose, t }) {
+function HotelPLModal({ data, onSave, onClose, t, lang }) {
+  const ar = lang === "ar";
   const [h, setH] = useState(data || defaultHotelPL());
   const upH = (u) => setH(prev => ({...prev, ...u}));
   const calc = calcHotelEBITDA(h);
@@ -4499,8 +4500,8 @@ function HotelPLModal({ data, onSave, onClose, t }) {
           </div>
         </div>
         <div style={{padding:"12px 20px",borderTop:"1px solid #e5e7ec",display:"flex",justifyContent:"flex-end",gap:8}}>
-          <button onClick={onClose} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"8px 16px",fontSize:12}}>Cancel</button>
-          <button onClick={()=>{onSave(h, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>Save & Apply EBITDA</button>
+          <button onClick={onClose} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"8px 16px",fontSize:12}}>{ar?"إلغاء":"Cancel"}</button>
+          <button onClick={()=>{onSave(h, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>{ar?"حفظ وتطبيق":"Save & Apply EBITDA"}</button>
         </div>
       </div>
     </div>
@@ -4510,7 +4511,8 @@ function HotelPLModal({ data, onSave, onClose, t }) {
 // ═══════════════════════════════════════════════════════════════
 // MARINA P&L MODAL
 // ═══════════════════════════════════════════════════════════════
-function MarinaPLModal({ data, onSave, onClose, t }) {
+function MarinaPLModal({ data, onSave, onClose, t, lang }) {
+  const ar = lang === "ar";
   const [m, setM] = useState(data || defaultMarinaPL());
   const upM = (u) => setM(prev => ({...prev, ...u}));
   const calc = calcMarinaEBITDA(m);
@@ -4555,8 +4557,8 @@ function MarinaPLModal({ data, onSave, onClose, t }) {
           </div>
         </div>
         <div style={{padding:"12px 20px",borderTop:"1px solid #e5e7ec",display:"flex",justifyContent:"flex-end",gap:8}}>
-          <button onClick={onClose} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"8px 16px",fontSize:12}}>Cancel</button>
-          <button onClick={()=>{onSave(m, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>Save & Apply EBITDA</button>
+          <button onClick={onClose} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:"8px 16px",fontSize:12}}>{ar?"إلغاء":"Cancel"}</button>
+          <button onClick={()=>{onSave(m, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>{ar?"حفظ وتطبيق":"Save & Apply EBITDA"}</button>
         </div>
       </div>
     </div>
@@ -5455,12 +5457,12 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
       {modal?.type==="hotel"&&<HotelPLModal
         data={assets[modal.idx]?.hotelPL}
         onSave={(h,ebitda)=>upAsset(modal.idx,{hotelPL:h,opEbitda:ebitda})}
-        onClose={()=>setModal(null)} t={t}
+        onClose={()=>setModal(null)} t={t} lang={lang}
       />}
       {modal?.type==="marina"&&<MarinaPLModal
         data={assets[modal.idx]?.marinaPL}
         onSave={(m,ebitda)=>upAsset(modal.idx,{marinaPL:m,opEbitda:ebitda})}
-        onClose={()=>setModal(null)} t={t}
+        onClose={()=>setModal(null)} t={t} lang={lang}
       />}
     </div>
   );
