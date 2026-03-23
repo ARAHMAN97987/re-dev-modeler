@@ -2133,8 +2133,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       </div>
     )}
 
-    {/* ═══ QUICK FINANCING SETTINGS ═══ */}
-    {(() => {
+    {/* ═══ QUICK FINANCING SETTINGS (hidden — replaced by global KPI bar) ═══ */}
+    {false && (() => {
       const hasDbt = cfg.finMode !== "self";
       const notHold = (cfg.exitStrategy||"sale") !== "hold";
       const isFundMode = cfg.finMode === "fund";
@@ -3505,12 +3505,54 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             <PresentationView project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} audienceView={audienceView} liveSliders={liveSliders} setLiveSliders={setLiveSliders} checks={checks} />
             </div>
           ) : (<>
-          {/* Global Expand/Collapse toggle */}
-          {activeTab !== "dashboard" && <div style={{padding:isMobile?"4px 10px":"4px 18px",borderBottom:"1px solid #f0f1f3",display:"flex",justifyContent:"flex-end"}}>
-            <button onClick={()=>setGlobalExpand(p=>p+1)} style={{fontSize:9,padding:"3px 12px",borderRadius:5,border:"1px solid #e5e7ec",background:globalExpand%2===1?"#eff6ff":"#f8f9fb",color:globalExpand%2===1?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
-              {globalExpand%2===1?(lang==="ar"?"▲ طي الكل":"▲ Collapse All"):(lang==="ar"?"▼ توسيع الكل":"▼ Expand All")}
-            </button>
-          </div>}
+          {/* ═══ STICKY KPI BAR + Expand/Collapse ═══ */}
+          {activeTab !== "dashboard" && (() => {
+            const ar = lang === "ar";
+            const c = results?.consolidated;
+            const fm = project?.finMode || "self";
+            const f = financing;
+            const w = waterfall;
+            const ir = incentivesResult;
+            const hasData = c && c.totalCapex > 0;
+            const hasDebt = fm !== "self" && f && f.totalDebt > 0;
+            const hasFund = fm === "fund" && w;
+            const hasIncentives = ir && ir.totalIncentiveValue > 0;
+            const notHold = (project?.exitStrategy || "sale") !== "hold";
+            const displayIRR = hasData ? (hasIncentives && ir.adjustedIRR !== null ? ir.adjustedIRR : c.irr) : null;
+            const dscrVals = f?.dscr ? f.dscr.filter(v => v !== null && v > 0) : [];
+            const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
+            const exitProc = f?.exitProceeds || 0;
+
+            const items = !hasData ? [] : [
+              { label: ar ? "التكاليف" : "CAPEX", value: fmtM(c.totalCapex), color: "#ef4444" },
+              { label: ar ? "الإيرادات" : "Revenue", value: fmtM(c.totalIncome), color: "#16a34a" },
+              { label: "IRR", value: displayIRR !== null ? (displayIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", displayIRR) },
+              ...(fm === "self" ? [{ label: "NPV", value: fmtM(calcNPV(c.netCF, 0.10)), color: getMetricColor("NPV", calcNPV(c.netCF, 0.10)) }] : []),
+              ...(hasDebt ? [
+                { label: ar ? "IRR ممول" : "Lev. IRR", value: f.leveredIRR != null ? (f.leveredIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", f.leveredIRR) },
+                { label: "DSCR", value: minDscr !== null ? minDscr.toFixed(2) + "x" : "—", color: getMetricColor("DSCR", minDscr) },
+                { label: "LTV", value: f.devCostInclLand > 0 ? ((f.totalDebt / f.devCostInclLand) * 100).toFixed(0) + "%" : "—", color: getMetricColor("LTV", f.devCostInclLand > 0 ? (f.totalDebt / f.devCostInclLand) * 100 : 0) },
+              ] : []),
+              ...(hasFund ? [
+                { label: "LP IRR", value: w.lpIRR != null ? (w.lpIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", w.lpIRR) },
+                { label: "MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2) + "x" : "—", color: getMetricColor("MOIC", w.lpMOIC) },
+              ] : []),
+              ...(hasDebt && notHold && exitProc > 0 ? [{ label: ar ? "التخارج" : "Exit", value: fmtM(exitProc), color: "#8b5cf6" }] : []),
+            ];
+
+            return <div style={{padding:isMobile?"5px 10px":"5px 18px",background:"#fafbfc",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap",position:"sticky",top:0,zIndex:20}}>
+              {items.map((item, i) => (
+                <div key={i} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11}}>
+                  <span style={{color:"#9ca3af",fontSize:9,fontWeight:500}}>{item.label}</span>
+                  <span style={{fontWeight:700,color:item.color,fontVariantNumeric:"tabular-nums"}}>{item.value}</span>
+                </div>
+              ))}
+              <div style={{flex:1}} />
+              <button onClick={()=>setGlobalExpand(p=>p+1)} style={{fontSize:9,padding:"3px 10px",borderRadius:5,border:"1px solid #e5e7ec",background:globalExpand%2===1?"#eff6ff":"#f8f9fb",color:globalExpand%2===1?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600,flexShrink:0}}>
+                {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
+              </button>
+            </div>;
+          })()}
           {[
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
