@@ -3481,7 +3481,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],
             ["incentives", <IncentivesView key="incentives" project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />],
             ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} />],
-            ["checks", <ChecksView key="checks" checks={checks} t={t} lang={lang} />],
+            ["checks", <ChecksView key="checks" checks={checks} t={t} lang={lang} onFix={(tab)=>{setActiveTab(tab);window.scrollTo(0,0);}} />],
           ].map(([tabKey, tabContent]) => (
             <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",overflow:"auto",height:"100%",padding:isMobile?10:18}}>
               {tabContent}
@@ -11088,12 +11088,20 @@ function MarketView({ project, results, lang, up }) {
   );
 }
 
-function ChecksView({ checks, t, lang }) {
+function ChecksView({ checks, t, lang, onFix }) {
   const ar = lang === "ar";
   const ap = checks.every(c=>c.pass);
   const fc = checks.filter(c=>!c.pass).length;
   const cats = [...new Set(checks.map(c=>c.cat||"General"))];
   const catLabels = {T0:ar?"T0: فحص المدخلات":"T0: Input Validation",T1:ar?"T1: محرك المشروع":"T1: Project Engine",T2:ar?"T2: التمويل":"T2: Financing",T3:ar?"T3: حافز الأداء":"T3: Waterfall",T4:ar?"T4: الحوافز":"T4: Incentives",T5:ar?"T5: التكامل":"T5: Integration",General:"General"};
+  const catFixTab = {T0:"assets",T1:"cashflow",T2:"financing",T3:"waterfall",T4:"incentives",T5:"dashboard"};
+  const getFixTab = (c) => {
+    if (c.name?.includes("Efficiency") || c.name?.includes("Cost/sqm") || c.name?.includes("GFA")) return "assets";
+    if (c.name?.includes("Tenor") || c.name?.includes("Grace") || c.name?.includes("LTV") || c.name?.includes("DSCR")) return "financing";
+    if (c.name?.includes("Exit") || c.name?.includes("Horizon")) return "dashboard";
+    if (c.name?.includes("GP") || c.name?.includes("LP") || c.name?.includes("Carry") || c.name?.includes("Catch")) return "financing";
+    return catFixTab[c.cat] || null;
+  };
   return (<div>
     <div style={{display:"flex",alignItems:"center",marginBottom:14,gap:12}}>
       <div style={{fontSize:15,fontWeight:600}}>{t.modelChecks}</div>
@@ -11105,11 +11113,11 @@ function ChecksView({ checks, t, lang }) {
     {/* Failed checks summary at top */}
     {fc > 0 && <div style={{background:"#fef2f2",borderRadius:8,border:"1px solid #fecaca",padding:"12px 16px",marginBottom:14}}>
       <div style={{fontSize:12,fontWeight:600,color:"#991b1b",marginBottom:8}}>{ar?`${fc} فحوصات فاشلة تحتاج مراجعة`:`${fc} Failed Checks Require Attention`}</div>
-      {checks.filter(c=>!c.pass).map((c,i) => <div key={i} style={{fontSize:11,color:"#b91c1c",padding:"3px 0",display:"flex",gap:6}}>
+      {checks.filter(c=>!c.pass).map((c,i) => {const fixTab=getFixTab(c);return <div key={i} style={{fontSize:11,color:"#b91c1c",padding:"3px 0",display:"flex",alignItems:"center",gap:6}}>
         <span style={{fontWeight:600}}>✗</span>
-        <span><strong>[{c.cat}]</strong> {c.name}</span>
-        {c.detail && <span style={{color:"#9ca3af"}}> - {c.detail}</span>}
-      </div>)}
+        <span style={{flex:1}}><strong>[{c.cat}]</strong> {c.name}{c.detail && <span style={{color:"#9ca3af"}}> - {c.detail}</span>}</span>
+        {fixTab && onFix && <button onClick={()=>onFix(fixTab)} style={{padding:"2px 8px",background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",borderRadius:4,color:"#0f766e",fontSize:9,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>{ar?"إصلاح →":"Fix →"}</button>}
+      </div>;})}
     </div>}
     {cats.map(cat => {
       const catChecks = checks.filter(c=>(c.cat||"General")===cat);
@@ -11123,12 +11131,13 @@ function ChecksView({ checks, t, lang }) {
           </div>
           <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
             <table style={tblStyle}><tbody>
-              {catChecks.map((c,i)=><tr key={i} style={{background:c.pass?"":"#fef2f2"}}>
+              {catChecks.map((c,i)=>{const fixTab=!c.pass?getFixTab(c):null;return <tr key={i} style={{background:c.pass?"":"#fef2f2"}}>
                 <td style={{...tdSt,fontWeight:500,width:"30%"}}>{c.name}</td>
                 <td style={{...tdSt,textAlign:"center",width:70}}><span style={{fontSize:10,padding:"2px 8px",borderRadius:3,fontWeight:600,background:c.pass?"#dcfce7":"#fef2f2",color:c.pass?"#16a34a":"#ef4444"}}>{c.pass?(ar?"ناجح":"PASS"):(ar?"فاشل":"FAIL")}</span></td>
                 <td style={{...tdSt,color:"#6b7080",fontSize:11}}>{c.desc}</td>
                 {c.detail && <td style={{...tdSt,color:"#9ca3af",fontSize:10,maxWidth:200}}>{c.detail}</td>}
-              </tr>)}
+                {fixTab && onFix ? <td style={{...tdSt,width:60,textAlign:"center"}}><button onClick={()=>onFix(fixTab)} style={{padding:"2px 8px",background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",borderRadius:4,color:"#0f766e",fontSize:9,fontWeight:600,cursor:"pointer"}}>{ar?"إصلاح →":"Fix →"}</button></td> : !c.pass ? <td style={tdSt}></td> : null}
+              </tr>;})}
             </tbody></table>
           </div>
         </div>
