@@ -2084,6 +2084,29 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       </div>;
     })()}
 
+    {/* ═══ FINANCING KPI STRIP ═══ */}
+    {f && f.totalDebt > 0 && (() => {
+      const dscrArr = f.dscr ? f.dscr.filter(v => v !== null && v > 0) : [];
+      const avgD = dscrArr.length > 0 ? dscrArr.reduce((a,b) => a+b, 0) / dscrArr.length : null;
+      const minD = dscrArr.length > 0 ? Math.min(...dscrArr) : null;
+      const effLTV = f.devCostInclLand > 0 ? (f.totalDebt / f.devCostInclLand) * 100 : 0;
+      const costOfDebt = cfg.financeRate || 0;
+      const kpis = [
+        { label: ar ? "إجمالي الدين" : "Total Debt", value: fmtM(f.totalDebt), color: "#1a1d23" },
+        { label: ar ? "إجمالي الملكية" : "Total Equity", value: fmtM(f.totalEquity), color: "#1a1d23" },
+        { label: ar ? "LTV الفعلي" : "Effective LTV", value: effLTV.toFixed(0) + "%", color: getMetricColor("LTV", effLTV) },
+        { label: ar ? "متوسط DSCR" : "Avg DSCR", value: avgD ? avgD.toFixed(2) + "x" : "—", color: getMetricColor("DSCR", avgD), sub: minD ? (ar ? "أدنى: " : "Min: ") + minD.toFixed(2) + "x" : null },
+        { label: ar ? "تكلفة الدين" : "Cost of Debt", value: costOfDebt + "%", color: "#1a1d23" },
+      ];
+      return <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        {kpis.map((k,i) => <div key={i} style={{flex:"1 1 120px",minWidth:110,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"10px 14px",boxShadow:"0 1px 2px rgba(0,0,0,0.03)"}}>
+          <div style={{fontSize:9,color:"#6b7080",fontWeight:500,marginBottom:4,textTransform:"uppercase",letterSpacing:0.3}}>{k.label}</div>
+          <div style={{fontSize:18,fontWeight:700,color:k.color,fontVariantNumeric:"tabular-nums"}}>{k.value}</div>
+          {k.sub && <div style={{fontSize:9,color:getMetricColor("DSCR",minD),marginTop:2,fontWeight:600}}>{k.sub}</div>}
+        </div>)}
+      </div>;
+    })()}
+
     {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
     {(() => {
         const hasDbt = cfg.finMode !== "self";
