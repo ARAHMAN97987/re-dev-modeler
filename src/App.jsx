@@ -1174,13 +1174,13 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
   }
 
   // ── SELF: Full self-funded results ──
-  return <SelfResultsView project={project} results={results} financing={financing} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
+  return <SelfResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // SELF-FUNDED RESULTS VIEW
 // ═══════════════════════════════════════════════════════════════
-function SelfResultsView({ project, results, financing, incentivesResult, t, lang, up, globalExpand }) {
+function SelfResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -1188,14 +1188,56 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
   const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true});
   const [kpiOpen, setKpiOpen] = useState({proj:false,cap:false,ret:false});
   const [eduModal, setEduModal] = useState(null);
+  const [selectedPhases, setSelectedPhases] = useState([]);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowChart(expand); setKpiOpen({proj:expand,cap:expand,ret:expand}); setSecOpen(expand?{}:{s1:true,s2:true,s3:true}); }}, [globalExpand]);
 
-  const f = financing;
-  const c = results.consolidated;
+  // ── Phase filter ──
+  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
+  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+
   const h = results.horizon;
   const sy = results.startYear;
   const cur = project.currency || "SAR";
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
+
+  // ── Filtered consolidated ──
+  const c = useMemo(() => {
+    if (!isFiltered) return results.consolidated;
+    const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
+    activePh.forEach(pName => {
+      const pr = results.phaseResults?.[pName];
+      if (!pr) return;
+      for (let y = 0; y < h; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
+    });
+    return { ...results.consolidated, income, capex, landRent, netCF,
+      totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0),
+      totalLandRent: landRent.reduce((a,b)=>a+b,0), totalNetCF: netCF.reduce((a,b)=>a+b,0),
+      irr: calcIRR(netCF), npv10: calcNPV(netCF, 0.10),
+    };
+  }, [isFiltered, selectedPhases, results, h]);
+
+  // ── Filtered financing ──
+  const f = useMemo(() => {
+    if (!isFiltered || !phaseFinancings) return financing;
+    const pfs = activePh.map(p => phaseFinancings[p]).filter(Boolean);
+    if (pfs.length === 0) return financing;
+    const leveredCF = new Array(h).fill(0);
+    pfs.forEach(pf => { if (pf.leveredCF) for (let y=0;y<h;y++) leveredCF[y] += pf.leveredCF[y]||0; });
+    const exitProceeds = new Array(h).fill(0);
+    pfs.forEach(pf => { if (pf.exitProceeds) for (let y=0;y<h;y++) exitProceeds[y] += pf.exitProceeds[y]||0; });
+    return { ...financing,
+      leveredCF, exitProceeds, leveredIRR: calcIRR(leveredCF),
+      devCostInclLand: pfs.reduce((s,pf) => s + (pf.devCostInclLand||0), 0),
+      devCostExclLand: pfs.reduce((s,pf) => s + (pf.devCostExclLand||0), 0),
+      totalDebt: pfs.reduce((s,pf) => s + (pf.totalDebt||0), 0),
+      totalEquity: pfs.reduce((s,pf) => s + (pf.totalEquity||0), 0),
+      landCapValue: pfs.reduce((s,pf) => s + (pf.landCapValue||0), 0),
+      constrEnd: Math.max(...pfs.map(pf => pf.constrEnd || 0)),
+      exitYear: Math.max(...pfs.map(pf => pf.exitYear || 0)),
+    };
+  }, [isFiltered, selectedPhases, financing, phaseFinancings, h]);
 
   const levIRR = f?.leveredIRR ?? c.irr;
   const exitProc = f?.exitProceeds ? f.exitProceeds.reduce((a,b)=>a+b,0) : 0;
@@ -1262,6 +1304,23 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
   };
 
   return (<div>
+    {/* ═══ PHASE FILTER ═══ */}
+    {allPhaseNames.length > 1 && (
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {ar?"كل المراحل":"All Phases"}
+          </button>
+          {allPhaseNames.map(p => {
+            const active = activePh.includes(p) && selectedPhases.length > 0;
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+              {p}
+            </button>;
+          })}
+          {isFiltered && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${allPhaseNames.length} مراحل`:`Showing ${activePh.length} of ${allPhaseNames.length} phases`}</span>}
+        </div>
+      </div>
+    )}
     {/* ═══ EXPANDABLE KPI CARDS: Project | Capital | Returns ═══ */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:16}}>
       {/* ── 🏠 Project Card ── */}
@@ -1289,7 +1348,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
             <KR l={ar?"دخل مستقر (NOI)":"Stabilized NOI"} v={fmt(stabNOI)} c="#059669" />
             <KR l={ar?"عائد على التكلفة":"Yield on Cost"} v={yieldOnCost>0?fmtPct(yieldOnCost*100):"—"} c={yieldOnCost>0.08?"#16a34a":"#f59e0b"} />
             <KR l={ar?"الأفق":"Horizon"} v={`${h} ${ar?"سنة":"yrs"}`} />
-            {hasIncentives && <><SecHd text={ar?"حوافز":"INCENTIVES"} /><KR l={ar?"إجمالي الحوافز":"Total Incentives"} v={fmtM(incentiveTotal)} c="#059669" bold /></>}
+            {hasIncentives && !isFiltered && <><SecHd text={ar?"حوافز":"INCENTIVES"} /><KR l={ar?"إجمالي الحوافز":"Total Incentives"} v={fmtM(incentiveTotal)} c="#059669" bold /></>}
           </div>
         )}
       </div>
@@ -1360,10 +1419,10 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
-    <ExitAnalysisPanel project={project} results={results} financing={financing} lang={lang} globalExpand={globalExpand} />
+    {!isFiltered && <ExitAnalysisPanel project={project} results={results} financing={f} lang={lang} globalExpand={globalExpand} />}
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
-    <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />
+    {!isFiltered && <IncentivesImpact project={project} results={results} financing={f} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />}
 
     {/* ═══ CF CHART (Revenue + CAPEX + Cumulative) ═══ */}
     {chartData.length > 2 && (
@@ -1423,12 +1482,12 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
       </>}
 
       {/* ═══ § 2. EXIT & INCENTIVES ═══ */}
-      {(exitProc > 0 || hasIncentives) && <>
+      {(exitProc > 0 || (hasIncentives && !isFiltered)) && <>
       <tr onClick={()=>setSecOpen(p=>({...p,s2:!p.s2}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#f59e0b",background:"#fffbeb",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #f59e0b",userSelect:"none"}}>{secOpen.s2?"▶":"▼"} {ar?"2. التخارج والحوافز":"2. EXIT & INCENTIVES"}</td></tr>
       {!secOpen.s2 && <>
       {exitProc > 0 && <CFRow label={ar?"(+) حصيلة التخارج":"(+) Exit Proceeds"} values={f?.exitProceeds||new Array(h).fill(0)} total={exitProc} color="#16a34a" />}
-      {hasIncentives && ir.capexGrantSchedule && (ir.capexGrantTotal||0)>0 && <CFRow label={ar?"(+) منحة CAPEX":"(+) CAPEX Grant"} values={ir.capexGrantSchedule} total={ir.capexGrantTotal} color="#059669" />}
-      {hasIncentives && ir.landRentSavingSchedule && (ir.landRentSavingTotal||0)>0 && <CFRow label={ar?"(+) وفر إيجار الأرض":"(+) Land Rent Savings"} values={ir.landRentSavingSchedule} total={ir.landRentSavingTotal} color="#059669" />}
+      {hasIncentives && !isFiltered && ir.capexGrantSchedule && (ir.capexGrantTotal||0)>0 && <CFRow label={ar?"(+) منحة CAPEX":"(+) CAPEX Grant"} values={ir.capexGrantSchedule} total={ir.capexGrantTotal} color="#059669" />}
+      {hasIncentives && !isFiltered && ir.landRentSavingSchedule && (ir.landRentSavingTotal||0)>0 && <CFRow label={ar?"(+) وفر إيجار الأرض":"(+) Land Rent Savings"} values={ir.landRentSavingSchedule} total={ir.landRentSavingTotal} color="#059669" />}
       </>}
       </>}
 
