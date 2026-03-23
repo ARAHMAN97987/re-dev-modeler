@@ -57,8 +57,8 @@ git pull origin feature/engine-extraction
 - ❌ Blocked
 - 🔬 Research needed
 
-**Last updated:** March 22, 2026
-**Updated by:** Claude (post-split cleanup complete)
+**Last updated:** March 23, 2026
+**Updated by:** Claude (UX sprint - 12 items completed)
 
 ---
 
@@ -106,12 +106,12 @@ git pull origin feature/engine-extraction
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
 | 1 | Toast System | ✅ | 2026-03-22 | 4 types, wired to 7 operations, exit animation |
-| 2 | Error Messages | ⬜ | | Replace generic "حدث خطأ" |
+| 2 | Error Messages | ✅ | 2026-03-23 | Auth + import errors improved, alert()→DOM notification |
 | 3 | Empty States + Progress Tracker | ✅ | 2026-03-22 | Dashboard tracker + 5 section empty states |
 | 4 | Auth Page Redesign | ✅ | pre-plan | Already split-screen with FeaturesPanel |
-| 5 | Google Login Visibility | ⬜ | | Prominent Google button on auth |
+| 5 | Google Login Visibility | ✅ | 2026-03-23 | Google OAuth button in auth.jsx |
 | 6 | Background Gradients | ✅ | 2026-03-22 | Subtle gradient on editor background |
-| 7 | Skeleton Loaders | ⬜ | | Loading placeholders |
+| 7 | Skeleton Loaders | ✅ | 2026-03-23 | Shimmer loading screen + .zan-shimmer class |
 | 8 | Button States | ✅ | 2026-03-22 | CSS hover effects on primary + export buttons |
 | 9 | CSV Template Visibility | ✅ | 2026-03-22 | Toast on template download |
 
@@ -136,15 +136,15 @@ git pull origin feature/engine-extraction
 |---|------|--------|------|-------|
 | 10 | Dynamic Tab Visibility | ✅ | 2026-03-22 | self: hides Financing, Incentives: conditional, auto-redirect |
 | 11 | Asset Templates | ⬜ | | 6 templates with Saudi defaults |
-| 12 | Asset Data Prep Guide | ⬜ | | Checklist banner in Assets tab |
+| 12 | Asset Data Prep Guide | ✅ | 2026-03-23 | Banner with 6 data points + template hint |
 | 13 | Asset Modal Field Grouping | ⬜ | | 4 collapsible groups |
 | 14 | Financing Settings Visible | ⬜ | | Quick settings at top of tab |
-| 15 | Financing KPI Strip | ⬜ | | Total Debt / Equity / LTV / DSCR |
+| 15 | Financing KPI Strip | ✅ | 2026-03-23 | 5 KPI cards with functional colors |
 | 16 | Financing Charts | ⬜ | | Pie + Line + Bar charts |
 | 17 | Dashboard KPIs | ✅ | 2026-03-22 | Projects/Assets/Fund/Bank strip |
 | 18 | Dashboard Filters | ✅ | 2026-03-22 | Search by name/location + no-results state |
-| 19 | Functional Colors Audit | ⬜ | | Green/yellow/red on all metrics |
-| 20 | Input Validation | ⬜ | | Inline red border + message |
+| 19 | Functional Colors Audit | ✅ | 2026-03-23 | getMetricColor() + 32 applications |
+| 20 | Input Validation | ✅ | 2026-03-23 | 13 fields validated across sidebar/financing/assets |
 | 21 | Checks Fix Buttons | ⬜ | | Navigate to problem field |
 
 ---
@@ -153,11 +153,11 @@ git pull origin feature/engine-extraction
 
 | # | Item | Status | Date | Notes |
 |---|------|--------|------|-------|
-| 22 | Selective Animations | ⬜ | | 5 specific animations only |
+| 22 | Selective Animations | ✅ | 2026-03-23 | Tab fade, modal scale, toast slide, shimmer, card hover |
 | 23 | Brand Consistency | ⬜ | | Color + font audit |
 | 24 | Spacing Audit | ⬜ | | Fix cramped/loose areas |
-| 25 | Typography Standardization | ⬜ | | Unified type scale |
-| 26 | Bilingual Audit | ⬜ | | Fix missing translations |
+| 25 | Typography Standardization | ✅ | 2026-03-23 | CSS type scale classes + tabular-nums |
+| 26 | Bilingual Audit | ✅ | 2026-03-23 | 20+ strings fixed: Total, Yr, Sign Out, Cancel, Save |
 | 27 | Waterfall Tooltips Enhancement | ⬜ | | Rich tooltips + Academy links |
 | 28 | Mobile Basic Improvements | ⬜ | | Sidebar + touch targets |
 | 29 | Report Preview Before Export | ⬜ | | Preview modal for PDFs |
