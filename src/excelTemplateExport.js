@@ -41,6 +41,15 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     cell.value = value;
   }
 
+  // ── Helper: FORCE set cell value, overwriting even formulas ──
+  // Use for critical values where template formula differs from platform engine
+  function forceSet(sheetName, cellRef, value) {
+    const ws = wb.getWorksheet(sheetName);
+    if (!ws) return;
+    const cell = ws.getCell(cellRef);
+    cell.value = value; // overwrites formula with static value
+  }
+
   // ── Helper: percentage (platform stores as whole number e.g. 6.5 = 6.5%, Excel needs 0.065) ──
   function pct(val) {
     if (val === undefined || val === null) return 0;
@@ -260,16 +269,27 @@ export async function generateTemplateExcel(project, results, financing, waterfa
 
   // ═══════════════════════════════════════════════════════════
   // 5. FILL FUND SHEET INPUTS (per phase)
+  // Critical: some cells are formulas in the template but the
+  // platform computes them differently. Use forceSet to override.
   // ═══════════════════════════════════════════════════════════
   for (let pi = 0; pi < 6; pi++) {
     const sheetName = `Fund_ZAN ${pi + 1}`;
     const ws = wb.getWorksheet(sheetName);
     if (!ws) continue;
+    const ph = phases[pi];
+    const f = ph?.financing || {};
 
-    setInput(sheetName, "C4", p.fundName || `${p.name || "Project"} Fund`);
-    setInput(sheetName, "C6", p.vehicleType === "direct" ? "Direct" : "Fund");
-    setInput(sheetName, "C7", "Develop & Hold");
-    setInput(sheetName, "C22", p.debtAllowed !== false ? "Y" : "N");
+    // Fund info
+    const fundName = f.fundName || p.fundName || `${p.name || "Project"} Fund`;
+    setInput(sheetName, "C4", fundName);
+    setInput(sheetName, "C6", (f.vehicleType || p.vehicleType) === "direct" ? "Direct" : "Fund");
+    setInput(sheetName, "C7", p.fundStrategy || "Develop & Hold");
+    setInput(sheetName, "C22", (f.debtAllowed ?? p.debtAllowed) !== false ? "Y" : "N");
+
+    // Fund Start Year: template formula (=startYear+offset-1) differs from platform
+    // Platform stores explicit fundStartYear per phase - force-write it
+    const fundStart = f.fundStartYear || ((p.startYear || 2026) + (ph?.startYearOffset || pi + 1));
+    forceSet(sheetName, "C9", fundStart);
   }
 
   // ═══════════════════════════════════════════════════════════
