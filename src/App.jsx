@@ -66,7 +66,7 @@ class AppErrorBoundary extends Component {
       return (
         <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",color:"#d0d4dc"}}>
           <div style={{textAlign:"center",maxWidth:460,padding:32}}>
-            <div style={{fontSize:28,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",marginBottom:8}}>Haseef</div>
+            <div style={{fontSize:28,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",marginBottom:8}}>{isAr?"حصيف":"Haseef"}</div>
             <div style={{fontSize:16,fontWeight:600,color:"#f87171",marginBottom:16}}>{isAr?"حدث خطأ غير متوقع":"An unexpected error occurred"}</div>
             <div style={{fontSize:12,color:"#6b7080",marginBottom:24,lineHeight:1.6}}>{isAr?"يمكنك إعادة المحاولة أو تحميل الصفحة من جديد. بياناتك محفوظة.":"You can retry or reload the page. Your data is saved."}</div>
             <div style={{display:"flex",gap:12,justifyContent:"center"}}>
@@ -160,7 +160,7 @@ const L = {
     partner: "Land as Equity (Partner)", bot: "Land Swap / BOT",
   },
   ar: {
-    title: "Haseef", subtitle: "منصة النمذجة المالية لمشاريع التطوير العقاري",
+    title: "حصيف", subtitle: "منصة النمذجة المالية لمشاريع التطوير العقاري",
     newProject: "+ مشروع جديد", projects: "مشاريع", noProjects: "لا توجد مشاريع",
     noProjectsSub: "أنشئ مشروعك الأول للبدء",
     back: "→ رجوع", saved: "تم الحفظ", saving: "جاري الحفظ...", error: "خطأ",
@@ -3338,7 +3338,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         <div className="sidebar-slide" style={{width:isMobile?"88vw":340,minWidth:isMobile?"auto":340,maxWidth:isMobile?400:340,background:"linear-gradient(180deg, #0f1117 0%, #0B2341 100%)",color:"#d0d4dc",display:"flex",flexDirection:"column",overflow:"hidden",position:"relative",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.4)"}:{})}}>
           <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(circle at 30% 20%, rgba(46,196,182,0.04) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(200,169,110,0.03) 0%, transparent 50%)",pointerEvents:"none"}} />
           <div style={{padding:isMobile?"12px 14px":"14px 16px",borderBottom:"1px solid #1e2230",display:"flex",alignItems:"center",gap:8}}>
-            <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,fontWeight:900,color:"#fff",letterSpacing:2}}>Haseef</span><span style={{width:1,height:18,background:"#2EC4B6",opacity:0.6}} /><span style={{fontSize:9,color:"#2EC4B6",lineHeight:1.3,fontWeight:400}}>{lang==="ar"?"النمذجة":"Financial"}<br/>{lang==="ar"?"المالية":"Modeler"}</span></div>
+            <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18,fontWeight:900,color:"#fff",letterSpacing:2}}>{lang==="ar"?"حصيف":"Haseef"}</span><span style={{width:1,height:18,background:"#2EC4B6",opacity:0.6}} /><span style={{fontSize:9,color:"#2EC4B6",lineHeight:1.3,fontWeight:400}}>{lang==="ar"?"النمذجة":"Financial"}<br/>{lang==="ar"?"المالية":"Modeler"}</span></div>
             <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:saveStatus==="saved"?"#dcfce7":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"#4ade80":saveStatus==="error"?"#f87171":"#fbbf24"}}>{t[saveStatus]||saveStatus}</span>
             {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"#1e2230",border:"none",borderRadius:6,color:"#9ca3af",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
           </div>
@@ -3567,7 +3567,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
     { title: t?"اسم المشروع والموقع":"Project Name & Location", content: (
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div><div style={{fontSize:11,color:"#6b7080",marginBottom:4,fontWeight:500}}>{t?"اسم المشروع":"Project Name"}</div>
-        <input value={project.name||""} onChange={e=>onUpdate({name:e.target.value})} placeholder={t?"مثال: مشروع الواجهة البحرية":"e.g. Haseef Waterfront"} style={{width:"100%",padding:"12px 16px",border:"2px solid #e5e7ec",borderRadius:10,fontSize:15,fontWeight:600,fontFamily:"inherit",outline:"none"}} autoFocus /></div>
+        <input value={project.name||""} onChange={e=>onUpdate({name:e.target.value})} placeholder={t?"مثال: مشروع الواجهة البحرية":(lang==="ar"?"مثال: واجهة حصيف البحرية":"e.g. Haseef Waterfront")} style={{width:"100%",padding:"12px 16px",border:"2px solid #e5e7ec",borderRadius:10,fontSize:15,fontWeight:600,fontFamily:"inherit",outline:"none"}} autoFocus /></div>
         <div><div style={{fontSize:11,color:"#6b7080",marginBottom:4,fontWeight:500}}>{t?"الموقع":"Location"}</div>
         <input value={project.location||""} onChange={e=>onUpdate({location:e.target.value})} placeholder={t?"مثال: جازان، السعودية":"e.g. Jazan, Saudi Arabia"} style={{width:"100%",padding:"10px 14px",border:"1px solid #e5e7ec",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} /></div>
       </div>
@@ -3711,7 +3711,7 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
             </div>
             {/* Logo */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-              <span style={{fontSize:48,fontWeight:900,color:"#fff",letterSpacing:3}}>Haseef</span>
+              <span style={{fontSize:48,fontWeight:900,color:"#fff",letterSpacing:3}}>{ar?"حصيف":"Haseef"}</span>
               <span style={{width:1,height:32,background:"rgba(46,196,182,0.4)"}} />
               <span style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.4,fontWeight:300}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
             </div>
@@ -3744,7 +3744,7 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
       <div style={{width:isMobile?"100%":420,minWidth:isMobile?"auto":380,flex:isMobile?1:"none",background:isMobile?"#0f1117":"#161a24",display:"flex",flexDirection:"column",justifyContent:"center",padding:isMobile?"32px 24px":"48px 36px",borderInlineStart:isMobile?"none":(ar?"none":"1px solid rgba(46,196,182,0.1)"),borderInlineEnd:isMobile?"none":(ar?"1px solid rgba(46,196,182,0.1)":"none")}}>
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
-            <span style={{fontSize:32,fontWeight:900,color:"#fff",letterSpacing:2}}>Haseef</span>
+            <span style={{fontSize:32,fontWeight:900,color:"#fff",letterSpacing:2}}>{ar?"حصيف":"Haseef"}</span>
             <span style={{width:1.5,height:22,background:"rgba(46,196,182,0.5)",borderRadius:1}} />
             <span style={{fontSize:11,color:"#2EC4B6",lineHeight:1.3,fontWeight:300,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
@@ -3806,7 +3806,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
         <div style={{display:"flex",flexDirection:isMobile?"column":"row",justifyContent:"space-between",alignItems:isMobile?"stretch":"flex-start",gap:isMobile?14:0,marginBottom:isMobile?20:32}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-              <span style={{fontSize:32,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>Haseef</span>
+              <span style={{fontSize:32,fontWeight:900,color:"#0f1117",fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>{ar?"حصيف":"Haseef"}</span>
               <span style={{width:1.5,height:24,background:"#2EC4B6",borderRadius:1}} />
               <span style={{fontSize:11,color:"#6b7080",lineHeight:1.3,fontWeight:500}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
             </div>
@@ -3986,7 +3986,7 @@ function ShareModal({ project, up, lang, user, onClose }) {
     const assets = (project?.assets || []).length;
     const phases = [...new Set((project?.assets || []).map(a => a.phase))].length;
     const text = ar
-      ? `مرحباً،\nأود مشاركة نموذج مالي معك على منصة Haseef Financial Modeler.\n\n📋 المشروع: ${projName}\n📊 عدد الأصول: ${assets} | المراحل: ${phases}\n\n🔗 رابط الوصول:\n${shareUrl}\n\nإذا ما عندك حساب، سجّل من نفس الرابط وبيظهر لك المشروع تلقائي.`
+      ? `مرحباً،\nأود مشاركة نموذج مالي معك على منصة حصيف للنمذجة المالية.\n\n📋 المشروع: ${projName}\n📊 عدد الأصول: ${assets} | المراحل: ${phases}\n\n🔗 رابط الوصول:\n${shareUrl}\n\nإذا ما عندك حساب، سجّل من نفس الرابط وبيظهر لك المشروع تلقائي.`
       : `Hi,\nI'd like to share a financial model with you on Haseef Financial Modeler.\n\n📋 Project: ${projName}\n📊 Assets: ${assets} | Phases: ${phases}\n\n🔗 Access link:\n${shareUrl}\n\nIf you don't have an account, register from the same link and the project will appear automatically.`;
     navigator.clipboard?.writeText(text).then(() => { setCopied("invite"); setTimeout(() => setCopied(""), 2000); });
   };
@@ -8686,7 +8686,7 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
           )}
           <div style={{ flex: 1 }} />
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: isMobile ? 20 : 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>Haseef</span>
+            <span style={{ fontSize: isMobile ? 20 : 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>{ar?"حصيف":"Haseef"}</span>
             {!isMobile && <>
               <span style={{ width: 1, height: 18, background: "rgba(46,196,182,0.35)" }} />
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{ar ? "النمذجة" : "Financial"}<br />{ar ? "المالية" : "Modeler"}</span>
@@ -9121,7 +9121,7 @@ function _buildXLSX(XLSX, project, results, financing, waterfall) {
     // ═══ SHEET 1: Executive Summary ═══
     const s1 = [];
     s1.push(['─────────────────────────────────────────']);
-    s1.push(['  HASEEF DESTINATION DEVELOPMENT']);
+    s1.push(['  ' + (project.currency === 'SAR' ? 'حصيف لتطوير الوجهات' : 'HASEEF DESTINATION DEVELOPMENT')]);
     s1.push(['  Financial Model — ' + (project.name || 'Project')]);
     s1.push(['─────────────────────────────────────────']);
     s1.push([]);
@@ -9160,7 +9160,7 @@ function _buildXLSX(XLSX, project, results, financing, waterfall) {
     }
 
     s1.push(['─────────────────────────────────────────']);
-    s1.push(['  Powered by Haseef Development']);
+    s1.push(['  Powered by ' + (project.currency === 'SAR' ? 'حصيف' : 'Haseef') + ' Development']);
     const ws1 = XLSX.utils.aoa_to_sheet(s1);
     ws1['!cols'] = [{wch:26},{wch:22},{wch:22},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
@@ -9498,16 +9498,16 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   @media print { .no-print { display: none !important; } }
 </style></head><body>
 <div class="zan-cover">
-  <div class="logo-group"><span class="logo-name">${ar?'Haseef':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'Haseef':'Haseef'}<br>${ar?'لتطوير الوجهات':'Destination Development'}</span></div>
+  <div class="logo-group"><span class="logo-name">${ar?'حصيف':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'حصيف':'Haseef'}<br>${ar?'لتطوير الوجهات':'Destination Development'}</span></div>
   <div class="sub">Financial Modeler</div>
   <div class="rtype">${reportTitle}</div>
   <div class="pname">${project.name}</div>
   <div class="ploc">${project.location||""} &middot; ${cur} &middot; ${dateStr}</div>
   <div class="conf">${ar?'سري':'CONFIDENTIAL'}</div>
 </div>
-<div class="zan-hdr"><div class="logo-group"><span class="logo-name">${ar?'Haseef':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div class="title">${reportTitle} &mdash; ${project.name}</div></div>
+<div class="zan-hdr"><div class="logo-group"><span class="logo-name">${ar?'حصيف':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div class="title">${reportTitle} &mdash; ${project.name}</div></div>
 <div class="report-body">${el.innerHTML}</div>
-<div class="zan-ftr"><div class="logo-group"><span class="logo-name">${ar?'Haseef':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div>${dateStr} &middot; ${ar?'سري':'Confidential'}</div></div>
+<div class="zan-ftr"><div class="logo-group"><span class="logo-name">${ar?'حصيف':'Haseef'}</span><span class="logo-div"></span><span class="logo-sub">${ar?'النمذجة':'Financial'}<br>${ar?'المالية':'Modeler'}</span></div><div>${dateStr} &middot; ${ar?'سري':'Confidential'}</div></div>
 </body></html>`;
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -11286,7 +11286,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
         <div style={{position:"absolute",top:0,right:0,width:200,height:200,background:"radial-gradient(circle,rgba(46,196,182,0.08) 0%,transparent 70%)",pointerEvents:"none"}} />
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
           <div>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>Haseef</span><span style={{width:1,height:14,background:"rgba(46,196,182,0.4)"}} /><span style={{fontSize:9,color:"#2EC4B6",fontWeight:300}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:18,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>{lang==="ar"?"حصيف":"Haseef"}</span><span style={{width:1,height:14,background:"rgba(46,196,182,0.4)"}} /><span style={{fontSize:9,color:"#2EC4B6",fontWeight:300}}>{lang==="ar"?"النمذجة المالية":"Financial Modeler"}</span></div>
             <div style={{fontSize:24,fontWeight:700,letterSpacing:-0.5}}>{project.name || "Untitled"}</div>
             {project.location && <div style={{fontSize:12,color:"#8b90a0",marginTop:4}}>{project.location}</div>}
           </div>

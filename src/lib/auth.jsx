@@ -278,7 +278,7 @@ export function AuthGate({ children }) {
       <Orbs/>
       <div style={{position:'relative',zIndex:20,display:'flex',alignItems:'center',justifyContent:'space-between',padding:isMobile?'14px 16px':'18px 32px',maxWidth:1400,margin:'0 auto'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:isMobile?28:34,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>Haseef</span>
+          <span style={{fontSize:isMobile?28:34,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>{ar?'حصيف':'Haseef'}</span>
           <span style={{width:1,height:isMobile?22:28,background:`${C.teal}50`}}/>
           <div style={{lineHeight:1.25}}><div style={{color:C.teal,fontSize:isMobile?11:12.5,fontWeight:700}}>{t(TX.fm,lang)}</div><div style={{color:C.w30,fontSize:isMobile?9:10}}>{t(TX.tagline,lang)}</div></div>
         </div>
