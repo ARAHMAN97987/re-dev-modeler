@@ -3033,6 +3033,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const [sidebarOpen, setSidebarOpen] = useState(false); // default closed (mobile-friendly)
   const [activeTab, setActiveTab] = useState("dashboard");
   const [globalExpand, setGlobalExpand] = useState(0); // increment to toggle; odd=expand, even=collapse
+  const [kpiPhase, setKpiPhase] = useState("all"); // phase selection for sticky KPI bar
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
@@ -3509,27 +3510,33 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           {activeTab !== "dashboard" && (() => {
             const ar = lang === "ar";
             const c = results?.consolidated;
+            if (!c) return null;
             const fm = project?.finMode || "self";
-            const f = financing;
-            const w = waterfall;
+            const phaseNames = Object.keys(results?.phaseResults || {});
+            const hasPhases = phaseNames.length > 1;
+
+            // Phase-aware data sources
+            const isPhase = kpiPhase !== "all" && results?.phaseResults?.[kpiPhase];
+            const pc = isPhase ? results.phaseResults[kpiPhase] : c;
+            const f = isPhase && phaseFinancings?.[kpiPhase] ? phaseFinancings[kpiPhase] : financing;
+            const w = isPhase && phaseWaterfalls?.[kpiPhase] ? phaseWaterfalls[kpiPhase] : waterfall;
             const ir = incentivesResult;
-            const hasData = c && c.totalCapex > 0;
+
             const hasDebt = fm !== "self" && f && f.totalDebt > 0;
             const hasFund = fm === "fund" && w;
-            const hasIncentives = ir && ir.totalIncentiveValue > 0;
+            const hasIncentives = !isPhase && ir && ir.totalIncentiveValue > 0;
             const notHold = (project?.exitStrategy || "sale") !== "hold";
-            const displayIRR = hasData ? (hasIncentives && ir.adjustedIRR !== null ? ir.adjustedIRR : c.irr) : null;
+            const displayIRR = hasIncentives && ir.adjustedIRR !== null ? ir.adjustedIRR : (hasDebt && f?.leveredIRR != null ? f.leveredIRR : pc.irr);
             const dscrVals = f?.dscr ? f.dscr.filter(v => v !== null && v > 0) : [];
             const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
             const exitProc = f?.exitProceeds || 0;
 
-            const items = !hasData ? [] : [
-              { label: ar ? "التكاليف" : "CAPEX", value: fmtM(c.totalCapex), color: "#ef4444" },
-              { label: ar ? "الإيرادات" : "Revenue", value: fmtM(c.totalIncome), color: "#16a34a" },
-              { label: "IRR", value: displayIRR !== null ? (displayIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", displayIRR) },
-              ...(fm === "self" ? [{ label: "NPV", value: fmtM(calcNPV(c.netCF, 0.10)), color: getMetricColor("NPV", calcNPV(c.netCF, 0.10)) }] : []),
+            const items = [
+              { label: ar ? "التكاليف" : "CAPEX", value: fmtM(pc.totalCapex || 0), color: "#ef4444" },
+              { label: ar ? "الإيرادات" : "Revenue", value: fmtM(pc.totalIncome || 0), color: "#16a34a" },
+              { label: "IRR", value: displayIRR != null ? (displayIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", displayIRR) },
+              ...(fm === "self" && !isPhase ? [{ label: "NPV", value: fmtM(calcNPV(pc.netCF, 0.10)), color: getMetricColor("NPV", calcNPV(pc.netCF, 0.10)) }] : []),
               ...(hasDebt ? [
-                { label: ar ? "IRR ممول" : "Lev. IRR", value: f.leveredIRR != null ? (f.leveredIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", f.leveredIRR) },
                 { label: "DSCR", value: minDscr !== null ? minDscr.toFixed(2) + "x" : "—", color: getMetricColor("DSCR", minDscr) },
                 { label: "LTV", value: f.devCostInclLand > 0 ? ((f.totalDebt / f.devCostInclLand) * 100).toFixed(0) + "%" : "—", color: getMetricColor("LTV", f.devCostInclLand > 0 ? (f.totalDebt / f.devCostInclLand) * 100 : 0) },
               ] : []),
@@ -3537,20 +3544,28 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                 { label: "LP IRR", value: w.lpIRR != null ? (w.lpIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", w.lpIRR) },
                 { label: "MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2) + "x" : "—", color: getMetricColor("MOIC", w.lpMOIC) },
               ] : []),
-              ...(hasDebt && notHold && exitProc > 0 ? [{ label: ar ? "التخارج" : "Exit", value: fmtM(exitProc), color: "#8b5cf6" }] : []),
+              ...(hasDebt && notHold && exitProc > 0 ? [{ label: ar ? "تخارج" : "Exit", value: fmtM(exitProc), color: "#8b5cf6" }] : []),
             ];
 
-            return <div style={{padding:isMobile?"5px 10px":"5px 18px",background:"#fafbfc",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap",position:"sticky",top:0,zIndex:20}}>
-              {items.map((item, i) => (
-                <div key={i} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11}}>
-                  <span style={{color:"#9ca3af",fontSize:9,fontWeight:500}}>{item.label}</span>
-                  <span style={{fontWeight:700,color:item.color,fontVariantNumeric:"tabular-nums"}}>{item.value}</span>
-                </div>
-              ))}
-              <div style={{flex:1}} />
-              <button onClick={()=>setGlobalExpand(p=>p+1)} style={{fontSize:9,padding:"3px 10px",borderRadius:5,border:"1px solid #e5e7ec",background:globalExpand%2===1?"#eff6ff":"#f8f9fb",color:globalExpand%2===1?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600,flexShrink:0}}>
-                {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
-              </button>
+            return <div style={{background:"#fafbfc",borderBottom:"1px solid #e5e7ec",position:"sticky",top:0,zIndex:20}}>
+              {/* Phase tabs row (only if multiple phases) */}
+              {hasPhases && <div style={{display:"flex",gap:0,padding:"0 18px",borderBottom:"1px solid #f0f1f3",overflowX:"auto"}}>
+                <button onClick={()=>setKpiPhase("all")} style={{padding:"5px 12px",fontSize:9,fontWeight:kpiPhase==="all"?700:500,border:"none",borderBottom:kpiPhase==="all"?"2px solid #2563eb":"2px solid transparent",background:"none",color:kpiPhase==="all"?"#2563eb":"#9ca3af",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{ar?"الإجمالي":"All"}</button>
+                {phaseNames.map(p => <button key={p} onClick={()=>setKpiPhase(p)} style={{padding:"5px 12px",fontSize:9,fontWeight:kpiPhase===p?700:500,border:"none",borderBottom:kpiPhase===p?"2px solid #2563eb":"2px solid transparent",background:"none",color:kpiPhase===p?"#2563eb":"#9ca3af",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{p}</button>)}
+              </div>}
+              {/* KPI metrics row */}
+              <div style={{padding:isMobile?"5px 10px":"5px 18px",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap"}}>
+                {items.map((item, i) => (
+                  <div key={i} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11}}>
+                    <span style={{color:"#9ca3af",fontSize:9,fontWeight:500}}>{item.label}</span>
+                    <span style={{fontWeight:700,color:item.color,fontVariantNumeric:"tabular-nums"}}>{item.value}</span>
+                  </div>
+                ))}
+                <div style={{flex:1}} />
+                <button onClick={()=>setGlobalExpand(p=>p+1)} style={{fontSize:9,padding:"3px 10px",borderRadius:5,border:"1px solid #e5e7ec",background:globalExpand%2===1?"#eff6ff":"#f8f9fb",color:globalExpand%2===1?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600,flexShrink:0}}>
+                  {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
+                </button>
+              </div>
             </div>;
           })()}
           {[
