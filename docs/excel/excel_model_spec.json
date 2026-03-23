@@ -1,0 +1,3298 @@
+{
+  "version": "v11",
+  "sheets": [
+    {
+      "name": "Inputs",
+      "rows": 140,
+      "cols": 8,
+      "purpose": "All model assumptions and settings. User/platform editable.",
+      "inputs": [
+        {
+          "cell": "C5",
+          "label": "Project Name",
+          "value": "ZAN Waterfront – Jazan",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "Location",
+          "value": "Jazan, North Corniche",
+          "format": "General"
+        },
+        {
+          "cell": "C7",
+          "label": "Model Start Year",
+          "value": "2026",
+          "format": "0"
+        },
+        {
+          "cell": "C8",
+          "label": "Projection Horizon (years)",
+          "value": "50",
+          "format": "0"
+        },
+        {
+          "cell": "C9",
+          "label": "Currency",
+          "value": "SAR",
+          "format": "General"
+        },
+        {
+          "cell": "C12",
+          "label": "Annual Rent Escalation (%)",
+          "value": "0.0075",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C13",
+          "label": "Flexible Block Efficiency %",
+          "value": "0.85",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C14",
+          "label": "Flexible Block Lease Rate (SAR/m²)",
+          "value": "700",
+          "format": "#,##0;[RED]\\(#,##0\\);\\-"
+        },
+        {
+          "cell": "C15",
+          "label": "Flexible Block Cost/m² (SAR)",
+          "value": "3500",
+          "format": "#,##0;[RED]\\(#,##0\\);\\-"
+        },
+        {
+          "cell": "C18",
+          "label": "Annual Land Rent (SAR)",
+          "value": "6000000",
+          "format": "#,##0;[RED]\\(#,##0\\);\\-"
+        },
+        {
+          "cell": "C19",
+          "label": "Escalation Every N Years",
+          "value": "5",
+          "format": "0"
+        },
+        {
+          "cell": "C20",
+          "label": "Land Rent Escalation (%)",
+          "value": "0.05",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C21",
+          "label": "Grace Period (years)",
+          "value": "5",
+          "format": "0"
+        },
+        {
+          "cell": "C22",
+          "label": "Land Rent Term (years)",
+          "value": "50",
+          "format": "0"
+        },
+        {
+          "cell": "C25",
+          "label": "Soft Cost (%)",
+          "value": "0.1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C26",
+          "label": "Contingency (%)",
+          "value": "0.05",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C29",
+          "label": "Active Scenario",
+          "value": "Base Case",
+          "format": "General"
+        },
+        {
+          "cell": "C45",
+          "label": "ZAN 1",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "C46",
+          "label": "ZAN 2",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "C47",
+          "label": "ZAN 3",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "C48",
+          "label": "ZAN 4",
+          "value": "5",
+          "format": "0"
+        },
+        {
+          "cell": "C49",
+          "label": "ZAN 5",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "C50",
+          "label": "ZAN 6",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "C51",
+          "label": "ZAN 7",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C52",
+          "label": "ZAN 8",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C53",
+          "label": "ZAN 9",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C54",
+          "label": "ZAN 10",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C55",
+          "label": "ZAN 11",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C56",
+          "label": "ZAN 12",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C57",
+          "label": "ZAN 13",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C58",
+          "label": "ZAN 14",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C59",
+          "label": "ZAN 15",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C63",
+          "label": "Total Land Area (m²)",
+          "value": "302473",
+          "format": "#,##0;[RED]\\(#,##0\\);\\-"
+        },
+        {
+          "cell": "C85",
+          "label": "Max Debt (% of Dev Cost incl. Land)",
+          "value": "0.7",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C88",
+          "label": "Land Type",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "C93",
+          "label": "Land Purchase Price (SAR)",
+          "value": "",
+          "format": "#,##0;[RED]\\(#,##0\\);\\-"
+        },
+        {
+          "cell": "C94",
+          "label": "Partner Land Equity %",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C95",
+          "label": "BOT Operation Period (years)",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "C101",
+          "label": "Financing Mode",
+          "value": "Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C107",
+          "label": "Exit Type",
+          "value": "Sale",
+          "format": "General"
+        },
+        {
+          "cell": "C113",
+          "label": "Exit Year",
+          "value": "2032",
+          "format": "0"
+        },
+        {
+          "cell": "C114",
+          "label": "Exit Multiple (x rent)",
+          "value": "10",
+          "format": "0.0"
+        },
+        {
+          "cell": "C115",
+          "label": "Exit Cost %",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C118",
+          "label": "Fund Settings Mode",
+          "value": "Unified",
+          "format": "General"
+        },
+        {
+          "cell": "C126",
+          "label": "Financing Rate %",
+          "value": "0.065",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D126",
+          "label": "",
+          "value": "0.065",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E126",
+          "label": "",
+          "value": "0.065",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F126",
+          "label": "",
+          "value": "0.065",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G126",
+          "label": "",
+          "value": "0.065",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H126",
+          "label": "",
+          "value": "0.065",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C127",
+          "label": "Loan Tenor (yrs)",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "D127",
+          "label": "",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "E127",
+          "label": "",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "F127",
+          "label": "",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "G127",
+          "label": "",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "H127",
+          "label": "",
+          "value": "7",
+          "format": "0"
+        },
+        {
+          "cell": "C128",
+          "label": "Grace Period (yrs)",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "D128",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "E128",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "F128",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "G128",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "H128",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "C129",
+          "label": "Upfront Fee %",
+          "value": "0.005",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D129",
+          "label": "",
+          "value": "0.005",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E129",
+          "label": "",
+          "value": "0.005",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F129",
+          "label": "",
+          "value": "0.005",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G129",
+          "label": "",
+          "value": "0.005",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H129",
+          "label": "",
+          "value": "0.005",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C130",
+          "label": "Subscription Fee %",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D130",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E130",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F130",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G130",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H130",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C131",
+          "label": "Management Fee %",
+          "value": "0.009",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D131",
+          "label": "",
+          "value": "0.009",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E131",
+          "label": "",
+          "value": "0.009",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F131",
+          "label": "",
+          "value": "0.009",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G131",
+          "label": "",
+          "value": "0.009",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H131",
+          "label": "",
+          "value": "0.009",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C132",
+          "label": "Custody Fee (SAR)",
+          "value": "130000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "D132",
+          "label": "",
+          "value": "130000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "E132",
+          "label": "",
+          "value": "130000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "F132",
+          "label": "",
+          "value": "130000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G132",
+          "label": "",
+          "value": "130000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H132",
+          "label": "",
+          "value": "130000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "C133",
+          "label": "Developer Fee %",
+          "value": "0.12",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D133",
+          "label": "",
+          "value": "0.12",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E133",
+          "label": "",
+          "value": "0.12",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F133",
+          "label": "",
+          "value": "0.12",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G133",
+          "label": "",
+          "value": "0.12",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H133",
+          "label": "",
+          "value": "0.12",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C134",
+          "label": "Structuring Fee %",
+          "value": "0.01",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D134",
+          "label": "",
+          "value": "0.01",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E134",
+          "label": "",
+          "value": "0.01",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F134",
+          "label": "",
+          "value": "0.01",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G134",
+          "label": "",
+          "value": "0.01",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H134",
+          "label": "",
+          "value": "0.01",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C135",
+          "label": "Preferred Return %",
+          "value": "0.15",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D135",
+          "label": "",
+          "value": "0.15",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E135",
+          "label": "",
+          "value": "0.15",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F135",
+          "label": "",
+          "value": "0.15",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G135",
+          "label": "",
+          "value": "0.15",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H135",
+          "label": "",
+          "value": "0.15",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C136",
+          "label": "GP Catch-up (Y/N)",
+          "value": "Y",
+          "format": "General"
+        },
+        {
+          "cell": "D136",
+          "label": "Y",
+          "value": "Y",
+          "format": "General"
+        },
+        {
+          "cell": "E136",
+          "label": "Y",
+          "value": "Y",
+          "format": "General"
+        },
+        {
+          "cell": "F136",
+          "label": "Y",
+          "value": "Y",
+          "format": "General"
+        },
+        {
+          "cell": "G136",
+          "label": "Y",
+          "value": "Y",
+          "format": "General"
+        },
+        {
+          "cell": "H136",
+          "label": "Y",
+          "value": "Y",
+          "format": "General"
+        },
+        {
+          "cell": "C137",
+          "label": "Carry %",
+          "value": "0.3",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D137",
+          "label": "",
+          "value": "0.3",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E137",
+          "label": "",
+          "value": "0.3",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F137",
+          "label": "",
+          "value": "0.3",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G137",
+          "label": "",
+          "value": "0.3",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H137",
+          "label": "",
+          "value": "0.3",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C138",
+          "label": "Exit Year",
+          "value": "2033",
+          "format": "0"
+        },
+        {
+          "cell": "D138",
+          "label": "",
+          "value": "2034",
+          "format": "0"
+        },
+        {
+          "cell": "E138",
+          "label": "",
+          "value": "2035",
+          "format": "0"
+        },
+        {
+          "cell": "F138",
+          "label": "",
+          "value": "2036",
+          "format": "0"
+        },
+        {
+          "cell": "G138",
+          "label": "",
+          "value": "2039",
+          "format": "0"
+        },
+        {
+          "cell": "H138",
+          "label": "",
+          "value": "2039",
+          "format": "0"
+        },
+        {
+          "cell": "C139",
+          "label": "Exit Multiple (x)",
+          "value": "10",
+          "format": "0.0"
+        },
+        {
+          "cell": "D139",
+          "label": "",
+          "value": "10",
+          "format": "0.0"
+        },
+        {
+          "cell": "E139",
+          "label": "",
+          "value": "10",
+          "format": "0.0"
+        },
+        {
+          "cell": "F139",
+          "label": "",
+          "value": "10",
+          "format": "0.0"
+        },
+        {
+          "cell": "G139",
+          "label": "",
+          "value": "10",
+          "format": "0.0"
+        },
+        {
+          "cell": "H139",
+          "label": "",
+          "value": "10",
+          "format": "0.0"
+        },
+        {
+          "cell": "C140",
+          "label": "Exit Cost %",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D140",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "E140",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "F140",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "G140",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "H140",
+          "label": "",
+          "value": "0.02",
+          "format": "0.00%"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Program",
+      "rows": 34,
+      "cols": 24,
+      "purpose": "Asset table (30 assets × 20+ columns). Platform fills from project assets.",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Hospitality",
+          "value": "Hotel",
+          "format": "General"
+        },
+        {
+          "cell": "F4",
+          "label": "Anchor (Hotel)",
+          "value": "5133",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G4",
+          "label": "",
+          "value": "2072",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H4",
+          "label": "",
+          "value": "16577",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I4",
+          "label": "",
+          "value": "Operating",
+          "format": "General"
+        },
+        {
+          "cell": "J4",
+          "label": "Operating",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L4",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O4",
+          "label": "",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "P4",
+          "label": "",
+          "value": "1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q4",
+          "label": "",
+          "value": "8000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S4",
+          "label": "",
+          "value": "36",
+          "format": "0"
+        },
+        {
+          "cell": "C5",
+          "label": "Retail",
+          "value": "Retail - Sport Complex",
+          "format": "General"
+        },
+        {
+          "cell": "F5",
+          "label": "",
+          "value": "6000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G5",
+          "label": "",
+          "value": "6000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H5",
+          "label": "",
+          "value": "6000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I5",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J5",
+          "label": "Lease",
+          "value": "1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L5",
+          "label": "",
+          "value": "173",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O5",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P5",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q5",
+          "label": "",
+          "value": "240",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S5",
+          "label": "",
+          "value": "6",
+          "format": "0"
+        },
+        {
+          "cell": "C6",
+          "label": "Utilities",
+          "value": "Parking & Landscaping ZAN1",
+          "format": "General"
+        },
+        {
+          "cell": "G6",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I6",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J6",
+          "label": "Lease",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L6",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O6",
+          "label": "",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "P6",
+          "label": "",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q6",
+          "label": "",
+          "value": "500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "R6",
+          "label": "",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "S6",
+          "label": "",
+          "value": "12",
+          "format": "0"
+        },
+        {
+          "cell": "C7",
+          "label": "Retail",
+          "value": "Fuel Station",
+          "format": "General"
+        },
+        {
+          "cell": "F7",
+          "label": "Shared utility",
+          "value": "6920",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G7",
+          "label": "",
+          "value": "3586",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H7",
+          "label": "",
+          "value": "3586",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I7",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J7",
+          "label": "Lease",
+          "value": "0.3",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L7",
+          "label": "",
+          "value": "900",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O7",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P7",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q7",
+          "label": "",
+          "value": "1500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S7",
+          "label": "",
+          "value": "12",
+          "format": "0"
+        },
+        {
+          "cell": "C8",
+          "label": "Marina",
+          "value": "Marina Berths",
+          "format": "General"
+        },
+        {
+          "cell": "F8",
+          "label": "Anchor",
+          "value": "3000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G8",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H8",
+          "label": "",
+          "value": "2400",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I8",
+          "label": "",
+          "value": "Operating",
+          "format": "General"
+        },
+        {
+          "cell": "J8",
+          "label": "Operating",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L8",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O8",
+          "label": "",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "P8",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q8",
+          "label": "",
+          "value": "16000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "R8",
+          "label": "",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "S8",
+          "label": "",
+          "value": "12",
+          "format": "0"
+        },
+        {
+          "cell": "C9",
+          "label": "Retail",
+          "value": "Marina Mall",
+          "format": "General"
+        },
+        {
+          "cell": "F9",
+          "label": "Anchor (Mall)",
+          "value": "28947",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G9",
+          "label": "",
+          "value": "20840",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H9",
+          "label": "",
+          "value": "31260",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I9",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J9",
+          "label": "Lease",
+          "value": "0.8",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L9",
+          "label": "",
+          "value": "2100",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O9",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P9",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q9",
+          "label": "",
+          "value": "3900",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S9",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C10",
+          "label": "Retail",
+          "value": "Seafront Mall",
+          "format": "General"
+        },
+        {
+          "cell": "F10",
+          "label": "Supporting anchor",
+          "value": "4718",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G10",
+          "label": "",
+          "value": "4511",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H10",
+          "label": "",
+          "value": "8918",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I10",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J10",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L10",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O10",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P10",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q10",
+          "label": "",
+          "value": "3500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S10",
+          "label": "",
+          "value": "24",
+          "format": "0"
+        },
+        {
+          "cell": "C11",
+          "label": "Office",
+          "value": "Flexible Block (Office)",
+          "format": "General"
+        },
+        {
+          "cell": "F11",
+          "label": "Flexible",
+          "value": "4781",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G11",
+          "label": "",
+          "value": "2367",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H11",
+          "label": "",
+          "value": "11168",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I11",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "L11",
+          "label": "",
+          "value": "850",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O11",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P11",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q11",
+          "label": "",
+          "value": "2600",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S11",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C12",
+          "label": "Hospitality",
+          "value": "Resort",
+          "format": "General"
+        },
+        {
+          "cell": "F12",
+          "label": "Core resort",
+          "value": "33000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G12",
+          "label": "",
+          "value": "15877",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H12",
+          "label": "",
+          "value": "16296",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I12",
+          "label": "",
+          "value": "Operating",
+          "format": "General"
+        },
+        {
+          "cell": "J12",
+          "label": "Operating",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L12",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O12",
+          "label": "",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "P12",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q12",
+          "label": "",
+          "value": "10000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S12",
+          "label": "",
+          "value": "42",
+          "format": "0"
+        },
+        {
+          "cell": "C13",
+          "label": "Retail",
+          "value": "Supermarket",
+          "format": "General"
+        },
+        {
+          "cell": "F13",
+          "label": "Daily needs",
+          "value": "2023",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G13",
+          "label": "",
+          "value": "2023",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H13",
+          "label": "",
+          "value": "4044",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I13",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J13",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L13",
+          "label": "",
+          "value": "500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O13",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P13",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q13",
+          "label": "",
+          "value": "1500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S13",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C14",
+          "label": "Retail",
+          "value": "Shops / Cafes",
+          "format": "General"
+        },
+        {
+          "cell": "F14",
+          "label": "F&B support",
+          "value": "7439",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G14",
+          "label": "",
+          "value": "1167",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H14",
+          "label": "",
+          "value": "1167",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I14",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J14",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L14",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O14",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P14",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q14",
+          "label": "",
+          "value": "3000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S14",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C15",
+          "label": "Retail",
+          "value": "Shopping Area",
+          "format": "General"
+        },
+        {
+          "cell": "F15",
+          "label": "Convenience",
+          "value": "1567",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G15",
+          "label": "",
+          "value": "917",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H15",
+          "label": "",
+          "value": "3668",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I15",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J15",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L15",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O15",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P15",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q15",
+          "label": "",
+          "value": "3000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S15",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C16",
+          "label": "Retail",
+          "value": "Shops / Cafes",
+          "format": "General"
+        },
+        {
+          "cell": "F16",
+          "label": "F&B support",
+          "value": "6990",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G16",
+          "label": "",
+          "value": "1167",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H16",
+          "label": "",
+          "value": "1167",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I16",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J16",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L16",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O16",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P16",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q16",
+          "label": "",
+          "value": "3000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S16",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C17",
+          "label": "Utilities",
+          "value": "Parking & Landscaping ZAN2",
+          "format": "General"
+        },
+        {
+          "cell": "G17",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I17",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J17",
+          "label": "Lease",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L17",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O17",
+          "label": "",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "P17",
+          "label": "",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q17",
+          "label": "",
+          "value": "500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "R17",
+          "label": "",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "S17",
+          "label": "",
+          "value": "12",
+          "format": "0"
+        },
+        {
+          "cell": "C18",
+          "label": "Office",
+          "value": "Office Block",
+          "format": "General"
+        },
+        {
+          "cell": "F18",
+          "label": "Office",
+          "value": "5497",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G18",
+          "label": "",
+          "value": "2710",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H18",
+          "label": "",
+          "value": "16429",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I18",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J18",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L18",
+          "label": "",
+          "value": "900",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O18",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P18",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q18",
+          "label": "",
+          "value": "2600",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S18",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C19",
+          "label": "Flexible",
+          "value": "Flexible Block (Residential)",
+          "format": "General"
+        },
+        {
+          "cell": "F19",
+          "label": "Flexible",
+          "value": "6664",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G19",
+          "label": "",
+          "value": "3066",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H19",
+          "label": "",
+          "value": "17153",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I19",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "L19",
+          "label": "",
+          "value": "750",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O19",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P19",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q19",
+          "label": "",
+          "value": "3000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S19",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C20",
+          "label": "Flexible",
+          "value": "Flexible Block",
+          "format": "General"
+        },
+        {
+          "cell": "F20",
+          "label": "Flexible",
+          "value": "7558",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G20",
+          "label": "",
+          "value": "3310",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H20",
+          "label": "",
+          "value": "19316",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I20",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "L20",
+          "label": "",
+          "value": "800",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O20",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P20",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q20",
+          "label": "",
+          "value": "2500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S20",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C21",
+          "label": "Residential",
+          "value": "Flexible Block",
+          "format": "General"
+        },
+        {
+          "cell": "F21",
+          "label": "Flexible",
+          "value": "6031",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G21",
+          "label": "",
+          "value": "2867",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H21",
+          "label": "",
+          "value": "14453",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I21",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "L21",
+          "label": "",
+          "value": "800",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O21",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P21",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q21",
+          "label": "",
+          "value": "2500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S21",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C22",
+          "label": "Cultural",
+          "value": "Multi-Purpose Hall",
+          "format": "General"
+        },
+        {
+          "cell": "F22",
+          "label": "Events/MICE",
+          "value": "5376",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G22",
+          "label": "",
+          "value": "1624",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H22",
+          "label": "",
+          "value": "3248",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I22",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J22",
+          "label": "Lease",
+          "value": "1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L22",
+          "label": "",
+          "value": "900",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O22",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P22",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q22",
+          "label": "",
+          "value": "7500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S22",
+          "label": "",
+          "value": "24",
+          "format": "0"
+        },
+        {
+          "cell": "C23",
+          "label": "Open Space",
+          "value": "Unallocated / Open Area",
+          "format": "General"
+        },
+        {
+          "cell": "F23",
+          "label": "Future plots",
+          "value": "16642",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G23",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I23",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J23",
+          "label": "Lease",
+          "value": "1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L23",
+          "label": "",
+          "value": "15000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O23",
+          "label": "",
+          "value": "1",
+          "format": "0"
+        },
+        {
+          "cell": "P23",
+          "label": "",
+          "value": "1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q23",
+          "label": "",
+          "value": "450",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S23",
+          "label": "",
+          "value": "12",
+          "format": "0"
+        },
+        {
+          "cell": "C24",
+          "label": "Retail",
+          "value": "Shops / Cafes",
+          "format": "General"
+        },
+        {
+          "cell": "F24",
+          "label": "Secondary",
+          "value": "7121",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G24",
+          "label": "",
+          "value": "1005",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H24",
+          "label": "",
+          "value": "1005",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I24",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J24",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L24",
+          "label": "",
+          "value": "2200",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O24",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P24",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q24",
+          "label": "",
+          "value": "3000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S24",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C25",
+          "label": "Retail",
+          "value": "Small Market",
+          "format": "General"
+        },
+        {
+          "cell": "F25",
+          "label": "Micro retail",
+          "value": "616",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G25",
+          "label": "",
+          "value": "328",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H25",
+          "label": "",
+          "value": "314",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I25",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J25",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L25",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O25",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P25",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q25",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S25",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C26",
+          "label": "Amenity",
+          "value": "Small Pavilions / Shops",
+          "format": "General"
+        },
+        {
+          "cell": "F26",
+          "label": "Activation",
+          "value": "15371",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G26",
+          "label": "",
+          "value": "4251",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H26",
+          "label": "",
+          "value": "3791",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I26",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J26",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L26",
+          "label": "",
+          "value": "2200",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O26",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P26",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q26",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S26",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C27",
+          "label": "Flexible",
+          "value": "Flexible Block",
+          "format": "General"
+        },
+        {
+          "cell": "F27",
+          "label": "Flexible",
+          "value": "6016",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G27",
+          "label": "",
+          "value": "4321",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H27",
+          "label": "",
+          "value": "25927",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I27",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "L27",
+          "label": "",
+          "value": "800",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O27",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P27",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q27",
+          "label": "",
+          "value": "2800",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S27",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C28",
+          "label": "Retail",
+          "value": "Shops / Cafes",
+          "format": "General"
+        },
+        {
+          "cell": "F28",
+          "label": "Secondary",
+          "value": "11401",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G28",
+          "label": "",
+          "value": "1310",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H28",
+          "label": "",
+          "value": "1310",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I28",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J28",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L28",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O28",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P28",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q28",
+          "label": "",
+          "value": "3000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S28",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C29",
+          "label": "Retail",
+          "value": "Small Market",
+          "format": "General"
+        },
+        {
+          "cell": "F29",
+          "label": "Micro retail",
+          "value": "619",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G29",
+          "label": "",
+          "value": "362",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H29",
+          "label": "",
+          "value": "347",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I29",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J29",
+          "label": "Lease",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L29",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O29",
+          "label": "",
+          "value": "2",
+          "format": "0"
+        },
+        {
+          "cell": "P29",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q29",
+          "label": "",
+          "value": "2000",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S29",
+          "label": "",
+          "value": "18",
+          "format": "0"
+        },
+        {
+          "cell": "C30",
+          "label": "Residential",
+          "value": "Flexible Block  (Branded)",
+          "format": "General"
+        },
+        {
+          "cell": "F30",
+          "label": "Flexible",
+          "value": "7411",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G30",
+          "label": "",
+          "value": "7430",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H30",
+          "label": "",
+          "value": "44218",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I30",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "L30",
+          "label": "",
+          "value": "1200",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O30",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P30",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q30",
+          "label": "",
+          "value": "4500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S30",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C31",
+          "label": "Retail",
+          "value": "Flexible Block",
+          "format": "General"
+        },
+        {
+          "cell": "F31",
+          "label": "Branded/Flex",
+          "value": "3806",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G31",
+          "label": "",
+          "value": "1774",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I31",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "L31",
+          "label": "",
+          "value": "800",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O31",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P31",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q31",
+          "label": "",
+          "value": "2500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S31",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C32",
+          "label": "Marina",
+          "value": "Yacht Club",
+          "format": "General"
+        },
+        {
+          "cell": "F32",
+          "label": "Marina anchor",
+          "value": "3186",
+          "format": "#,##0"
+        },
+        {
+          "cell": "G32",
+          "label": "",
+          "value": "1474",
+          "format": "#,##0"
+        },
+        {
+          "cell": "H32",
+          "label": "",
+          "value": "2400",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I32",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J32",
+          "label": "Lease",
+          "value": "0.85",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L32",
+          "label": "",
+          "value": "950",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O32",
+          "label": "",
+          "value": "3",
+          "format": "0"
+        },
+        {
+          "cell": "P32",
+          "label": "",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q32",
+          "label": "",
+          "value": "6500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "S32",
+          "label": "",
+          "value": "30",
+          "format": "0"
+        },
+        {
+          "cell": "C33",
+          "label": "Utilities",
+          "value": "Parking & Landscaping ZAN3",
+          "format": "General"
+        },
+        {
+          "cell": "G33",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "I33",
+          "label": "",
+          "value": "Lease",
+          "format": "General"
+        },
+        {
+          "cell": "J33",
+          "label": "Lease",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "L33",
+          "label": "",
+          "value": "",
+          "format": "#,##0"
+        },
+        {
+          "cell": "O33",
+          "label": "",
+          "value": "",
+          "format": "0"
+        },
+        {
+          "cell": "P33",
+          "label": "",
+          "value": "",
+          "format": "0.00%"
+        },
+        {
+          "cell": "Q33",
+          "label": "",
+          "value": "500",
+          "format": "#,##0"
+        },
+        {
+          "cell": "R33",
+          "label": "",
+          "value": "4",
+          "format": "0"
+        },
+        {
+          "cell": "S33",
+          "label": "",
+          "value": "12",
+          "format": "0"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "CAPEX",
+      "rows": 95,
+      "cols": 54,
+      "purpose": "Year-by-year cost schedule. 100% formulas - reads from Program + Inputs.",
+      "inputs": [],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Revenue",
+      "rows": 124,
+      "cols": 54,
+      "purpose": "Year-by-year income schedule. 100% formulas - reads from Program + Inputs.",
+      "inputs": [],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "CashFlow",
+      "rows": 212,
+      "cols": 53,
+      "purpose": "Per-phase and consolidated unlevered cash flows. 100% formulas.",
+      "inputs": [
+        {
+          "cell": "B119",
+          "label": "NPV @ 10%",
+          "value": "0.1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "B120",
+          "label": "NPV @ 12%",
+          "value": "0.12",
+          "format": "0.00%"
+        },
+        {
+          "cell": "B121",
+          "label": "NPV @ 14%",
+          "value": "0.14",
+          "format": "0.00%"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Operating_PL",
+      "rows": 81,
+      "cols": 5,
+      "purpose": "Hotel and Marina P&L assumptions. Platform fills from asset config.",
+      "inputs": [
+        {
+          "cell": "C7",
+          "label": "Links to Program Row",
+          "value": "4",
+          "format": "General"
+        },
+        {
+          "cell": "D7",
+          "label": "",
+          "value": "12",
+          "format": "General"
+        },
+        {
+          "cell": "C8",
+          "label": "Keys  عدد الغرف/المفاتيح",
+          "value": "230",
+          "format": "General"
+        },
+        {
+          "cell": "D8",
+          "label": "",
+          "value": "175",
+          "format": "General"
+        },
+        {
+          "cell": "C9",
+          "label": "ADR (SAR/night)  متوسط سعر الغرفة",
+          "value": "548",
+          "format": "General"
+        },
+        {
+          "cell": "D9",
+          "label": "",
+          "value": "920",
+          "format": "General"
+        },
+        {
+          "cell": "C10",
+          "label": "Stabilized Occupancy  الإشغال المستقر",
+          "value": "0.7",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D10",
+          "label": "",
+          "value": "0.73",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C11",
+          "label": "Days / Year  أيام السنة",
+          "value": "365",
+          "format": "General"
+        },
+        {
+          "cell": "D11",
+          "label": "",
+          "value": "365",
+          "format": "General"
+        },
+        {
+          "cell": "C15",
+          "label": "Rooms %  الغرف",
+          "value": "0.72",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D15",
+          "label": "",
+          "value": "0.64",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C16",
+          "label": "F&B %  الأغذية والمشروبات",
+          "value": "0.22",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D16",
+          "label": "",
+          "value": "0.25",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C17",
+          "label": "MICE %  المؤتمرات",
+          "value": "0.04",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D17",
+          "label": "",
+          "value": "0.07",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C18",
+          "label": "Other %  أخرى",
+          "value": "0.02",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D18",
+          "label": "",
+          "value": "0.04",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C28",
+          "label": "Room Expense %  مصاريف الغرف",
+          "value": "0.2",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D28",
+          "label": "",
+          "value": "0.2",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C29",
+          "label": "F&B Expense %  مصاريف الأغذية",
+          "value": "0.6",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D29",
+          "label": "",
+          "value": "0.6",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C30",
+          "label": "MICE Expense %  مصاريف المؤتمرات",
+          "value": "0.58",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D30",
+          "label": "",
+          "value": "0.58",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C31",
+          "label": "Other Expense %  مصاريف أخرى",
+          "value": "0.5",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D31",
+          "label": "",
+          "value": "0.55",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C32",
+          "label": "Undistributed % of Rev  غير موزعة",
+          "value": "0.29",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D32",
+          "label": "",
+          "value": "0.28",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C33",
+          "label": "Fixed Charges % of Rev  تكاليف ثابتة",
+          "value": "0.09",
+          "format": "0.00%"
+        },
+        {
+          "cell": "D33",
+          "label": "",
+          "value": "0.09",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C50",
+          "label": "Links to Program Row",
+          "value": "8",
+          "format": "General"
+        },
+        {
+          "cell": "C53",
+          "label": "Berths  عدد المراسي",
+          "value": "80",
+          "format": "General"
+        },
+        {
+          "cell": "C54",
+          "label": "Avg Berth Length (m)  متوسط الطول",
+          "value": "14",
+          "format": "General"
+        },
+        {
+          "cell": "C55",
+          "label": "Unit Price (SAR/m/yr)  سعر المتر",
+          "value": "2063",
+          "format": "#,##0;[RED]\\(#,##0\\);\\-"
+        },
+        {
+          "cell": "C56",
+          "label": "Stabilized Occupancy  الإشغال",
+          "value": "0.9",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C60",
+          "label": "Fuel % of Total  نسبة الوقود",
+          "value": "0.25",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C61",
+          "label": "Other % of Total  أخرى",
+          "value": "0.1",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C70",
+          "label": "Berthing OPEX %",
+          "value": "0.58",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C71",
+          "label": "Fuel OPEX %",
+          "value": "0.96",
+          "format": "0.00%"
+        },
+        {
+          "cell": "C72",
+          "label": "Other OPEX %",
+          "value": "0.3",
+          "format": "0.00%"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Fund_Summary",
+      "rows": 25,
+      "cols": 14,
+      "purpose": "Dashboard aggregating all Fund sheets. 100% formulas.",
+      "inputs": [],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Fund_ZAN 1",
+      "rows": 144,
+      "cols": 54,
+      "purpose": "Phase 1 fund: capital structure, debt, fees, waterfall, returns.",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Fund Name",
+          "value": "ZAN Infrastructure Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "Vehicle Type",
+          "value": "Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C7",
+          "label": "Strategy",
+          "value": "Develop & Hold",
+          "format": "General"
+        },
+        {
+          "cell": "C22",
+          "label": "Debt Allowed (Y/N)",
+          "value": "Y",
+          "format": "General"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Fund_ZAN 2",
+      "rows": 144,
+      "cols": 54,
+      "purpose": "Phase 2 fund (same structure as ZAN 1).",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Fund Name",
+          "value": "ZAN Infrastructure Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "Vehicle Type",
+          "value": "Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C7",
+          "label": "Strategy",
+          "value": "Develop & Hold",
+          "format": "General"
+        },
+        {
+          "cell": "C22",
+          "label": "Debt Allowed (Y/N)",
+          "value": "Y",
+          "format": "General"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Fund_ZAN 3",
+      "rows": 144,
+      "cols": 54,
+      "purpose": "Phase 3 fund (same structure as ZAN 1).",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Fund Name",
+          "value": "ZAN Infrastructure Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "Vehicle Type",
+          "value": "Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C7",
+          "label": "Strategy",
+          "value": "Develop & Hold",
+          "format": "General"
+        },
+        {
+          "cell": "C22",
+          "label": "Debt Allowed (Y/N)",
+          "value": "Y",
+          "format": "General"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Fund_ZAN 4",
+      "rows": 144,
+      "cols": 54,
+      "purpose": "Phase 4 fund (empty, same structure).",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Fund Name",
+          "value": "ZAN Infrastructure Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "Vehicle Type",
+          "value": "Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C7",
+          "label": "Strategy",
+          "value": "Develop & Hold",
+          "format": "General"
+        },
+        {
+          "cell": "C22",
+          "label": "Debt Allowed (Y/N)",
+          "value": "Y",
+          "format": "General"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Fund_ZAN 5",
+      "rows": 144,
+      "cols": 54,
+      "purpose": "Phase 5 fund (empty, same structure).",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Fund Name",
+          "value": "ZAN Infrastructure Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "Vehicle Type",
+          "value": "Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C7",
+          "label": "Strategy",
+          "value": "Develop & Hold",
+          "format": "General"
+        },
+        {
+          "cell": "C22",
+          "label": "Debt Allowed (Y/N)",
+          "value": "Y",
+          "format": "General"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Fund_ZAN 6",
+      "rows": 144,
+      "cols": 54,
+      "purpose": "Phase 6 fund (empty, same structure).",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Fund Name",
+          "value": "ZAN Infrastructure Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "Vehicle Type",
+          "value": "Fund",
+          "format": "General"
+        },
+        {
+          "cell": "C7",
+          "label": "Strategy",
+          "value": "Develop & Hold",
+          "format": "General"
+        },
+        {
+          "cell": "C22",
+          "label": "Debt Allowed (Y/N)",
+          "value": "Y",
+          "format": "General"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "Bank",
+      "rows": 61,
+      "cols": 54,
+      "purpose": "Bank submission model: aggregated debt, DSCR, sources & uses.",
+      "inputs": [
+        {
+          "cell": "C4",
+          "label": "Bank Name",
+          "value": "[Bank Name]",
+          "format": "General"
+        },
+        {
+          "cell": "C5",
+          "label": "Scope (Phases to Include)",
+          "value": "All",
+          "format": "General"
+        },
+        {
+          "cell": "C6",
+          "label": "DSCR Analysis Period (years)",
+          "value": "10",
+          "format": "0"
+        },
+        {
+          "cell": "C22",
+          "label": "Repayment Type",
+          "value": "Equal Installment",
+          "format": "General"
+        }
+      ],
+      "outputs": [],
+      "key_formulas": []
+    },
+    {
+      "name": "9_Checks",
+      "rows": 46,
+      "cols": 8,
+      "purpose": "Consolidated model integrity checks (24 automated tests).",
+      "inputs": [],
+      "outputs": [],
+      "key_formulas": []
+    }
+  ],
+  "input_cells": [],
+  "output_cells": [],
+  "formula_rows": {}
+}

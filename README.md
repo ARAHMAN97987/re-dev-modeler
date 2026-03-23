@@ -55,14 +55,33 @@ Then in Vercel → Settings → Domains → Add `redev.yourdomain.com`
 
 ```
 src/
-  App.jsx          - Main application (all 5 phases)
-  main.jsx         - React entry point
+  App.jsx              - Main application (all 5 phases)
+  main.jsx             - React entry point
+  excelExport.js       - Excel export (platform → Excel template)
+  engine/              - Calculation engine
   lib/
-    supabase.js    - Supabase client
-    storage.js     - Storage adapter (Supabase / localStorage)
+    supabase.js        - Supabase client
+    storage.js         - Storage adapter (Supabase / localStorage)
+
+templates/
+  ZAN_Full_Model_v11_AUDITED.xlsx  - Excel model template (26,208 formulas)
+
+docs/excel/
+  EXCEL_MODEL.md       - Full reference (inputs, outputs, formula chain)
+  EXCEL_CHANGELOG.md   - Version history
+  EXCEL_WORKFLOW.md    - How to add/modify inputs and outputs
+  excel_model_spec.json - Machine-readable cell map (524 inputs, 56 outputs)
+
+tests/                 - 633+ automated tests
 supabase/
-  schema.sql       - Database schema
+  schema.sql           - Database schema
 ```
+
+## Excel Model
+
+The platform exports a fully dynamic Excel file (not just static numbers). The template at `templates/ZAN_Full_Model_v11_AUDITED.xlsx` contains 26,208 formulas across 15 sheets. The platform fills 524 input cells, and all outputs recalculate automatically when the user opens the file.
+
+Full documentation: [`docs/excel/README.md`](docs/excel/README.md)
 
 ## Features
 
