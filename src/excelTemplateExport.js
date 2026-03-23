@@ -41,10 +41,12 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     cell.value = value;
   }
 
-  // ── Helper: percentage (platform stores as whole number, Excel needs decimal) ──
+  // ── Helper: percentage (platform stores as whole number e.g. 6.5 = 6.5%, Excel needs 0.065) ──
   function pct(val) {
     if (val === undefined || val === null) return 0;
-    return typeof val === "number" && Math.abs(val) > 1 ? val / 100 : val;
+    // Platform ALWAYS stores percentages as human-readable: 6.5 means 6.5%, 0.5 means 0.5%
+    // Excel ALWAYS needs decimal: 0.065 for 6.5%, 0.005 for 0.5%
+    return typeof val === "number" ? val / 100 : val;
   }
 
   // ═══════════════════════════════════════════════════════════
