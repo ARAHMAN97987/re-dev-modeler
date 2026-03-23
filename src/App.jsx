@@ -402,7 +402,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [wSec, setWSec] = useState({});  // chart toggle state
   const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false}); // expandable KPI cards
   const [eduModal, setEduModal] = useState(null);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand}); }}, [globalExpand]);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
@@ -739,10 +739,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
-    <ExitAnalysisPanel project={project} results={results} financing={financing} waterfall={w} lang={lang} />
+    <ExitAnalysisPanel project={project} results={results} financing={financing} waterfall={w} lang={lang} globalExpand={globalExpand} />
 
     {/* ═══ INCENTIVES IMPACT (if active) ═══ */}
-    {incentivesResult && <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />}
+    {incentivesResult && <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />}
 
     {/* ═══ CHART TOGGLE ═══ */}
     {cfChartData.length > 2 && (
@@ -919,10 +919,11 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 // ═══════════════════════════════════════════════════════════════
 // EXIT ANALYSIS PANEL (shared by all Results views, collapsible)
 // ═══════════════════════════════════════════════════════════════
-function ExitAnalysisPanel({ project, results, financing, waterfall, lang }) {
+function ExitAnalysisPanel({ project, results, financing, waterfall, lang, globalExpand }) {
   const ar = lang === "ar";
   const isMobile = useIsMobile();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (globalExpand > 0) setOpen(globalExpand % 2 === 1); }, [globalExpand]);
   const f = financing;
   if (!f || !results) return null;
 
@@ -1061,9 +1062,10 @@ function ExitAnalysisPanel({ project, results, financing, waterfall, lang }) {
 // ═══════════════════════════════════════════════════════════════
 // INCENTIVES IMPACT PANEL (shared by all Results views)
 // ═══════════════════════════════════════════════════════════════
-function IncentivesImpact({ project, results, financing, incentivesResult, lang }) {
+function IncentivesImpact({ project, results, financing, incentivesResult, lang, globalExpand }) {
   const ar = lang === "ar";
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (globalExpand > 0) setOpen(globalExpand % 2 === 1); }, [globalExpand]);
   const ir = incentivesResult;
   if (!ir || !financing) return null;
   const hasAny = (ir.capexGrantTotal||0) > 0 || (ir.interestSubsidyTotal||0) > 0 || (ir.landRentSavingTotal||0) > 0 || (ir.feeRebateTotal||0) > 0;
@@ -1183,10 +1185,10 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
   const [showChart, setShowChart] = useState(false);
-  const [secOpen, setSecOpen] = useState({});
+  const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true});
   const [kpiOpen, setKpiOpen] = useState({proj:false,cap:false,ret:false});
   const [eduModal, setEduModal] = useState(null);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowChart(expand); setKpiOpen({proj:expand,cap:expand,ret:expand}); }}, [globalExpand]);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowChart(expand); setKpiOpen({proj:expand,cap:expand,ret:expand}); setSecOpen(expand?{}:{s1:true,s2:true,s3:true}); }}, [globalExpand]);
 
   const f = financing;
   const c = results.consolidated;
@@ -1358,10 +1360,10 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
-    <ExitAnalysisPanel project={project} results={results} financing={financing} lang={lang} />
+    <ExitAnalysisPanel project={project} results={results} financing={financing} lang={lang} globalExpand={globalExpand} />
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
-    <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} />
+    <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />
 
     {/* ═══ CF CHART (Revenue + CAPEX + Cumulative) ═══ */}
     {chartData.length > 2 && (
@@ -1477,10 +1479,10 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const [selectedPhase, setSelectedPhase] = useState("all");
   const [showTerms, setShowTerms] = useState(false);
   const [eduModal, setEduModal] = useState(null);
-  const [secOpen, setSecOpen] = useState({});
+  const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true,s4:true,s5:true});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); }}, [globalExpand]);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true,s4:true,s5:true}); }}, [globalExpand]);
 
   const f = financing;
   if (!f) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
@@ -1781,10 +1783,10 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     </div>
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و DSCR؟":"What do IRR, NPV, DSCR mean?"} /></div>
 
-    {/* ═══ EXIT ANALYSIS ═══ */}    <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} />
+    {/* ═══ EXIT ANALYSIS ═══ */}    <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} globalExpand={globalExpand} />
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
-    <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
+    <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />
 
     {/* ═══ FINANCING CHARTS (Pie + DSCR Line + Debt Area) ═══ */}
     {f && f.totalDebt > 0 && (() => {
@@ -2000,7 +2002,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 // ── Financing Panel Input Components (MUST be outside FinancingView to keep focus) ──
 const _finInpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
 const _finSelSt = {..._finInpSt,cursor:"pointer",appearance:"auto"};
-function FieldGroup({icon,title,children,defaultOpen=true}) {
+function FieldGroup({icon,title,children,defaultOpen=false}) {
   const [open,setOpen]=useState(defaultOpen);
   return <div style={{marginBottom:12,border:"1px solid #e5e7ec",borderRadius:10,overflow:"hidden"}}>
     <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"10px 14px",background:open?"#fff":"#fafbfc",border:"none",cursor:"pointer",fontSize:11,fontWeight:600,color:"#1a1d23"}}><span>{icon}</span><span>{title}</span><span style={{marginInlineStart:"auto",fontSize:9,color:"#9ca3af"}}>{open?"▲":"▼"}</span></button>
@@ -2034,17 +2036,17 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const [collapsed, setCollapsed] = useState({});
   const [cfgSec, setCfgSec] = useState({}); // accordion sections: {debt:false} = collapsed
   const cfgToggle = (id) => setCfgSec(prev => ({...prev, [id]: !prev[id]}));
-  const cfgOpen = (id) => !cfgSec[id]; // all open by default
+  const cfgOpen = (id) => cfgSec[id] === true; // all closed by default
   const [eduModal, setEduModal] = useState(null);
   const [showTerms, setShowTerms] = useState(false);
-  const [secOpen, setSecOpen] = useState({});
+  const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCollapsed({}); setCfgSec(expand ? {} : {debt:true,exit:true,land:true,fund:true,wf:true,fees:true}); setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); }}, [globalExpand]);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; const allSec = {mode:expand,debt:expand,exit:expand,land:expand,fund:expand,wf:expand,fees:expand,dscr:expand,equity:expand,cf:expand}; setCollapsed(expand?allSec:{}); setCfgSec(expand?{debt:true,exit:true,land:true,fund:true,wf:true,fees:true}:{}); setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true}); }}, [globalExpand]);
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
   const toggle = (id) => setCollapsed(prev => ({...prev, [id]: !prev[id]}));
-  const isOpen = (id) => !collapsed[id]; // all open by default
+  const isOpen = (id) => collapsed[id] === true; // all closed by default
 
   // Per-phase financing config proxy
   const isPhaseView = selectedPhase !== "all";
@@ -4407,7 +4409,7 @@ function ControlPanel({ project, up, t, lang, results }) {
 
   return (<>
     {/* ── 1. GENERAL ── */}
-    <Sec title={t.general} def={true} filled={!!(project.location && project.startYear)} summary={project.location ? `${project.startYear} | ${project.horizon}yr` : ""}>
+    <Sec title={t.general} def={false} filled={!!(project.location && project.startYear)} summary={project.location ? `${project.startYear} | ${project.horizon}yr` : ""}>
       <Fld label={t.location} tip="موقع المشروع. للعرض والتقارير فقط
 Project location. For display and reports only"><SidebarInput value={project.location} onChange={v=>up({location:v})} placeholder="e.g. Jazan, Saudi Arabia" /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
