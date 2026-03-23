@@ -1,5 +1,5 @@
 /**
- * ZAN Financial Engine — CSV Import/Export Utilities
+ * Haseef Financial Engine — CSV Import/Export Utilities
  * @module utils/csv
  * 
  * Dependencies: none (uses browser APIs: Blob, URL, FileReader, document)
@@ -76,7 +76,7 @@ export function generateTemplate() {
   const csv = allRows.map(r => r.map(csvEscape).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = "ZAN_Asset_Template.csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const a = document.createElement("a"); a.href = url; a.download = "Haseef_Asset_Template.csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
