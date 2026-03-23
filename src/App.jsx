@@ -397,7 +397,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
-  const [selectedPhase, setSelectedPhase] = useState("all");
+  const [selectedPhases, setSelectedPhases] = useState([]);
   const [showTerms, setShowTerms] = useState(false);
   const [wSec, setWSec] = useState({});  // chart toggle state
   const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false}); // expandable KPI cards
@@ -409,13 +409,21 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
   </div>;
 
-  // Per-phase config proxy (same pattern as FinancingView)
-  const isPhaseView = selectedPhase !== "all";
-  const cfg = isPhaseView ? getPhaseFinancing(project, selectedPhase) : project;
-  const upCfg = up ? (isPhaseView
+  // ── Phase filter (multi-select) ──
+  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
+  const isSinglePhase = selectedPhases.length === 1;
+  const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
+  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+
+  const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
+    : (isFiltered && activePh.length > 0) ? getPhaseFinancing(project, activePh[0])
+    : project;
+  const upCfg = up ? (isSinglePhase
     ? (fields) => up(prev => ({
-        phases: (prev.phases||[]).map(p => p.name === selectedPhase
-          ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
+        phases: (prev.phases||[]).map(p => p.name === singlePhaseName
+          ? { ...p, financing: { ...getPhaseFinancing(prev, singlePhaseName), ...fields } }
           : p)
       }))
     : (fields) => up(prev => ({
@@ -428,31 +436,82 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const h = results.horizon;
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
-  const phaseNames = Object.keys(results.phaseResults || {});
+  const phaseNames = allPhaseNames;
   const hasPhases = phaseNames.length > 1 && phaseWaterfalls && Object.keys(phaseWaterfalls).length > 0;
-  const _pw = (selectedPhase !== "all" && phaseWaterfalls?.[selectedPhase]) ? phaseWaterfalls[selectedPhase] : null;
-  const h0 = new Array(results.horizon || 50).fill(0);
-  // New independent phase waterfalls are full waterfall objects - use directly
-  const w = _pw ? {
-    ..._pw,
-    feeSub: _pw.feeSub || h0, feeMgmt: _pw.feeMgmt || h0, feeCustody: _pw.feeCustody || h0,
-    feeDev: _pw.feeDev || h0, feeStruct: _pw.feeStruct || h0,
-    feePreEst: _pw.feePreEst || h0, feeSpv: _pw.feeSpv || h0, feeAuditor: _pw.feeAuditor || h0,
-    feeOperator: _pw.feeOperator || h0, feeMisc: _pw.feeMisc || h0, fees: _pw.fees || h0,
-    totalFees: _pw.totalFees ?? 0,
-    totalEquity: _pw.totalEquity || _pw.equity || 0,
-    exitYear: _pw.exitYear || waterfall.exitYear || 0,
-    lpNPV12: _pw.lpNPV12 ?? null, lpNPV14: _pw.lpNPV14 ?? null,
-    gpNPV12: _pw.gpNPV12 ?? null, gpNPV14: _pw.gpNPV14 ?? null,
-    unreturnedClose: _pw.unreturnedClose || h0, unreturnedOpen: _pw.unreturnedOpen || h0,
-    prefAccrual: _pw.prefAccrual || h0, prefAccumulated: _pw.prefAccumulated || h0,
-    exitProceeds: _pw.exitProceeds || h0,
-  } : waterfall;
+  const h0 = new Array(h).fill(0);
   const cur = project.currency || "SAR";
 
+  // ── Filtered waterfall ──
+  const w = useMemo(() => {
+    if (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) {
+      const _pw = phaseWaterfalls[singlePhaseName];
+      return { ..._pw,
+        feeSub:_pw.feeSub||h0, feeMgmt:_pw.feeMgmt||h0, feeCustody:_pw.feeCustody||h0,
+        feeDev:_pw.feeDev||h0, feeStruct:_pw.feeStruct||h0, feePreEst:_pw.feePreEst||h0,
+        feeSpv:_pw.feeSpv||h0, feeAuditor:_pw.feeAuditor||h0, feeOperator:_pw.feeOperator||h0,
+        feeMisc:_pw.feeMisc||h0, fees:_pw.fees||h0, totalFees:_pw.totalFees??0,
+        totalEquity:_pw.totalEquity||_pw.equity||0, exitYear:_pw.exitYear||waterfall.exitYear||0,
+        lpNPV12:_pw.lpNPV12??null, lpNPV14:_pw.lpNPV14??null, gpNPV12:_pw.gpNPV12??null, gpNPV14:_pw.gpNPV14??null,
+        unreturnedClose:_pw.unreturnedClose||h0, unreturnedOpen:_pw.unreturnedOpen||h0,
+        prefAccrual:_pw.prefAccrual||h0, prefAccumulated:_pw.prefAccumulated||h0, exitProceeds:_pw.exitProceeds||h0,
+      };
+    }
+    if (!isFiltered) return waterfall;
+    // Multi-phase: aggregate selected phase waterfalls
+    const pws = activePh.map(p => phaseWaterfalls?.[p]).filter(Boolean);
+    if (pws.length === 0) return waterfall;
+    const sumArr = (field) => { const arr = new Array(h).fill(0); pws.forEach(pw => { const a = pw[field]; if (a) for(let y=0;y<h;y++) arr[y]+=(a[y]||0); }); return arr; };
+    const sum = (field) => pws.reduce((s,pw) => s + (pw[field]||0), 0);
+    const lpNetCF = sumArr('lpNetCF'), gpNetCF = sumArr('gpNetCF');
+    const totalEquity = activePh.reduce((s,p) => s + (phaseFinancings?.[p]?.totalEquity||0), 0);
+    const gpEquity = activePh.reduce((s,p) => s + (phaseFinancings?.[p]?.gpEquity||0), 0);
+    const lpEquity = activePh.reduce((s,p) => s + (phaseFinancings?.[p]?.lpEquity||0), 0);
+    const lpTotalDist = sum('lpTotalDist'), gpTotalDist = sum('gpTotalDist');
+    const eqCalls = sumArr('equityCalls');
+    const lpCalled = eqCalls.reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity));
+    const gpCalled = eqCalls.reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity));
+    return { ...waterfall, totalEquity, gpEquity, lpEquity, gpPct: totalEquity>0?gpEquity/totalEquity:0, lpPct: totalEquity>0?lpEquity/totalEquity:0,
+      equityCalls: eqCalls, fees: sumArr('fees'), feeSub: sumArr('feeSub'), feeMgmt: sumArr('feeMgmt'),
+      feeCustody: sumArr('feeCustody'), feeDev: sumArr('feeDev'), feeStruct: sumArr('feeStruct'),
+      feePreEst: sumArr('feePreEst'), feeSpv: sumArr('feeSpv'), feeAuditor: sumArr('feeAuditor'),
+      feeOperator: sumArr('feeOperator'), feeMisc: sumArr('feeMisc'), totalFees: sum('totalFees'),
+      unfundedFees: sumArr('unfundedFees'), exitProceeds: sumArr('exitProceeds'),
+      exitYear: Math.max(...pws.map(pw=>pw.exitYear||0)),
+      cashAvail: sumArr('cashAvail'), tier1: sumArr('tier1'), tier2: sumArr('tier2'),
+      tier3: sumArr('tier3'), tier4LP: sumArr('tier4LP'), tier4GP: sumArr('tier4GP'),
+      lpDist: sumArr('lpDist'), gpDist: sumArr('gpDist'), lpNetCF, gpNetCF,
+      unreturnedOpen: sumArr('unreturnedOpen'), unreturnedClose: sumArr('unreturnedClose'),
+      prefAccrual: sumArr('prefAccrual'), prefAccumulated: sumArr('prefAccumulated'),
+      lpIRR: calcIRR(lpNetCF), gpIRR: calcIRR(gpNetCF),
+      lpTotalDist, gpTotalDist, lpNetDist: sum('lpNetDist')||lpTotalDist, gpNetDist: sum('gpNetDist')||gpTotalDist,
+      lpTotalCalled: lpCalled, gpTotalCalled: gpCalled, lpTotalInvested: lpCalled, gpTotalInvested: gpCalled,
+      lpMOIC: lpCalled>0?(sum('lpNetDist')||lpTotalDist)/lpCalled:0, gpMOIC: gpCalled>0?(sum('gpNetDist')||gpTotalDist)/gpCalled:0,
+      lpNPV10: calcNPV(lpNetCF,0.10), lpNPV12: calcNPV(lpNetCF,0.12), lpNPV14: calcNPV(lpNetCF,0.14),
+      gpNPV10: calcNPV(gpNetCF,0.10), gpNPV12: calcNPV(gpNetCF,0.12), gpNPV14: calcNPV(gpNetCF,0.14),
+      isFund: pws.some(pw=>pw.isFund),
+    };
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, waterfall, phaseWaterfalls, phaseFinancings, h]);
+
   // Phase-aware data sources for table §7 and §8
-  const pc = (selectedPhase !== "all" && results.phaseResults?.[selectedPhase]) ? results.phaseResults[selectedPhase] : results.consolidated;
-  const f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing;
+  const pc = useMemo(() => {
+    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
+    if (!isFiltered) return results.consolidated;
+    const income=new Array(h).fill(0),capex=new Array(h).fill(0),landRent=new Array(h).fill(0),netCF=new Array(h).fill(0);
+    activePh.forEach(pName=>{const pr=results.phaseResults?.[pName];if(!pr)return;for(let y=0;y<h;y++){income[y]+=pr.income[y]||0;capex[y]+=pr.capex[y]||0;landRent[y]+=pr.landRent[y]||0;netCF[y]+=pr.netCF[y]||0;}});
+    return {income,capex,landRent,netCF,totalCapex:capex.reduce((a,b)=>a+b,0),totalIncome:income.reduce((a,b)=>a+b,0),totalLandRent:landRent.reduce((a,b)=>a+b,0),totalNetCF:netCF.reduce((a,b)=>a+b,0),irr:calcIRR(netCF)};
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h]);
+  const f = useMemo(() => {
+    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
+    if (!isFiltered) return financing;
+    const pfs = activePh.map(p=>phaseFinancings?.[p]).filter(Boolean);
+    if (pfs.length===0) return financing;
+    const leveredCF = new Array(h).fill(0);
+    pfs.forEach(pf2=>{if(pf2.leveredCF)for(let y=0;y<h;y++)leveredCF[y]+=pf2.leveredCF[y]||0;});
+    return {...financing, leveredCF, leveredIRR:calcIRR(leveredCF),
+      totalDebt:pfs.reduce((s,p2)=>s+(p2.totalDebt||0),0), totalEquity:pfs.reduce((s,p2)=>s+(p2.totalEquity||0),0),
+      devCostInclLand:pfs.reduce((s,p2)=>s+(p2.devCostInclLand||0),0), totalInterest:pfs.reduce((s,p2)=>s+(p2.totalInterest||0),0),
+    };
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h]);
 
   // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
   const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0, wasNeg = false; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum < -1) wasNeg = true; if (wasNeg && cum >= 0) return y + 1; } return null; })();
@@ -497,19 +556,32 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   };
 
   return (<div>
-    {/* Phase selector */}
+    {/* Phase selector (multi-select) */}
     {hasPhases && (
-      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-          {lang==="ar"?"الإجمالي":"Consolidated"}
-        </button>
-        {phaseNames.map(p=>{
-          const pw = phaseWaterfalls?.[p];
-          const irr = pw?.lpIRR;
-          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-            {p}{irr !== null && irr !== undefined ? <span style={{fontSize:10,opacity:0.8}}>{` LP ${(irr*100).toFixed(1)}%`}</span> : ""}
-          </button>;
-        })}
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {ar?"كل المراحل":"All Phases"}
+          </button>
+          {phaseNames.map(p=>{
+            const active = activePh.includes(p) && selectedPhases.length > 0;
+            const pw = phaseWaterfalls?.[p];
+            const irr = pw?.lpIRR;
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+              {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>LP {(irr*100).toFixed(1)}%</span> : ""}
+            </button>;
+          })}
+          {isFiltered && !isSinglePhase && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${allPhaseNames.length} مراحل`:`Showing ${activePh.length} of ${allPhaseNames.length} phases`}</span>}
+        </div>
+      </div>
+    )}
+    {/* Warning: settings propagation */}
+    {hasPhases && !isSinglePhase && upCfg && (
+      <div style={{background:"#fffbeb",borderRadius:8,border:"1px solid #fde68a",padding:"8px 14px",marginBottom:12,fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:13}}>⚠</span>
+        {isFiltered
+          ? (ar ? `أي تعديل سينطبق على: ${activePh.join("، ")}` : `Changes apply to: ${activePh.join(", ")}`)
+          : (ar ? "أي تعديل هنا سينتشر في جميع المراحل" : "Changes here apply to ALL phases")}
       </div>
     )}
 
@@ -587,10 +659,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const gpNetCash = (w.gpTotalDist||0) + gpFeesTotal - (w.gpLandRentTotal||0);
       const gpNetProfit = gpNetCash - (w.gpTotalInvested||0);
       // Project-level land rent for this phase (shown when not GP-specific obligation)
-      const phaseLR = (() => {
-        if (selectedPhase !== "all") { const pr = results.phaseResults?.[selectedPhase]; return pr?.totalLandRent || 0; }
-        return results.consolidated?.totalLandRent || 0;
-      })();
+      const phaseLR = pc?.totalLandRent || 0;
       const showLandRent = (w.gpLandRentTotal||0) > 0 || phaseLR > 0;
       const gpPctVal = w.gpPct||0;
       const lpPctVal = w.lpPct||0;
@@ -722,7 +791,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"رأس المال":"CAPITAL"} />
               <KR l={ar?"إجمالي الملكية":"Total Equity"} v={fmtM(w.totalEquity)} bold />
               <KR l="LP / GP" v={`${fmtPct(lpPctVal*100)} / ${fmtPct(gpPctVal*100)}`} />
-              <KR l={ar?"دين":"Debt"} v={(() => { const _f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing; return _f?.totalDebt ? fmtM(_f.totalDebt) : "—"; })()} c="#ef4444" />
+              <KR l={ar?"دين":"Debt"} v={f?.totalDebt ? fmtM(f.totalDebt) : "—"} c="#ef4444" />
               <SecHd text={ar?"التخارج":"EXIT"} />
               <KR l={ar?"السنة":"Year"} v={exitYr>0?`${exitYr} (${sy+exitYr-1})`:"—"} />
               <KR l={ar?"المضاعف":"Multiple"} v={exitMult>0?exitMult+"x":"—"} />
@@ -739,10 +808,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
-    <ExitAnalysisPanel project={project} results={results} financing={financing} waterfall={w} lang={lang} globalExpand={globalExpand} />
+    {!isFiltered && <ExitAnalysisPanel project={project} results={results} financing={f} waterfall={w} lang={lang} globalExpand={globalExpand} />}
 
     {/* ═══ INCENTIVES IMPACT (if active) ═══ */}
-    {incentivesResult && <IncentivesImpact project={project} results={results} financing={financing} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />}
+    {!isFiltered && incentivesResult && <IncentivesImpact project={project} results={results} financing={f} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />}
 
     {/* ═══ CHART TOGGLE ═══ */}
     {cfChartData.length > 2 && (
@@ -1535,7 +1604,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
-  const [selectedPhase, setSelectedPhase] = useState("all");
+  const [selectedPhases, setSelectedPhases] = useState([]);
   const [showTerms, setShowTerms] = useState(false);
   const [eduModal, setEduModal] = useState(null);
   const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true,s4:true,s5:true});
@@ -1543,16 +1612,24 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const [showChart, setShowChart] = useState(false);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true,s4:true,s5:true}); }}, [globalExpand]);
 
-  const f = financing;
-  if (!f) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
+  if (!financing) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
 
-  // Per-phase support (same pattern as WaterfallView)
-  const isPhaseView = selectedPhase !== "all";
-  const cfg = isPhaseView ? getPhaseFinancing(project, selectedPhase) : project;
-  const upCfg = up ? (isPhaseView
+  // ── Phase filter (multi-select) ──
+  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
+  const isSinglePhase = selectedPhases.length === 1;
+  const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
+  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const hasPhases = allPhaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
+
+  const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
+    : (isFiltered && activePh.length > 0) ? getPhaseFinancing(project, activePh[0])
+    : project;
+  const upCfg = up ? (isSinglePhase
     ? (fields) => up(prev => ({
-        phases: (prev.phases||[]).map(p => p.name === selectedPhase
-          ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
+        phases: (prev.phases||[]).map(p => p.name === singlePhaseName
+          ? { ...p, financing: { ...getPhaseFinancing(prev, singlePhaseName), ...fields } }
           : p)
       }))
     : (fields) => up(prev => ({
@@ -1565,12 +1642,41 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const h = results.horizon;
   const sy = results.startYear;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
-  const phaseNames = Object.keys(results.phaseResults || {});
-  const hasPhases = phaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
-  const pf = (isPhaseView && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : f;
-  const pc = (isPhaseView && results.phaseResults?.[selectedPhase]) ? results.phaseResults[selectedPhase] : results.consolidated;
+  const phaseNames = allPhaseNames;
   const cur = project.currency || "SAR";
-  const isBank100 = (isPhaseView ? cfg.finMode : project.finMode) === "bank100";
+  const isBank100 = cfg.finMode === "bank100";
+
+  // ── Filtered financing ──
+  const pf = useMemo(() => {
+    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
+    if (!isFiltered) return financing;
+    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean);
+    if (pfs.length === 0) return financing;
+    const leveredCF = new Array(h).fill(0), debtService = new Array(h).fill(0), debtBalClose = new Array(h).fill(0);
+    const interest = new Array(h).fill(0), repayment = new Array(h).fill(0), exitProceeds = new Array(h).fill(0);
+    pfs.forEach(pf2 => { for (let y=0;y<h;y++) {
+      leveredCF[y]+=pf2.leveredCF?.[y]||0; debtService[y]+=pf2.debtService?.[y]||0;
+      debtBalClose[y]+=pf2.debtBalClose?.[y]||0; interest[y]+=pf2.interest?.[y]||0;
+      repayment[y]+=pf2.repayment?.[y]||0; exitProceeds[y]+=pf2.exitProceeds?.[y]||0;
+    }});
+    const dscrRaw = new Array(h).fill(null);
+    for (let y=0;y<h;y++) { if (debtService[y]>0) { let noi=0; activePh.forEach(p=>{const pr=results.phaseResults?.[p];if(pr)noi+=(pr.income[y]||0)-(pr.landRent[y]||0);}); dscrRaw[y]=noi/debtService[y]; }}
+    return { ...financing, leveredCF, debtService, debtBalClose, interest, repayment, exitProceeds, dscr: dscrRaw, leveredIRR: calcIRR(leveredCF),
+      totalDebt: pfs.reduce((s,p2)=>s+(p2.totalDebt||0),0), totalEquity: pfs.reduce((s,p2)=>s+(p2.totalEquity||0),0),
+      totalInterest: pfs.reduce((s,p2)=>s+(p2.totalInterest||0),0), devCostInclLand: pfs.reduce((s,p2)=>s+(p2.devCostInclLand||0),0),
+      maxDebt: pfs.reduce((s,p2)=>s+(p2.maxDebt||0),0), constrEnd: Math.max(...pfs.map(p2=>p2.constrEnd||0)),
+      exitYear: Math.max(...pfs.map(p2=>p2.exitYear||0)), gpEquity: pfs.reduce((s,p2)=>s+(p2.gpEquity||0),0),
+    };
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h, results]);
+
+  // ── Filtered cashflow ──
+  const pc = useMemo(() => {
+    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
+    if (!isFiltered) return results.consolidated;
+    const income=new Array(h).fill(0), capex=new Array(h).fill(0), landRent=new Array(h).fill(0), netCF=new Array(h).fill(0);
+    activePh.forEach(pName=>{const pr=results.phaseResults?.[pName];if(!pr)return;for(let y=0;y<h;y++){income[y]+=pr.income[y]||0;capex[y]+=pr.capex[y]||0;landRent[y]+=pr.landRent[y]||0;netCF[y]+=pr.netCF[y]||0;}});
+    return { income, capex, landRent, netCF, totalCapex:capex.reduce((a,b)=>a+b,0), totalIncome:income.reduce((a,b)=>a+b,0), totalLandRent:landRent.reduce((a,b)=>a+b,0), totalNetCF:netCF.reduce((a,b)=>a+b,0), irr:calcIRR(netCF) };
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h]);
 
   // ── Derived metrics ──
   const dscrVals = pf.dscr ? pf.dscr.filter(v => v !== null && v > 0) : [];
@@ -1616,19 +1722,32 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const cardHd = {cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"};
 
   return (<div>
-    {/* ═══ Phase Selector ═══ */}
+    {/* ═══ Phase Selector (multi-select) ═══ */}
     {hasPhases && (
-      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-          {ar?"الإجمالي":"Consolidated"}
-        </button>
-        {phaseNames.map(p => {
-          const pff = phaseFinancings?.[p];
-          const irr = pff?.leveredIRR;
-          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-            {p}{irr!==null&&irr!==undefined?<span style={{fontSize:10,opacity:0.8}}>{` ${(irr*100).toFixed(1)}%`}</span>:""}
-          </button>;
-        })}
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {ar?"كل المراحل":"All Phases"}
+          </button>
+          {phaseNames.map(p => {
+            const active = activePh.includes(p) && selectedPhases.length > 0;
+            const pff = phaseFinancings?.[p];
+            const irr = pff?.leveredIRR;
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+              {p}{irr!==null&&irr!==undefined?<span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>{(irr*100).toFixed(1)}%</span>:""}
+            </button>;
+          })}
+          {isFiltered && !isSinglePhase && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${allPhaseNames.length} مراحل`:`Showing ${activePh.length} of ${allPhaseNames.length} phases`}</span>}
+        </div>
+      </div>
+    )}
+    {/* Warning: settings propagation */}
+    {hasPhases && !isSinglePhase && upCfg && (
+      <div style={{background:"#fffbeb",borderRadius:8,border:"1px solid #fde68a",padding:"8px 14px",marginBottom:12,fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:13}}>⚠</span>
+        {isFiltered
+          ? (ar ? `أي تعديل سينطبق على: ${activePh.join("، ")}` : `Changes apply to: ${activePh.join(", ")}`)
+          : (ar ? "أي تعديل هنا سينتشر في جميع المراحل" : "Changes here apply to ALL phases")}
       </div>
     )}
 
@@ -1842,28 +1961,28 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     </div>
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و DSCR؟":"What do IRR, NPV, DSCR mean?"} /></div>
 
-    {/* ═══ EXIT ANALYSIS ═══ */}    <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} globalExpand={globalExpand} />
+    {/* ═══ EXIT ANALYSIS ═══ */}    {!isFiltered && <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} globalExpand={globalExpand} />}
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
-    <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />
+    {!isFiltered && <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} globalExpand={globalExpand} />}
 
     {/* ═══ FINANCING CHARTS (Pie + DSCR Line + Debt Area) ═══ */}
-    {f && f.totalDebt > 0 && (() => {
+    {pf && pf.totalDebt > 0 && (() => {
       const dscrData = years.map(y => ({
         year: sy + y,
-        dscr: f.dscr?.[y] ?? null,
+        dscr: pf.dscr?.[y] ?? null,
       })).filter(d => d.dscr !== null && d.dscr > 0);
       const debtData = years.map(y => ({
         year: sy + y,
-        balance: f.debtBalance?.[y] || 0,
+        balance: pf.debtBalClose?.[y] || 0,
         noi: (pc.income[y]||0) - (pc.landRent[y]||0),
-        ds: (f.principalPayment?.[y]||0) + (f.interestPayment?.[y]||0),
+        ds: pf.debtService?.[y] || 0,
       }));
       const pieData = [
-        { name: ar ? "دين" : "Debt", value: f.totalDebt, color: "#ef4444" },
-        { name: ar ? "ملكية" : "Equity", value: f.totalEquity, color: "#2EC4B6" },
+        { name: ar ? "دين" : "Debt", value: pf.totalDebt, color: "#ef4444" },
+        { name: ar ? "ملكية" : "Equity", value: pf.totalEquity, color: "#2EC4B6" },
       ].filter(d => d.value > 0);
-      const effLTV = f.devCostInclLand > 0 ? ((f.totalDebt / f.devCostInclLand) * 100).toFixed(0) : 0;
+      const effLTV = pf.devCostInclLand > 0 ? ((pf.totalDebt / pf.devCostInclLand) * 100).toFixed(0) : 0;
 
       return <div style={{marginBottom:16}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
