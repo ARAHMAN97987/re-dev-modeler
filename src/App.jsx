@@ -11196,7 +11196,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
       landRentSavingTotal: (ir.landRentSavingTotal || 0) * phaseShare.land,
       feeRebateTotal: (ir.feeRebateTotal || 0) * phaseShare.capex,
     };
-  }, [ir, isFiltered, phaseShare]);
+  }, [ir, isFiltered, phaseShare, selectedPhases]);
 
   const upInc = (key, updates) => {
     const newInc = { ...project.incentives, [key]: { ...project.incentives[key], ...updates } };
