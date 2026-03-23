@@ -9033,25 +9033,50 @@ function CashFlowView({ project, results, t, incentivesResult }) {
   if (!project||!results) return <div style={{color:"#9ca3af"}}>Add assets to see projections.</div>;
   const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
+  const [selectedPhases, setSelectedPhases] = useState([]);
   const {horizon,startYear}=results;
   const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
   const ar = t.dashboard === "لوحة التحكم";
 
-  // ── Read directly from engine results (single source of truth) ──
-  const phaseNames = Object.keys(results.phaseResults || {});
-  const phases = phaseNames.map(pName => {
+  // ── Phase filter ──
+  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
+  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+
+  // ── Read from engine results, filtered by selected phases ──
+  const phases = allPhaseNames.filter(pName => activePh.includes(pName)).map(pName => {
     const pr = results.phaseResults[pName];
-    // NOI = income - landRent (derived, not stored in engine)
     const noi = new Array(horizon).fill(0);
     for (let y = 0; y < horizon; y++) noi[y] = (pr.income[y]||0) - (pr.landRent[y]||0);
     return [pName, { ...pr, noi, totalNOI: noi.reduce((a,b)=>a+b,0) }];
   });
-  const c = {
-    ...results.consolidated,
-    // NOI derived from consolidated arrays
-    noi: new Array(horizon).fill(0),
-  };
-  for (let y = 0; y < horizon; y++) c.noi[y] = (c.income[y]||0) - (c.landRent[y]||0);
+
+  // ── Filtered consolidated ──
+  const c = useMemo(() => {
+    if (!isFiltered) {
+      const raw = { ...results.consolidated, noi: new Array(horizon).fill(0) };
+      for (let y = 0; y < horizon; y++) raw.noi[y] = (raw.income[y]||0) - (raw.landRent[y]||0);
+      return raw;
+    }
+    const income = new Array(horizon).fill(0), capex = new Array(horizon).fill(0), landRent = new Array(horizon).fill(0), netCF = new Array(horizon).fill(0), noi = new Array(horizon).fill(0);
+    activePh.forEach(pName => {
+      const pr = results.phaseResults?.[pName];
+      if (!pr) return;
+      for (let y = 0; y < horizon; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
+    });
+    for (let y = 0; y < horizon; y++) noi[y] = income[y] - landRent[y];
+    const totalCapex = capex.reduce((a,b)=>a+b,0);
+    const totalIncome = income.reduce((a,b)=>a+b,0);
+    const totalLandRent = landRent.reduce((a,b)=>a+b,0);
+    const totalNetCF = netCF.reduce((a,b)=>a+b,0);
+    let pbCum = 0, pbYr = null, pbNeg = false, peakNeg = 0, peakNegY = null;
+    for (let y = 0; y < horizon; y++) { pbCum += netCF[y]; if (pbCum < -1) pbNeg = true; if (pbNeg && pbCum >= 0 && pbYr === null) pbYr = y; if (pbCum < peakNeg) { peakNeg = pbCum; peakNegY = y; } }
+    return { ...results.consolidated, income, capex, landRent, netCF, noi, totalCapex, totalIncome, totalLandRent, totalNetCF,
+      irr: calcIRR(netCF), npv10: calcNPV(netCF, 0.10), npv12: calcNPV(netCF, 0.12), npv14: calcNPV(netCF, 0.14),
+      paybackYear: pbYr, peakNegative: peakNeg, peakNegativeYear: peakNegY,
+    };
+  }, [isFiltered, selectedPhases, results, horizon]);
 
   // ── Period detection: construction vs operating years ──
   let constrEnd = 0;
@@ -9107,6 +9132,23 @@ function CashFlowView({ project, results, t, incentivesResult }) {
   </tr>;
 
   return (<div>
+    {/* ═══ PHASE FILTER ═══ */}
+    {allPhaseNames.length > 1 && (
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {ar?"كل المراحل":"All Phases"}
+          </button>
+          {allPhaseNames.map(p => {
+            const active = activePh.includes(p) && selectedPhases.length > 0;
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+              {p}
+            </button>;
+          })}
+          {isFiltered && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${allPhaseNames.length} مراحل`:`Showing ${activePh.length} of ${allPhaseNames.length} phases`}</span>}
+        </div>
+      </div>
+    )}
     {/* Disclaimer */}
     <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"6px 12px",marginBottom:12,fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:6}}>
       <span style={{fontSize:14}}>⚠</span>
@@ -9171,7 +9213,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
     ))}
     <div style={{background:"#fff",borderRadius:8,border:"2px solid #2563eb",overflow:"hidden"}}>
       <div style={{padding:"10px 14px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,background:"#f0f4ff",display:"flex",justifyContent:"space-between"}}>
-        <span>{t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>{ar?"IRR قبل التمويل":"Unlevered IRR"}: <strong style={{color:"#2563eb"}}>{(incentivesResult&&incentivesResult.totalIncentiveValue>0&&incentivesResult.adjustedIRR!==null)?fmtPct(incentivesResult.adjustedIRR*100):c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
+        <span>{isFiltered?(ar?"المجموع المختار":"Selected Total"):t.consolidated}</span><span style={{fontSize:11,fontWeight:400}}>{ar?"IRR قبل التمويل":"Unlevered IRR"}: <strong style={{color:"#2563eb"}}>{(!isFiltered&&incentivesResult&&incentivesResult.totalIncentiveValue>0&&incentivesResult.adjustedIRR!==null)?fmtPct(incentivesResult.adjustedIRR*100):c.irr!==null?fmtPct(c.irr*100):"—"}</strong></span>
       </div>
       <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
         <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:150}}>{t.lineItem}</th>
