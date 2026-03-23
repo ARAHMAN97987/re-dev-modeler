@@ -2092,7 +2092,7 @@ function Drp({value,onChange,options,lang:dl}) {
 function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, incentivesResult, t, up, lang, globalExpand }) {
   const isMobile = useIsMobile();
   const [showYrs, setShowYrs] = useState(15);
-  const [selectedPhase, setSelectedPhase] = useState("all");
+  const [selectedPhases, setSelectedPhases] = useState([]);
   const [collapsed, setCollapsed] = useState({});
   const [cfgSec, setCfgSec] = useState({}); // accordion sections: {debt:false} = collapsed
   const cfgToggle = (id) => setCfgSec(prev => ({...prev, [id]: !prev[id]}));
@@ -2108,22 +2108,43 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const toggle = (id) => setCollapsed(prev => ({...prev, [id]: !prev[id]}));
   const isOpen = (id) => collapsed[id] === true; // all closed by default
 
-  // Per-phase financing config proxy
-  const isPhaseView = selectedPhase !== "all";
-  const cfg = isPhaseView ? getPhaseFinancing(project, selectedPhase) : project;
-  const upCfg = isPhaseView
+  // ── Phase filter (multi-select) ──
+  const allPhaseNames = Object.keys(results?.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
+  const isSinglePhase = selectedPhases.length === 1;
+  const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
+  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const hasPhases = allPhaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
+
+  // ── Settings source: single phase → phase settings, multi → first selected, all → project ──
+  const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
+    : (isFiltered && activePh.length > 0) ? getPhaseFinancing(project, activePh[0])
+    : project;
+
+  // ── Settings writer ──
+  const upCfg = isSinglePhase
+    // Single phase → write to that phase only
     ? (fields) => up(prev => ({
-        phases: (prev.phases||[]).map(p => p.name === selectedPhase
-          ? { ...p, financing: { ...getPhaseFinancing(prev, selectedPhase), ...fields } }
+        phases: (prev.phases||[]).map(p => p.name === singlePhaseName
+          ? { ...p, financing: { ...getPhaseFinancing(prev, singlePhaseName), ...fields } }
           : p)
       }))
+    : isFiltered
+    // Multiple phases selected → write to selected phases ONLY (not project-level)
+    ? (fields) => up(prev => ({
+        phases: (prev.phases||[]).map(p => activePh.includes(p.name)
+          ? { ...p, financing: { ...(p.financing || getPhaseFinancing(prev, p.name)), ...fields } }
+          : p)
+      }))
+    // All → write to project + propagate to all phases
     : (fields) => up(prev => ({
         ...fields,
-        // Propagate to ALL phases so per-phase overrides don't mask the change
         phases: (prev.phases||[]).map(p => p.financing
           ? { ...p, financing: { ...p.financing, ...fields } }
           : p)
       }));
+
   const copyFromPhase = (sourceName) => {
     const source = getPhaseFinancing(project, sourceName);
     upCfg({ ...source });
@@ -2144,12 +2165,48 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const autoHint = (field, baseHint) => { const d = _FD[field]; if (d === undefined) return baseHint; const u = _FU[field]; const fmt = u ? d.toLocaleString()+u : d >= 1000 ? (d/1000).toLocaleString()+'K' : d+'%'; const tag = ar ? `التلقائي: ${fmt}` : `default: ${fmt}`; return baseHint ? baseHint + ` · ${tag}` : tag; };
   const dh = (field) => autoHint(field, ""); // shortcut: default hint only
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
-  const phaseNames = Object.keys(results.phaseResults || {});
-  const hasPhases = phaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
-  const f = (selectedPhase !== "all" && phaseFinancings?.[selectedPhase]) ? phaseFinancings[selectedPhase] : financing;
+  const phaseNames = allPhaseNames;
+
+  // ── Filtered financing & cashflow ──
+  const f = useMemo(() => {
+    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
+    if (!isFiltered) return financing;
+    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean);
+    if (pfs.length === 0) return financing;
+    const leveredCF = new Array(h).fill(0), debtService = new Array(h).fill(0), debtBalClose = new Array(h).fill(0);
+    const interest = new Array(h).fill(0), repayment = new Array(h).fill(0), exitProceeds = new Array(h).fill(0);
+    pfs.forEach(pf => { for (let y=0;y<h;y++) {
+      leveredCF[y] += pf.leveredCF?.[y]||0; debtService[y] += pf.debtService?.[y]||0;
+      debtBalClose[y] += pf.debtBalClose?.[y]||0; interest[y] += pf.interest?.[y]||0;
+      repayment[y] += pf.repayment?.[y]||0; exitProceeds[y] += pf.exitProceeds?.[y]||0;
+    }});
+    const dscrRaw = new Array(h).fill(null);
+    for (let y=0;y<h;y++) { if (debtService[y] > 0) { let noi = 0; activePh.forEach(p => { const pr = results.phaseResults?.[p]; if (pr) noi += (pr.income[y]||0) - (pr.landRent[y]||0); }); dscrRaw[y] = noi / debtService[y]; } }
+    return { ...financing, leveredCF, debtService, debtBalClose, interest, repayment, exitProceeds,
+      leveredIRR: calcIRR(leveredCF), dscr: dscrRaw,
+      totalDebt: pfs.reduce((s,pf) => s + (pf.totalDebt||0), 0),
+      totalEquity: pfs.reduce((s,pf) => s + (pf.totalEquity||0), 0),
+      totalInterest: pfs.reduce((s,pf) => s + (pf.totalInterest||0), 0),
+      devCostInclLand: pfs.reduce((s,pf) => s + (pf.devCostInclLand||0), 0),
+      devCostExclLand: pfs.reduce((s,pf) => s + (pf.devCostExclLand||0), 0),
+      landCapValue: pfs.reduce((s,pf) => s + (pf.landCapValue||0), 0),
+      maxDebt: pfs.reduce((s,pf) => s + (pf.maxDebt||0), 0),
+      gpEquity: pfs.reduce((s,pf) => s + (pf.gpEquity||0), 0),
+      lpEquity: pfs.reduce((s,pf) => s + (pf.lpEquity||0), 0),
+      constrEnd: Math.max(...pfs.map(pf => pf.constrEnd || 0)),
+      upfrontFee: pfs.reduce((s,pf) => s + (pf.upfrontFee||0), 0),
+      devFeeTotal: pfs.reduce((s,pf) => s + (pf.devFeeTotal||0), 0),
+    };
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h, results]);
+
   const c = results.consolidated;
-  // pc = "phase cash flow" - reads directly from phaseResults when a phase is selected
-  const pc = (selectedPhase !== "all" && results.phaseResults?.[selectedPhase]) ? results.phaseResults[selectedPhase] : c;
+  const pc = useMemo(() => {
+    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
+    if (!isFiltered) return c;
+    const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
+    activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; for (let y=0;y<h;y++) { income[y]+=pr.income[y]||0; capex[y]+=pr.capex[y]||0; landRent[y]+=pr.landRent[y]||0; netCF[y]+=pr.netCF[y]||0; }});
+    return { income, capex, landRent, netCF, totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0), totalLandRent: landRent.reduce((a,b)=>a+b,0), totalNetCF: netCF.reduce((a,b)=>a+b,0), irr: calcIRR(netCF) };
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h, c]);
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
@@ -2162,32 +2219,46 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   };
 
   return (<div>
-    {/* ═══ PHASE SELECTOR (above settings) ═══ */}
+    {/* ═══ PHASE SELECTOR (multi-select) ═══ */}
     {hasPhases && (
-      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-        <button onClick={()=>setSelectedPhase("all")} style={{...btnS,padding:"7px 16px",fontSize:12,fontWeight:600,background:selectedPhase==="all"?"#1e3a5f":"#f0f1f5",color:selectedPhase==="all"?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase==="all"?"#1e3a5f":"#e5e7ec"),borderRadius:8}}>
-          {ar?"الإجمالي":"Consolidated"}
-        </button>
-        {phaseNames.map(p=>{
-          const pf = phaseFinancings?.[p];
-          const irr = pf?.leveredIRR;
-          return <button key={p} onClick={()=>setSelectedPhase(p)} style={{...btnS,padding:"7px 16px",fontSize:12,fontWeight:600,background:selectedPhase===p?"#1e3a5f":"#f0f1f5",color:selectedPhase===p?"#fff":"#1a1d23",border:"1px solid "+(selectedPhase===p?"#1e3a5f":"#e5e7ec"),borderRadius:8}}>
-            {p}{irr !== null && irr !== undefined ? <span style={{fontSize:10,opacity:0.8}}>{` Levered ${(irr*100).toFixed(1)}%`}</span> : ""}
-          </button>;
-        })}
-        {isPhaseView && (
-          <select onChange={e => { if (e.target.value) { copyFromPhase(e.target.value); e.target.value = ""; } }} style={{padding:"6px 12px",fontSize:11,borderRadius:6,border:"1px solid #93c5fd",background:"#eff6ff",color:"#1e40af",cursor:"pointer",marginInlineStart:"auto"}}>
-            <option value="">{ar?"📋 نسخ الإعدادات من...":"📋 Copy settings from..."}</option>
-            {(project.phases||[]).filter(p=>p.name!==selectedPhase).map(p=>
-              <option key={p.name} value={p.name}>{p.name}</option>
-            )}
-          </select>
-        )}
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {ar?"كل المراحل":"All Phases"}
+          </button>
+          {phaseNames.map(p=>{
+            const active = activePh.includes(p) && selectedPhases.length > 0;
+            const pf = phaseFinancings?.[p];
+            const irr = pf?.leveredIRR;
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+              {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>{(irr*100).toFixed(1)}%</span> : ""}
+            </button>;
+          })}
+          {isSinglePhase && (
+            <select onChange={e => { if (e.target.value) { copyFromPhase(e.target.value); e.target.value = ""; } }} style={{padding:"5px 10px",fontSize:10,borderRadius:6,border:"1px solid #93c5fd",background:"#eff6ff",color:"#1e40af",cursor:"pointer",marginInlineStart:"auto"}}>
+              <option value="">{ar?"📋 نسخ من...":"📋 Copy from..."}</option>
+              {(project.phases||[]).filter(p=>p.name!==singlePhaseName).map(p=>
+                <option key={p.name} value={p.name}>{p.name}</option>
+              )}
+            </select>
+          )}
+          {isFiltered && !isSinglePhase && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${allPhaseNames.length} مراحل`:`Showing ${activePh.length} of ${allPhaseNames.length} phases`}</span>}
+        </div>
       </div>
     )}
-    {isPhaseView && (
+    {/* Warning: settings propagation */}
+    {hasPhases && !isSinglePhase && (
+      <div style={{background:"#fffbeb",borderRadius:8,border:"1px solid #fde68a",padding:"8px 14px",marginBottom:12,fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:13}}>⚠</span>
+        {isFiltered
+          ? (ar ? `أي تعديل سينطبق على: ${activePh.join("، ")}` : `Changes apply to: ${activePh.join(", ")}`)
+          : (ar ? "أي تعديل هنا سينتشر في جميع المراحل" : "Changes here apply to ALL phases")}
+      </div>
+    )}
+    {/* Single phase info */}
+    {isSinglePhase && (
       <div style={{background:"#eff6ff",borderRadius:8,border:"1px solid #bfdbfe",padding:"10px 16px",marginBottom:12,fontSize:12,color:"#1e40af"}}>
-        <strong>{selectedPhase}</strong> — {ar?"إعدادات تمويل مستقلة":"Independent Financing Settings"}
+        <strong>{singlePhaseName}</strong> — {ar?"إعدادات تمويل مستقلة":"Independent Financing Settings"}
         {f && f.devCostInclLand > 0 && <span style={{marginInlineStart:12,color:"#6b7080"}}>DevCost: {fmtM(f.devCostInclLand)} · Debt: {fmtM(f.maxDebt)} · Equity: {fmtM(f.totalEquity)}</span>}
       </div>
     )}
@@ -2569,7 +2640,7 @@ When to use:
       };
 
       // Get waterfall for selected phase
-      const w = (selectedPhase !== "all" && phaseWaterfalls?.[selectedPhase]) ? phaseWaterfalls[selectedPhase] : waterfall;
+      const w = (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) ? phaseWaterfalls[singlePhaseName] : waterfall;
       const isFund = cfg.finMode === "fund";
       const isBank = cfg.finMode === "debt" || cfg.finMode === "bank100";
       const isSelf = cfg.finMode === "self";
@@ -2749,7 +2820,7 @@ When to use:
             {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>{ar?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
           </tr></thead><tbody>
             {/* ── Project CF ── */}
-            <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"التدفق التشغيلي":"PROJECT CASH FLOW"}{isPhaseView ? ` — ${selectedPhase}` : ""}</td></tr>
+            <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"التدفق التشغيلي":"PROJECT CASH FLOW"}{isFiltered ? ` — ${activePh.join(", ")}` : ""}</td></tr>
             <CFRow label={ar?"الإيرادات":"Revenue"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
             <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.totalLandRent} color="#ef4444" negate />
             <CFRow label={ar?"(-) تكاليف التطوير":"(-) CAPEX"} values={pc.capex} total={pc.totalCapex} color="#ef4444" negate />
