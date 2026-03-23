@@ -3507,58 +3507,68 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             </div>
           ) : (<>
           {/* ═══ STICKY KPI BAR + Expand/Collapse ═══ */}
-          {activeTab !== "dashboard" && (() => {
+          {activeTab !== "dashboard" && results?.consolidated && (() => {
             const ar = lang === "ar";
-            const c = results?.consolidated;
-            if (!c) return null;
-            const fm = project?.finMode || "self";
-            const phaseNames = Object.keys(results?.phaseResults || {});
+            const phaseNames = Object.keys(results.phaseResults || {});
             const hasPhases = phaseNames.length > 1;
+            const fm = project?.finMode || "self";
 
-            // Phase-aware data sources
-            const isPhase = kpiPhase !== "all" && results?.phaseResults?.[kpiPhase];
-            const pc = isPhase ? results.phaseResults[kpiPhase] : c;
-            const f = isPhase && phaseFinancings?.[kpiPhase] ? phaseFinancings[kpiPhase] : financing;
-            const w = isPhase && phaseWaterfalls?.[kpiPhase] ? phaseWaterfalls[kpiPhase] : waterfall;
-            const ir = incentivesResult;
+            // ── Data sources: phase-aware ──
+            const isPhase = kpiPhase !== "all" && !!results.phaseResults?.[kpiPhase];
+            const pc = isPhase ? results.phaseResults[kpiPhase] : results.consolidated;
+            const f  = isPhase ? phaseFinancings?.[kpiPhase] || financing : financing;
+            const w  = isPhase ? phaseWaterfalls?.[kpiPhase] || waterfall : waterfall;
 
-            const hasDebt = fm !== "self" && f && f.totalDebt > 0;
-            const hasFund = fm === "fund" && w;
-            const hasIncentives = !isPhase && ir && ir.totalIncentiveValue > 0;
-            const notHold = (project?.exitStrategy || "sale") !== "hold";
-            const displayIRR = hasIncentives && ir.adjustedIRR !== null ? ir.adjustedIRR : (hasDebt && f?.leveredIRR != null ? f.leveredIRR : pc.irr);
-            const dscrVals = f?.dscr ? f.dscr.filter(v => v !== null && v > 0) : [];
-            const minDscr = dscrVals.length > 0 ? Math.min(...dscrVals) : null;
-            const exitProc = f?.exitProceeds || 0;
+            // ── Derived metrics ──
+            const hasDebt   = fm !== "self" && f?.totalDebt > 0;
+            const hasFund   = fm === "fund" && w;
+            const hasInc    = !isPhase && incentivesResult?.totalIncentiveValue > 0;
+            const notHold   = (project?.exitStrategy || "sale") !== "hold";
+            const irr       = hasInc && incentivesResult.adjustedIRR != null ? incentivesResult.adjustedIRR : (hasDebt && f?.leveredIRR != null ? f.leveredIRR : pc.irr);
+            const dscrArr   = f?.dscr?.filter(v => v != null && v > 0) || [];
+            const minDscr   = dscrArr.length ? Math.min(...dscrArr) : null;
+            const effLTV    = f?.devCostInclLand > 0 ? (f.totalDebt / f.devCostInclLand) * 100 : 0;
+            const exitVal   = f?.exitProceeds || 0;
 
-            const items = [
-              { label: ar ? "التكاليف" : "CAPEX", value: fmtM(pc.totalCapex || 0), color: "#ef4444" },
-              { label: ar ? "الإيرادات" : "Revenue", value: fmtM(pc.totalIncome || 0), color: "#16a34a" },
-              { label: "IRR", value: displayIRR != null ? (displayIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", displayIRR) },
-              ...(fm === "self" && !isPhase ? [{ label: "NPV", value: fmtM(calcNPV(pc.netCF, 0.10)), color: getMetricColor("NPV", calcNPV(pc.netCF, 0.10)) }] : []),
-              ...(hasDebt ? [
-                { label: "DSCR", value: minDscr !== null ? minDscr.toFixed(2) + "x" : "—", color: getMetricColor("DSCR", minDscr) },
-                { label: "LTV", value: f.devCostInclLand > 0 ? ((f.totalDebt / f.devCostInclLand) * 100).toFixed(0) + "%" : "—", color: getMetricColor("LTV", f.devCostInclLand > 0 ? (f.totalDebt / f.devCostInclLand) * 100 : 0) },
-              ] : []),
-              ...(hasFund ? [
-                { label: "LP IRR", value: w.lpIRR != null ? (w.lpIRR * 100).toFixed(1) + "%" : "—", color: getMetricColor("IRR", w.lpIRR) },
-                { label: "MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2) + "x" : "—", color: getMetricColor("MOIC", w.lpMOIC) },
-              ] : []),
-              ...(hasDebt && notHold && exitProc > 0 ? [{ label: ar ? "تخارج" : "Exit", value: fmtM(exitProc), color: "#8b5cf6" }] : []),
+            // ── Build KPI list ──
+            const kpis = [
+              { k: "capex",   l: ar ? "التكاليف" : "CAPEX",     v: fmtM(pc.totalCapex || 0), c: "#ef4444" },
+              { k: "revenue", l: ar ? "الإيرادات" : "Revenue",   v: fmtM(pc.totalIncome || 0), c: "#16a34a" },
+              { k: "irr",     l: "IRR",                          v: irr != null ? (irr * 100).toFixed(1) + "%" : "—", c: getMetricColor("IRR", irr) },
             ];
+            if (fm === "self" && !isPhase)
+              kpis.push({ k: "npv", l: "NPV", v: fmtM(calcNPV(pc.netCF, 0.10)), c: getMetricColor("NPV", calcNPV(pc.netCF, 0.10)) });
+            if (hasDebt) {
+              kpis.push({ k: "dscr", l: "DSCR", v: minDscr != null ? minDscr.toFixed(2) + "x" : "—", c: getMetricColor("DSCR", minDscr) });
+              kpis.push({ k: "ltv",  l: "LTV",  v: effLTV > 0 ? effLTV.toFixed(0) + "%" : "—", c: getMetricColor("LTV", effLTV) });
+            }
+            if (hasFund) {
+              kpis.push({ k: "lpirr", l: "LP IRR", v: w.lpIRR != null ? (w.lpIRR * 100).toFixed(1) + "%" : "—", c: getMetricColor("IRR", w.lpIRR) });
+              kpis.push({ k: "moic",  l: "MOIC",   v: w.lpMOIC ? w.lpMOIC.toFixed(2) + "x" : "—", c: getMetricColor("MOIC", w.lpMOIC) });
+            }
+            if (hasDebt && notHold && exitVal > 0)
+              kpis.push({ k: "exit", l: ar ? "تخارج" : "Exit", v: fmtM(exitVal), c: "#8b5cf6" });
+
+            // ── Shared tab style ──
+            const tabStyle = (active) => ({
+              padding: "5px 12px", fontSize: 9, fontWeight: active ? 700 : 500,
+              border: "none", borderBottom: active ? "2px solid #2563eb" : "2px solid transparent",
+              background: "none", color: active ? "#2563eb" : "#9ca3af",
+              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap"
+            });
 
             return <div style={{background:"#fafbfc",borderBottom:"1px solid #e5e7ec",position:"sticky",top:0,zIndex:20}}>
-              {/* Phase tabs row (only if multiple phases) */}
-              {hasPhases && <div style={{display:"flex",gap:0,padding:"0 18px",borderBottom:"1px solid #f0f1f3",overflowX:"auto"}}>
-                <button onClick={()=>setKpiPhase("all")} style={{padding:"5px 12px",fontSize:9,fontWeight:kpiPhase==="all"?700:500,border:"none",borderBottom:kpiPhase==="all"?"2px solid #2563eb":"2px solid transparent",background:"none",color:kpiPhase==="all"?"#2563eb":"#9ca3af",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{ar?"الإجمالي":"All"}</button>
-                {phaseNames.map(p => <button key={p} onClick={()=>setKpiPhase(p)} style={{padding:"5px 12px",fontSize:9,fontWeight:kpiPhase===p?700:500,border:"none",borderBottom:kpiPhase===p?"2px solid #2563eb":"2px solid transparent",background:"none",color:kpiPhase===p?"#2563eb":"#9ca3af",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{p}</button>)}
-              </div>}
-              {/* KPI metrics row */}
+              {hasPhases && (
+                <div style={{display:"flex",padding:"0 18px",borderBottom:"1px solid #f0f1f3",overflowX:"auto"}}>
+                  <button onClick={()=>setKpiPhase("all")} style={tabStyle(kpiPhase==="all")}>{ar?"الإجمالي":"All"}</button>
+                  {phaseNames.map(p => <button key={p} onClick={()=>setKpiPhase(p)} style={tabStyle(kpiPhase===p)}>{p}</button>)}
+                </div>
+              )}
               <div style={{padding:isMobile?"5px 10px":"5px 18px",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap"}}>
-                {items.map((item, i) => (
-                  <div key={i} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11}}>
-                    <span style={{color:"#9ca3af",fontSize:9,fontWeight:500}}>{item.label}</span>
-                    <span style={{fontWeight:700,color:item.color,fontVariantNumeric:"tabular-nums"}}>{item.value}</span>
+                {kpis.map(kpi => (
+                  <div key={kpi.k} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11}}>
+                    <span style={{color:"#9ca3af",fontSize:9,fontWeight:500}}>{kpi.l}</span>
+                    <span style={{fontWeight:700,color:kpi.c,fontVariantNumeric:"tabular-nums"}}>{kpi.v}</span>
                   </div>
                 ))}
                 <div style={{flex:1}} />
