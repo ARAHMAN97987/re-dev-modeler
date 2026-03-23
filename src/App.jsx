@@ -560,14 +560,14 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p=>{
             const active = activePh.includes(p) && selectedPhases.length > 0;
             const pw = phaseWaterfalls?.[p];
             const irr = pw?.lpIRR;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
               {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>LP {(irr*100).toFixed(1)}%</span> : ""}
             </button>;
           })}
@@ -1377,12 +1377,12 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
     {allPhaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {allPhaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
               {p}
             </button>;
           })}
@@ -1726,14 +1726,14 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
             const pff = phaseFinancings?.[p];
             const irr = pff?.leveredIRR;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
               {p}{irr!==null&&irr!==undefined?<span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>{(irr*100).toFixed(1)}%</span>:""}
             </button>;
           })}
@@ -2342,14 +2342,14 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p=>{
             const active = activePh.includes(p) && selectedPhases.length > 0;
             const pf = phaseFinancings?.[p];
             const irr = pf?.leveredIRR;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
               {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>{(irr*100).toFixed(1)}%</span> : ""}
             </button>;
           })}
@@ -3079,7 +3079,7 @@ When to use:
               {/* VERIFICATION */}
               <tr style={{background:"#fefce8"}}>
                 <td style={{...tdL,background:"#fefce8",color:"#92400e",fontSize:9}}>{ar?"✓ تحقق (حساب مستقل)":"✓ Verify (independent calc)"}</td>
-                <td style={{...tdS,background:"#fefce8",fontSize:8,color:"#9ca3af"}}>{ar?"يدوي":"manual"}</td>
+                <td style={{...tdS,background:"#fefce8",fontSize:10,color:"#9ca3af"}}>{ar?"يدوي":"manual"}</td>
                 {tracerYears.map(y=>{
                   let exp;
                   if (fSold && y > exitYrIdx) { exp = 0; }
@@ -4105,10 +4105,10 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             <div style={{fontSize:isMobile?11:13,color:"#6b7080",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#2EC4B6",color:"#fff",padding:"6px 14px",fontSize:11,fontWeight:600,border:"none",borderRadius:6}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
-            {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"6px 14px",fontSize:11,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:6}} title={ar?"أكاديمية حصيف":"Haseef Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
+            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#2EC4B6",color:"#fff",padding:"8px 16px",fontSize:12,fontWeight:600,border:"none",borderRadius:6}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
+            {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"8px 16px",fontSize:12,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:6}} title={ar?"أكاديمية حصيف":"Haseef Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
             {!isMobile && user && <div style={{fontSize:11,color:"#6b7080",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
-            {signOut && <button onClick={signOut} style={{...btnSm,background:"#fef2f2",color:"#ef4444",padding:"6px 14px",fontSize:11,fontWeight:500}}>{ar?"خروج":"Sign Out"}</button>}
+            {signOut && <button onClick={signOut} style={{...btnSm,background:"#fef2f2",color:"#ef4444",padding:"8px 16px",fontSize:12,fontWeight:500}}>{ar?"خروج":"Sign Out"}</button>}
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#e8e5e0",color:"#4b5060",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>
@@ -4428,6 +4428,7 @@ function Sel({value,onChange,options,lang}) {
 // SIDEBAR ADVISOR PANEL (with Phase Tabs)
 // ═══════════════════════════════════════════════════════════════
 function SidebarAdvisor({ project, results, financing, waterfall, incentivesResult, lang, setActiveTab }) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [advPhase, setAdvPhase] = useState("all"); // "all" or phase name
   const ar = lang === "ar";
@@ -4617,7 +4618,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
           )}
 
           {/* ── KPI Strip ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr 1fr":"1fr 1fr 1fr", gap: 6, marginBottom: 10 }}>
             {[
               { label: "IRR", value: irrVal !== null ? (irrVal * 100).toFixed(1) + "%" : "—", ok: irrOk },
               { label: isPhase ? "NPV" : (minDscr !== null ? "DSCR" : "NPV"), value: isPhase ? (npvVal >= 1e6 ? fmtM(npvVal) : "—") : (minDscr !== null ? minDscr.toFixed(2) + "x" : (npvVal >= 1e6 ? fmtM(npvVal) : npvVal > 0 ? "+" : "—")), ok: isPhase ? npvOk : (minDscr !== null ? dscrOk : npvOk) },
@@ -5482,7 +5483,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
             {/* ── Group 1: Basic Info ── */}
             <FieldGroup icon="📝" title={ar?"أساسي":"Basic Info"}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:10}}>
               <F2 label={ar?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></F2>
               <F2 label={ar?"التصنيف":"Category"}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></F2>
               <F2 label={ar?"نوع الإيراد":"Rev Type"}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
@@ -5494,7 +5495,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
 </FieldGroup>
             {/* ── Group 2: Areas & Dimensions ── */}
             <FieldGroup icon="📐" title={ar?"المساحات":"Areas & Dimensions"}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
               <F2 label={ar?"مساحة القطعة Plot Area":"Plot Area"} error={a.plotArea<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"المسطح البنائي Footprint":"Footprint"} error={a.footprint<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"المساحة الطابقية GFA (م²)":"GFA (m²)"} error={a.gfa<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
@@ -5502,7 +5503,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
 </FieldGroup>
             {/* ── Group 3: Revenue ── */}
             <FieldGroup icon="💰" title={ar?"الإيرادات":"Revenue"}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
               <F2 label={ar?"نسبة الكفاءة Eff %":"Efficiency %"}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"معدل الإيجار Lease Rate /م²":"Lease Rate"}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"EBITDA التشغيلية":"Op EBITDA"}><EditableCell type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
@@ -5525,7 +5526,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             </div>
             {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginTop:8}}>{isH?(ar?"⚙ حساب أرباح الفندق":"⚙ Hotel P&L"):(ar?"⚙ حساب أرباح المارينا":"⚙ Marina P&L")}</button>}
             </FieldGroup>
-            <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:12}}>
+            <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:8,fontSize:12}}>
               <div><span style={{color:"#6b7080"}}>{ar?"التكاليف:":"CAPEX:"}</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
               <div><span style={{color:"#6b7080"}}>{ar?"الإيرادات:":"Income:"}</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
               {(()=>{
@@ -5948,12 +5949,12 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
     {phaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
               {p}
             </button>;
           })}
@@ -9374,8 +9375,8 @@ function CashFlowView({ project, results, t, incentivesResult }) {
       const isPB = c.paybackYear !== null && y === c.paybackYear;
       const bg = constr && !income ? "#fef3c7" : constr && income ? "#fef9c3" : income ? "#dcfce7" : "#f8f9fb";
       const lbl = constr && !income ? (ar?"بناء":"Build") : constr && income ? (ar?"بناء+دخل":"Build+Op") : income ? (ar?"تشغيل":"Oper.") : "";
-      return <td key={y} style={{padding:"2px 4px",textAlign:"center",background:bg,fontSize:8,fontWeight:600,color:constr?"#a16207":"#16a34a",borderBottom:isPB?"3px solid #2563eb":"1px solid #e5e7ec",position:"relative"}}>
-        {lbl}{isPB && <span style={{display:"block",fontSize:7,color:"#2563eb",fontWeight:700}}>{ar?"استرداد":"Payback"}</span>}
+      return <td key={y} style={{padding:"2px 4px",textAlign:"center",background:bg,fontSize:10,fontWeight:600,color:constr?"#a16207":"#16a34a",borderBottom:isPB?"3px solid #2563eb":"1px solid #e5e7ec",position:"relative"}}>
+        {lbl}{isPB && <span style={{display:"block",fontSize:9,color:"#2563eb",fontWeight:700}}>{ar?"استرداد":"Payback"}</span>}
       </td>;
     })}
   </tr>;
@@ -9385,12 +9386,12 @@ function CashFlowView({ project, results, t, incentivesResult }) {
     {allPhaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {allPhaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
               {p}
             </button>;
           })}
@@ -10058,15 +10059,15 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                   <div style={{display:"flex",flexDirection:"column",gap:2}}>
                     {cap>0&&<div style={{display:"flex",alignItems:"center",gap:4}}>
                       <div style={{width:Math.max(2,cap/maxVal*100)+"%",height:6,background:"#fca5a5",borderRadius:3}} />
-                      <span style={{fontSize:8,color:"#ef4444",whiteSpace:"nowrap"}}>{fmtM(cap)}</span>
+                      <span style={{fontSize:10,color:"#ef4444",whiteSpace:"nowrap"}}>{fmtM(cap)}</span>
                     </div>}
                     {inc>0&&<div style={{display:"flex",alignItems:"center",gap:4}}>
                       <div style={{width:Math.max(2,inc/maxVal*100)+"%",height:6,background:"#86efac",borderRadius:3}} />
-                      <span style={{fontSize:8,color:"#16a34a",whiteSpace:"nowrap"}}>{fmtM(inc)}</span>
+                      <span style={{fontSize:10,color:"#16a34a",whiteSpace:"nowrap"}}>{fmtM(inc)}</span>
                     </div>}
                     <div style={{display:"flex",alignItems:"center",gap:4}}>
                       <div style={{width:Math.max(2,Math.abs(net)/maxVal*100)+"%",height:6,background:net>=0?"#0f766e":"#dc2626",borderRadius:3}} />
-                      <span style={{fontSize:8,color:net>=0?"#0f766e":"#dc2626",fontWeight:600,whiteSpace:"nowrap"}}>{fmtM(net)}</span>
+                      <span style={{fontSize:10,color:net>=0?"#0f766e":"#dc2626",fontWeight:600,whiteSpace:"nowrap"}}>{fmtM(net)}</span>
                     </div>
                   </div>
                 </div>;
@@ -10235,8 +10236,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <div style={zanSec}>{ar?"4. التدفقات النقدية 10 سنوات وDSCR":"4. 10-Year Cash Flow & DSCR"}</div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:9}}>
             <thead><tr style={{background:"#0f1117"}}>
-              <th style={{...zanTh,fontSize:8}}>{ar?"البند":"Item"}</th>
-              {bankYears.map(y=><th key={y} style={{...zanTh,textAlign:numA,fontSize:8}}>{sy+y}</th>)}
+              <th style={{...zanTh,fontSize:10}}>{ar?"البند":"Item"}</th>
+              {bankYears.map(y=><th key={y} style={{...zanTh,textAlign:numA,fontSize:10}}>{sy+y}</th>)}
             </tr></thead>
             <tbody>
               {[
@@ -10306,14 +10307,14 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                     const d = f.dscr?.[y]; const val = d===null||d===undefined||d===Infinity ? 0 : d;
                     const h = Math.min(val/3*100, 100);
                     return <div key={y} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                      <div style={{fontSize:7,fontWeight:700,color:val>=1.2?"#16a34a":val>0?"#ef4444":"#9ca3af"}}>{val>0?val.toFixed(1)+"x":"—"}</div>
+                      <div style={{fontSize:9,fontWeight:700,color:val>=1.2?"#16a34a":val>0?"#ef4444":"#9ca3af"}}>{val>0?val.toFixed(1)+"x":"—"}</div>
                       <div style={{width:"100%",height:h+"%",minHeight:2,background:val>=1.25?"#86efac":val>=1.0?"#fde68a":"#fca5a5",borderRadius:"2px 2px 0 0",transition:"height 0.3s"}} />
-                      <div style={{fontSize:7,color:"#9ca3af"}}>{sy+y}</div>
+                      <div style={{fontSize:9,color:"#9ca3af"}}>{sy+y}</div>
                     </div>;
                   })}
                 </div>
                 <div style={{borderTop:"2px solid #ef4444",marginTop:0,position:"relative"}}>
-                  <span style={{position:"absolute",top:-8,right:0,fontSize:7,color:"#ef4444",fontWeight:600}}>1.0x {ar?"الحد الأدنى":"min"}</span>
+                  <span style={{position:"absolute",top:-8,right:0,fontSize:9,color:"#ef4444",fontWeight:600}}>1.0x {ar?"الحد الأدنى":"min"}</span>
                 </div>
               </div>
               {/* Debt Balance Profile */}
@@ -10326,9 +10327,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                       const bal = f.debtBalClose?.[y]||0;
                       const pct = bal/maxDebt*100;
                       return <div key={y} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                        <div style={{fontSize:7,fontWeight:600,color:"#3b82f6"}}>{bal>0?fmtM(bal):""}</div>
+                        <div style={{fontSize:9,fontWeight:600,color:"#3b82f6"}}>{bal>0?fmtM(bal):""}</div>
                         <div style={{width:"100%",height:pct+"%",minHeight:bal>0?2:0,background:"linear-gradient(180deg,#3b82f6,#93c5fd)",borderRadius:"2px 2px 0 0"}} />
-                        <div style={{fontSize:7,color:"#9ca3af"}}>{sy+y}</div>
+                        <div style={{fontSize:9,color:"#9ca3af"}}>{sy+y}</div>
                       </div>;
                     })}
                   </div>;
@@ -10494,11 +10495,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                     <div style={{display:"flex",flexDirection:"column",gap:2}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <div style={{width:Math.max(2,d.lp/maxCum*100)+"%",height:7,background:"linear-gradient(90deg,#8b5cf6,#a78bfa)",borderRadius:3}} />
-                        <span style={{fontSize:8,color:"#8b5cf6",whiteSpace:"nowrap"}}>{fmtM(d.lp)}</span>
+                        <span style={{fontSize:10,color:"#8b5cf6",whiteSpace:"nowrap"}}>{fmtM(d.lp)}</span>
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <div style={{width:Math.max(2,d.gp/maxCum*100)+"%",height:7,background:"linear-gradient(90deg,#0f766e,#2EC4B6)",borderRadius:3}} />
-                        <span style={{fontSize:8,color:"#0f766e",whiteSpace:"nowrap"}}>{fmtM(d.gp)}</span>
+                        <span style={{fontSize:10,color:"#0f766e",whiteSpace:"nowrap"}}>{fmtM(d.gp)}</span>
                       </div>
                     </div>
                   </div>
@@ -10529,12 +10530,12 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                     <div style={{fontSize:10,fontWeight:600,color:"#374151"}}>{p.icon} {p.l}</div>
                     <div style={{position:"relative",height:16,background:"#f0f1f5",borderRadius:8}}>
                       <div style={{position:"absolute",left:(p.from/totalYrs*100)+"%",width:Math.max(4,(p.to-p.from+1)/totalYrs*100)+"%",height:"100%",background:p.color,borderRadius:8,opacity:0.8}} />
-                      <div style={{position:"absolute",left:(p.from/totalYrs*100)+"%",top:-1,fontSize:7,color:p.color,fontWeight:600}}>{sy+p.from}</div>
-                      <div style={{position:"absolute",left:Math.min(95,((p.to+1)/totalYrs*100))+"%",top:-1,fontSize:7,color:p.color,fontWeight:600}}>{sy+p.to}</div>
+                      <div style={{position:"absolute",left:(p.from/totalYrs*100)+"%",top:-1,fontSize:9,color:p.color,fontWeight:600}}>{sy+p.from}</div>
+                      <div style={{position:"absolute",left:Math.min(95,((p.to+1)/totalYrs*100))+"%",top:-1,fontSize:9,color:p.color,fontWeight:600}}>{sy+p.to}</div>
                     </div>
                   </div>
                 ))}
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#9ca3af",marginTop:4,paddingLeft:128}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#9ca3af",marginTop:4,paddingLeft:128}}>
                   <span>{sy}</span><span>{sy+Math.floor(totalYrs/4)}</span><span>{sy+Math.floor(totalYrs/2)}</span><span>{sy+Math.floor(totalYrs*3/4)}</span><span>{sy+totalYrs-1}</span>
                 </div>
               </div>;
@@ -11243,12 +11244,12 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {allPhaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
               {p}
             </button>;
           })}
@@ -11304,7 +11305,7 @@ Government pays part of financing cost or provides a zero-profit loan. Lowers ef
           </select>
         </F>
         {inc.financeSupport?.subType === "interestSubsidy" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr 1fr", gap: 8 }}>
             <F label={lang === "ar" ? "نسبة التحمل %" : "Subsidy %"}><NI value={inc.financeSupport?.subsidyPct || 50} onChange={v => upInc("financeSupport", { subsidyPct: v })} /></F>
             <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"}><NI value={inc.financeSupport?.subsidyYears || 5} onChange={v => upInc("financeSupport", { subsidyYears: v })} /></F>
             <F label={lang === "ar" ? "البداية" : "Start"}>
@@ -11316,7 +11317,7 @@ Government pays part of financing cost or provides a zero-profit loan. Lowers ef
           </div>
         )}
         {inc.financeSupport?.subType === "softLoan" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr 1fr", gap: 8 }}>
             <F label={lang === "ar" ? "المبلغ (ريال)" : "Amount (SAR)"}><NI value={inc.financeSupport?.softLoanAmount || 0} onChange={v => upInc("financeSupport", { softLoanAmount: v })} /></F>
             <F label={lang === "ar" ? "المدة (سنوات)" : "Tenor (yrs)"}><NI value={inc.financeSupport?.softLoanTenor || 10} onChange={v => upInc("financeSupport", { softLoanTenor: v })} /></F>
             <F label={lang === "ar" ? "سماح (سنوات)" : "Grace (yrs)"}><NI value={inc.financeSupport?.softLoanGrace || 3} onChange={v => upInc("financeSupport", { softLoanGrace: v })} /></F>
@@ -11352,7 +11353,7 @@ Rebates or deferrals of municipal charges, permits, and regulatory fees. Even de
               <input value={item.name || ""} onChange={e => updateFeeItem(i, { name: e.target.value })} placeholder={lang === "ar" ? "اسم الرسم" : "Fee name"} style={{ ...sideInputStyle, flex: 1, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }} />
               <button onClick={() => removeFeeItem(i)} style={{ ...btnSm, background: "#fef2f2", color: "#ef4444" }}>✕</button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, fontSize: 11 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr", gap: 6, fontSize: 11 }}>
               <div>
                 <div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "النوع" : "Type"}</div>
                 <select value={item.type || "rebate"} onChange={e => updateFeeItem(i, { type: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec", padding: "4px 6px" }}>
@@ -11386,6 +11387,7 @@ function NI({ value, onChange, style: sx }) {
 }
 
 function MarketView({ project, results, lang, up }) {
+  const isMobile = useIsMobile();
   const ar = lang === "ar";
   if (!project) return null;
   const m = project.market || {};
@@ -11592,7 +11594,7 @@ function MarketView({ project, results, lang, up }) {
       <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e5e7ec", padding: "18px 20px", marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{ar ? "④ معاملات التحويل" : "④ Conversion Factors"}</div>
         <div style={{ fontSize: 10, color: "#6b7080", marginBottom: 12 }}>{ar ? "لتحويل الغرف والوحدات والمراسي إلى متر مربع مكافئ" : "For converting keys/units/berths to equivalent sqm"}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr 1fr", gap: 12 }}>
           <div>
             <div style={{ fontSize: 10, color: "#6b7080", marginBottom: 4 }}>{ar ? "م²/غرفة فندقية" : "sqm / Hotel Key"}</div>
             <NI value={conv.sqmPerKey || 45} onChange={v => upConv("sqmPerKey", v)} />
@@ -11679,6 +11681,7 @@ function ChecksView({ checks, t, lang, onFix }) {
 // PRESENTATION MODE (Sprint 2)
 // ═══════════════════════════════════════════════════════════════
 function PresentationView({ project, results, financing, waterfall, incentivesResult, lang, audienceView, liveSliders, setLiveSliders, checks }) {
+  const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [activePhase, setActivePhase] = useState("consolidated"); // "consolidated" or phase name
   if (!results || !project) return <div style={{textAlign:"center",padding:60,color:"#6b7080",fontSize:14}}>{ar?"لا توجد بيانات للعرض":"No data to present"}</div>;
@@ -11855,15 +11858,15 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
                   const clr = d >= 1.4 ? "#16a34a" : d >= 1.2 ? "#eab308" : "#ef4444";
                   return (
                     <div key={y} style={{flex:1,minWidth:24,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                      <span style={{fontSize:8,color:"#6b7080",fontWeight:600}}>{d.toFixed(1)}x</span>
+                      <span style={{fontSize:10,color:"#6b7080",fontWeight:600}}>{d.toFixed(1)}x</span>
                       <div style={{width:"80%",height:h,background:clr,borderRadius:3,transition:"height 0.5s"}} />
-                      <span style={{fontSize:8,color:"#9ca3af"}}>{(liveProject.startYear||2026)+y}</span>
+                      <span style={{fontSize:10,color:"#9ca3af"}}>{(liveProject.startYear||2026)+y}</span>
                     </div>
                   );
                 })}
               </div>
               <div style={{borderTop:"2px dashed #ef4444",marginTop:4,position:"relative"}}>
-                <span style={{position:"absolute",right:0,top:2,fontSize:8,color:"#ef4444",fontWeight:600}}>1.2x {ar?"حد أدنى":"min"}</span>
+                <span style={{position:"absolute",right:0,top:2,fontSize:10,color:"#ef4444",fontWeight:600}}>1.2x {ar?"حد أدنى":"min"}</span>
               </div>
             </div>
           </Section>
@@ -11928,7 +11931,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
         </Section>
         {w && w.tier1 && (
           <Section title={ar?"شلال التوزيعات":"Distribution Waterfall"} color="#7c3aed">
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:12}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)",gap:12}}>
               {[
                 { label: ar?"رد رأس المال":"T1: Return of Capital", value: (w.tier1||[]).reduce((s,v)=>s+v,0), color: "#1e40af" },
                 { label: ar?"العائد التفضيلي":"T2: Pref Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" },
