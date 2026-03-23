@@ -781,8 +781,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
     <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
       <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
-      <th style={{...thSt,textAlign:"right",minWidth:85}}>Total</th>
-      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
+      <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
+      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?"س":"Yr"} {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
     </tr></thead><tbody>
 
       {/* ═══ § 7. PROJECT CF ═══ */}
@@ -1406,8 +1406,8 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
     <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
       <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
-      <th style={{...thSt,textAlign:"right",minWidth:85}}>Total</th>
-      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
+      <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
+      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?"س":"Yr"} {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
     </tr></thead><tbody>
 
       {/* ═══ § 1. PROJECT CF ═══ */}
@@ -1893,8 +1893,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
     <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
       <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
-      <th style={{...thSt,textAlign:"right",minWidth:85}}>Total</th>
-      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>Yr {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
+      <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
+      {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?"س":"Yr"} {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
     </tr></thead><tbody>
 
       {/* ═══ § 1. PROJECT CF (Unlevered) ═══ */}
@@ -3233,6 +3233,24 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         @keyframes zanModalIn { from { opacity: 0; transform: translate(-50%,-50%) scale(0.96); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
         .zan-shimmer { background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.07) 50%, rgba(0,0,0,0.04) 75%); background-size: 200% 100%; animation: zanShimmer 1.5s infinite; border-radius: 6px; }
         .zan-tab-content { animation: zanTabFade 0.2s ease-out; }
+        /* ═══ TYPOGRAPHY SCALE ═══ */
+        .zan-title { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+        .zan-section { font-size: 1.5rem; font-weight: 700; line-height: 1.3; }
+        .zan-subsection { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+        .zan-body { font-size: 0.9375rem; font-weight: 400; line-height: 1.6; }
+        .zan-label { font-size: 0.8125rem; font-weight: 500; color: #6b7080; }
+        .zan-small { font-size: 0.75rem; color: #9ca3af; }
+        .zan-metric { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        /* ═══ CARD SYSTEM ═══ */
+        .zan-card { background: #fff; border-radius: 12px; border: 1px solid #e5e7ec; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .zan-card-dark { background: rgba(15,17,23,0.6); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
+        /* ═══ SPACING HELPERS ═══ */
+        .zan-gap-sm { gap: 8px; }
+        .zan-gap-md { gap: 12px; }
+        .zan-gap-lg { gap: 20px; }
+        .zan-section-gap { margin-bottom: 24px; }
+        /* ═══ FOCUS RING ═══ */
+        input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid #2EC4B6; outline-offset: 2px; }
         .hero-kpi { animation: fadeInUp 0.4s ease-out both; }
         .hero-kpi:nth-child(1) { animation-delay: 0s; }
         .hero-kpi:nth-child(2) { animation-delay: 0.08s; }
@@ -5127,7 +5145,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         {/* ═══ TEMPLATE PICKER MODAL ═══ */}
         {showTemplatePicker && (<>
           <div onClick={()=>setShowTemplatePicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9990}} />
-          <div style={{position:"fixed",zIndex:9991,top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:520,maxWidth:"94vw",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",overflow:"hidden"}}>
+          <div style={{position:"fixed",zIndex:9991,top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:520,maxWidth:"94vw",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",overflow:"hidden",animation:"zanModalIn 0.2s ease-out"}}>
             <div style={{padding:"20px 24px 12px",borderBottom:"1px solid #f0f1f5"}}>
               <div style={{fontSize:18,fontWeight:700,color:"#1a1d23"}}>{ar?"اختر نوع الأصل":"Choose Asset Type"}</div>
               <div style={{fontSize:12,color:"#6b7080",marginTop:4}}>{ar?"اختر قالب جاهز بقيم السوق السعودي، أو ابدأ فارغ":"Pick a template with Saudi market defaults, or start empty"}</div>
@@ -5147,7 +5165,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         const g3=isMobile?"1fr 1fr":"1fr 1fr 1fr";
         const g2=isMobile?"1fr":"1fr 1fr";
         return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
-        <div style={{position:"fixed",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden",background:"#fff",boxShadow:"0 20px 60px rgba(0,0,0,0.15)",...(isMobile?{inset:0,borderRadius:0}:{top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",borderRadius:16})}}>
+        <div style={{position:"fixed",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden",background:"#fff",boxShadow:"0 20px 60px rgba(0,0,0,0.15)",...(isMobile?{inset:0,borderRadius:0}:{top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",borderRadius:16,animation:"zanModalIn 0.2s ease-out"})}}>
           <div style={{padding:"16px 20px",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",gap:10}}>
             <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"#9ca3af"}}>{catL(a.category,ar)} · {a.phase}</div></div>
             <button onClick={()=>{dupAsset(i);setEditIdx(null);setTimeout(()=>setEditIdx(assets.length),80);}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"6px 12px",fontSize:11}} title={ar?"تكرار":"Duplicate"}>{ar?"📋 تكرار":"📋 Duplicate"}</button>
