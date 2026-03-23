@@ -549,7 +549,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
     const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af";};
     return <tr style={st}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:160}}>{label}</td>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:isMobile?100:160}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-total:total)}}>{fmt(total)}</td>
       {years.map(y=>{const v=values?.[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
     </tr>;
@@ -604,7 +604,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               {l:ar?"حصة LP %":"LP Split %",k:"lpProfitSplitPct",v:cfg.lpProfitSplitPct},
             ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{f.l}</span>
-              <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>)}
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080"}}>{ar?"GP Catch-up":"Catch-up"}</span>
@@ -849,7 +849,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
     <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-      <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
+      <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:isMobile?120:200}}>{ar?"البند":"Line Item"}</th>
       <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
       {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?"س":"Yr"} {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
     </tr></thead><tbody>
@@ -876,7 +876,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <CFRow label={ar?"إجمالي خدمة الدين":"Total Debt Service"} values={f.debtService} total={f.debtService?.reduce((a,b)=>a+b,0)||0} negate bold color="#ef4444" />
         {/* DSCR */}
         {f.dscr && <tr>
-          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>DSCR</td>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:isMobile?120:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>DSCR</td>
           <td style={tdN}></td>
           {years.map(y=>{const v=f.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:getMetricColor("DSCR",v)}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
         </tr>}
@@ -1366,7 +1366,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
     const st = bold ? {fontWeight:700,background:"#f8f9fb"} : {};
     const nc = v => { if(color) return color; return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af"; };
     return <tr style={st}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:200}}>{label}</td>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:isMobile?120:200}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-(total||0):(total||0))}}>{total!==null&&total!==undefined?fmt(total):""}</td>
       {years.map(y=>{const v=values?.[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
     </tr>;
@@ -1535,7 +1535,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
 
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
     <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-      <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
+      <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:isMobile?120:200}}>{ar?"البند":"Line Item"}</th>
       <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
       {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?"س":"Yr"} {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
     </tr></thead><tbody>
@@ -1566,13 +1566,13 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
       <CFRow label={ar?"= صافي التدفق النهائي":"= Final Net Cash Flow"} values={levCF} total={totalLevCF} bold />
       {/* Cumulative */}
       {(() => { let cum=0; const cumArr=levCF.map(v=>{cum+=v;return cum;}); return <tr style={{background:"#fffbeb"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:200}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:isMobile?120:200}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
         <td style={tdN}></td>
         {years.map(y=><td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cumArr[y]<0?"#ef4444":"#16a34a"}}>{fmt(cumArr[y])}</td>)}
       </tr>; })()}
       {/* Capital Deployed */}
       <tr style={{background:"#eff6ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:10,color:"#2563eb",minWidth:200}}>{ar?"رأس المال المجمد":"Capital Deployed"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:10,color:"#2563eb",minWidth:isMobile?120:200}}>{ar?"رأس المال المجمد":"Capital Deployed"}</td>
         <td style={tdN}></td>
         {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:capitalDeployed[y]>0?"#2563eb":"#d0d4dc"}}>{capitalDeployed[y]>0?fmt(capitalDeployed[y]):"—"}</td>)}
       </tr>
@@ -1709,7 +1709,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     const st = bold ? {fontWeight:700,background:"#f8f9fb"} : {};
     const nc = v => { if(color) return color; return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af"; };
     return <tr style={st}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:200}}>{label}</td>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:isMobile?120:200}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-(total||0):(total||0))}}>{total!==null&&total!==undefined?fmt(total):""}</td>
       {years.map(y=>{const v=values?.[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
     </tr>;
@@ -1765,7 +1765,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
           <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
             {!isBank100 && <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:70}}>LTV %</span>
-              <input type="number" value={cfg.maxLtvPct||""} onChange={e=>upCfg({maxLtvPct:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              <input type="number" value={cfg.maxLtvPct||""} onChange={e=>upCfg({maxLtvPct:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>}
             {[
               {l:ar?"معدل %":"Rate %",k:"financeRate",v:cfg.financeRate},
@@ -1774,7 +1774,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
               {l:ar?"رسوم %":"Fee %",k:"upfrontFeePct",v:cfg.upfrontFeePct},
             ].map(fld=><div key={fld.k} style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:70}}>{fld.l}</span>
-              <input type="number" value={fld.v||""} onChange={e=>upCfg({[fld.k]:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+              <input type="number" value={fld.v||""} onChange={e=>upCfg({[fld.k]:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>)}
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:70}}>{ar?"السداد":"Repay"}</span>
@@ -1811,20 +1811,20 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             {(cfg.exitStrategy||"sale")!=="hold"&&<>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"السنة":"Year"}</span>
-                <input type="number" value={cfg.exitYear||""} onChange={e=>upCfg({exitYear:parseFloat(e.target.value)||0})} placeholder="auto" style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+                <input type="number" value={cfg.exitYear||""} onChange={e=>upCfg({exitYear:parseFloat(e.target.value)||0})} placeholder="auto" style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
                 {pf?.optimalExitYear > 0 && pf?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && <span style={{fontSize:10,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.optimalExitYear} ({(pf.optimalExitIRR*100).toFixed(1)}%)</span>}
               </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"المضاعف":"Multiple"}</span>
-                <input type="number" value={cfg.exitMultiple||""} onChange={e=>upCfg({exitMultiple:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+                <input type="number" value={cfg.exitMultiple||""} onChange={e=>upCfg({exitMultiple:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
               </div>}
               {cfg.exitStrategy==="caprate"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"رسملة %":"Cap %"}</span>
-                <input type="number" value={cfg.exitCapRate||""} onChange={e=>upCfg({exitCapRate:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+                <input type="number" value={cfg.exitCapRate||""} onChange={e=>upCfg({exitCapRate:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
               </div>}
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"#6b7080",minWidth:60}}>{ar?"تكلفة %":"Cost %"}</span>
-                <input type="number" value={cfg.exitCostPct||""} onChange={e=>upCfg({exitCostPct:parseFloat(e.target.value)||0})} style={{width:60,padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+                <input type="number" value={cfg.exitCostPct||""} onChange={e=>upCfg({exitCostPct:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
               </div>
             </>}
           </div>
@@ -2072,7 +2072,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
     <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
     <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-      <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:200}}>{ar?"البند":"Line Item"}</th>
+      <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:isMobile?120:200}}>{ar?"البند":"Line Item"}</th>
       <th style={{...thSt,textAlign:"right",minWidth:85}}>{ar?"الإجمالي":"Total"}</th>
       {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:78}}>{ar?"س":"Yr"} {y+1}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
     </tr></thead><tbody>
@@ -2094,7 +2094,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       {!isBank100 && pf.equityCalls && <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={pf.equityCalls} total={pf.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" negate />}
       {/* Cumulative equity deployed */}
       {!isBank100 && pf.equityCalls && <tr style={{background:"#faf5ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:500,fontSize:10,color:"#7c3aed",paddingInlineStart:20,minWidth:200}}>{ar?"↳ ملكية تراكمية":"↳ Cumulative Equity"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:500,fontSize:10,color:"#7c3aed",paddingInlineStart:20,minWidth:isMobile?120:200}}>{ar?"↳ ملكية تراكمية":"↳ Cumulative Equity"}</td>
         <td style={tdN}></td>
         {(() => { let cum=0; return years.map(y => { cum+=pf.equityCalls[y]||0; return <td key={y} style={{...tdN,fontSize:10,fontWeight:500,color:cum>0?"#7c3aed":"#d0d4dc"}}>{cum>0?fmt(cum):"—"}</td>; }); })()}
       </tr>}
@@ -2117,7 +2117,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <CFRow label={ar?"(÷) خدمة الدين":"(÷) Debt Service"} values={pf.debtService} total={totalDS} color="#ef4444" />
       {/* DSCR = NOI / DS (highlighted) */}
       {pf.dscr && <tr style={{background:"#eff6ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:700,minWidth:200,fontSize:11,color:"#1e40af",paddingInlineStart:10}}>= DSCR (NOI ÷ DS)</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:700,minWidth:isMobile?120:200,fontSize:11,color:"#1e40af",paddingInlineStart:10}}>= DSCR (NOI ÷ DS)</td>
         <td style={{...tdN,fontWeight:700,color:"#1e40af"}}>{dscrAvg!==null?dscrAvg.toFixed(2)+"x":""}</td>
         {years.map(y=>{const v=pf.dscr?.[y];const bg=v===null||v===undefined?"#eff6ff":getMetricColor("DSCR",v,{raw:true})==="error"?"#fef2f2":getMetricColor("DSCR",v,{raw:true})==="warning"?"#fefce8":"#f0fdf4";const fg=getMetricColor("DSCR",v);return <td key={y} style={{...tdN,fontSize:11,fontWeight:700,color:fg,background:bg}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
       </tr>}
@@ -2146,7 +2146,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <CFRow label={ar?"= صافي التدفق (بعد التمويل)":"= Levered Net Cash Flow"} values={pf.leveredCF} total={devNetCF} bold />
       {/* Cumulative */}
       {(() => { let cum=0; const cumArr=pf.leveredCF.map(v=>{cum+=v;return cum;}); return <tr style={{background:"#fffbeb"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:200}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:isMobile?120:200}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
         <td style={tdN}></td>
         {years.map(y=><td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cumArr[y]<0?"#ef4444":"#16a34a"}}>{fmt(cumArr[y])}</td>)}
       </tr>; })()}
@@ -2331,7 +2331,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};
     const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af";};
     return <tr style={st}>
-      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:140}}>{label}</td>
+      <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:isMobile?100:140}}>{label}</td>
       <td style={{...tdN,fontWeight:600,color:nc(negate?-total:total)}}>{fmt(total)}</td>
       {years.map(y=>{const v=values?.[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
     </tr>;
@@ -2934,7 +2934,7 @@ When to use:
 
         <div style={{borderRadius:8,border:"2px solid #1e3a5f",overflow:"hidden"}}>
           <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{...tblStyle,fontSize:11}}><thead><tr>
-            <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:180}}>{ar?"البند":"Line Item"}</th>
+            <th style={{...thSt,position:"sticky",left:0,background:"#f8f9fb",zIndex:2,minWidth:isMobile?110:180}}>{ar?"البند":"Line Item"}</th>
             <th style={{...thSt,textAlign:"right"}}>{ar?"الإجمالي":"Total"}</th>
             {years.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:80}}>{ar?`سنة ${y+1}`:`Yr ${y+1}`}<br/><span style={{fontWeight:400,color:"#9ca3af"}}>{sy+y}</span></th>)}
           </tr></thead><tbody>
@@ -2989,7 +2989,7 @@ When to use:
             <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#f0f4ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #2563eb"}}>{ar?"النتيجة":"NET RESULT"}</td></tr>
             <CFRow label={ar?"= صافي التدفق الممول":"= Levered Net CF"} values={f.leveredCF} total={f.leveredCF.reduce((a,b)=>a+b,0)} bold />
             {(() => { let cum=0; return <tr style={{background:"#fffbeb"}}>
-              <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:180}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
+              <td style={{...tdSt,position:"sticky",left:0,background:"#fffbeb",zIndex:1,fontWeight:600,fontSize:10,color:"#92400e",minWidth:isMobile?110:180}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
               <td style={tdN}></td>
               {years.map(y=>{cum+=f.leveredCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
             </tr>; })()}
@@ -3017,7 +3017,7 @@ When to use:
       const tracerYears = Array.from({length:Math.min(15,h)},(_,i)=>i);
       const tdS = {padding:"3px 6px",fontSize:10,fontFamily:"monospace",textAlign:"right",borderBottom:"1px solid #f0f1f5",whiteSpace:"nowrap"};
       const tdH = {...tdS,fontWeight:700,background:"#f8f9fb",textAlign:"center",fontSize:9,position:"sticky",top:0,zIndex:1};
-      const tdL = {...tdS,textAlign:"left",fontWeight:600,position:"sticky",left:0,background:"#fff",zIndex:1,minWidth:180};
+      const tdL = {...tdS,textAlign:"left",fontWeight:600,position:"sticky",left:0,background:"#fff",zIndex:1,minWidth:isMobile?110:180};
       const fmtC = v => v === 0 ? "—" : (v > 0 ? "+" : "") + (Math.abs(v) >= 1e6 ? (v/1e6).toFixed(2)+"M" : Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+"K" : v.toFixed(0));
       const rowColor = (v) => v > 0 ? "#16a34a" : v < 0 ? "#ef4444" : "#9ca3af";
 
@@ -3623,7 +3623,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                 <button onClick={()=>setMenuOpen(!menuOpen)} style={{...btnS,background:menuOpen?"#f0f1f5":"transparent",color:"#4b5060",padding:isMobile?"4px 6px":"5px 8px",fontSize:isMobile?14:16,fontWeight:500,border:"none"}}>⋮</button>
                 {menuOpen && <>
                   <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:998}} />
-                  <div style={{position:"absolute",top:"100%",marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:200,padding:"6px 0",...(lang==="ar"?{left:0}:{right:0})}}>
+                  <div style={{position:"absolute",top:"100%",marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:isMobile?120:200,padding:"6px 0",...(lang==="ar"?{left:0}:{right:0})}}>
                     {/* AI */}
                     <button onClick={()=>{setAiOpen(true);setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#1a1d23",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>🤖</span> {lang==="ar"?"مساعد AI":"AI Assistant"}
@@ -3836,6 +3836,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
 // QUICK SETUP WIZARD
 // ═══════════════════════════════════════════════════════════════
 function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
+  const isMobile = useIsMobile();
   const [step, setStep] = useState(0);
   const [eduModal, setEduModal] = useState(null);
   const t = lang === "ar";
@@ -3900,23 +3901,23 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
 
   return (<>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
-      <div style={{background:"#fff",borderRadius:20,width:520,maxWidth:"94vw",padding:0,boxShadow:"0 24px 80px rgba(0,0,0,0.2)",overflow:"hidden"}}>
+      <div style={{background:"#fff",borderRadius:isMobile?14:20,width:520,maxWidth:"94vw",padding:0,boxShadow:"0 24px 80px rgba(0,0,0,0.2)",overflow:"hidden"}}>
         {/* Progress */}
-        <div style={{padding:"20px 28px 0",display:"flex",gap:6}}>
+        <div style={{padding:isMobile?"14px 16px 0":"20px 28px 0",display:"flex",gap:6}}>
           {activeSteps.map((_,i)=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?"#2563eb":"#e5e7ec",transition:"background 0.3s"}} />)}
         </div>
         {/* Header */}
-        <div style={{padding:"20px 28px 8px"}}>
+        <div style={{padding:isMobile?"14px 16px 6px":"20px 28px 8px"}}>
           <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:6}}>
             {t?"الخطوة":"Step"} {step+1} {t?"من":"of"} {activeSteps.length}
           </div>
-          <div style={{fontSize:20,fontWeight:700,color:"#1a1d23"}}>{current.title}</div>
-          {current.subtitle&&<div style={{fontSize:13,color:"#6b7080",marginTop:4}}>{current.subtitle}</div>}
+          <div style={{fontSize:isMobile?17:20,fontWeight:700,color:"#1a1d23"}}>{current.title}</div>
+          {current.subtitle&&<div style={{fontSize:12,color:"#6b7080",marginTop:4}}>{current.subtitle}</div>}
         </div>
         {/* Content */}
-        <div style={{padding:"12px 28px 24px",minHeight:200}}>{current.content}</div>
+        <div style={{padding:isMobile?"10px 16px 18px":"12px 28px 24px",minHeight:isMobile?160:200}}>{current.content}</div>
         {/* Footer */}
-        <div style={{padding:"16px 28px",borderTop:"1px solid #f0f1f5",display:"flex",gap:10,justifyContent:"space-between",background:"#fafbfc"}}>
+        <div style={{padding:isMobile?"12px 16px":"16px 28px",borderTop:"1px solid #f0f1f5",display:"flex",gap:10,justifyContent:"space-between",background:"#fafbfc"}}>
           <button onClick={()=>step>0?setStep(step-1):onDone()} style={{padding:"10px 20px",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff",color:"#6b7080",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>
             {step>0?(t?"السابق":"Back"):(t?"تخطي":"Skip")}
           </button>
@@ -9270,9 +9271,10 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 }
 
 function KPI({label,value,sub,color,tip}) {
-  return <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:"12px 14px"}}>
-    <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{tip?<Tip text={tip}>{label}</Tip>:label}</div>
-    <div style={{fontSize:19,fontWeight:700,color:color||"#1a1d23",lineHeight:1.1}}>{value}{sub&&<span style={{fontSize:11,fontWeight:400,color:"#9ca3af",marginInlineStart:4}}>{sub}</span>}</div>
+  const isMobile = useIsMobile();
+  return <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:isMobile?"10px 12px":"12px 14px"}}>
+    <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{tip?<Tip text={tip}>{label}</Tip>:label}</div>
+    <div style={{fontSize:isMobile?15:19,fontWeight:700,color:color||"#1a1d23",lineHeight:1.1}}>{value}{sub&&<span style={{fontSize:isMobile?10:11,fontWeight:400,color:"#9ca3af",marginInlineStart:4}}>{sub}</span>}</div>
   </div>;
 }
 
