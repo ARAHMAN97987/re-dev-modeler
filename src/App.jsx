@@ -11152,6 +11152,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
 function IncentivesView({ project, results, incentivesResult, financing, lang, up }) {
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
+  const [selectedPhases, setSelectedPhases] = useState([]);
   if (!project || !results) return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
       <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏛</div>
@@ -11159,10 +11160,43 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
       <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Incentives need project data. Add assets from the Program tab."}</div>
     </div>
   );
+
+  // ── Phase filter ──
+  const ar = lang === "ar";
+  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
+  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const hasPhases = allPhaseNames.length > 1;
+
+  // ── Phase share for proportional display ──
+  const phaseShare = useMemo(() => {
+    if (!isFiltered) return { capex: 1, land: 1 };
+    const rawC = results.consolidated;
+    let capexSum = 0, landSum = 0;
+    activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; capexSum += pr.totalCapex || 0; landSum += pr.totalLandRent || 0; });
+    return { capex: rawC.totalCapex > 0 ? capexSum / rawC.totalCapex : 0, land: rawC.totalLandRent > 0 ? landSum / rawC.totalLandRent : 0 };
+  }, [isFiltered, selectedPhases, results]);
+
   const ir = incentivesResult;
   const inc = project.incentives || {};
   const cur = project.currency || "SAR";
-  const c = results.consolidated;
+  const rawC = results.consolidated;
+  // Filtered CAPEX for display in formula
+  const cTotalCapex = isFiltered ? activePh.reduce((s, p) => s + (results.phaseResults?.[p]?.totalCapex || 0), 0) : rawC.totalCapex;
+
+  // Proportional incentive values
+  const pIR = useMemo(() => {
+    if (!ir) return null;
+    if (!isFiltered) return ir;
+    return {
+      ...ir,
+      totalIncentiveValue: (ir.totalIncentiveValue || 0) * phaseShare.capex,
+      capexGrantTotal: (ir.capexGrantTotal || 0) * phaseShare.capex,
+      landRentSavingTotal: (ir.landRentSavingTotal || 0) * phaseShare.land,
+      feeRebateTotal: (ir.feeRebateTotal || 0) * phaseShare.capex,
+    };
+  }, [ir, isFiltered, phaseShare]);
 
   const upInc = (key, updates) => {
     const newInc = { ...project.incentives, [key]: { ...project.incentives[key], ...updates } };
@@ -11183,9 +11217,9 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   };
 
   // Without incentives calc (for comparison)
-  const irrWithout = c.irr;
+  const irrWithout = rawC.irr;
   const irrWith = financing?.leveredIRR;
-  const npvWithout = c.npv10;
+  const npvWithout = rawC.npv10;
 
   const ToggleCard = ({ title, titleAr, enabled, onToggle, color, value, children, tip }) => (
     <div style={{ background: "#fff", borderRadius: 8, border: `1px solid ${enabled ? color : "#e5e7ec"}`, overflow: "hidden", transition: "border-color 0.2s" }}>
@@ -11205,13 +11239,37 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   const F = ({ label, children, hint }) => <div style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: "#6b7080", marginBottom: 3 }}>{label}</div>{children}{hint && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{hint}</div>}</div>;
 
   return (<div>
+    {/* ═══ PHASE FILTER ═══ */}
+    {hasPhases && (
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {ar?"كل المراحل":"All Phases"}
+          </button>
+          {allPhaseNames.map(p => {
+            const active = activePh.includes(p) && selectedPhases.length > 0;
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+              {p}
+            </button>;
+          })}
+          {isFiltered && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`حصة المراحل المختارة: ${(phaseShare.capex*100).toFixed(0)}% من التكاليف`:`Selected phases: ${(phaseShare.capex*100).toFixed(0)}% of CAPEX`}</span>}
+        </div>
+      </div>
+    )}
+    {/* Warning: settings are always project-level */}
+    {hasPhases && isFiltered && (
+      <div style={{background:"#fffbeb",borderRadius:8,border:"1px solid #fde68a",padding:"8px 14px",marginBottom:12,fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:6}}>
+        <span style={{fontSize:13}}>⚠</span>
+        {ar ? "إعدادات الحوافز على مستوى المشروع كاملاً. الأرقام المعروضة تعكس حصة المراحل المختارة فقط" : "Incentive settings apply to the entire project. Numbers shown reflect the selected phases' share only"}
+      </div>
+    )}
     {/* Summary KPIs */}
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 18 }}>
-      <KPI label={lang === "ar" ? "إجمالي الحوافز" : "Total Incentives"} value={fmtM(ir?.totalIncentiveValue || 0)} sub={cur} color="#16a34a" tip="مجموع كل الحوافز الحكومية (منح + دعم + إعفاءات)\nSum of all government incentives" />
-      <KPI label={lang === "ar" ? "منحة CAPEX" : "CAPEX Grant"} value={fmtM(ir?.capexGrantTotal || 0)} sub={inc.capexGrant?.enabled ? "ON" : "OFF"} color={inc.capexGrant?.enabled ? "#2563eb" : "#9ca3af"} tip="الحكومة تغطي نسبة من تكاليف البناء. تقلل رأس المال المطلوب\nGov covers % of construction cost. Reduces equity needed" />
-      <KPI label={lang === "ar" ? "وفر إيجار الأرض" : "Land Rent Savings"} value={fmtM(ir?.landRentSavingTotal || 0)} sub={inc.landRentRebate?.enabled ? "ON" : "OFF"} color={inc.landRentRebate?.enabled ? "#f59e0b" : "#9ca3af"} tip="الحكومة تعفي أو تخفض إيجار الأرض لسنوات محددة\nGov waives/reduces land rent for specified years" />
-      <KPI label={lang === "ar" ? "دعم التمويل" : "Finance Support"} value={fmtM(financing?.interestSubsidyTotal || 0)} sub={inc.financeSupport?.enabled ? "ON" : "OFF"} color={inc.financeSupport?.enabled ? "#8b5cf6" : "#9ca3af"} tip="الحكومة تدفع جزء من فوائد البنك أو تقدم قرض ميسر\nGov pays portion of bank interest or provides soft loan" />
-      <KPI label={lang === "ar" ? "استرداد رسوم" : "Fee Rebates"} value={fmtM(ir?.feeRebateTotal || 0)} sub={inc.feeRebates?.enabled ? "ON" : "OFF"} color={inc.feeRebates?.enabled ? "#06b6d4" : "#9ca3af"} tip="إعفاء أو تخفيض رسوم حكومية (تراخيص، ربط خدمات)\nGov fee waivers/reductions (permits, utility connections)" />
+      <KPI label={ar ? "إجمالي الحوافز" : "Total Incentives"} value={fmtM(pIR?.totalIncentiveValue || 0)} sub={cur} color="#16a34a" tip="مجموع كل الحوافز الحكومية (منح + دعم + إعفاءات)\nSum of all government incentives" />
+      <KPI label={ar ? "منحة CAPEX" : "CAPEX Grant"} value={fmtM(pIR?.capexGrantTotal || 0)} sub={inc.capexGrant?.enabled ? "ON" : "OFF"} color={inc.capexGrant?.enabled ? "#2563eb" : "#9ca3af"} tip="الحكومة تغطي نسبة من تكاليف البناء. تقلل رأس المال المطلوب\nGov covers % of construction cost. Reduces equity needed" />
+      <KPI label={ar ? "وفر إيجار الأرض" : "Land Rent Savings"} value={fmtM(pIR?.landRentSavingTotal || 0)} sub={inc.landRentRebate?.enabled ? "ON" : "OFF"} color={inc.landRentRebate?.enabled ? "#f59e0b" : "#9ca3af"} tip="الحكومة تعفي أو تخفض إيجار الأرض لسنوات محددة\nGov waives/reduces land rent for specified years" />
+      <KPI label={ar ? "دعم التمويل" : "Finance Support"} value={fmtM(financing?.interestSubsidyTotal || 0)} sub={inc.financeSupport?.enabled ? "ON" : "OFF"} color={inc.financeSupport?.enabled ? "#8b5cf6" : "#9ca3af"} tip="الحكومة تدفع جزء من فوائد البنك أو تقدم قرض ميسر\nGov pays portion of bank interest or provides soft loan" />
+      <KPI label={ar ? "استرداد رسوم" : "Fee Rebates"} value={fmtM(pIR?.feeRebateTotal || 0)} sub={inc.feeRebates?.enabled ? "ON" : "OFF"} color={inc.feeRebates?.enabled ? "#06b6d4" : "#9ca3af"} tip="إعفاء أو تخفيض رسوم حكومية (تراخيص، ربط خدمات)\nGov fee waivers/reductions (permits, utility connections)" />
     </div>
 
     {/* Incentive cards */}
@@ -11220,7 +11278,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
 
       {/* ── 1. CAPEX Grant ── */}
       <ToggleCard title="CAPEX Grant (Capital Subsidy)" tip="منحة حكومية تغطي جزءاً من CAPEX الإنشائي. تخفض التكلفة الفعلية وترفع IRR
-Government grant covering part of construction CAPEX. Lowers effective cost and improves IRR" titleAr="دعم رأسمالي (منحة CAPEX)" enabled={inc.capexGrant?.enabled} onToggle={() => upInc("capexGrant", { enabled: !inc.capexGrant?.enabled })} color="#2563eb" value={ir?.capexGrantTotal}>
+Government grant covering part of construction CAPEX. Lowers effective cost and improves IRR" titleAr="دعم رأسمالي (منحة CAPEX)" enabled={inc.capexGrant?.enabled} onToggle={() => upInc("capexGrant", { enabled: !inc.capexGrant?.enabled })} color="#2563eb" value={pIR?.capexGrantTotal}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <F label={lang === "ar" ? "نسبة المنحة %" : "Grant %"}><NI value={inc.capexGrant?.grantPct || 25} onChange={v => upInc("capexGrant", { grantPct: v })} /></F>
           <F label={lang === "ar" ? "الحد الأقصى (ريال)" : "Max Cap (SAR)"}><NI value={inc.capexGrant?.maxCap || 50000000} onChange={v => upInc("capexGrant", { maxCap: v })} /></F>
@@ -11232,7 +11290,7 @@ Government grant covering part of construction CAPEX. Lowers effective cost and 
           </select>
         </F>
         <div style={{ fontSize: 11, color: "#6b7080", marginTop: 6, padding: 8, background: "#f0f4ff", borderRadius: 4 }}>
-          {lang === "ar" ? "القيمة المحسوبة" : "Calculated"}: <strong>{fmt(ir?.capexGrantTotal || 0)} {cur}</strong> = min({inc.capexGrant?.grantPct}% × {fmtM(c.totalCapex)}, {fmt(inc.capexGrant?.maxCap)})
+          {lang === "ar" ? "القيمة المحسوبة" : "Calculated"}: <strong>{fmt(pIR?.capexGrantTotal || 0)} {cur}</strong> = min({inc.capexGrant?.grantPct}% × {fmtM(cTotalCapex)}, {fmt(inc.capexGrant?.maxCap)})
         </div>
       </ToggleCard>
 
@@ -11268,7 +11326,7 @@ Government pays part of financing cost or provides a zero-profit loan. Lowers ef
 
       {/* ── 3. Land Rent Rebate ── */}
       <ToggleCard title="Land Rent Rebate (Exemption/Discount)" tip="تخفيض أو إعفاء إيجار الأرض خلال البناء أو السنوات الأولى. يحسن التدفقات النقدية المبكرة
-Reducing or waiving land rent during construction or early years. Improves early cash flows" titleAr="إعفاء/خصم إيجار الأرض" enabled={inc.landRentRebate?.enabled} onToggle={() => upInc("landRentRebate", { enabled: !inc.landRentRebate?.enabled })} color="#f59e0b" value={ir?.landRentSavingTotal}>
+Reducing or waiving land rent during construction or early years. Improves early cash flows" titleAr="إعفاء/خصم إيجار الأرض" enabled={inc.landRentRebate?.enabled} onToggle={() => upInc("landRentRebate", { enabled: !inc.landRentRebate?.enabled })} color="#f59e0b" value={pIR?.landRentSavingTotal}>
         {project.landType !== "lease" ? (
           <div style={{ fontSize: 12, color: "#ef4444" }}>{lang === "ar" ? "غير متاح - الأرض ليست مؤجرة" : "Not applicable - land is not leased"}</div>
         ) : (<>
@@ -11287,7 +11345,7 @@ Reducing or waiving land rent during construction or early years. Improves early
 
       {/* ── 4. Fee/Tax Rebates ── */}
       <ToggleCard title="Fee/Tax Rebates & Deferrals" tip="استرداد أو تأجيل رسوم بلدية وتصاريح ومدفوعات نظامية. حتى التأجيل له منفعة زمنية تُحسب بمعدل خصم 10%
-Rebates or deferrals of municipal charges, permits, and regulatory fees. Even deferrals have time-value benefit at 10% discount" titleAr="استرداد/تأجيل رسوم وضرائب" enabled={inc.feeRebates?.enabled} onToggle={() => upInc("feeRebates", { enabled: !inc.feeRebates?.enabled })} color="#06b6d4" value={ir?.feeRebateTotal}>
+Rebates or deferrals of municipal charges, permits, and regulatory fees. Even deferrals have time-value benefit at 10% discount" titleAr="استرداد/تأجيل رسوم وضرائب" enabled={inc.feeRebates?.enabled} onToggle={() => upInc("feeRebates", { enabled: !inc.feeRebates?.enabled })} color="#06b6d4" value={pIR?.feeRebateTotal}>
         {(inc.feeRebates?.items || []).map((item, i) => (
           <div key={i} style={{ background: "#f8f9fb", borderRadius: 6, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
