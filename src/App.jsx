@@ -3550,7 +3550,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             </div>;
           })()}
           {[
-            ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
+            ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
             ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
@@ -5527,24 +5527,80 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
 // ═══════════════════════════════════════════════════════════════
 // PROJECT DASHBOARD
 // ═══════════════════════════════════════════════════════════════
-function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lang, incentivesResult, setActiveTab }) {
+function ProjectDash({ project, results, checks, t, financing, phaseFinancings, onGoToAssets, lang, incentivesResult, setActiveTab }) {
   if (!project || !results) return null;
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
-  const c = results.consolidated;
+  const [selectedPhases, setSelectedPhases] = useState([]);
+  const rawC = results.consolidated;
   const cur = project.currency || "SAR";
-  const phases = Object.entries(results.phaseResults);
-  const fc = checks.filter(ch => !ch.pass).length;
-  const f = financing;
+  const allPhases = Object.entries(results.phaseResults);
+  const phaseNames = Object.keys(results.phaseResults || {});
+  const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
+  const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
+  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const failedChecks = checks.filter(ch => !ch.pass).length;
+
+  // ── Filtered consolidated: aggregate selected phases only ──
+  const c = useMemo(() => {
+    if (!isFiltered) return rawC;
+    const hLen = results.horizon;
+    const income = new Array(hLen).fill(0), capex = new Array(hLen).fill(0), landRent = new Array(hLen).fill(0), netCF = new Array(hLen).fill(0);
+    activePh.forEach(pName => {
+      const pr = results.phaseResults?.[pName];
+      if (!pr) return;
+      for (let y = 0; y < hLen; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
+    });
+    const totalCapex = capex.reduce((a,b)=>a+b,0);
+    const totalIncome = income.reduce((a,b)=>a+b,0);
+    const totalLandRent = landRent.reduce((a,b)=>a+b,0);
+    const totalNetCF = netCF.reduce((a,b)=>a+b,0);
+    let pbCum = 0, pbYr = null, pbNeg = false, peakNeg = 0, peakNegY = null;
+    for (let y = 0; y < hLen; y++) { pbCum += netCF[y]; if (pbCum < -1) pbNeg = true; if (pbNeg && pbCum >= 0 && pbYr === null) pbYr = y + 1; if (pbCum < peakNeg) { peakNeg = pbCum; peakNegY = y; } }
+    return { ...rawC, income, capex, landRent, netCF, totalCapex, totalIncome, totalLandRent, totalNetCF,
+      irr: calcIRR(netCF),
+      npv10: calcNPV(netCF, 0.10),
+      npv12: calcNPV(netCF, 0.12),
+      npv14: calcNPV(netCF, 0.14),
+      paybackYear: pbYr, peakNegative: peakNeg, peakNegativeYear: peakNegY,
+    };
+  }, [isFiltered, selectedPhases, results, rawC]);
+
+  // ── Filtered financing: aggregate selected phase financings ──
+  const f = useMemo(() => {
+    if (!isFiltered || !phaseFinancings) return financing;
+    const pfs = activePh.map(p => phaseFinancings[p]).filter(Boolean);
+    if (pfs.length === 0) return financing;
+    const totalDebt = pfs.reduce((s,pf) => s + (pf.totalDebt||0), 0);
+    const totalEquity = pfs.reduce((s,pf) => s + (pf.totalEquity||0), 0);
+    const totalInterest = pfs.reduce((s,pf) => s + (pf.totalInterest||0), 0);
+    const devCostExclLand = pfs.reduce((s,pf) => s + (pf.devCostExclLand||0), 0);
+    const devCostInclLand = pfs.reduce((s,pf) => s + (pf.devCostInclLand||0), 0);
+    const totalProjectCost = pfs.reduce((s,pf) => s + (pf.totalProjectCost||pf.devCostInclLand||0), 0);
+    const landCapValue = pfs.reduce((s,pf) => s + (pf.landCapValue||0), 0);
+    const capitalizedFinCosts = pfs.reduce((s,pf) => s + (pf.capitalizedFinCosts||0), 0);
+    const h = results.horizon;
+    const leveredCF = new Array(h).fill(0);
+    pfs.forEach(pf => { if (pf.leveredCF) for (let y=0;y<h;y++) leveredCF[y] += pf.leveredCF[y]||0; });
+    const gpEquity = pfs.reduce((s,pf) => s + (pf.gpEquity||0), 0);
+    const lpEquity = pfs.reduce((s,pf) => s + (pf.lpEquity||0), 0);
+    const exitProceeds = new Array(h).fill(0);
+    pfs.forEach(pf => { if (pf.exitProceeds) for (let y=0;y<h;y++) exitProceeds[y] += pf.exitProceeds[y]||0; });
+    return { ...financing, totalDebt, totalEquity, totalInterest, devCostExclLand, devCostInclLand, totalProjectCost, landCapValue, capitalizedFinCosts, leveredCF, gpEquity, lpEquity, exitProceeds,
+      leveredIRR: calcIRR(leveredCF),
+      interestSubsidyTotal: pfs.reduce((s,pf) => s + (pf.interestSubsidyTotal||0), 0),
+    };
+  }, [isFiltered, selectedPhases, financing, phaseFinancings, results]);
+
   const h = results.horizon;
   const ar = lang === "ar";
   const hasAssets = (project.assets||[]).length > 0;
   const ir = incentivesResult;
 
   const hasIncentives = (ir && ir.totalIncentiveValue > 0) || (ir && ir.finSupportEstimate) || (f && f.interestSubsidyTotal > 0);
-  const displayIRR = (ir && ir.totalIncentiveValue > 0 && ir.adjustedIRR !== null) ? ir.adjustedIRR : c.irr;
-  const displayNPV10 = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedNPV10 : c.npv10;
-  const displayTotalNetCF = (ir && ir.totalIncentiveValue > 0) ? ir.adjustedTotalNetCF : c.totalNetCF;
+  const displayIRR = (ir && ir.totalIncentiveValue > 0 && ir.adjustedIRR !== null && !isFiltered) ? ir.adjustedIRR : c.irr;
+  const displayNPV10 = (ir && ir.totalIncentiveValue > 0 && !isFiltered) ? ir.adjustedNPV10 : c.npv10;
+  const displayTotalNetCF = (ir && ir.totalIncentiveValue > 0 && !isFiltered) ? ir.adjustedTotalNetCF : c.totalNetCF;
 
   let cumCF = 0, paybackYr = null, _pbNeg = false;
   for (let y = 0; y < h; y++) { cumCF += c.netCF[y]; if (cumCF < -1) _pbNeg = true; if (cumCF > 0 && _pbNeg && paybackYr === null) paybackYr = y + 1; }
@@ -5639,6 +5695,23 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </div>
       );
     })()}
+    {/* ═══ PHASE FILTER (multi-select) ═══ */}
+    {phaseNames.length > 1 && (
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+            {ar?"كل المراحل":"All Phases"}
+          </button>
+          {phaseNames.map(p => {
+            const active = activePh.includes(p) && selectedPhases.length > 0;
+            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"6px 14px",fontSize:11,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+              {p}
+            </button>;
+          })}
+          {isFiltered && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${phaseNames.length} مراحل`:`Showing ${activePh.length} of ${phaseNames.length} phases`}</span>}
+        </div>
+      </div>
+    )}
     {/* ═══ SECTION 1: Decision Summary ═══ */}
     <div style={{background:`linear-gradient(135deg, ${healthColor}08, ${healthColor}18)`,borderRadius:14,border:`2px solid ${healthColor}30`,padding:isMobile?"16px 14px":"22px 26px",marginBottom:20,display:"flex",flexDirection:isMobile?"column":"row",alignItems:isMobile?"stretch":"center",gap:isMobile?14:20,flexWrap:"wrap"}}>
       {/* Health badge */}
@@ -5658,8 +5731,8 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </div>
         <div>
           <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"إجمالي التكاليف":"Total CAPEX"}</div>
-          <div style={{fontSize:20,fontWeight:800,color:"#1a1d23"}}>{fmtM(hasIncentives?(c.totalCapex-grantTotal):c.totalCapex)}</div>
-          <div style={{fontSize:10,color:"#9ca3af"}}>{cur}{hasIncentives?` (${ar?"بعد المنحة":"net of grant"})`:""}</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#1a1d23"}}>{fmtM(hasIncentives&&!isFiltered?(c.totalCapex-grantTotal):c.totalCapex)}</div>
+          <div style={{fontSize:10,color:"#9ca3af"}}>{cur}{hasIncentives&&!isFiltered?` (${ar?"بعد المنحة":"net of grant"})`:""}</div>
         </div>
         {f && f.mode !== "self" && <div>
           <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"IRR بعد التمويل":"Levered IRR"}</div>
@@ -5672,7 +5745,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </div>
         <div>
           <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"الفحوصات":"Checks"}</div>
-          <div style={{fontSize:20,fontWeight:800,color:fc===0?"#16a34a":"#ef4444"}}>{fc===0?(ar?"✓ سليم":"✓ Pass"):`${fc} ✗`}</div>
+          <div style={{fontSize:20,fontWeight:800,color:failedChecks===0?"#16a34a":"#ef4444"}}>{failedChecks===0?(ar?"✓ سليم":"✓ Pass"):`${failedChecks} ✗`}</div>
         </div>
       </div>
     </div>
@@ -5697,7 +5770,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
                 <span style={{color:"#6b7080"}}>{ar?"حقوق ملكية":"Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmtM(totalEquity)}</span>
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
                 <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmtM(totalDebt + totalEquity)}</span>
-                {grantTotal > 0 && [<span key="gl" style={{color:"#16a34a",fontSize:10,fontStyle:"italic"}}>{ar?"* تم خصم منحة حكومية":"* CAPEX grant deducted"}: {fmtM(grantTotal)}</span>]}
+                {grantTotal > 0 && !isFiltered && [<span key="gl" style={{color:"#16a34a",fontSize:10,fontStyle:"italic"}}>{ar?"* تم خصم منحة حكومية":"* CAPEX grant deducted"}: {fmtM(grantTotal)}</span>]}
               </div>
               {/* LTV bar */}
               {totalDebt > 0 && (() => {
@@ -5736,7 +5809,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
             <div style={{fontSize:16,fontWeight:700,color:"#16a34a"}}>{fmtM(c.totalIncome)}</div>
           </div>
           <div style={{background:displayTotalNetCF>=0?"#f0fdf4":"#fef2f2",borderRadius:8,padding:"10px 12px",border:`1px solid ${displayTotalNetCF>=0?"#dcfce7":"#fee2e2"}`}}>
-            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"صافي التدفق":"Net CF"}{hasIncentives?` (${ar?"+حوافز":"+inc."})`:""}</div>
+            <div style={{fontSize:10,color:"#6b7080"}}>{ar?"صافي التدفق":"Net CF"}{hasIncentives&&!isFiltered?` (${ar?"+حوافز":"+inc."})`:""}</div>
             <div style={{fontSize:16,fontWeight:700,color:displayTotalNetCF>=0?"#16a34a":"#ef4444"}}>{fmtM(displayTotalNetCF)}</div>
           </div>
           {f && f.mode !== "self" && <>
@@ -5753,7 +5826,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
             <div style={{fontSize:10,color:"#6b7080"}}>{ar?"العائد النقدي":"Cash Yield"}</div>
             <div style={{fontSize:16,fontWeight:700,color:"#2563eb"}}>{fmtPct(cashYield)}</div>
           </div>}
-          {hasIncentives && ir && <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 12px",border:"1px solid #bbf7d0"}}>
+          {hasIncentives && !isFiltered && ir && <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 12px",border:"1px solid #bbf7d0"}}>
             <div style={{fontSize:10,color:"#6b7080"}}>{ar?"قيمة الحوافز":"Incentive Value"}</div>
             <div style={{fontSize:16,fontWeight:700,color:"#16a34a"}}>{fmtM(ir.totalIncentiveValue + (f?.interestSubsidyTotal||0))}</div>
           </div>}
@@ -5820,17 +5893,19 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     </div>
 
     {/* ═══ SECTION 4: Phase Summary ═══ */}
-    {phases.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:20}}>
+    {allPhases.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:20}}>
       <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
         <span style={{fontSize:15}}>🏗</span> {t.phaseSummary}
       </div>
       <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={tblStyle}><thead><tr>
         {(ar?["المرحلة","الأصول","إجمالي التكاليف","إجمالي الإيرادات","إيجار الأرض","صافي التدفق","IRR","نسبة الأرض"]:["Phase","Assets","Total CAPEX","Total Income","Land Rent","Net CF","IRR","Land %"]).map(h=><th key={h} style={thSt}>{h}</th>)}
       </tr></thead><tbody>
-        {phases.map(([n,pr])=>{
-          const capexPct = c.totalCapex > 0 ? pr.totalCapex / c.totalCapex * 100 : 0;
-          return <tr key={n}>
-          <td style={tdSt}><strong>{n}</strong></td>
+        {allPhases.map(([n,pr])=>{
+          const capexPct = rawC.totalCapex > 0 ? pr.totalCapex / rawC.totalCapex * 100 : 0;
+          const isHighlighted = isFiltered && activePh.includes(n);
+          const isDimmed = isFiltered && !activePh.includes(n);
+          return <tr key={n} style={{background:isHighlighted?"#f0fdf4":undefined,opacity:isDimmed?0.45:1,transition:"opacity 0.2s"}}>
+          <td style={tdSt}><strong>{n}</strong>{isHighlighted && <span style={{marginInlineStart:4,fontSize:9,color:"#0f766e"}}>●</span>}</td>
           <td style={{...tdSt,textAlign:"center"}}>{pr.assetCount}</td>
           <td style={tdN}><div>{fmt(pr.totalCapex)}</div><div style={{height:3,borderRadius:2,background:"#f0f1f5",marginTop:3}}><div style={{height:"100%",borderRadius:2,background:"#ef4444",width:`${capexPct}%`}} /></div></td>
           <td style={tdN}>{fmt(pr.totalIncome)}</td>
@@ -5840,12 +5915,12 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
           <td style={tdN}>{fmtPct(pr.allocPct*100)}</td>
         </tr>;})}
         <tr style={{background:"#f8f9fb",fontWeight:700}}>
-          <td style={tdSt}>{t.consolidated}</td>
-          <td style={{...tdSt,textAlign:"center"}}>{project.assets.length}</td>
+          <td style={tdSt}>{isFiltered?(ar?"المجموع المختار":"Selected Total"):t.consolidated}</td>
+          <td style={{...tdSt,textAlign:"center"}}>{isFiltered ? (project.assets||[]).filter(a=>activePh.includes(a.phase)).length : project.assets.length}</td>
           <td style={tdN}>{fmt(c.totalCapex)}</td><td style={tdN}>{fmt(c.totalIncome)}</td>
           <td style={{...tdN,color:"#ef4444"}}>{fmt(c.totalLandRent)}</td>
           <td style={{...tdN,color:displayTotalNetCF>=0?"#16a34a":"#ef4444"}}>{fmt(displayTotalNetCF)}</td>
-          <td style={{...tdN,fontWeight:700}}>{displayIRR!==null?fmtPct(displayIRR*100):"—"}{hasIncentives?" *":""}</td>
+          <td style={{...tdN,fontWeight:700}}>{displayIRR!==null?fmtPct(displayIRR*100):"—"}{hasIncentives&&!isFiltered?" *":""}</td>
           <td style={tdN}></td>
         </tr>
       </tbody></table></div>
@@ -5891,14 +5966,16 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
     })()}
 
     {/* ═══ SECTION 5: Asset Overview (compact) ═══ */}
-    {results.assetSchedules.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
+    {results.assetSchedules.length>0&&(()=>{
+      const filteredAssets = isFiltered ? results.assetSchedules.filter(a => activePh.includes(a.phase)) : results.assetSchedules;
+      return <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",overflow:"hidden"}}>
       <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
-        <span style={{fontSize:15}}>🏢</span> {t.assetOverview} ({results.assetSchedules.length})
+        <span style={{fontSize:15}}>🏢</span> {t.assetOverview} ({filteredAssets.length}{isFiltered?` / ${results.assetSchedules.length}`:""})
       </div>
       <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={tblStyle}><thead><tr>
         {(ar?["#","الأصل","المرحلة","المساحة","التكاليف",`الإيرادات (${project.horizon}ع)`,"النوع"]:["#","Asset","Phase","GFA","CAPEX",`Income (${project.horizon}yr)`,"Type"]).map(h=><th key={h} style={thSt}>{h}</th>)}
       </tr></thead><tbody>
-        {results.assetSchedules.map((a,i)=><tr key={a.id||i}>
+        {filteredAssets.map((a,i)=><tr key={a.id||i}>
           <td style={{...tdSt,color:"#9ca3af",width:30}}>{i+1}</td>
           <td style={tdSt}>{a.name||"—"} <span style={{color:"#9ca3af",fontSize:10}}>({catL(a.category,ar)})</span></td>
           <td style={tdSt}>{a.phase}</td>
@@ -5906,7 +5983,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
           <td style={{...tdN,color:"#16a34a"}}>{fmt(a.totalRevenue)}</td><td style={{...tdSt,fontSize:11}}>{revL(a.revType,ar)}</td>
         </tr>)}
       </tbody></table></div>
-    </div>}
+    </div>;})()}
     {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
 }
