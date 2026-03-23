@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo, Component } from "react";
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Area, AreaChart } from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Area, AreaChart, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { storage } from "./lib/storage";
 import { generateProfessionalExcel } from "./excelExport";
 import { generateFormulaExcel } from "./excelFormulaExport";
@@ -1785,6 +1785,70 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
     {/* ═══ INCENTIVES IMPACT ═══ */}
     <IncentivesImpact project={project} results={results} financing={pf} incentivesResult={incentivesResult} lang={lang} />
+
+    {/* ═══ FINANCING CHARTS (Pie + DSCR Line + Debt Area) ═══ */}
+    {f && f.totalDebt > 0 && (() => {
+      const dscrData = years.map(y => ({
+        year: sy + y,
+        dscr: f.dscr?.[y] ?? null,
+      })).filter(d => d.dscr !== null && d.dscr > 0);
+      const debtData = years.map(y => ({
+        year: sy + y,
+        balance: f.debtBalance?.[y] || 0,
+        noi: (pc.income[y]||0) - (pc.landRent[y]||0),
+        ds: (f.principalPayment?.[y]||0) + (f.interestPayment?.[y]||0),
+      }));
+      const pieData = [
+        { name: ar ? "دين" : "Debt", value: f.totalDebt, color: "#ef4444" },
+        { name: ar ? "ملكية" : "Equity", value: f.totalEquity, color: "#2EC4B6" },
+      ].filter(d => d.value > 0);
+      const effLTV = f.devCostInclLand > 0 ? ((f.totalDebt / f.devCostInclLand) * 100).toFixed(0) : 0;
+
+      return <div style={{marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <div style={{fontSize:13,fontWeight:700,flex:1}}>{ar?"التحليل البصري":"Visual Analysis"}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 2fr",gap:12}}>
+          {/* Pie: Debt/Equity Split */}
+          <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px"}}>
+            <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{ar?"هيكل رأس المال":"Capital Structure"}</div>
+            <ResponsiveContainer width="100%" height={160}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value">
+                  {pieData.map((d,idx) => <Cell key={idx} fill={d.color} />)}
+                </Pie>
+                <Tooltip formatter={v => fmtM(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{textAlign:"center",fontSize:20,fontWeight:700,color:getMetricColor("LTV",+effLTV),marginTop:-8}}>{effLTV}% LTV</div>
+            <div style={{display:"flex",justifyContent:"center",gap:14,marginTop:6,fontSize:10}}>
+              {pieData.map((d,i) => <span key={i} style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:8,height:8,borderRadius:2,background:d.color,display:"inline-block"}} />{d.name}: {fmtM(d.value)}</span>)}
+            </div>
+          </div>
+
+          {/* DSCR Line Chart */}
+          {dscrData.length > 1 && <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px"}}>
+            <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{ar?"مسار DSCR":"DSCR Trajectory"}</div>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={dscrData} margin={{top:5,right:10,left:0,bottom:5}}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f1f5" />
+                <XAxis dataKey="year" tick={{fontSize:9,fill:"#6b7080"}} />
+                <YAxis tick={{fontSize:9,fill:"#6b7080"}} domain={[0, 'auto']} tickFormatter={v => v.toFixed(1)+"x"} />
+                <Tooltip formatter={v => v.toFixed(2)+"x"} />
+                <ReferenceLine y={1.2} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{value:"1.2x min",position:"right",fontSize:9,fill:"#ef4444"}} />
+                <ReferenceLine y={1.5} stroke="#10b981" strokeDasharray="4 4" strokeWidth={1} label={{value:"1.5x target",position:"right",fontSize:9,fill:"#10b981"}} />
+                <Line type="monotone" dataKey="dscr" stroke="#2563eb" strokeWidth={2.5} dot={{fill:"#2563eb",r:3}} activeDot={{r:5}} name="DSCR" />
+              </LineChart>
+            </ResponsiveContainer>
+            <div style={{display:"flex",gap:14,justifyContent:"center",marginTop:4,fontSize:10}}>
+              <span><span style={{display:"inline-block",width:12,height:3,background:"#2563eb",borderRadius:2,marginInlineEnd:4}} />DSCR</span>
+              <span><span style={{display:"inline-block",width:12,height:1,borderTop:"2px dashed #ef4444",marginInlineEnd:4}} />{ar?"حد أدنى":"Min"} 1.2x</span>
+              <span><span style={{display:"inline-block",width:12,height:1,borderTop:"2px dashed #10b981",marginInlineEnd:4}} />{ar?"مستهدف":"Target"} 1.5x</span>
+            </div>
+          </div>}
+        </div>
+      </div>;
+    })()}
 
     {/* ═══ CHART TOGGLE (Debt Balance + NOI) ═══ */}
     {chartData.length > 2 && (
