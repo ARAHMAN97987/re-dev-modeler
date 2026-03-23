@@ -1936,11 +1936,12 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 // ── Financing Panel Input Components (MUST be outside FinancingView to keep focus) ──
 const _finInpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
 const _finSelSt = {..._finInpSt,cursor:"pointer",appearance:"auto"};
-function FL({label,children,tip,hint}) {
+function FL({label,children,tip,hint,error}) {
   return (<div style={{marginBottom:10}}>
-    <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"#6b7080",marginBottom:4,fontWeight:500,letterSpacing:0.2}}>{tip?<Tip text={tip}>{label}</Tip>:label}</label>
-    {children}
-    {hint&&<div style={{fontSize:9,color:"#9ca3af",marginTop:3}}>{hint}</div>}
+    <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:error?"#ef4444":"#6b7080",marginBottom:4,fontWeight:500,letterSpacing:0.2}}>{tip?<Tip text={tip}>{label}</Tip>:label}</label>
+    <div style={error?{borderRadius:6,boxShadow:"0 0 0 1.5px #ef4444"}:undefined}>{children}</div>
+    {error&&<div style={{fontSize:9,color:"#ef4444",marginTop:3,fontWeight:500}}>{error}</div>}
+    {!error&&hint&&<div style={{fontSize:9,color:"#9ca3af",marginTop:3}}>{hint}</div>}
   </div>);
 }
 function Inp({value,onChange,type="text",...rest}) {
@@ -2160,12 +2161,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             )}
             {showDebtFields && <>
               <div style={g2}>
-                {cfg.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى قيمة المشروع. في السعودية 50-70%\nLoan-to-Value ratio. Saudi: 50-70%" hint={dh("maxLtvPct")}><Inp type="number" value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} /></FL>}
-                <FL label={ar?"معدل %":"Rate %"} tip="معدل تكلفة التمويل السنوي. في السعودية 5-8%\nAnnual financing cost rate. Saudi: 5-8%" hint={dh("financeRate")}><Inp type="number" value={cfg.financeRate} onChange={v=>upCfg({financeRate:v})} /></FL>
+                {cfg.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى قيمة المشروع. في السعودية 50-70%\nLoan-to-Value ratio. Saudi: 50-70%" hint={dh("maxLtvPct")} error={cfg.maxLtvPct>100?(ar?"الحد الأقصى 100%":"Max 100%"):cfg.maxLtvPct<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><Inp type="number" value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} /></FL>}
+                <FL label={ar?"معدل %":"Rate %"} tip="معدل تكلفة التمويل السنوي. في السعودية 5-8%\nAnnual financing cost rate. Saudi: 5-8%" hint={dh("financeRate")} error={cfg.financeRate>30?(ar?"الحد الأقصى 30%":"Max 30%"):cfg.financeRate<0?(ar?"لا يمكن أن يكون سالباً":"Cannot be negative"):null}><Inp type="number" value={cfg.financeRate} onChange={v=>upCfg({financeRate:v})} /></FL>
               </div>
               <div style={g3}>
-                <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years" hint={dh("loanTenor")}><Inp type="number" value={cfg.loanTenor} onChange={v=>upCfg({loanTenor:v})} /></FL>
-                <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years" hint={dh("debtGrace")}><Inp type="number" value={cfg.debtGrace} onChange={v=>upCfg({debtGrace:v})} /></FL>
+                <FL label={ar?"مدة القرض":"Tenor"} tip="مدة القرض الكلية شاملة فترة السماح. عادة 7-15 سنة\nTotal loan period including grace. Usually 7-15 years" hint={dh("loanTenor")} error={cfg.loanTenor<1?(ar?"يجب أن تكون سنة واحدة على الأقل":"Must be at least 1 year"):cfg.loanTenor>50?(ar?"الحد الأقصى 50 سنة":"Max 50 years"):null}><Inp type="number" value={cfg.loanTenor} onChange={v=>upCfg({loanTenor:v})} /></FL>
+                <FL label={ar?"فترة السماح":"Grace"} tip="فترة دفع الربح فقط بدون أصل الدين. عادة 2-4 سنوات\nInterest-only period, no principal. Usually 2-4 years" hint={dh("debtGrace")} error={cfg.debtGrace>(cfg.loanTenor||7)?(ar?"فترة السماح تتجاوز مدة القرض":"Grace exceeds tenor"):cfg.debtGrace<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><Inp type="number" value={cfg.debtGrace} onChange={v=>upCfg({debtGrace:v})} /></FL>
                 <FL label={ar?"بداية السماح":"Grace Basis"} tip={ar?"متى تبدأ فترة السماح: من اكتمال البناء أو أول سحب"+(isFundMode?" أو بداية الصندوق":""):"When grace starts: COD, first drawdown"+(isFundMode?", or fund start year":"")}><select value={cfg.graceBasis||"cod"} onChange={e=>upCfg({graceBasis:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="cod">{ar?"اكتمال البناء (تلقائي)":"COD (default)"}</option><option value="firstDraw">{ar?"أول سحب":"First Drawdown"}</option>{isFundMode&&<option value="fundStart">{ar?"بداية الصندوق":"Fund Start Year"}</option>}</select></FL>
               </div>
               <div style={g2}>
@@ -4004,16 +4005,17 @@ function Sec({title,children,def=false,filled,summary}) {
   </div>);
 }
 
-function Fld({label,children,hint,tip}) {
+function Fld({label,children,hint,tip,error}) {
   const [showTip, setShowTip] = useState(false);
   return (<div style={{marginBottom:9,position:"relative"}}>
-    <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"#7b8094",marginBottom:3}}>
+    <label style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:error?"#ef4444":"#7b8094",marginBottom:3}}>
       {label}
       {tip && <span onMouseEnter={()=>setShowTip(true)} onMouseLeave={()=>setShowTip(false)} style={{cursor:"help",fontSize:10,color:"#4b5060",lineHeight:1}}>ⓘ</span>}
     </label>
     {showTip && tip && <div style={{position:"absolute",top:-4,insetInlineStart:0,insetInlineEnd:0,transform:"translateY(-100%)",background:"#1a1d23",color:"#d0d4dc",padding:"8px 10px",borderRadius:6,fontSize:10,lineHeight:1.4,zIndex:99,boxShadow:"0 4px 12px rgba(0,0,0,0.4)",maxWidth:260}}>{tip.split("\n").map((line,i)=><div key={i} dir={/[\u0600-\u06FF]/.test(line)?"rtl":"ltr"} style={{marginBottom:i===0?3:0}}>{line}</div>)}</div>}
-    {children}
-    {hint&&<div style={{fontSize:10,color:"#4b5060",marginTop:2}}>{hint}</div>}
+    <div style={error?{borderRadius:6,boxShadow:"0 0 0 1.5px #ef4444"}:undefined}>{children}</div>
+    {error&&<div style={{fontSize:9,color:"#ef4444",marginTop:2,fontWeight:500}}>{error}</div>}
+    {!error&&hint&&<div style={{fontSize:10,color:"#4b5060",marginTop:2}}>{hint}</div>}
   </div>);
 }
 
@@ -4307,7 +4309,7 @@ Project location. For display and reports only"><SidebarInput value={project.loc
         <Fld label={t.startYear} tip="سنة بداية المشروع. تُحدد توقيت CAPEX والإيرادات
 Project start year. Sets the timing for CAPEX and revenue"><SidebarInput type="number" value={project.startYear} onChange={v=>up({startYear:v})} /></Fld>
         <Fld label={t.horizon} tip="أفق النموذج بالسنوات (5-99). يحدد مدى حساب التدفقات النقدية
-Model horizon in years (5-99). Determines cash flow projection length"><SidebarInput type="number" value={project.horizon} onChange={v=>up({horizon:v})} /></Fld>
+Model horizon in years (5-99). Determines cash flow projection length" error={project.horizon<1?(lang==="ar"?"المدة يجب أن تكون 1 على الأقل":"Horizon must be at least 1"):project.horizon>99?(lang==="ar"?"الحد الأقصى 99 سنة":"Max 99 years"):null}><SidebarInput type="number" value={project.horizon} onChange={v=>up({horizon:v})} /></Fld>
       </div>
       <Fld label={t.currency} tip="عملة النموذج. الافتراضي ريال سعودي
 Model currency. Default is SAR"><Sel lang={lang} value={project.currency} onChange={v=>up({currency:v})} options={CURRENCIES} /></Fld>
@@ -4316,12 +4318,12 @@ Model currency. Default is SAR"><Sel lang={lang} value={project.currency} onChan
     {/* ── 4. ASSUMPTIONS (CAPEX + Revenue merged) ── */}
     <Sec title={ar?"افتراضات التكاليف والإيرادات":"Cost & Revenue Assumptions"} filled={project.softCostPct > 0 || project.rentEscalation > 0} summary={`${project.softCostPct}% soft | ${project.rentEscalation}% esc`}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.softCost} tip="تشمل التصميم، الدراسات، الإشراف، التصاريح وإدارة المشروع. عادة 8-15%\nDesign, studies, supervision, permits, project management. Usually 8-15%: تصميم، إشراف، تصاريح. عادة 8-15%\nIndirect costs: design, supervision, permits. Standard 8-15%"><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
-        <Fld label={t.contingency} tip="هامش احتياطي لزيادات الأسعار أو تغييرات التنفيذ. عادة 5-10%\nReserve for cost overruns or scope changes. Usually 5-10% للمخاطر غير المتوقعة. عادة 5-10%\nRisk reserve for unexpected costs. Standard 5-10%"><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
+        <Fld label={t.softCost} tip="تشمل التصميم، الدراسات، الإشراف، التصاريح وإدارة المشروع. عادة 8-15%\nDesign, studies, supervision, permits, project management. Usually 8-15%: تصميم، إشراف، تصاريح. عادة 8-15%\nIndirect costs: design, supervision, permits. Standard 8-15%" error={project.softCostPct<0?(lang==="ar"?"لا يمكن أن تكون سالبة":"Cannot be negative"):project.softCostPct>50?(lang==="ar"?"قيمة عالية جداً (>50%)":"Very high value (>50%)"):null}><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
+        <Fld label={t.contingency} tip="هامش احتياطي لزيادات الأسعار أو تغييرات التنفيذ. عادة 5-10%\nReserve for cost overruns or scope changes. Usually 5-10% للمخاطر غير المتوقعة. عادة 5-10%\nRisk reserve for unexpected costs. Standard 5-10%" error={project.contingencyPct<0?(lang==="ar"?"لا يمكن أن تكون سالبة":"Cannot be negative"):project.contingencyPct>30?(lang==="ar"?"قيمة عالية جداً (>30%)":"Very high value (>30%)"):null}><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
       </div>
       <Fld label={t.rentEsc} tip="الزيادة السنوية المفترضة في الإيجار. المناطق الرئيسية 2-5%، الثانوية 0.5-2%\nAssumed annual rent increase. Prime areas 2-5%, secondary 0.5-2% في الإيجار. المناطق الرئيسية 2-5%، الثانوية 0.5-2%\nAnnual rent increase %. Prime areas: 2-5%, secondary: 0.5-2%"><SidebarInput type="number" value={project.rentEscalation} onChange={v=>up({rentEscalation:v})} /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <Fld label={t.defEfficiency} tip="نسبة المساحة المدرة للدخل من GFA. مكاتب 75-85%، تجزئة 80-90%\nIncome-generating share of GFA. Offices 75-85%, Retail 80-90% للتأجير من GFA. مكاتب 80-90%، تجزئة 70-85%\nLeasable % of GFA. Offices 80-90%, Retail 70-85%"><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
+        <Fld label={t.defEfficiency} tip="نسبة المساحة المدرة للدخل من GFA. مكاتب 75-85%، تجزئة 80-90%\nIncome-generating share of GFA. Offices 75-85%, Retail 80-90% للتأجير من GFA. مكاتب 80-90%، تجزئة 70-85%\nLeasable % of GFA. Offices 80-90%, Retail 70-85%" error={project.defaultEfficiency<0?(lang==="ar"?"لا يمكن أن تكون سالبة":"Cannot be negative"):project.defaultEfficiency>100?(lang==="ar"?"الحد الأقصى 100%":"Max 100%"):null}><SidebarInput type="number" value={project.defaultEfficiency} onChange={v=>up({defaultEfficiency:v})} /></Fld>
         <Fld label={t.defLeaseRate} tip="معدل الإيجار الافتراضي للأصول الجديدة بالريال/م²/سنة
 Default lease rate for new assets in SAR/sqm/year"><SidebarInput type="number" value={project.defaultLeaseRate} onChange={v=>up({defaultLeaseRate:v})} /></Fld>
       </div>
@@ -4757,8 +4759,9 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             </select>
           </div>
           <div>
-            <div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"إجمالي المساحة":"Total Area"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"م²":"sqm"})</span></div>
-            <SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landArea} onChange={v=>up({landArea:v})} />
+            <div style={{fontSize:10,color:project.landArea<0?"#ef4444":"#6b7080",marginBottom:3,fontWeight:500}}>{ar?"إجمالي المساحة":"Total Area"} <span style={{fontWeight:400,color:"#9ca3af"}}>({ar?"م²":"sqm"})</span></div>
+            <div style={project.landArea<0?{borderRadius:6,boxShadow:"0 0 0 1.5px #ef4444"}:undefined}><SidebarInput style={{background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec"}} type="number" value={project.landArea} onChange={v=>up({landArea:v})} /></div>
+            {project.landArea<0&&<div style={{fontSize:9,color:"#ef4444",marginTop:2}}>{ar?"لا يمكن أن تكون سالبة":"Cannot be negative"}</div>}
           </div>
         </div>
 
@@ -5051,7 +5054,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           </div>
         </>)}
         {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isSale=a.revType==="Sale",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
-        const F2=({label,children})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div>{children}</div>;
+        const F2=({label,children,error})=><div style={{marginBottom:8}}><div style={{fontSize:10,color:error?"#ef4444":"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div><div style={error?{borderRadius:6,boxShadow:"0 0 0 1.5px #ef4444"}:undefined}>{children}</div>{error&&<div style={{fontSize:9,color:"#ef4444",marginTop:2}}>{error}</div>}</div>;
         const g3=isMobile?"1fr 1fr":"1fr 1fr 1fr";
         const g2=isMobile?"1fr":"1fr 1fr";
         return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
@@ -5074,9 +5077,9 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             </div>
             <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>{ar?"المساحات":"Areas"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-              <F2 label={ar?"مساحة القطعة Plot Area":"Plot Area"}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
-              <F2 label={ar?"المسطح البنائي Footprint":"Footprint"}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
-              <F2 label={ar?"المساحة الطابقية GFA (م²)":"GFA (m²)"}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"مساحة القطعة Plot Area":"Plot Area"} error={a.plotArea<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"المسطح البنائي Footprint":"Footprint"} error={a.footprint<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"المساحة الطابقية GFA (م²)":"GFA (m²)"} error={a.gfa<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>{ar?"الإيرادات":"Revenue"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
@@ -5091,12 +5094,12 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               </>}
               <F2 label={ar?"نسبة الزيادة Esc %":"Escalation %"}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
               <F2 label={ar?"سنوات النمو Ramp":"Ramp Years"}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
-              <F2 label={ar?"نسبة الإشغال Occ %":"Occupancy %"}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"نسبة الإشغال Occ %":"Occupancy %"} error={a.stabilizedOcc>100?(ar?"الحد الأقصى 100%":"Max 100%"):a.stabilizedOcc<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             <div style={{fontSize:11,fontWeight:600,marginBottom:8}}>{ar?"البناء":"Construction"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-              <F2 label={ar?"تكلفة/م² Cost/sqm":"Cost/m²"}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
-              <F2 label={ar?"مدة البناء (شهر)":"Build duration (months)"}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"تكلفة/م² Cost/sqm":"Cost/m²"} error={a.costPerSqm<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
+              <F2 label={ar?"مدة البناء (شهر)":"Build duration (months)"} error={a.constrDuration<1?(ar?"يجب شهر واحد على الأقل":"Must be at least 1 month"):a.constrDuration>120?(ar?"الحد الأقصى 120 شهر":"Max 120 months"):null}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} style={{padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fafbfc"}} /></F2>
             </div>
             {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginBottom:12}}>{isH?(ar?"⚙ حساب أرباح الفندق":"⚙ Hotel P&L"):(ar?"⚙ حساب أرباح المارينا":"⚙ Marina P&L")}</button>}
             <div style={{background:"#f8f9fb",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,fontSize:12}}>
