@@ -2002,8 +2002,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 // ── Financing Panel Input Components (MUST be outside FinancingView to keep focus) ──
 const _finInpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
 const _finSelSt = {..._finInpSt,cursor:"pointer",appearance:"auto"};
-function FieldGroup({icon,title,children,defaultOpen=false}) {
+function FieldGroup({icon,title,children,defaultOpen=false,globalExpand}) {
   const [open,setOpen]=useState(defaultOpen);
+  useEffect(() => { if (globalExpand > 0) setOpen(globalExpand % 2 === 1); }, [globalExpand]);
   return <div style={{marginBottom:12,border:"1px solid #e5e7ec",borderRadius:10,overflow:"hidden"}}>
     <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"10px 14px",background:open?"#fff":"#fafbfc",border:"none",cursor:"pointer",fontSize:11,fontWeight:600,color:"#1a1d23"}}><span>{icon}</span><span>{title}</span><span style={{marginInlineStart:"auto",fontSize:9,color:"#9ca3af"}}>{open?"▲":"▼"}</span></button>
     {open&&<div style={{padding:"10px 14px",borderTop:"1px solid #f0f1f5"}}>{children}</div>}
@@ -3343,7 +3344,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"#1e2230",border:"none",borderRadius:6,color:"#9ca3af",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
           </div>
           <div ref={sidebarRef} style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
-            <ControlPanel project={project} up={up} t={t} lang={lang} results={results} />
+            <ControlPanel project={project} up={up} t={t} lang={lang} results={results} globalExpand={globalExpand} />
           </div>
           <SidebarAdvisor project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} setActiveTab={setActiveTab} />
         </div>
@@ -4099,8 +4100,9 @@ function StatusBadge({status,onChange}) {
 // CONTROL PANEL
 // ═══════════════════════════════════════════════════════════════
 // ── Sidebar helper components (defined OUTSIDE ControlPanel to prevent re-creation) ──
-function Sec({title,children,def=false,filled,summary}) {
+function Sec({title,children,def=false,filled,summary,globalExpand}) {
   const [open,setOpen]=useState(def);
+  useEffect(() => { if (globalExpand > 0) setOpen(globalExpand % 2 === 1); }, [globalExpand]);
   return (<div style={{borderBottom:"1px solid #1e2230"}}>
     <button onClick={e=>{e.preventDefault();setOpen(!open);}} style={{width:"100%",padding:"11px 16px",background:"none",border:"none",color:open?"#d0d4dc":"#8b90a0",fontSize:10,fontWeight:600,letterSpacing:1.2,textTransform:"uppercase",textAlign:"start",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"color 0.15s"}}>
       {filled!==undefined&&<span style={{width:7,height:7,borderRadius:4,background:filled?"#16a34a":"#3b4050",flexShrink:0}} />}
@@ -4400,7 +4402,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
   );
 }
 
-function ControlPanel({ project, up, t, lang, results }) {
+function ControlPanel({ project, up, t, lang, results, globalExpand }) {
   if (!project) return null;
   const [eduModal, setEduModal] = useState(null);
 
@@ -4409,7 +4411,7 @@ function ControlPanel({ project, up, t, lang, results }) {
 
   return (<>
     {/* ── 1. GENERAL ── */}
-    <Sec title={t.general} def={false} filled={!!(project.location && project.startYear)} summary={project.location ? `${project.startYear} | ${project.horizon}yr` : ""}>
+    <Sec title={t.general} def={false} globalExpand={globalExpand} filled={!!(project.location && project.startYear)} summary={project.location ? `${project.startYear} | ${project.horizon}yr` : ""}>
       <Fld label={t.location} tip="موقع المشروع. للعرض والتقارير فقط
 Project location. For display and reports only"><SidebarInput value={project.location} onChange={v=>up({location:v})} placeholder="e.g. Jazan, Saudi Arabia" /></Fld>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -4423,7 +4425,7 @@ Model currency. Default is SAR"><Sel lang={lang} value={project.currency} onChan
     </Sec>
 
     {/* ── 4. ASSUMPTIONS (CAPEX + Revenue merged) ── */}
-    <Sec title={ar?"افتراضات التكاليف والإيرادات":"Cost & Revenue Assumptions"} filled={project.softCostPct > 0 || project.rentEscalation > 0} summary={`${project.softCostPct}% soft | ${project.rentEscalation}% esc`}>
+    <Sec title={ar?"افتراضات التكاليف والإيرادات":"Cost & Revenue Assumptions"} globalExpand={globalExpand} filled={project.softCostPct > 0 || project.rentEscalation > 0} summary={`${project.softCostPct}% soft | ${project.rentEscalation}% esc`}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         <Fld label={t.softCost} tip="تشمل التصميم، الدراسات، الإشراف، التصاريح وإدارة المشروع. عادة 8-15%\nDesign, studies, supervision, permits, project management. Usually 8-15%: تصميم، إشراف، تصاريح. عادة 8-15%\nIndirect costs: design, supervision, permits. Standard 8-15%" error={project.softCostPct<0?(lang==="ar"?"لا يمكن أن تكون سالبة":"Cannot be negative"):project.softCostPct>50?(lang==="ar"?"قيمة عالية جداً (>50%)":"Very high value (>50%)"):null}><SidebarInput type="number" value={project.softCostPct} onChange={v=>up({softCostPct:v})} /></Fld>
         <Fld label={t.contingency} tip="هامش احتياطي لزيادات الأسعار أو تغييرات التنفيذ. عادة 5-10%\nReserve for cost overruns or scope changes. Usually 5-10% للمخاطر غير المتوقعة. عادة 5-10%\nRisk reserve for unexpected costs. Standard 5-10%" error={project.contingencyPct<0?(lang==="ar"?"لا يمكن أن تكون سالبة":"Cannot be negative"):project.contingencyPct>30?(lang==="ar"?"قيمة عالية جداً (>30%)":"Very high value (>30%)"):null}><SidebarInput type="number" value={project.contingencyPct} onChange={v=>up({contingencyPct:v})} /></Fld>
@@ -4636,7 +4638,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [showLandRentDetail, setShowLandRentDetail] = useState(false);
   const [landEduModal, setLandEduModal] = useState(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
-  const [landOpen, setLandOpen] = useState(true);
+  const [landOpen, setLandOpen] = useState(false);
   const fileRef = useRef(null);
   if (!project) return null;
   const assets = project.assets || [];
@@ -4806,7 +4808,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [cfAllOpen, setCfAllOpen] = useState(false); // global toggle
   const [cfDetail, setCfDetail] = useState(false); // show detail rows
   const [cfYrs, setCfYrs] = useState(15);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCfAllOpen(expand); setCfDetail(expand); const obj = {}; (project?.assets||[]).forEach((_, i) => { obj[i] = expand; }); setCfOpen(obj); }}, [globalExpand]);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCfAllOpen(expand); setCfDetail(expand); setLandOpen(expand); setShowLandRentDetail(expand); const obj = {}; (project?.assets||[]).forEach((_, i) => { obj[i] = expand; }); setCfOpen(obj); }}, [globalExpand]);
   const ar = lang === "ar";
   const toggleCol = (key) => { setHiddenCols(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); };
   const visibleCols = cols.filter(c => !hiddenCols.has(c.key));
