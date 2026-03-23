@@ -2527,9 +2527,9 @@ When to use:
               // Compute auto fund start year from project data (independent of financing result)
               const sy = project.startYear || 2026;
               let firstCapexYr = sy;
-              if (results?.consolidated?.capex) {
+              if (pc?.capex) {
                 for (let y = 0; y < (project.horizon||20); y++) {
-                  if (results.consolidated.capex[y] > 0) { firstCapexYr = sy + y; break; }
+                  if (pc.capex[y] > 0) { firstCapexYr = sy + y; break; }
                 }
               }
               const autoFundStart = firstCapexYr;
