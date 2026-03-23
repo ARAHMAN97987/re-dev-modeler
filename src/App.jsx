@@ -10,6 +10,51 @@ import AiAssistant from "./AiAssistant";
 // ZAN Financial Modeler — Project Engine v3 (Stable)
 // ═══════════════════════════════════════════════════════════════
 
+// ── Functional Colors — consistent metric coloring across all tabs ──
+const METRIC_COLORS = { success: "#10b981", warning: "#f59e0b", error: "#ef4444", neutral: "#6b7080", muted: "#9ca3af" };
+const METRIC_COLORS_DARK = { success: "#4ade80", warning: "#fbbf24", error: "#f87171", neutral: "#8b90a0", muted: "#6b7080" };
+
+/**
+ * Returns the functional color for a financial metric based on its value.
+ * @param {string} metric - One of: IRR, DSCR, LTV, NPV, MOIC, cashFlow
+ * @param {number|null} value - The numeric value (IRR as decimal e.g. 0.15, DSCR as ratio, LTV as %, NPV as amount, MOIC as multiple)
+ * @param {object} [opts] - Options: { dark: false, raw: false }
+ *   dark=true returns lighter colors for dark backgrounds
+ *   raw=true returns 'success'|'warning'|'error' instead of hex
+ * @returns {string} hex color or level string
+ */
+const getMetricColor = (metric, value, opts = {}) => {
+  const { dark = false, raw = false } = opts;
+  if (value === null || value === undefined || (typeof value === "number" && isNaN(value))) {
+    return raw ? "neutral" : (dark ? METRIC_COLORS_DARK.muted : METRIC_COLORS.muted);
+  }
+  const palette = dark ? METRIC_COLORS_DARK : METRIC_COLORS;
+  let level = "neutral";
+  switch (metric) {
+    case "IRR":
+      level = value >= 0.15 ? "success" : value >= 0.10 ? "warning" : "error";
+      break;
+    case "DSCR":
+      level = value >= 1.5 ? "success" : value >= 1.2 ? "warning" : "error";
+      break;
+    case "LTV":
+      level = value <= 60 ? "success" : value <= 70 ? "warning" : "error";
+      break;
+    case "NPV":
+      level = value > 0 ? "success" : value === 0 ? "warning" : "error";
+      break;
+    case "MOIC":
+      level = value >= 2.0 ? "success" : value >= 1.5 ? "warning" : "error";
+      break;
+    case "cashFlow":
+      level = value > 0 ? "success" : value === 0 ? "neutral" : "error";
+      break;
+    default:
+      return raw ? "neutral" : palette.neutral;
+  }
+  return raw ? level : palette[level];
+};
+
 // ── Error Boundary — prevents white screen on runtime errors ─
 class AppErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
@@ -571,8 +616,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           {!kpiOpen.gp ? (
             <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
               {badge(ar?"صافي":"Net", fmtM(gpNetCash), "#16a34a")}
-              {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", "#3b82f6")}
-              {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", w.gpIRR>0.001?"#16a34a":"#6b7080")}
+              {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
+              {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
             </div>
           ) : (
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
@@ -600,8 +645,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"صافي الربح":"Net Profit"} v={fmtM(gpNetProfit)} c={gpNetProfit>=0?"#16a34a":"#ef4444"} bold />
               <SecHd text={ar?"المؤشرات":"METRICS"} />
               <div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap",paddingTop:4}}>
-                {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", "#3b82f6")}
-                {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", w.gpIRR>0.001?"#16a34a":"#6b7080")}
+                {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
+                {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
                 {badge(ar?"استرداد":"Payback", gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—", "#6366f1")}
               </div>
             </div>
@@ -617,8 +662,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </div>
           {!kpiOpen.lp ? (
             <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-              {badge("IRR", w.lpIRR!==null?fmtPct(w.lpIRR*100):"—", w.lpIRR>0?"#16a34a":"#6b7080")}
-              {badge("MOIC", w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—", "#8b5cf6")}
+              {badge("IRR", w.lpIRR!==null?fmtPct(w.lpIRR*100):"—", getMetricColor("IRR",w.lpIRR))}
+              {badge("MOIC", w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.lpMOIC))}
               {badge(ar?"استرداد":"Payback", lpPayback?`Yr ${lpPayback}`:"—", "#6366f1")}
             </div>
           ) : (
@@ -632,8 +677,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"إجمالي التوزيعات":"Total Distributions"} v={fmt(w.lpTotalDist)} c="#8b5cf6" />
               <KR l={ar?"صافي النقد":"Net Cash"} v={fmtM(lpNetCash)} c={lpNetCash>=0?"#16a34a":"#ef4444"} bold />
               <SecHd text={ar?"المؤشرات":"METRICS"} />
-              <KR l="IRR" v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={w.lpIRR>0?"#16a34a":"#6b7080"} bold />
-              <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c="#8b5cf6" bold />
+              <KR l="IRR" v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={getMetricColor("IRR",w.lpIRR)} bold />
+              <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.lpMOIC)} bold />
               <KR l="DPI" v={w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"} />
               <KR l={ar?"استرداد":"Payback"} v={lpPayback?`${lpPayback} ${ar?"سنة":"yr"}`:"—"} />
               <KR l={ar?"عائد نقدي":"Cash Yield"} v={lpStabYieldVal>0?fmtPct(lpStabYieldVal*100):"—"} />
@@ -764,7 +809,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {f.dscr && <tr>
           <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>DSCR</td>
           <td style={tdN}></td>
-          {years.map(y=>{const v=f.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.2?"#f59e0b":"#16a34a"}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
+          {years.map(y=>{const v=f.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:getMetricColor("DSCR",v)}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
         </tr>}
       </>}
 
@@ -1286,14 +1331,14 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
         </div>
         {!kpiOpen.ret ? (
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-            {badge("IRR", levIRR!==null?fmtPct(levIRR*100):"—", levIRR>0.12?"#16a34a":"#f59e0b")}
+            {badge("IRR", levIRR!==null?fmtPct(levIRR*100):"—", getMetricColor("IRR",levIRR))}
             {badge(ar?"صافي":"Net", fmtM(totalLevCF), totalLevCF>0?"#16a34a":"#ef4444")}
             {exitProc>0 && badge(ar?"تخارج":"Exit", fmtM(exitProc), "#f59e0b")}
           </div>
         ) : (
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
             <SecHd text={ar?"المؤشرات":"METRICS"} />
-            <KR l="IRR" v={levIRR!==null?fmtPct(levIRR*100):"N/A"} c={levIRR>0.12?"#16a34a":"#f59e0b"} bold />
+            <KR l="IRR" v={levIRR!==null?fmtPct(levIRR*100):"N/A"} c={getMetricColor("IRR",levIRR)} bold />
             <KR l={ar?"عائد على التكلفة":"Yield on Cost"} v={yieldOnCost>0?fmtPct(yieldOnCost*100):"—"} c={yieldOnCost>0.08?"#16a34a":"#6b7080"} />
             <KR l={ar?"استرداد":"Payback"} v={payback?`${payback} ${ar?"سنة":"yr"}`:"—"} c="#2563eb" />
             {exitProc>0 && <KR l={ar?"العائد / التكلفة":"Return / Cost"} v={(exitProc/devCost).toFixed(2)+"x"} c={exitProc/devCost>1?"#16a34a":"#ef4444"} bold />}
@@ -1407,7 +1452,7 @@ function SelfResultsView({ project, results, financing, incentivesResult, t, lan
       <tr><td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11,background:"#e0e7ff",borderTop:"2px solid #1e3a5f"}}>
         <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
           <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
-          <span>IRR <strong style={{color:levIRR>0.12?"#16a34a":"#f59e0b"}}>{levIRR!==null?fmtPct(levIRR*100):"N/A"}</strong></span>
+          <span>IRR <strong style={{color:getMetricColor("IRR",levIRR)}}>{levIRR!==null?fmtPct(levIRR*100):"N/A"}</strong></span>
           <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
           <span>{ar?"عائد/تكلفة":"Yield"} <strong style={{color:yieldOnCost>0.08?"#16a34a":"#f59e0b"}}>{yieldOnCost>0?fmtPct(yieldOnCost*100):"—"}</strong></span>
           <span>NPV@10% <strong>{fmtM(calcNPV(levCF,0.10))}</strong></span>
@@ -1619,7 +1664,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         {!kpiOpen.bank ? (
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
             {badge(ar?"دين":"Debt", fmtM(pf.totalDebt), "#2563eb")}
-            {badge("DSCR", dscrMin!==null?dscrMin.toFixed(2)+"x":"—", dscrMin>=1.25?"#16a34a":"#ef4444")}
+            {badge("DSCR", dscrMin!==null?dscrMin.toFixed(2)+"x":"—", getMetricColor("DSCR",dscrMin))}
             {badge(ar?"فوائد":"Interest", fmtM(pf.totalInterest), "#ef4444")}
           </div>
         ) : (
@@ -1637,7 +1682,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"إجمالي تكلفة الدين":"Total Debt Cost"} v={fmtM(totalFinCost)} c="#ef4444" bold />
             <KR l={ar?"كنسبة من التكلفة":"% of Dev Cost"} v={pf.devCostInclLand>0?fmtPct(totalFinCost/pf.devCostInclLand*100):"—"} />
             <SecHd text="DSCR" />
-            <KR l={ar?"أدنى":"Minimum"} v={dscrMin!==null?dscrMin.toFixed(2)+"x":"—"} c={dscrMin>=1.25?"#16a34a":"#ef4444"} bold />
+            <KR l={ar?"أدنى":"Minimum"} v={dscrMin!==null?dscrMin.toFixed(2)+"x":"—"} c={getMetricColor("DSCR",dscrMin)} bold />
             <KR l={ar?"متوسط":"Average"} v={dscrAvg!==null?dscrAvg.toFixed(2)+"x":"—"} c={dscrAvg>=1.5?"#16a34a":"#f59e0b"} />
             <KR l={ar?"ذروة الدين":"Peak Debt"} v={fmtM(peakDebt)} c="#dc2626" />
             <KR l={ar?"تصفية الدين":"Debt Cleared"} v={debtClearYr?`${debtClearYr}`:(ar?"لم يُصفَّ":"Not cleared")} c={debtClearYr?"#16a34a":"#ef4444"} />
@@ -1654,7 +1699,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         </div>
         {!kpiOpen.dev ? (
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-            {badge("IRR", pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—", pf.leveredIRR>0.12?"#16a34a":"#f59e0b")}
+            {badge("IRR", pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—", getMetricColor("IRR",pf.leveredIRR))}
             {badge(ar?"صافي":"Net CF", fmtM(devNetCF), devNetCF>0?"#16a34a":"#ef4444")}
             {badge(ar?"استرداد":"Payback", paybackLev?`Yr ${paybackLev}`:"—", "#6366f1")}
           </div>
@@ -1666,7 +1711,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"تكلفة التطوير":"Dev Cost"} v={fmtM(pf.devCostInclLand)} bold />
             {pf.landCapValue>0 && <KR l={ar?"رسملة أرض":"Land Cap"} v={fmtM(pf.landCapValue)} />}
             <SecHd text={ar?"العوائد":"RETURNS"} />
-            <KR l={ar?"IRR بعد التمويل":"Levered IRR"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"} c={pf.leveredIRR>0.12?"#16a34a":"#f59e0b"} bold />
+            <KR l={ar?"IRR بعد التمويل":"Levered IRR"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"} c={getMetricColor("IRR",pf.leveredIRR)} bold />
             <KR l={ar?"IRR قبل التمويل":"Unlevered IRR"} v={pc.irr!==null?fmtPct(pc.irr*100):"N/A"} />
             <KR l={ar?"فترة الاسترداد":"Payback"} v={paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"—"} c="#2563eb" />
             <KR l={ar?"عائد نقدي":"Cash-on-Cash"} v={cashOnCash>0?fmtPct(cashOnCash*100):"—"} c={cashOnCash>0.08?"#16a34a":"#6b7080"} />
@@ -1675,8 +1720,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             {!isBank100 && pf.totalEquity > 0 && <>
             <SecHd text={ar?"تأثير الرافعة المالية":"LEVERAGE EFFECT"} />
             <KR l={ar?"IRR بدون دين":"Without Debt"} v={pc.irr!==null?fmtPct(pc.irr*100):"—"} c="#6b7080" />
-            <KR l={ar?"IRR مع دين":"With Debt"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—"} c={pf.leveredIRR>0.12?"#16a34a":"#f59e0b"} bold />
-            <KR l={ar?"الفرق (أثر الدين)":"IRR Boost"} v={pc.irr!==null&&pf.leveredIRR!==null?`+${((pf.leveredIRR-pc.irr)*100).toFixed(2)}%`:"—"} c={pf.leveredIRR>pc.irr?"#16a34a":"#ef4444"} bold />
+            <KR l={ar?"IRR مع دين":"With Debt"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—"} c={getMetricColor("IRR",pf.leveredIRR)} bold />
+            <KR l={ar?"الفرق (أثر الدين)":"IRR Boost"} v={pc.irr!==null&&pf.leveredIRR!==null?`+${((pf.leveredIRR-pc.irr)*100).toFixed(2)}%`:"—"} c={pf.leveredIRR>pc.irr?"#10b981":"#ef4444"} bold />
             <KR l={ar?"مضاعف الملكية":"Equity Multiple"} v={pf.totalEquity>0?((exitProc+devNetCF)/pf.totalEquity).toFixed(2)+"x":"—"} c={exitProc+devNetCF>pf.totalEquity?"#16a34a":"#ef4444"} bold />
             </>}
             <SecHd text="NPV" />
@@ -1726,10 +1771,10 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"العائد":"Proceeds"} v={exitProc>0?fmtM(exitProc):"—"} c="#16a34a" />
             <KR l={ar?"تكلفة التخارج":"Exit Cost"} v={exitCostPct>0?exitCostPct+"%":"—"} />
             <SecHd text={ar?"امتثال بنكي":"BANK COMPLIANCE"} />
-            <KR l="Min DSCR ≥ 1.25x" v={dscrMin>=1.25?"✅":"❌"} c={dscrMin>=1.25?"#16a34a":"#ef4444"} bold />
+            <KR l="Min DSCR ≥ 1.25x" v={dscrMin>=1.25?"✅":"❌"} c={getMetricColor("DSCR",dscrMin)} bold />
             <KR l="Avg DSCR ≥ 1.50x" v={dscrAvg>=1.5?"✅":"❌"} c={dscrAvg>=1.5?"#16a34a":"#ef4444"} bold />
             <KR l={ar?"الدين مسدد":"Debt Cleared"} v={debtClearYr?"✅":"❌"} c={debtClearYr?"#16a34a":"#ef4444"} />
-            <KR l="IRR > 0" v={pf.leveredIRR>0?"✅":"❌"} c={pf.leveredIRR>0?"#16a34a":"#ef4444"} />
+            <KR l="IRR > 0" v={pf.leveredIRR>0?"✅":"❌"} c={pf.leveredIRR>0?"#10b981":"#ef4444"} />
           </div>
         )}
       </div>
@@ -1830,10 +1875,10 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       {pf.dscr && <tr style={{background:"#eff6ff"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:700,minWidth:200,fontSize:11,color:"#1e40af",paddingInlineStart:10}}>= DSCR (NOI ÷ DS)</td>
         <td style={{...tdN,fontWeight:700,color:"#1e40af"}}>{dscrAvg!==null?dscrAvg.toFixed(2)+"x":""}</td>
-        {years.map(y=>{const v=pf.dscr?.[y];const bg=v===null||v===undefined?"#eff6ff":v<1?"#fef2f2":v<1.25?"#fefce8":"#f0fdf4";const fg=v===null||v===undefined?"#d0d4dc":v<1?"#ef4444":v<1.25?"#f59e0b":"#16a34a";return <td key={y} style={{...tdN,fontSize:11,fontWeight:700,color:fg,background:bg}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
+        {years.map(y=>{const v=pf.dscr?.[y];const bg=v===null||v===undefined?"#eff6ff":getMetricColor("DSCR",v,{raw:true})==="error"?"#fef2f2":getMetricColor("DSCR",v,{raw:true})==="warning"?"#fefce8":"#f0fdf4";const fg=getMetricColor("DSCR",v);return <td key={y} style={{...tdN,fontSize:11,fontWeight:700,color:fg,background:bg}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
       </tr>}
       {/* Min DSCR indicator */}
-      <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:10,color:dscrMin>=1.25?"#16a34a":"#ef4444",background:dscrMin>=1.25?"#f0fdf4":"#fef2f2"}}>
+      <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:10,color:getMetricColor("DSCR",dscrMin),background:dscrMin>=1.25?"#f0fdf4":"#fef2f2"}}>
         {dscrMin>=1.25?"✅":"⚠️"} {ar?"الحد الأدنى":"Minimum"}: <strong>{dscrMin!==null?dscrMin.toFixed(2)+"x":"N/A"}</strong> | {ar?"المتوسط":"Average"}: <strong>{dscrAvg!==null?dscrAvg.toFixed(2)+"x":"N/A"}</strong> | {ar?"حد البنك":"Bank Req"}: <strong>1.25x</strong>
       </td></tr>
       </>}
@@ -1872,7 +1917,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         <td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11}}>
           <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
-            <span>IRR <strong style={{color:pf.leveredIRR>0.12?"#16a34a":"#f59e0b"}}>{pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"}</strong></span>
+            <span>IRR <strong style={{color:getMetricColor("IRR",pf.leveredIRR)}}>{pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"}</strong></span>
             <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
             <span>NPV@10% <strong>{fmtM(calcNPV(pf.leveredCF,0.10))}</strong></span>
             <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(pf.leveredCF,0.12))}</strong></span>
@@ -2437,7 +2482,7 @@ When to use:
           <KPI label={ar?"تكلفة التطوير (شامل الأرض)":"Dev Cost (Incl Land)"} value={fmtM(f.devCostInclLand)} sub={cur} color="#1a1d23" />
           <KPI label={ar?"سقف الدين":"Max Debt (LTV)"} value={fmtM(f.maxDebt)} sub={`${cfg.maxLtvPct||70}% LTV`} color="#ef4444" />
           <KPI label={ar?"إجمالي الملكية":"Total Equity"} value={fmtM(f.totalEquity)} sub={fmtPct((1-(f.totalDebt/(f.devCostInclLand||1)))*100)} color="#3b82f6" />
-          <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color={f.leveredIRR>0.12?"#16a34a":"#f59e0b"} />
+          <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color={getMetricColor("IRR",f.leveredIRR)} />
           <KPI label={ar?"إجمالي تكلفة التمويل":"Total Financing Cost"} value={fmtM(totalFinCost)} sub={finCostPct>0?fmtPct(finCostPct*100)+" "+ar?"من التكلفة":"of cost":""} color="#ef4444" tip={ar?"فوائد (شامل رسوم القرض) + رسوم صندوق\nInterest (incl. upfront fee) + Fund Fees":""} />
           <KPI label={ar?"عائد نقدي سنوي":"Cash-on-Cash Yield"} value={cashOnCash>0?fmtPct(cashOnCash*100):"—"} color={cashOnCash>0.08?"#16a34a":"#f59e0b"} />
           {isFund && feeData && <KPI label={ar?"إجمالي الرسوم":"Total Fund Fees"} value={fmtM(feeData.total)} sub={f.devCostInclLand>0?fmtPct(feeData.total/f.devCostInclLand*100)+" "+ar?"من التكلفة":"of cost":""} color="#f59e0b" />}
@@ -5418,7 +5463,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
         </div>
         {f && f.mode !== "self" && <div>
           <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"IRR بعد التمويل":"Levered IRR"}</div>
-          <div style={{fontSize:20,fontWeight:800,color:f.leveredIRR>0.15?"#16a34a":"#8b5cf6"}}>{f.leveredIRR!==null?(f.leveredIRR*100).toFixed(1)+"%":"N/A"}</div>
+          <div style={{fontSize:20,fontWeight:800,color:getMetricColor("IRR",f.leveredIRR)}}>{f.leveredIRR!==null?(f.leveredIRR*100).toFixed(1)+"%":"N/A"}</div>
         </div>}
         <div>
           <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{ar?"فترة الاسترداد":"Payback"}</div>
@@ -5460,7 +5505,7 @@ function ProjectDash({ project, results, checks, t, financing, onGoToAssets, lan
                 return <div style={{marginTop:10}}>
                   <div style={{fontSize:10,color:"#6b7080",marginBottom:3}}>LTV: {ltv.toFixed(0)}%</div>
                   <div style={{height:6,borderRadius:3,background:"#f0f1f5",overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${ltv}%`,background:ltv>75?"#ef4444":ltv>60?"#f59e0b":"#16a34a",borderRadius:3}} />
+                    <div style={{height:"100%",width:`${ltv}%`,background:getMetricColor("LTV",ltv),borderRadius:3}} />
                   </div>
                 </div>;
               })()}
@@ -8793,7 +8838,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
     {/* NPV/IRR Summary */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(130px, 1fr))",gap:10,marginBottom:16}}>
       {[
-        {label:ar?"IRR المشروع (قبل التمويل)":"Unlevered IRR",value:c.irr!==null?fmtPct(c.irr*100):"N/A",color:c.irr>0.12?"#16a34a":"#f59e0b"},
+        {label:ar?"IRR المشروع (قبل التمويل)":"Unlevered IRR",value:c.irr!==null?fmtPct(c.irr*100):"N/A",color:getMetricColor("IRR",c.irr)},
         {label:"NPV @10%",value:fmtM(c.npv10),color:c.npv10>0?"#2563eb":"#ef4444"},
         {label:"NPV @12%",value:fmtM(c.npv12),color:c.npv12>0?"#2563eb":"#ef4444"},
         {label:"NPV @14%",value:fmtM(c.npv14),color:c.npv14>0?"#2563eb":"#ef4444"},
@@ -11083,10 +11128,10 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
         </div>
         <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
           <KPI label={ar?"إجمالي التكاليف":"Total CAPEX"} value={fmtM(displayCapex)} color="#fff" />
-          <KPI label="IRR" value={displayIRR !== null ? (displayIRR*100).toFixed(1)+"%" : "—"} color={irrOk>=2?"#4ade80":irrOk===1?"#fbbf24":"#f87171"} />
-          {displayNPV !== null && <KPI label={ar?"صافي القيمة الحالية":"NPV @10%"} value={fmtM(displayNPV)} color={displayNPV>0?"#4ade80":"#f87171"} />}
-          {minDscr !== null && !isPhase && <KPI label={ar?"أدنى DSCR":"Min DSCR"} value={minDscr.toFixed(2)+"x"} color={dscrOk>=2?"#4ade80":dscrOk===1?"#fbbf24":"#f87171"} />}
-          {w && !isPhase && <KPI label="LP MOIC" value={w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"} color="#fff" />}
+          <KPI label="IRR" value={displayIRR !== null ? (displayIRR*100).toFixed(1)+"%" : "—"} color={getMetricColor("IRR",displayIRR,{dark:true})} />
+          {displayNPV !== null && <KPI label={ar?"صافي القيمة الحالية":"NPV @10%"} value={fmtM(displayNPV)} color={getMetricColor("NPV",displayNPV,{dark:true})} />}
+          {minDscr !== null && !isPhase && <KPI label={ar?"أدنى DSCR":"Min DSCR"} value={minDscr.toFixed(2)+"x"} color={getMetricColor("DSCR",minDscr,{dark:true})} />}
+          {w && !isPhase && <KPI label="LP MOIC" value={w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"} color={getMetricColor("MOIC",w.lpMOIC,{dark:true})} />}
           {isPhase && <KPI label={ar?"إجمالي الإيرادات":"Total Income"} value={fmtM(displayIncome)} color="#4ade80" />}
           {isPhase && <KPI label={ar?"عدد الأصول":"Assets"} value={String(displayAssets.length)} color="#fff" />}
         </div>
@@ -11150,7 +11195,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
               </div>
               <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"متوسط DSCR":"Avg DSCR"}</div>
-                <div style={{fontSize:20,fontWeight:700,color:dscrOk>=2?"#16a34a":dscrOk===1?"#eab308":"#ef4444"}}>{avgDscr ? avgDscr.toFixed(2)+"x" : "—"}</div>
+                <div style={{fontSize:20,fontWeight:700,color:getMetricColor("DSCR",avgDscr)}}>{avgDscr ? avgDscr.toFixed(2)+"x" : "—"}</div>
                 <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{ar?"أدنى":"Min"}: {minDscr ? minDscr.toFixed(2)+"x" : "—"}</div>
               </div>
             </div>
