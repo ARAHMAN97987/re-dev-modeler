@@ -113,33 +113,35 @@ export async function generateTemplateExcel(project, results, financing, waterfa
   setInput(INP, "C114", p.exitMultiple || 10);
   setInput(INP, "C115", pct(p.exitCostPct));
 
-  // Section 12: Fund Settings Mode
-  setInput(INP, "C118", "Unified");
+  // Section 12: Fund Settings Mode (auto-detect: if any phase has financing config, use Per-Phase)
+  const hasPerPhase = phases.some(ph => ph?.financing && Object.keys(ph.financing).length > 0);
+  setInput(INP, "C118", hasPerPhase ? "Per-Phase" : "Unified");
 
   // Section 13: Per-Phase Fund Grid (rows 126-140, cols C-H = phases 1-6)
+  // Priority: phase.financing (per-phase config) > project-level
   const colLetters = ["C", "D", "E", "F", "G", "H"];
   for (let pi = 0; pi < 6; pi++) {
     const col = colLetters[pi];
-    // Use project-level settings for all phases (Unified mode)
-    setInput(INP, `${col}126`, pct(p.financeRate));
-    setInput(INP, `${col}127`, p.loanTenor || 7);
-    setInput(INP, `${col}128`, p.debtGrace || 3);
-    setInput(INP, `${col}129`, pct(p.upfrontFeePct));
-    setInput(INP, `${col}130`, pct(p.subscriptionFeePct));
-    setInput(INP, `${col}131`, pct(p.annualMgmtFeePct));
-    setInput(INP, `${col}132`, p.custodyFeeAnnual || 130000);
-    setInput(INP, `${col}133`, pct(p.developerFeePct));
-    setInput(INP, `${col}134`, pct(p.structuringFeePct));
-    setInput(INP, `${col}135`, pct(p.prefReturnPct));
-    setInput(INP, `${col}136`, p.gpCatchup !== false ? "Y" : "N");
-    setInput(INP, `${col}137`, pct(p.carryPct));
+    const ph = phases[pi];
+    const f = ph?.financing || {}; // per-phase financing config
+    setInput(INP, `${col}126`, pct(f.financeRate ?? p.financeRate));
+    setInput(INP, `${col}127`, f.loanTenor ?? p.loanTenor ?? 7);
+    setInput(INP, `${col}128`, f.debtGrace ?? p.debtGrace ?? 3);
+    setInput(INP, `${col}129`, pct(f.upfrontFeePct ?? p.upfrontFeePct));
+    setInput(INP, `${col}130`, pct(f.subscriptionFeePct ?? p.subscriptionFeePct));
+    setInput(INP, `${col}131`, pct(f.annualMgmtFeePct ?? p.annualMgmtFeePct));
+    setInput(INP, `${col}132`, f.custodyFeeAnnual ?? p.custodyFeeAnnual ?? 130000);
+    setInput(INP, `${col}133`, pct(f.developerFeePct ?? p.developerFeePct));
+    setInput(INP, `${col}134`, pct(f.structuringFeePct ?? p.structuringFeePct));
+    setInput(INP, `${col}135`, pct(f.prefReturnPct ?? p.prefReturnPct));
+    setInput(INP, `${col}136`, (f.gpCatchup ?? p.gpCatchup) !== false ? "Y" : "N");
+    setInput(INP, `${col}137`, pct(f.carryPct ?? p.carryPct));
 
-    // Exit year per phase: if phases have different start offsets, stagger exit years
-    const phaseOffset = phases[pi]?.startYearOffset || (pi + 1);
-    const baseExitYear = p.exitYear || ((p.startYear || 2026) + phaseOffset + (p.loanTenor || 7) - 1);
-    setInput(INP, `${col}138`, baseExitYear);
-    setInput(INP, `${col}139`, p.exitMultiple || 10);
-    setInput(INP, `${col}140`, pct(p.exitCostPct));
+    // Exit params: per-phase > project-level
+    const exitYr = f.exitYear ?? p.exitYear ?? ((p.startYear || 2026) + (ph?.startYearOffset || pi + 1) + (f.loanTenor ?? p.loanTenor ?? 7) - 1);
+    setInput(INP, `${col}138`, exitYr);
+    setInput(INP, `${col}139`, f.exitMultiple ?? p.exitMultiple ?? 10);
+    setInput(INP, `${col}140`, pct(f.exitCostPct ?? p.exitCostPct));
   }
 
   // ═══════════════════════════════════════════════════════════
