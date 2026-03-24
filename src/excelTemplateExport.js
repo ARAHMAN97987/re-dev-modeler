@@ -306,6 +306,18 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     // Platform stores explicit fundStartYear per phase - force-write it
     const fundStart = f.fundStartYear || ((p.startYear || 2026) + (ph?.startYearOffset || pi + 1));
     forceSet(sheetName, "C9", fundStart);
+
+    // Fix freeze pane: template locks rows 1-46 (E47) which is too many.
+    // Change to column-only freeze: A-D always visible, rows scroll freely.
+    if (ws.views && ws.views.length > 0) {
+      ws.views = [{
+        state: 'frozen',
+        xSplit: 4,        // freeze columns A-D (labels always visible)
+        ySplit: 0,        // no row freeze
+        topLeftCell: 'E1',
+        activeCell: 'E47',
+      }];
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
