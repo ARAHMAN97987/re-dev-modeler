@@ -34,7 +34,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   let structFee = isFund ? f.devCostExclLand * (project.structuringFeePct || 0) / 100 : 0;
   const structFeeCap = project.structuringFeeCap || 0;
   if (structFeeCap > 0 && structFee > structFeeCap) structFee = structFeeCap;
-  const mgmtFeeBase = project.mgmtFeeBase || "fundAssets";
+  const mgmtFeeBase = project.mgmtFeeBase || "nav";
   const mgmtFeeRate = (project.annualMgmtFeePct || 0) / 100;
   const mgmtFeeCap = project.mgmtFeeCapAnnual || 0;
   const annualCustody = isFund ? (project.custodyFeeAnnual || 0) : 0;
