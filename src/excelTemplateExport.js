@@ -202,7 +202,10 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     setInput(PRG, `O${row}`, a.rampUpYears || 3);
     setInput(PRG, `P${row}`, pct(a.stabilizedOcc || a.occupancy));
     setInput(PRG, `Q${row}`, a.costPerSqm || 0);
-    if (a.floors) setInput(PRG, `R${row}`, a.floors);
+    // Col R = construction start year offset (constrStart) - must always be written
+    // without this, hardcoded template values (e.g. 4 for Parking/Marina) persist
+    // which misaligns CAPEX timing vs platform → wrong IRR in Excel
+    setInput(PRG, `R${row}`, a.constrStart || a.startOffset || 2);
     setInput(PRG, `S${row}`, a.constrDuration || a.constructionMonths || 12);
   }
 
