@@ -155,6 +155,9 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     // Exit Cap Rate (row 141) - platform stores as whole number (10 = 10%)
     const capRate = f.exitCapRate ?? p.exitCapRate ?? 10;
     setInput(INP, `${col}141`, pct(capRate));
+    // Fee caps (rows 142-143) - platform stores as absolute values
+    setInput(INP, `${col}142`, f.mgmtFeeCapAnnual ?? p.mgmtFeeCapAnnual ?? 2000000);
+    setInput(INP, `${col}143`, f.structuringFeeCap ?? p.structuringFeeCap ?? 300000);
   }
 
   // ═══════════════════════════════════════════════════════════

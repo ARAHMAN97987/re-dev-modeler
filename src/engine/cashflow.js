@@ -76,8 +76,17 @@ export function computeProjectCashFlows(project) {
     }
 
     if (durYears > 0 && totalCapex > 0) {
-      const ann = totalCapex / durYears;
-      for (let y = cStart; y < cStart + durYears && y < horizon; y++) if (y >= 0) capexSch[y] = ann;
+      // Monthly proration (matches Excel formula):
+      // Each year gets: CAPEX × MIN(12, durMonths - yearOffset×12) / durMonths
+      // This correctly handles durations not divisible by 12 (e.g. 30mo = 40%+40%+20%)
+      const durMonths = asset.constrDuration || (durYears * 12);
+      for (let y = cStart; y < cStart + durYears && y < horizon; y++) {
+        if (y >= 0) {
+          const yearOffset = y - cStart;
+          const monthsThisYear = Math.min(12, durMonths - yearOffset * 12);
+          capexSch[y] = totalCapex * monthsThisYear / durMonths;
+        }
+      }
     }
 
     // H15: BOT limits revenue to operation period
