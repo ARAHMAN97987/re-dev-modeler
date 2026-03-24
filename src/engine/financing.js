@@ -49,10 +49,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
           } else {
             if (exitStrategy === "caprate") {
               const capRate = (project.exitCapRate ?? 9) / 100;
-              const totalFP = assetScheds.reduce((s, a) => s + (a.footprint || 0), 0);
-              const landShare = (c.landRent[exitIdx] || 0) * ((as.footprint || 0) / Math.max(1, totalFP));
-              const assetNOI = assetIncome - landShare;
-              exitVal += capRate > 0 ? assetNOI / capRate : 0;
+              // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
+              exitVal += capRate > 0 ? assetIncome / capRate : 0;
             } else {
               exitVal += assetIncome * (project.exitMultiple ?? 10);
             }
@@ -60,10 +58,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
         }
       } else {
         const stabIncome = c.income[exitIdx] || 0;
-        const stabNOI = stabIncome - (c.landRent[exitIdx] || 0);
+        // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
         if (exitStrategy === "caprate") {
           const capRate = (project.exitCapRate ?? 9) / 100;
-          exitVal = capRate > 0 ? stabNOI / capRate : 0;
+          exitVal = capRate > 0 ? stabIncome / capRate : 0;
         } else {
           exitVal = stabIncome * (project.exitMultiple ?? 10);
         }
@@ -151,10 +149,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
           } else {
             if (exitStrategySelf === "caprate") {
               const capRate = (project.exitCapRate ?? 9) / 100;
-              const totalFP = assetScheds.reduce((s, a) => s + (a.footprint || 0), 0);
-              const landShare = (c.landRent[exitIdx] || 0) * ((as.footprint || 0) / Math.max(1, totalFP));
-              const assetNOI = assetIncome - landShare;
-              exitVal += capRate > 0 ? assetNOI / capRate : 0;
+              // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
+              exitVal += capRate > 0 ? assetIncome / capRate : 0;
             } else {
               exitVal += assetIncome * (project.exitMultiple ?? 10);
             }
@@ -162,10 +158,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
         }
       } else {
         const stabIncome = c.income[exitIdx] || c.income[fallbackIdx] || 0;
-        const stabNOI = stabIncome - (c.landRent[exitIdx] || 0);
+        // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
         if (exitStrategySelf === "caprate") {
           const capRateSelf = (project.exitCapRate ?? 9) / 100;
-          exitVal = capRateSelf > 0 ? stabNOI / capRateSelf : 0;
+          exitVal = capRateSelf > 0 ? stabIncome / capRateSelf : 0;
         } else {
           exitVal = stabIncome * (project.exitMultiple ?? 10);
         }
@@ -516,9 +512,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
           // Lease: income contributes to NOI-based valuation
           if (exitStrategy === "caprate") {
             const capRate = (project.exitCapRate ?? 9) / 100;
-            const landShare = (c.landRent[exitIdx] || 0) * ((as.footprint || 0) / Math.max(1, assetScheds.reduce((s,a)=>s+(a.footprint||0),0)));
-            const assetNOI = assetIncome - landShare;
-            exitVal += capRate > 0 ? assetNOI / capRate : 0;
+            // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
+            exitVal += capRate > 0 ? assetIncome / capRate : 0;
           } else {
             exitVal += assetIncome * (project.exitMultiple ?? 10);
           }
@@ -527,10 +522,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     } else {
       // Fallback: old method if no asset schedules
       const stabIncome = c.income[exitIdx] || c.income[fallbackIdx] || 0;
-      const stabNOI = stabIncome - (c.landRent[exitIdx] || 0);
+      // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
       if (exitStrategy === "caprate") {
         const capRate = (project.exitCapRate ?? 9) / 100;
-        exitVal = capRate > 0 ? stabNOI / capRate : 0;
+        exitVal = capRate > 0 ? stabIncome / capRate : 0;
       } else {
         exitVal = stabIncome * (project.exitMultiple ?? 10);
       }
