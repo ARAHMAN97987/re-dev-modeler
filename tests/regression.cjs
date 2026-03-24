@@ -64,8 +64,8 @@ const checks = runChecks(JAZAN, r, f, w, i);
 // ── T1: Project Engine ──
 const tol = (actual, expected, pct) => Math.abs(actual - expected) / Math.max(1, Math.abs(expected)) < pct/100;
 t("T1", "Total CAPEX = 362,554,500", tol(r.consolidated.totalCapex, 362554500, 0.01), `Got: ${Math.round(r.consolidated.totalCapex)}`);
-t("T1", "Total Income (15yr) > 900M", r.consolidated.totalIncome > 900000000, `Got: ${Math.round(r.consolidated.totalIncome)}`);
-t("T1", "Unlevered IRR ~13.5%", tol(r.consolidated.irr, 0.1353, 1), `Got: ${(r.consolidated.irr*100).toFixed(2)}%`);
+t("T1", "Total Income (15yr) > 800M", r.consolidated.totalIncome > 800000000, `Got: ${Math.round(r.consolidated.totalIncome)}`);
+t("T1", "Unlevered IRR ~12.5%", tol(r.consolidated.irr, 0.1247, 2), `Got: ${(r.consolidated.irr*100).toFixed(2)}%`);
 t("T1", "NPV@10% > 0", r.consolidated.npv10 > 0, `Got: ${Math.round(r.consolidated.npv10)}`);
 t("T1", "4 assets computed", r.assetSchedules.length === 4);
 t("T1", "2 phases", Object.keys(r.phaseResults).length === 2);

@@ -105,24 +105,24 @@ suite('F3-computeProjectCashFlows');
 {
   const r = E.computeProjectCashFlows(D1);
   const c = r.consolidated;
-  // A: CAPEX schedule
+  // A: CAPEX schedule (constrStart=1 → cStart=1, dur=2yrs → CAPEX at Y1,Y2)
   const expCapex = oracleCapex(1000,3000,10,5,1);
   const durYrs = Math.ceil(24/12); // 2
   t('Total CAPEX matches oracle', near(c.totalCapex, expCapex, TOL.MONEY_LARGE), `${c.totalCapex} vs ${expCapex}`);
   t('CAPEX sum = totalCapex', near(sumArr(c.capex), c.totalCapex, TOL.MONEY_SMALL));
   const expSch = oracleCapexSchedule(expCapex, 0, 2, 10, 0);
-  t('CAPEX schedule Y0', near(c.capex[0], expCapex/2, TOL.MONEY_SMALL));
   t('CAPEX schedule Y1', near(c.capex[1], expCapex/2, TOL.MONEY_SMALL));
-  t('CAPEX Y2+ = 0', c.capex.slice(2).every(v => v === 0));
-  // B: Lease revenue
-  const revStart = 0 + 2; // constrStart=1 → idx 0, dur=2 → revStart=2
-  t('No revenue Y0-Y1', c.income[0]===0 && c.income[1]===0);
-  t('Revenue starts Y2', c.income[2] > 0, `Y2=${c.income[2]}`);
+  t('CAPEX schedule Y2', near(c.capex[2], expCapex/2, TOL.MONEY_SMALL));
+  t('CAPEX Y3+ = 0', c.capex.slice(3).every(v => v === 0));
+  // B: Lease revenue (constrStart=1 → cStart=1, dur=2 → revStart=3)
+  const revStart = 1 + 2; // constrStart=1 → idx 1, dur=2 → revStart=3
+  t('No revenue Y0-Y2', c.income[0]===0 && c.income[1]===0 && c.income[2]===0);
+  t('Revenue starts Y3', c.income[3] > 0, `Y3=${c.income[3]}`);
   // Oracle: leasable=1000*0.8=800, rate=1000, occ=0.9, ramp=2, esc=2%
-  const expRevY2 = 800 * 1000 * 0.9 * Math.min(1, 1/2) * Math.pow(1.02, 0); // = 360,000
-  t('Rev Y2 oracle', near(c.income[2], expRevY2, TOL.MONEY_LARGE), `${c.income[2]} vs ${expRevY2}`);
-  const expRevY3 = 800 * 1000 * 0.9 * Math.min(1, 2/2) * Math.pow(1.02, 1); // = 734,400
-  t('Rev Y3 oracle (full ramp)', near(c.income[3], expRevY3, TOL.MONEY_LARGE), `${c.income[3]} vs ${expRevY3}`);
+  const expRevY3 = 800 * 1000 * 0.9 * Math.min(1, 1/2) * Math.pow(1.02, 0); // = 360,000
+  t('Rev Y3 oracle', near(c.income[3], expRevY3, TOL.MONEY_LARGE), `${c.income[3]} vs ${expRevY3}`);
+  const expRevY4 = 800 * 1000 * 0.9 * Math.min(1, 2/2) * Math.pow(1.02, 1); // = 734,400
+  t('Rev Y4 oracle (full ramp)', near(c.income[4], expRevY4, TOL.MONEY_LARGE), `${c.income[4]} vs ${expRevY4}`);
   // E: Land rent
   const expLand = oracleLandRent(500000, 2, 5, 5, 10, 10);
   const landCheck = arrClose(r.landSchedule, expLand, TOL.MONEY_SMALL);
@@ -146,11 +146,12 @@ suite('F3b-SaleRevenue');
   const sellable = 1000 * 0.9; // 900
   const totalVal = 900 * 5000; // 4,500,000
   const preSale = totalVal * 0.2 * 0.95; // 855,000
-  t('Pre-sale in last constr yr', near(r.consolidated.income[1], preSale, TOL.MONEY_LARGE), `Y1=${r.consolidated.income[1]} exp=${preSale}`);
+  // constrStart=1 → cStart=1, dur=2 → constr Y1-Y2, revStart=3
+  t('Pre-sale in last constr yr', near(r.consolidated.income[2], preSale, TOL.MONEY_LARGE), `Y2=${r.consolidated.income[2]} exp=${preSale}`);
   const remaining = totalVal * 0.8;
   const annSale = remaining / 2; // 1,800,000
-  const postY2 = annSale * 0.95 * Math.pow(1.02, 0); // esc=2% from asset
-  t('Post-sale Y2', near(r.consolidated.income[2], postY2, TOL.MONEY_LARGE), `Y2=${r.consolidated.income[2]} exp=${postY2}`);
+  const postY3 = annSale * 0.95 * Math.pow(1.02, 0); // esc=2% from asset
+  t('Post-sale Y3', near(r.consolidated.income[3], postY3, TOL.MONEY_LARGE), `Y3=${r.consolidated.income[3]} exp=${postY3}`);
 }
 
 // ── F3c: Operating revenue branch ──
@@ -158,9 +159,10 @@ suite('F3c-OperatingRevenue');
 {
   const pOp = {...D1, assets:[{...D1.assets[0], revType:'Operating', opEbitda:1000000, rampUpYears:3, escalation:1.0}]};
   const r = E.computeProjectCashFlows(pOp);
-  const expY2 = 1000000 * Math.min(1, 1/3) * Math.pow(1.01, 0); // ramp yr 1
-  t('Op rev Y2 ramp', near(r.consolidated.income[2], expY2, TOL.MONEY_LARGE), `${r.consolidated.income[2]} vs ${expY2}`);
-  t('Op rev Y4 full', r.consolidated.income[4] > r.consolidated.income[2]);
+  // constrStart=1 → cStart=1, dur=2 → revStart=3
+  const expY3 = 1000000 * Math.min(1, 1/3) * Math.pow(1.01, 0); // ramp yr 1
+  t('Op rev Y3 ramp', near(r.consolidated.income[3], expY3, TOL.MONEY_LARGE), `${r.consolidated.income[3]} vs ${expY3}`);
+  t('Op rev Y5 full', r.consolidated.income[5] > r.consolidated.income[3]);
 }
 
 // ── F3d: Delay scenario ──
@@ -896,8 +898,8 @@ suite('LR2-LandRentPaidByDeveloper');
   const f = E.computeFinancing(p, r, i);
   const wDev = E.computeWaterfall(p, r, f, i);
   const wProj = E.computeWaterfall({...p, landRentPaidBy:'project'}, r, f, i);
-  t('Dev pays: gpPaysLandRent=true', wDev.gpPaysLandRent);
-  t('Dev pays: gpLandRentTotal > 0', wDev.gpLandRentTotal > 0);
+  t('Dev pays: gpPaysLandRent=false (double-count fix)', !wDev.gpPaysLandRent);
+  t('Dev pays: gpLandRentTotal = 0 (double-count fix)', wDev.gpLandRentTotal === 0);
   // When GP pays rent, more cash available for distribution (higher cashAvail)
   const devCash = sumArr(wDev.cashAvail);
   const projCash = sumArr(wProj.cashAvail);
@@ -954,8 +956,11 @@ suite('LR4-AutoResolution');
   const iGP = E.computeIncentives(pGP, rGP);
   const fGP = E.computeFinancing(pGP, rGP, iGP);
   const wGP = E.computeWaterfall(pGP, rGP, fGP, iGP);
-  t('Auto+capToGP = GP pays', wGP.resolvedLandRentPayer === 'gp', 'Resolved: ' + wGP.resolvedLandRentPayer);
-  t('Auto+capToGP: gpLandRent > 0', wGP.gpLandRentTotal > 0);
+  // NOTE: All modes now resolve to "project" to prevent double-counting.
+  // Land rent is already in unlevered CF → charging separately = double-count.
+  // Future: implement cashAvail add-back for explicit gp/lp modes.
+  t('Auto+capToGP = project (double-count fix)', wGP.resolvedLandRentPayer === 'project', 'Resolved: ' + wGP.resolvedLandRentPayer);
+  t('Auto+capToGP: gpLandRent = 0 (double-count fix)', wGP.gpLandRentTotal === 0);
 
   // Case 2: landCapTo=lp + auto -> LP pays
   const pLP = {...D2, landCapitalize:true, landCapRate:2000, landCapTo:'lp', landRentPaidBy:'auto'};
@@ -963,8 +968,8 @@ suite('LR4-AutoResolution');
   const iLP = E.computeIncentives(pLP, rLP);
   const fLP = E.computeFinancing(pLP, rLP, iLP);
   const wLP = E.computeWaterfall(pLP, rLP, fLP, iLP);
-  t('Auto+capToLP = LP pays', wLP.resolvedLandRentPayer === 'lp', 'Resolved: ' + wLP.resolvedLandRentPayer);
-  t('Auto+capToLP: lpLandRent > 0', wLP.lpLandRentTotal > 0);
+  t('Auto+capToLP = project (double-count fix)', wLP.resolvedLandRentPayer === 'project', 'Resolved: ' + wLP.resolvedLandRentPayer);
+  t('Auto+capToLP: lpLandRent = 0 (double-count fix)', wLP.lpLandRentTotal === 0);
   t('Auto+capToLP: gpLandRent = 0', wLP.gpLandRentTotal === 0);
 
   // Case 3: landCapTo=split + auto -> split
@@ -973,8 +978,8 @@ suite('LR4-AutoResolution');
   const iS = E.computeIncentives(pSplit, rS);
   const fS = E.computeFinancing(pSplit, rS, iS);
   const wS = E.computeWaterfall(pSplit, rS, fS, iS);
-  t('Auto+capToSplit = split', wS.resolvedLandRentPayer === 'split', 'Resolved: ' + wS.resolvedLandRentPayer);
-  t('Auto+split: both pay', wS.gpLandRentTotal > 0 && wS.lpLandRentTotal > 0);
+  t('Auto+capToSplit = project (double-count fix)', wS.resolvedLandRentPayer === 'project', 'Resolved: ' + wS.resolvedLandRentPayer);
+  t('Auto+split: no obligations (double-count fix)', wS.gpLandRentTotal === 0 && wS.lpLandRentTotal === 0);
 
   // Case 4: no capitalization + auto -> project
   const pNoCap = {...D2, landCapitalize:false, landRentPaidBy:'auto'};
@@ -988,17 +993,18 @@ suite('LR4-AutoResolution');
 
 suite('LR5-LPPaysLandRent');
 {
-  // Explicit LP pays: LP IRR should be lower, GP IRR higher vs project-pays
+  // NOTE: Explicit LP/GP payer modes now resolve to "project" to prevent double-counting.
+  // Land rent is in unlevered CF → separate obligation = double-count.
   const p = {...D2, landCapitalize:true, landCapRate:2000, landCapTo:'lp', landRentPaidBy:'lp'};
   const r = E.computeProjectCashFlows(p);
   const i = E.computeIncentives(p, r);
   const f = E.computeFinancing(p, r, i);
   const wLP = E.computeWaterfall(p, r, f, i);
   const wProj = E.computeWaterfall({...p, landRentPaidBy:'project'}, r, f, i);
-  t('LP pays: lpLandRentTotal > 0', wLP.lpLandRentTotal > 0);
+  t('LP pays: lpLandRentTotal = 0 (double-count fix)', wLP.lpLandRentTotal === 0);
   t('LP pays: gpLandRentTotal = 0', wLP.gpLandRentTotal === 0);
-  t('LP pays: more cash distributable', sumArr(wLP.cashAvail) > sumArr(wProj.cashAvail) - TOL.MONEY_LARGE);
-  t('LP pays: LP MOIC <= project mode', wLP.lpMOIC <= wProj.lpMOIC + 0.01);
+  t('LP pays: same as project mode (double-count fix)', Math.abs(wLP.lpMOIC - wProj.lpMOIC) < 0.01);
+  t('LP pays: LP MOIC same as project mode', wLP.lpMOIC <= wProj.lpMOIC + 0.01);
 }
 
 suite('NPV1-FormulaVerification');

@@ -158,6 +158,16 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
     equityCalls[y] = capexPortion + unfundedFees[y];
   }
+  // Gate equity calls to fund period: accumulate pre-fundStart into fundStartIdx
+  // This matches Excel: IF(year >= fundStart, call, 0)
+  if (fundStartIdx > 0) {
+    let preFundCalls = 0;
+    for (let y = 0; y < fundStartIdx; y++) {
+      preFundCalls += equityCalls[y];
+      equityCalls[y] = 0;
+    }
+    equityCalls[fundStartIdx] += preFundCalls;
+  }
 
   // GP/LP call split (for transparency and proper net CF calculation)
   const gpCalls = new Array(h).fill(0);
@@ -176,15 +186,20 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // DS is positive in our code → subtract. Fees positive → subtract. UF positive → add back.
   const adjLandRent = ir?.adjustedLandRent || c.landRent;
   // Land rent payer resolution (platform-specific, not in ZAN)
+  // IMPORTANT: Land rent is ALREADY deducted in unlevered CF (Income - LandRent - CAPEX).
+  // cashAvail is based on unlevered CF, so distributions already reflect land rent cost.
+  // Setting a specific payer (gp/lp) would DOUBLE-COUNT land rent unless we add it back to cashAvail.
+  // Therefore: "auto" always resolves to "project" (shared via CF, no separate obligation).
+  // Only explicit "gp"/"lp" with cashAvail adjustment would avoid double-counting (future enhancement).
   const lrPaidByRaw = project.landRentPaidBy || "auto";
-  let resolvedLandRentPayer = lrPaidByRaw;
-  if (lrPaidByRaw === "auto" && project.landCapitalize) {
-    resolvedLandRentPayer = project.landCapTo || "gp";
-  } else if (lrPaidByRaw === "auto" || lrPaidByRaw === "developer") {
+  let resolvedLandRentPayer = "project"; // Default: land rent is project cost, shared via CF
+  if (lrPaidByRaw === "gp" || lrPaidByRaw === "lp" || lrPaidByRaw === "split") {
+    // Explicit assignment - BUT land rent is still in cashAvail, so this would double-count.
+    // For now, treat as project to avoid the bug. TODO: add-back to cashAvail for explicit modes.
     resolvedLandRentPayer = "project";
   }
-  const gpPaysLandRent = resolvedLandRentPayer === "gp" || resolvedLandRentPayer === "split";
-  const lpPaysLandRent = resolvedLandRentPayer === "lp" || resolvedLandRentPayer === "split";
+  const gpPaysLandRent = false; // Disabled until cashAvail add-back is implemented
+  const lpPaysLandRent = false;
   const gpLandRentObligation = new Array(h).fill(0);
   const lpLandRentObligation = new Array(h).fill(0);
   const cashAvail = new Array(h).fill(0);

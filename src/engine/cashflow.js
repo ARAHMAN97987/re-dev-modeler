@@ -61,7 +61,9 @@ export function computeProjectCashFlows(project) {
       cStart = Math.max(0, revStart - durYears);
     } else if ((asset.constrStart || 0) > 0) {
       // OLD: constrStart set → forward calculation (legacy / ZAN Excel)
-      cStart = (asset.constrStart - 1) + delayYears;
+      // constrStart = year offset from project start (e.g. 2 = year 2 = startYear+2)
+      // Excel: CAPEX starts at startYear + constrStart. No -1 offset.
+      cStart = asset.constrStart + delayYears;
       revStart = cStart + durYears;
     } else if (assetPhase && (assetPhase.completionMonth || 0) > 0) {
       // LEGACY fallback: completionMonth without completionYear and without constrStart
