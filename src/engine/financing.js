@@ -403,22 +403,27 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   if (trancheMode === "perDraw" && repayYears > 0) {
     // ═══ PER-DRAW TRANCHE MODE ═══
-    // Each drawdown becomes an independent loan with its own grace + repayment schedule.
-    // Grace starts from the draw year (each tranche's own disbursement date).
-    // This matches Saudi bank practice where each facility disbursement starts its own clock.
+    // ZAN Excel convention: all tranches share the SAME repayStart (firstDraw + grace).
+    // Excel template rows 130-139 each use the SAME grace period countdown from fund start,
+    // not from individual draw date. repayStart was already computed above.
+    // Excel formula: Tranche N repays when year >= fundStart + N + grace
+    // Row 130 (N=0): year >= fundStart+0+grace, Row 131 (N=1): year >= fundStart+1+grace
+    let trancheIndex = 0;
     tranches = [];
     for (let y = 0; y < h; y++) {
       if (drawdown[y] > 0) {
+        const excelRepayStart = computedFundStartIdx + trancheIndex + grace;
         tranches.push({
           drawYear: y,
           amount: drawdown[y],
-          repayStart: y + grace,
+          repayStart: excelRepayStart, // ZAN Excel: fundStart + trancheN + grace
           annualRepay: drawdown[y] / repayYears,
           balOpen: new Array(h).fill(0),
           balClose: new Array(h).fill(0),
           repay: new Array(h).fill(0),
           interest: new Array(h).fill(0),
         });
+        trancheIndex++;
       }
     }
 
@@ -539,8 +544,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // Determine if project was sold (not hold)
   const sold = exitStrategy !== "hold" && exitYr >= 0 && exitYr < h;
-  // If exit before debt maturity: force balloon repayment of remaining balance
-  if (sold && debtBalClose[exitYr] > 0) {
+  // Balloon at exit: for perDraw + fund/jv, ZAN Excel does NOT balloon remaining debt into DS.
+  // Exit proceeds (gross) implicitly cover remaining debt as part of the sale transaction.
+  // For single tranche OR debt-only mode, balloon IS added (conventional modeling).
+  const isFundPerDraw = trancheMode === "perDraw" && (project.finMode === "fund" || project.finMode === "jv");
+  if (sold && !isFundPerDraw && debtBalClose[exitYr] > 0) {
     const remainingDebt = debtBalClose[exitYr];
     repay[exitYr] += remainingDebt;
     debtBalClose[exitYr] = 0;
