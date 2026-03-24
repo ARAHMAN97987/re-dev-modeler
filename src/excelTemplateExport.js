@@ -315,7 +315,7 @@ export async function generateTemplateExcel(project, results, financing, waterfa
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${(p.name || "ZAN_Model").replace(/[^a-zA-Z0-9_\- ]/g, "")}_Full_Model.xlsx`;
+  a.download = `${(p.name || "ZAN_Model").replace(/[\/\\:*?"<>|]/g, "").trim() || "ZAN_Model"}_Full_Model.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
