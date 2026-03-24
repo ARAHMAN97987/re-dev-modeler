@@ -158,6 +158,15 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     // Fee caps (rows 142-143) - platform stores as absolute values
     setInput(INP, `${col}142`, f.mgmtFeeCapAnnual ?? p.mgmtFeeCapAnnual ?? 2000000);
     setInput(INP, `${col}143`, f.structuringFeeCap ?? p.structuringFeeCap ?? 300000);
+    // Debt tranche mode (row 144)
+    setInput(INP, `${col}144`, f.debtTrancheMode ?? p.debtTrancheMode ?? "single");
+    // Additional fund fees (rows 145-150)
+    setInput(INP, `${col}145`, f.preEstablishmentFee ?? p.preEstablishmentFee ?? 0);
+    setInput(INP, `${col}146`, f.spvFee ?? p.spvFee ?? 0);
+    setInput(INP, `${col}147`, f.auditorFeeAnnual ?? p.auditorFeeAnnual ?? 0);
+    setInput(INP, `${col}148`, pct(f.operatorFeePct ?? p.operatorFeePct ?? 0));
+    setInput(INP, `${col}149`, f.operatorFeeCap ?? p.operatorFeeCap ?? 0);
+    setInput(INP, `${col}150`, pct(f.miscExpensePct ?? p.miscExpensePct ?? 0));
   }
 
   // ═══════════════════════════════════════════════════════════
