@@ -14,7 +14,22 @@ All changes to the Excel model template must be logged here.
 
 ---
 
-### v11 - 2026-03-24
+### v11.1 - 2026-03-24
+**Changed:**
+- Added Inputs row 141: Exit Cap Rate % (per-phase, default 10%)
+- Added Fund rows 44-45: Exit Method + Exit Cap Rate (reads from Inputs)
+- Exit formula dual-mode: IF(method="Sale") → Income×Multiple, else → Income/CapRate
+- Fixed Fund Start Year: template formula was off by 1 year vs platform. Now force-written from phase.financing.fundStartYear
+- excelTemplateExport.js: reads per-phase financing config (phase.financing.X ?? project.X) for all 15 fund params
+- excelTemplateExport.js: pct() always divides by 100 (fixed upfrontFee 0.5→0.005, structuringFee 1→0.01)
+- excelTemplateExport.js: caprate exit type maps to "CapRate" (was incorrectly "Sale")
+- Fund Settings Mode auto-detects Per-Phase when phases have financing configs
+
+**Cells affected:**
+- Inputs: row 141 (new - Exit Cap Rate)
+- Fund_ZAN 1-6: rows 44-45 (new), row 51 formula updated (all year columns)
+
+**Tests:** 634 PASSED | 0 FAILED + 26,220 formulas, 0 errors
 **Changed:**
 - Fund sheet rebuilt as per-phase (Fund_ZAN 1-6 instead of single Fund)
 - Added Fund_Summary dashboard
