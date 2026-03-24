@@ -221,14 +221,19 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
       gpLandRentObligation[y] = adjLandRent[y] * gpPct;
       lpLandRentObligation[y] = adjLandRent[y] * lpPct;
     }
-    // ZAN Cash Available: MAX(0, UnlevCF - DS - Fees + UF + Exit)
-    // Use incentive-adjusted CF if available
+    // ZAN Cash Available: MAX(0, UnlevCF - DS + UF + Exit)
+    // MATCHES ZAN Excel formula (R75): MAX(0, E50 + E62 + E70 + E51)
+    // where E50=NetCF, E62=DebtService(negative), E70=UnfundedFees, E51=Exit
+    // Operating fees (mgmt, custody, etc.) funded from operating CF are NOT
+    // subtracted here — they reduce UF to 0 when income covers them, meaning
+    // the fund pays them from income without affecting the distribution waterfall.
+    // Only fees that operating income can't cover (UF > 0) are equity-funded
+    // and added back to cashAvail so distributions can recover the equity call.
     const unlevCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
     const inPeriod = y >= fundStartIdx && y <= exitYr;
     cashAvail[y] = Math.max(0,
       (inPeriod ? unlevCF : 0)
       - (f.debtService[y] || 0)
-      - fees[y]
       + unfundedFees[y]
       + exitProceeds[y]
     );
