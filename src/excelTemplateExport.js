@@ -116,7 +116,8 @@ export async function generateTemplateExcel(project, results, financing, waterfa
   setInput(INP, "C101", finModeMap[p.finMode] || "Fund");
 
   // Section 11: Exit Strategy
-  const exitTypeMap = { sale: "Sale", hold: "Hold", reit: "REIT", refinance: "Refinance", partial: "Partial", caprate: "Sale" };
+  // Excel formula: IF(method="Sale", Income×Multiple, Income/CapRate)
+  const exitTypeMap = { sale: "Sale", hold: "Hold", reit: "REIT", refinance: "Refinance", partial: "Partial", caprate: "CapRate" };
   setInput(INP, "C107", exitTypeMap[p.exitStrategy] || "Sale");
   setInput(INP, "C113", p.exitYear || (p.startYear || 2026) + 6);
   setInput(INP, "C114", p.exitMultiple || 10);
@@ -151,6 +152,9 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     setInput(INP, `${col}138`, exitYr);
     setInput(INP, `${col}139`, f.exitMultiple ?? p.exitMultiple ?? 10);
     setInput(INP, `${col}140`, pct(f.exitCostPct ?? p.exitCostPct));
+    // Exit Cap Rate (row 141) - platform stores as whole number (10 = 10%)
+    const capRate = f.exitCapRate ?? p.exitCapRate ?? 10;
+    setInput(INP, `${col}141`, pct(capRate));
   }
 
   // ═══════════════════════════════════════════════════════════
