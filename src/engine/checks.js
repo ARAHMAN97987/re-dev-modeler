@@ -136,19 +136,49 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T2","Capital Structure Equation", capDiff<10000, "Debt + GP + LP = Total Project Cost",
       `${fmt(f.totalDebt+f.gpEquity+f.lpEquity)} vs ${fmt(capTarget)} (diff: ${fmt(capDiff)})`);
     add("T2","Debt Balance ≥ 0", (f.debtBalClose||[]).every(v=>v>=-0.01), "Debt balance never negative");
-    const rpEnd = f.repayStart+f.repayYears-1;
-    const balEnd = rpEnd>=0&&rpEnd<h?(f.debtBalClose[rpEnd]||0):0;
-    add("T2","Debt Fully Repaid", f.tenor===0||balEnd<1, "Debt repaid by tenor end", `Balance at year ${rpEnd+1}: ${fmt(balEnd)}`);
+    let debtRepaidOk = true;
+    let debtRepaidDetail = '';
+    if (f.trancheMode === "perDraw" && f.tranches) {
+      // perDraw: each tranche repays over its own repayYears from its own repayStart
+      for (const tr of f.tranches) {
+        const trEnd = Math.min(tr.repayStart + f.repayYears - 1, h - 1);
+        const trBal = tr.balClose[trEnd] || 0;
+        if (f.tenor > 0 && trBal > 1) {
+          debtRepaidOk = false;
+          debtRepaidDetail = `Tranche Y${tr.drawYear}: balance at Y${trEnd+1}=${fmt(trBal)}`;
+          break;
+        }
+      }
+    } else {
+      const rpEnd = f.repayStart+f.repayYears-1;
+      const balEnd = rpEnd>=0&&rpEnd<h?(f.debtBalClose[rpEnd]||0):0;
+      if (f.tenor > 0 && balEnd >= 1) { debtRepaidOk = false; debtRepaidDetail = `Balance at year ${rpEnd+1}: ${fmt(balEnd)}`; }
+    }
+    add("T2","Debt Fully Repaid", debtRepaidOk, "Debt repaid by tenor end (per-tranche in perDraw mode)", debtRepaidDetail);
     let intOk=true;
     const ufPct = (project.upfrontFeePct||0)/100;
     const exitIdx = f.exitYear ? f.exitYear - (project.startYear||2026) : -1;
-    for (let y=0;y<Math.min(h,20);y++) {
-      if (y === exitIdx) continue; // Balloon repay distorts trueClose at exit year
-      if ((f.debtBalOpen[y]||0)>0||(f.debtBalClose[y]||0)>0||(f.drawdown?.[y]||0)>0) {
-        const trueClose = Math.max(0,(f.debtBalOpen[y]||0)+(f.drawdown?.[y]||0)-(f.repayment?.[y]||0));
-        const exp=Math.max(0,((f.debtBalOpen[y]||0)+trueClose)/2*f.rate + (f.drawdown?.[y]||0)*ufPct);
-        const act=Math.abs(f.originalInterest?.[y]||f.interest[y]||0);
-        if (exp>0&&Math.abs(act-exp)/exp>0.05) { intOk=false; break; }
+    if (f.trancheMode === "perDraw" && f.tranches) {
+      // perDraw: validate interest per tranche (each tranche is a clean single loan)
+      for (const tr of f.tranches) {
+        for (let y=0; y<Math.min(h,20) && intOk; y++) {
+          if (y === exitIdx) continue;
+          if ((tr.balOpen[y]||0)>0||(tr.balClose[y]||0)>0||(y===tr.drawYear&&tr.amount>0)) {
+            const exp = Math.max(0, ((tr.balOpen[y]||0)+(tr.balClose[y]||0))/2*f.rate + (y===tr.drawYear?tr.amount*ufPct:0));
+            const act = Math.abs(tr.interest[y]||0);
+            if (exp>0 && Math.abs(act-exp)/exp>0.05) intOk=false;
+          }
+        }
+      }
+    } else {
+      for (let y=0;y<Math.min(h,20);y++) {
+        if (y === exitIdx) continue; // Balloon repay distorts trueClose at exit year
+        if ((f.debtBalOpen[y]||0)>0||(f.debtBalClose[y]||0)>0||(f.drawdown?.[y]||0)>0) {
+          const trueClose = Math.max(0,(f.debtBalOpen[y]||0)+(f.drawdown?.[y]||0)-(f.repayment?.[y]||0));
+          const exp=Math.max(0,((f.debtBalOpen[y]||0)+trueClose)/2*f.rate + (f.drawdown?.[y]||0)*ufPct);
+          const act=Math.abs(f.originalInterest?.[y]||f.interest[y]||0);
+          if (exp>0&&Math.abs(act-exp)/exp>0.05) { intOk=false; break; }
+        }
       }
     }
     add("T2","Interest = AvgBal × Rate + Draw × Fee%", intOk, "Interest uses (Open+Close)/2 × rate + draw × upfrontFee%");
@@ -158,8 +188,19 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     const totDrw=(f.drawdown||[]).reduce((s,v)=>s+v,0);
     add("T2","Drawdown = Total Debt", Math.abs(totDrw-f.totalDebt)<1, "Sum drawdowns = debt drawn");
     let graceOk=true;
-    if (f.repayStart>0) { for(let y=0;y<f.repayStart&&y<h;y++) { if(y===exitIdx) continue; if((f.repayment?.[y]||0)>1){graceOk=false;break;} } }
-    add("T2","Grace Period Respected", graceOk, "No repayment during grace period");
+    if (f.trancheMode === "perDraw" && f.tranches) {
+      // perDraw: each tranche has its own grace starting from draw year — validate per-tranche
+      for (const tr of f.tranches) {
+        for (let y=0; y<tr.repayStart && y<h; y++) {
+          if (y===exitIdx) continue;
+          if ((tr.repay?.[y]||0)>1) { graceOk=false; break; }
+        }
+        if (!graceOk) break;
+      }
+    } else {
+      if (f.repayStart>0) { for(let y=0;y<f.repayStart&&y<h;y++) { if(y===exitIdx) continue; if((f.repayment?.[y]||0)>1){graceOk=false;break;} } }
+    }
+    add("T2","Grace Period Respected", graceOk, "No repayment during grace period (per-tranche in perDraw mode)");
     const adjLR=ir?.adjustedLandRent||c.landRent;
     let levOk=true;
     // Determine if sold (post-exit CF should be zero)
