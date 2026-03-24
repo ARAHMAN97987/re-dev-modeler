@@ -163,6 +163,7 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
   const levCF = sumArr('leveredCF');
   return {
     mode: phaseFinancings[names[0]]?.mode || 'independent',
+    isConsolidated: true, // multi-phase aggregate — checks must not apply single-phase formula math
     totalEquity: sum('totalEquity'), gpEquity: sum('gpEquity'), lpEquity: sum('lpEquity'),
     // FIX: bank100 has totalEquity=0, but gpPct should be 1; inherit from first phase
     gpPct: sum('totalEquity') > 0 ? sum('gpEquity') / sum('totalEquity') : (phaseFinancings[names[0]]?.gpPct ?? 0),

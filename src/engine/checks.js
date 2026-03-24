@@ -136,12 +136,12 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T2","Capital Structure Equation", capDiff<10000, "Debt + GP + LP = Total Project Cost",
       `${fmt(f.totalDebt+f.gpEquity+f.lpEquity)} vs ${fmt(capTarget)} (diff: ${fmt(capDiff)})`);
     add("T2","Debt Balance ≥ 0", (f.debtBalClose||[]).every(v=>v>=-0.01), "Debt balance never negative");
-    // ── Multi-phase detection: aggregated financing has mode='independent' ──
+    // ── Multi-phase detection: aggregated financing has isConsolidated=true ──
     // Formula checks (Debt Repaid, Interest, Levered CF) are only valid for
     // single-phase financing. For multi-phase consolidated results, each phase
     // has its own exit year / balloon / repayStart — checking the aggregate
     // against first-phase scalar values produces false failures.
-    const isMultiPhase = f.mode === 'independent';
+    const isMultiPhase = f.isConsolidated === true;
 
     let debtRepaidOk = true;
     let debtRepaidDetail = '';
