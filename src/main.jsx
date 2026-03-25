@@ -17,11 +17,8 @@ function Root() {
   )
 }
 
-// Theme initialization (auto/light/dark)
-const savedTheme = localStorage.getItem('haseef-theme') || 'auto';
-if (savedTheme !== 'auto') {
-  document.documentElement.setAttribute('data-theme', savedTheme);
-}
+// Force light mode — dark mode disabled
+document.documentElement.setAttribute('data-theme', 'light');
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

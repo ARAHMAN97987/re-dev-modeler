@@ -3694,8 +3694,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           {!isMobile && <StatusBadge status={project?.status} onChange={s=>up({status:s})} />}
           {/* Undo - desktop only */}
           {!isMobile && <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" className="z-nav-btn" style={{padding:"5px 8px",fontSize:14,flexShrink:0,opacity:undoStack.current.length>0?1:0.3}}>↩</button>}
-          {/* Theme toggle - desktop only */}
-          {!isMobile && <button onClick={()=>{const cur=document.documentElement.getAttribute('data-theme');const next=cur==='dark'?'light':cur==='light'?'auto':'dark';if(next==='auto'){document.documentElement.removeAttribute('data-theme');}else{document.documentElement.setAttribute('data-theme',next);}localStorage.setItem('haseef-theme',next);}} className="z-nav-btn" style={{padding:"5px 8px",fontSize:13,flexShrink:0}} title="Toggle theme">{document.documentElement.getAttribute('data-theme')==='dark'?'☀️':document.documentElement.getAttribute('data-theme')==='light'?'🌙':'🌓'}</button>}
           {/* Present - desktop only */}
           {!isMobile && <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} className="z-nav-btn" style={{padding:"5px 10px",fontSize:10,fontWeight:600,flexShrink:0,background:presentMode?"var(--color-success)":"var(--nav-btn-bg)",color:presentMode?"#fff":"var(--nav-btn-text)"}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>}
           {/* Dropdown menu */}
