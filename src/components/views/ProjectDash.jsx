@@ -1,10 +1,15 @@
 // Extracted from App.jsx lines 5859-6320
 // ProjectDash: Dashboard overview with KPIs, checklist, summaries
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useIsMobile } from "../shared/hooks";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
-import { btnS, btnPrim } from "../shared/styles";
+import { btnS, btnPrim, tblStyle, thSt, tdSt, tdN } from "../shared/styles";
+import { calcIRR, calcNPV } from "../../engine/math";
+import { catL, revL } from "../../data/translations";
+import { HelpLink, EducationalModal } from "./LearningCenterView";
+import { catL, revL } from "../../data/translations";
+import { calcIRR, calcNPV } from "../../engine/math";
 
 // ── Metric color utility ──
 // ── Functional Colors — consistent metric coloring across all tabs ──

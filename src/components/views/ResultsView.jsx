@@ -2,11 +2,13 @@
 // ResultsView router + SelfResultsView + BankResultsView + form helpers
 
 import { useState, useEffect, useMemo, useRef, memo } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, LineChart, Line, Legend } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, LineChart, Line, Legend, PieChart, Pie, Cell } from "recharts";
 import { useIsMobile } from "../shared/hooks";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
 import { btnS, btnPrim, sideInputStyle, tblStyle, thSt, tdSt, tdN } from "../shared/styles";
 import { FINANCING_FIELDS, getPhaseFinancing, hasPerPhaseFinancing } from "../../engine/phases";
+import { calcIRR, calcNPV } from "../../engine/math.js";
+import WaterfallView, { ExitAnalysisPanel, IncentivesImpact, HelpLink, EducationalModal } from "./WaterfallView";
 
 // ── Metric color utility ──
 // ── Functional Colors — consistent metric coloring across all tabs ──
@@ -1003,6 +1005,24 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     </div>
     {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
+}
+
+// ── Tip: tooltip component used by FL ──
+function Tip({text,children}) {
+  const isMobile = useIsMobile();
+  const [show,setShow]=useState(false);
+  const ref=useRef(null);
+  const [pos,setPos]=useState({top:0,left:0});
+  const onEnter=()=>{
+    if(ref.current){const r=ref.current.getBoundingClientRect();setPos({top:r.bottom+6,left:r.left+r.width/2});}
+    setShow(true);
+  };
+  useEffect(()=>{ if(show && isMobile){ const t=setTimeout(()=>setShow(false),4000); return ()=>clearTimeout(t); } },[show,isMobile]);
+  return <span style={{display:"inline-flex",alignItems:"center"}}>
+    {children}
+    <span ref={ref} onMouseEnter={isMobile?undefined:onEnter} onMouseLeave={isMobile?undefined:()=>setShow(false)} onClick={()=>{if(!show)onEnter();else setShow(false);}} style={{cursor:"help",fontSize:isMobile?13:10,color:"#9ca3af",marginInlineStart:3,lineHeight:1,padding:isMobile?"4px":0}}>ⓘ</span>
+    {show&&<>{isMobile&&<div onClick={()=>setShow(false)} style={{position:"fixed",inset:0,zIndex:99998}} />}<div style={{position:"fixed",top:pos.top,...(document.dir==="rtl"?{right:Math.max(10,Math.min(window.innerWidth-pos.left-140,window.innerWidth-300))}:{left:Math.max(10,Math.min(pos.left-140,window.innerWidth-300))}),width:isMobile?Math.min(280,window.innerWidth-24):280,background:"#1a1d23",color:"#d0d4dc",padding:isMobile?"12px 14px":"10px 13px",borderRadius:8,fontSize:isMobile?12:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"start"}}>{text.split("\n").map((line,i)=><div key={i} dir={/[\u0600-\u06FF]/.test(line)?"rtl":"ltr"} style={{marginBottom:i===0?4:0}}>{line}</div>)}</div></>}
+  </span>;
 }
 
 // ── Financing Panel Input Components (MUST be outside FinancingView to keep focus) ──

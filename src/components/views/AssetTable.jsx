@@ -1,7 +1,7 @@
 // Extracted from App.jsx lines 4455-5858
 // AssetTable + StatusBadge + ScoreCell + HotelPLModal + MarinaPLModal
 
-import { useState, useRef, useMemo, memo } from "react";
+import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { useIsMobile } from "../shared/hooks";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
 import { btnS, btnPrim, btnSm, cellInputStyle, tblStyle, thSt, tdSt, tdN } from "../shared/styles";
