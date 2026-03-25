@@ -133,18 +133,18 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --surface-page: #1C1C1E; --surface-card: #2C2C2E;
-    --surface-sidebar: #2C2C2E; --surface-input: #0D2535;
+    --surface-sidebar: #2C2C2E; --surface-input: #1A2A3E;
     --surface-hover: #3A3A3C; --surface-active: #48484A;
-    --surface-table-header: #3A3A3C; --surface-separator: #38383A;
+    --surface-table-header: #2C2C2E; --surface-separator: #38383A;
     --surface-nav: #000000; --surface-tab-bar: #0A0F18;
-    --nav-tab-border: #1C1C1E; --nav-logo-text: #F5F5F7;
-    --nav-project-text: #636366; --nav-project-border: #2C2C2E;
-    --nav-btn-bg: #1C1C1E; --nav-btn-border: #38383A;
-    --nav-btn-text: #AEAEB2; --nav-btn-hover: #2C2C2E;
+    --nav-tab-border: #2C2C2E; --nav-logo-text: #F5F5F7;
+    --nav-project-text: #8E8E93; --nav-project-border: #38383A;
+    --nav-btn-bg: #2C2C2E; --nav-btn-border: #48484A;
+    --nav-btn-text: #AEAEB2; --nav-btn-hover: #3A3A3C;
     --tab-text: #8E8E93; --tab-text-hover: #AEAEB2;
     --tab-text-active: #F5F5F7;
     --text-primary: #F5F5F7; --text-secondary: #AEAEB2;
-    --text-tertiary: #636366; --text-inverse: #1C1C1E;
+    --text-tertiary: #8E8E93; --text-inverse: #1C1C1E;
     --text-link: #0A84FF; --text-positive: #30D158; --text-negative: #FF453A;
     --border-default: #38383A; --border-hover: #48484A;
     --border-focus: #0A84FF; --border-active: #0A84FF; --border-input: #1A4A66;
@@ -187,17 +187,17 @@
 
 [data-theme="dark"] {
   --surface-page: #1C1C1E; --surface-card: #2C2C2E;
-  --surface-sidebar: #2C2C2E; --surface-input: #0D2535;
+  --surface-sidebar: #2C2C2E; --surface-input: #1A2A3E;
   --surface-hover: #3A3A3C; --surface-active: #48484A;
-  --surface-table-header: #3A3A3C; --surface-separator: #38383A;
+  --surface-table-header: #2C2C2E; --surface-separator: #38383A;
   --surface-nav: #000000; --surface-tab-bar: #0A0F18;
-  --nav-tab-border: #1C1C1E; --nav-logo-text: #F5F5F7;
-  --nav-project-text: #636366; --nav-project-border: #2C2C2E;
-  --nav-btn-bg: #1C1C1E; --nav-btn-border: #38383A;
-  --nav-btn-text: #AEAEB2; --nav-btn-hover: #2C2C2E;
+  --nav-tab-border: #2C2C2E; --nav-logo-text: #F5F5F7;
+  --nav-project-text: #8E8E93; --nav-project-border: #38383A;
+  --nav-btn-bg: #2C2C2E; --nav-btn-border: #48484A;
+  --nav-btn-text: #AEAEB2; --nav-btn-hover: #3A3A3C;
   --tab-text: #8E8E93; --tab-text-hover: #AEAEB2; --tab-text-active: #F5F5F7;
   --text-primary: #F5F5F7; --text-secondary: #AEAEB2;
-  --text-tertiary: #636366; --text-inverse: #1C1C1E;
+  --text-tertiary: #8E8E93; --text-inverse: #1C1C1E;
   --text-link: #0A84FF; --text-positive: #30D158; --text-negative: #FF453A;
   --border-default: #38383A; --border-hover: #48484A;
   --border-focus: #0A84FF; --border-active: #0A84FF; --border-input: #1A4A66;
@@ -410,6 +410,18 @@ body {
   .z-btn:active { transform: none; }
   .z-skeleton { animation: none; }
 }
+
+/* ========== DARK MODE TABLE FIXES ========== */
+@media (prefers-color-scheme: dark) {
+  table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  table tbody tr:hover td { background: var(--surface-hover) !important; }
+  select, input[type="text"], input[type="number"] { color: var(--text-primary); background: var(--surface-card); border-color: var(--border-default); }
+  .sidebar-input { background: var(--surface-input) !important; color: var(--text-primary) !important; border-color: var(--border-input) !important; }
+}
+[data-theme="dark"] table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+[data-theme="dark"] table tbody tr:hover td { background: var(--surface-hover) !important; }
+[data-theme="dark"] select, [data-theme="dark"] input[type="text"], [data-theme="dark"] input[type="number"] { color: var(--text-primary); background: var(--surface-card); border-color: var(--border-default); }
+[data-theme="dark"] .sidebar-input { background: var(--surface-input) !important; color: var(--text-primary) !important; border-color: var(--border-input) !important; }
 
 /* ========== TAB VISIBILITY RULES ==========
    SELF: dashboard, assets, results, reports

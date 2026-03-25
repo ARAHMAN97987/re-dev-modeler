@@ -72,11 +72,11 @@ class AppErrorBoundary extends Component {
             <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:24,lineHeight:1.6}}>{isAr?"يمكنك إعادة المحاولة أو تحميل الصفحة من جديد. بياناتك محفوظة.":"You can retry or reload the page. Your data is saved."}</div>
             <div style={{display:"flex",gap:12,justifyContent:"center"}}>
               <button onClick={()=>this.setState({hasError:false,error:null})} style={{padding:"10px 24px",background:"var(--btn-primary-bg)",color:"var(--text-inverse)",border:"none",borderRadius:"var(--radius-md)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"إعادة المحاولة":"Retry"}</button>
-              <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"#1e2230",color:"var(--text-secondary)",border:"0.5px solid var(--nav-tab-border)",borderRadius:"var(--radius-md)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"تحديث الصفحة":"Reload Page"}</button>
+              <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"var(--surface-active)",color:"var(--text-secondary)",border:"0.5px solid var(--nav-tab-border)",borderRadius:"var(--radius-md)",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"تحديث الصفحة":"Reload Page"}</button>
             </div>
             <details style={{marginTop:24,textAlign:"start"}}>
               <summary style={{fontSize:10,color:"var(--text-secondary)",cursor:"pointer"}}>{isAr?"تفاصيل الخطأ":"Error details"}</summary>
-              <pre style={{fontSize:10,color:"var(--text-secondary)",background:"#0F2D4F",padding:12,borderRadius:"var(--radius-sm)",marginTop:8,overflow:"auto",maxHeight:120,whiteSpace:"pre-wrap"}}>{this.state.error?.message || "Unknown error"}{"\n"}{this.state.error?.stack?.split("\n").slice(0,4).join("\n")}</pre>
+              <pre style={{fontSize:10,color:"var(--text-secondary)",background:"var(--surface-input)",padding:12,borderRadius:"var(--radius-sm)",marginTop:8,overflow:"auto",maxHeight:120,whiteSpace:"pre-wrap"}}>{this.state.error?.message || "Unknown error"}{"\n"}{this.state.error?.stack?.split("\n").slice(0,4).join("\n")}</pre>
             </details>
           </div>
         </div>
@@ -3643,7 +3643,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           <div style={{padding:isMobile?"12px 14px":"14px 16px",borderBottom:"1px solid var(--nav-tab-border)",display:"flex",alignItems:"center",gap:8}}>
             <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}><span className="z-nav-logo" style={{fontSize:18,fontWeight:900,letterSpacing:2}}>{lang==="ar"?"حصيف":"Haseef"}</span><span style={{width:1,height:18,background:"var(--zan-teal-500)",opacity:0.6}} /><span style={{fontSize:9,color:"var(--zan-teal-500)",lineHeight:1.3,fontWeight:400}}>{lang==="ar"?"النمذجة":"Financial"}<br/>{lang==="ar"?"المالية":"Modeler"}</span></div>
             <span className={`z-badge ${saveStatus==="saved"?"z-badge-success":saveStatus==="error"?"z-badge-danger":"z-badge-warning"}`}>{t[saveStatus]||saveStatus}</span>
-            {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"#1e2230",border:"none",borderRadius:"var(--radius-sm)",color:"var(--text-tertiary)",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
+            {isMobile && <button onClick={()=>setSidebarOpen(false)} style={{background:"var(--surface-active)",border:"none",borderRadius:"var(--radius-sm)",color:"var(--text-tertiary)",fontSize:16,padding:"6px 10px",cursor:"pointer",minHeight:36,display:"flex",alignItems:"center"}}>✕</button>}
           </div>
           <div ref={sidebarRef} style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
             <ControlPanel project={project} up={up} t={t} lang={lang} results={results} globalExpand={globalExpand} />
@@ -4148,7 +4148,7 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
           </div>
         </div>
         <div style={{marginTop:32,textAlign:"center"}}>
-          <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#1e2230",color:"rgba(255,255,255,0.5)",padding:"6px 16px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
+          <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"var(--surface-active)",color:"rgba(255,255,255,0.5)",padding:"6px 16px",fontSize:11,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
         </div>
         {/* Powered by */}
         <div style={{marginTop:24,textAlign:"center",fontSize:10,color:"rgba(255,255,255,0.2)"}}>{ar?"حصيف للنمذجة المالية":"Haseef Financial Modeler"}</div>
@@ -12110,19 +12110,19 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           <input type="range" min={80} max={120} value={liveSliders.capex} onChange={e=>setLiveSliders(s=>({...s,capex:+e.target.value}))} style={{width:120,accentColor:"var(--zan-teal-500)"}} />
           <span style={{fontSize:11,color:liveSliders.capex!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.capex}%</span>
         </div>
-        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <div style={{width:1,height:24,background:"var(--nav-tab-border)"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"var(--zan-teal-500)",fontWeight:600,minWidth:50}}>{ar?"الإيجار":"Rent"}</span>
           <input type="range" min={80} max={120} value={liveSliders.rent} onChange={e=>setLiveSliders(s=>({...s,rent:+e.target.value}))} style={{width:120,accentColor:"var(--color-success-text)"}} />
           <span style={{fontSize:11,color:liveSliders.rent!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.rent}%</span>
         </div>
-        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <div style={{width:1,height:24,background:"var(--nav-tab-border)"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"var(--zan-teal-500)",fontWeight:600,minWidth:50}}>{ar?"المضاعف":"Exit ×"}</span>
           <input type="range" min={6} max={15} step={0.5} value={liveSliders.exitMult} onChange={e=>setLiveSliders(s=>({...s,exitMult:+e.target.value}))} style={{width:120,accentColor:"var(--color-warning)"}} />
           <span style={{fontSize:11,color:liveSliders.exitMult!==(project.exitMultiple||10)?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.exitMult}x</span>
         </div>
-        <div style={{width:1,height:24,background:"#282d3a"}} />
+        <div style={{width:1,height:24,background:"var(--nav-tab-border)"}} />
         <button onClick={()=>setLiveSliders({capex:100,rent:100,exitMult:project.exitMultiple||10})} style={{...btnS,background:slidersDefault?"#1e2230":"#fbbf2430",color:slidersDefault?"#4b5060":"#fbbf24",padding:"6px 14px",fontSize:10,fontWeight:600,border:slidersDefault?"1px solid #282d3a":"1px solid #fbbf2440"}}>{ar?"إعادة تعيين":"Reset"}</button>
       </div>
     </div>
@@ -12135,7 +12135,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
 const btnS={border:"none",borderRadius:5,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"};
 const btnPrim={...btnS,background:"var(--btn-primary-bg)",color:"var(--text-inverse)",fontWeight:600};
 const btnSm={...btnS,padding:"4px 8px",fontSize:11,fontWeight:500,borderRadius:4};
-const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:5,border:"0.5px solid var(--nav-tab-border)",background:"#0F2D4F",color:"var(--text-secondary)",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:5,border:"0.5px solid var(--nav-tab-border)",background:"var(--surface-input)",color:"var(--text-secondary)",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 const cellInputStyle={padding:"4px 6px",borderRadius:3,border:"1px solid transparent",background:"transparent",color:"var(--text-primary)",fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",width:"100%"};
 const tblStyle={width:"100%",borderCollapse:"collapse"};
 const thSt={padding:"7px 8px",textAlign:"start",fontSize:10,fontWeight:600,color:"var(--text-secondary)",background:"var(--surface-page)",borderBottom:"0.5px solid var(--border-default)",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
