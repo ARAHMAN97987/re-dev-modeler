@@ -3856,22 +3856,22 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap"
             });
 
-            return <div style={{background:"#fafbfc",borderBottom:"1px solid #e5e7ec",position:"sticky",top:0,zIndex:20}}>
+            return <div className="z-status-bar" style={{borderBottom:"0.5px solid var(--border-default)",position:"sticky",top:0,zIndex:"var(--z-sticky)",flexDirection:"column",padding:0}}>
               {hasPhases && (
-                <div style={{display:"flex",padding:"0 18px",borderBottom:"1px solid #f0f1f3",overflowX:"auto"}}>
-                  <button onClick={()=>setKpiPhase("all")} style={tabStyle(kpiPhase==="all")}>{ar?"الإجمالي":"All"}</button>
-                  {phaseNames.map(p => <button key={p} onClick={()=>setKpiPhase(p)} style={tabStyle(kpiPhase===p)}>{p}</button>)}
+                <div style={{display:"flex",padding:"0 var(--space-5)",borderBottom:"0.5px solid var(--surface-separator)",overflowX:"auto",gap:0}}>
+                  <button onClick={()=>setKpiPhase("all")} className={`z-tab${kpiPhase==="all"?" z-tab-active":""}`} style={{padding:"5px 12px",fontSize:9,background:"var(--surface-card)"}}>{ar?"الإجمالي":"All"}</button>
+                  {phaseNames.map(p => <button key={p} onClick={()=>setKpiPhase(p)} className={`z-tab${kpiPhase===p?" z-tab-active":""}`} style={{padding:"5px 12px",fontSize:9,background:"var(--surface-card)"}}>{p}</button>)}
                 </div>
               )}
-              <div style={{padding:isMobile?"5px 10px":"5px 18px",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap"}}>
+              <div style={{padding:isMobile?"5px 10px":"5px var(--space-5)",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap"}}>
                 {kpis.map(kpi => (
-                  <div key={kpi.k} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11}}>
-                    <span style={{color:"#9ca3af",fontSize:9,fontWeight:500}}>{kpi.l}</span>
-                    <span style={{fontWeight:700,color:kpi.c,fontVariantNumeric:"tabular-nums"}}>{kpi.v}</span>
+                  <div key={kpi.k} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:"var(--text-xs)"}}>
+                    <span style={{color:"var(--text-tertiary)",fontSize:9,fontWeight:500}}>{kpi.l}</span>
+                    <span style={{fontWeight:700,color:kpi.c,fontVariantNumeric:"tabular-nums",fontFamily:"var(--font-mono)"}}>{kpi.v}</span>
                   </div>
                 ))}
                 <div style={{flex:1}} />
-                <button onClick={()=>setGlobalExpand(p=>p+1)} style={{fontSize:9,padding:"3px 10px",borderRadius:5,border:"1px solid #e5e7ec",background:globalExpand%2===1?"#eff6ff":"#f8f9fb",color:globalExpand%2===1?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600,flexShrink:0}}>
+                <button onClick={()=>setGlobalExpand(p=>p+1)} className="z-btn z-btn-ghost z-btn-sm" style={{flexShrink:0}}>
                   {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
                 </button>
               </div>
