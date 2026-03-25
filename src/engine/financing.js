@@ -44,16 +44,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
         for (const as of assetScheds) {
           if (as.revType === "Sale") continue;
           const assetIncome = as.revenueSchedule[exitIdx] ?? 0;
-          if (as.revType === "Operating") {
-            exitVal += assetIncome * (project.exitMultiple ?? 10);
+          if (exitStrategy === "caprate") {
+            const capRate = (project.exitCapRate ?? 9) / 100;
+            exitVal += capRate > 0 ? assetIncome / capRate : 0;
           } else {
-            if (exitStrategy === "caprate") {
-              const capRate = (project.exitCapRate ?? 9) / 100;
-              // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
-              exitVal += capRate > 0 ? assetIncome / capRate : 0;
-            } else {
-              exitVal += assetIncome * (project.exitMultiple ?? 10);
-            }
+            exitVal += assetIncome * (project.exitMultiple ?? 10);
           }
         }
       } else {
@@ -144,16 +139,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
         for (const as of assetScheds) {
           if (as.revType === "Sale") continue; // Skip - already realized through sales
           const assetIncome = as.revenueSchedule[exitIdx] ?? as.revenueSchedule[fallbackIdx] ?? 0;
-          if (as.revType === "Operating") {
-            exitVal += assetIncome * (project.exitMultiple ?? 10);
+          if (exitStrategySelf === "caprate") {
+            const capRate = (project.exitCapRate ?? 9) / 100;
+            exitVal += capRate > 0 ? assetIncome / capRate : 0;
           } else {
-            if (exitStrategySelf === "caprate") {
-              const capRate = (project.exitCapRate ?? 9) / 100;
-              // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
-              exitVal += capRate > 0 ? assetIncome / capRate : 0;
-            } else {
-              exitVal += assetIncome * (project.exitMultiple ?? 10);
-            }
+            exitVal += assetIncome * (project.exitMultiple ?? 10);
           }
         }
       } else {
@@ -508,20 +498,16 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     if (assetScheds.length > 0) {
       for (const as of assetScheds) {
         const assetIncome = as.revenueSchedule[exitIdx] ?? as.revenueSchedule[fallbackIdx] ?? 0;
-        if (as.revType === "Operating") {
-          // Operating: EBITDA × multiple
-          exitVal += assetIncome * (project.exitMultiple ?? 10);
-        } else if (as.revType === "Sale") {
+        if (as.revType === "Sale") {
           // Sale: remaining unsold value (skip - already realized through sales)
+        } else if (exitStrategy === "caprate") {
+          // CapRate exit: ALL assets valued at income/capRate (matches Excel: totalIncome/$C$45)
+          // This is standard real estate cap rate valuation applied to total property income.
+          const capRate = (project.exitCapRate ?? 9) / 100;
+          exitVal += capRate > 0 ? assetIncome / capRate : 0;
         } else {
-          // Lease: income contributes to NOI-based valuation
-          if (exitStrategy === "caprate") {
-            const capRate = (project.exitCapRate ?? 9) / 100;
-            // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
-            exitVal += capRate > 0 ? assetIncome / capRate : 0;
-          } else {
-            exitVal += assetIncome * (project.exitMultiple ?? 10);
-          }
+          // Sale exit: income × multiple for all asset types
+          exitVal += assetIncome * (project.exitMultiple ?? 10);
         }
       }
     } else {

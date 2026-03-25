@@ -124,8 +124,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     }
     feeCustody[y] = annualCustody;
     feeAuditor[y] = auditorAnnual;
-    // Operator fee: annual, starts after construction ends (operating period only)
-    if (hasRentalAssets && operatorFeeBase > 0 && y > constrEnd) {
+    // Operator fee: annual, when income > 0 (operating period)
+    // Excel formula: IF(AND(year>=fundStart, year<=exitYear, income>0), MIN(cap, devCost*rate), 0)
+    if (hasRentalAssets && operatorFeeBase > 0 && c.income[y] > 0) {
       feeOperator[y] = operatorFeeBase * operatorFeePct;
       const operatorCap = project.operatorFeeCap || 0;
       if (operatorCap > 0 && feeOperator[y] > operatorCap) feeOperator[y] = operatorCap;
