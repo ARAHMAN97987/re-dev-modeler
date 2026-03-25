@@ -3429,7 +3429,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       usesLegacy: !independentPhaseResults?.consolidatedWaterfall && !!_legacyWaterfall,
       phaseErrors: independentPhaseResults?.errors || [],
     };
-    console.log('%c[ZAN Debug]', 'color:#0ea5e9;font-weight:bold', window.__debugProject);
   }, [project, waterfall, _legacyWaterfall, independentPhaseResults]);
 
   const createProject = async (templateId) => {
@@ -4166,7 +4165,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
   const totalAssets = index.reduce((s,p) => s + (p.assetCount||0), 0);
   const finModes = index.reduce((m,p) => { const k = p.finMode||"self"; m[k] = (m[k]||0)+1; return m; }, {});
   return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(180deg, #f5f3f0 0%, #ede9e4 100%)",backgroundImage:"radial-gradient(circle at 20% 30%, rgba(46,196,182,0.04) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(200,169,110,0.03) 0%, transparent 40%)",fontFamily:"var(--font-family)",color:"var(--text-primary)"}}>
+    <div dir={ar?"rtl":"ltr"} style={{minHeight:"100vh",background:"linear-gradient(180deg, #f5f3f0 0%, #ede9e4 100%)",backgroundImage:"radial-gradient(circle at 20% 30%, rgba(46,196,182,0.04) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(200,169,110,0.03) 0%, transparent 40%)",fontFamily:"var(--font-family)",color:"var(--text-primary)"}}>
       <div style={{maxWidth:900,margin:"0 auto",padding:isMobile?"20px 14px":"48px 24px"}}>
         <div style={{display:"flex",flexDirection:isMobile?"column":"row",justifyContent:"space-between",alignItems:isMobile?"stretch":"flex-start",gap:isMobile?14:0,marginBottom:isMobile?20:32}}>
           <div>
@@ -4293,8 +4292,8 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                 {!p._shared && <button onClick={e=>{e.stopPropagation();const url=`${window.location.origin}?s=${p.id}&o=${user?.id||""}`;navigator.clipboard?.writeText(url).then(()=>{e.currentTarget.textContent="✓";setTimeout(()=>{e.currentTarget.textContent="🔗";},1500);});}} style={{...btnSm,background:"var(--color-info-bg)",color:"#60a5fa",padding:"4px 10px",fontSize:13}} title={lang==="ar"?"نسخ رابط المشاركة":"Copy share link"}>🔗</button>}
                 {!p._shared && (confirmDel===p.id ? (
                   <div style={{display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
-                    <button onClick={()=>{onDel(p.id);setConfirmDel(null);}} style={{...btnSm,background:"var(--color-danger-bg)",color:"var(--color-danger)"}}>Yes</button>
-                    <button onClick={()=>setConfirmDel(null)} style={{...btnSm,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>No</button>
+                    <button onClick={()=>{onDel(p.id);setConfirmDel(null);}} style={{...btnSm,background:"var(--color-danger-bg)",color:"var(--color-danger)"}}>{ar?"نعم":"Yes"}</button>
+                    <button onClick={()=>setConfirmDel(null)} style={{...btnSm,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>{ar?"لا":"No"}</button>
                   </div>
                 ) : (
                   <button onClick={e=>{e.stopPropagation();setConfirmDel(p.id);}} style={{...btnSm,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}} title="Delete">✕</button>
@@ -9357,7 +9356,7 @@ function KPI({label,value,sub,color,tip}) {
 // CASH FLOW VIEW
 // ═══════════════════════════════════════════════════════════════
 function CashFlowView({ project, results, t, incentivesResult }) {
-  if (!project||!results) return <div style={{color:"var(--text-tertiary)"}}>Add assets to see projections.</div>;
+  if (!project||!results) return <div style={{color:"var(--text-tertiary)"}}>{t.dashboard==="لوحة التحكم"?"أضف أصول لرؤية التوقعات.":"Add assets to see projections."}</div>;
   const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
   const [selectedPhases, setSelectedPhases] = useState([]);
