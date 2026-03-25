@@ -3374,8 +3374,9 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   useEffect(() => {
     if (!project || view !== "editor") return;
     const fm = project.finMode || "self";
+    const hasDebt = fm === "debt" || fm === "bank100" || fm === "fund";
     const hidden = new Set();
-    if (fm === "self") hidden.add("financing");
+    if (!hasDebt) { hidden.add("financing"); hidden.add("scenarios"); }
     if (hidden.has(activeTab)) setActiveTab("dashboard");
   }, [project?.finMode, activeTab, view]);
 
@@ -3772,28 +3773,21 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             const fm = project?.finMode || "self";
             const hasFund = fm === "fund";
             const hasDebt = fm === "debt" || fm === "bank100" || fm === "fund";
-            // Smart tab visibility: Self=4, Debt=6, Fund=7
-            const TAB_VIS = {
-              self: ["dashboard","assets","results","reports"],
-              debt: ["dashboard","assets","financing","results","reports","scenarios"],
-              fund: ["dashboard","assets","financing","results","reports","scenarios","incentives"],
-            };
-            const mode = fm === "none" || fm === "self" ? "self" : hasFund ? "fund" : "debt";
-            const visibleKeys = new Set(TAB_VIS[mode]);
-            // Always show cashflow, market, checks for backward compat (hidden from smart visibility but accessible)
+            // Smart tab visibility by financing mode
+            // Core tabs always visible + conditional tabs based on mode
             const allTabs = [
-              {key:"dashboard",label:t.dashboard},
-              {key:"assets",label:t.assetProgram},
-              {key:"financing",label:lang==="ar"?"التمويل":"Financing"},
-              {key:"results",label:lang==="ar"?"النتائج":"Results"},
-              {key:"reports",label:lang==="ar"?"التقارير":"Reports"},
-              {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios"},
-              {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},
-              {key:"cashflow",label:t.cashFlow},
-              {key:"market",label:lang==="ar"?"السوق":"Market"},
-              {key:"checks",label:lang==="ar"?"الفحوصات":"Checks"},
+              {key:"dashboard",label:t.dashboard,show:true},
+              {key:"assets",label:t.assetProgram,show:true},
+              {key:"cashflow",label:t.cashFlow,show:true},
+              {key:"financing",label:lang==="ar"?"التمويل":"Financing",show:hasDebt},
+              {key:"results",label:lang==="ar"?"النتائج":"Results",show:true},
+              {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",show:true},
+              {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",show:hasDebt},
+              {key:"market",label:lang==="ar"?"السوق":"Market",show:true},
+              {key:"checks",label:lang==="ar"?"الفحوصات":"Checks",show:true},
+              {key:"reports",label:lang==="ar"?"التقارير":"Reports",show:true},
             ];
-            const tabs = allTabs.filter(tb => visibleKeys.has(tb.key));
+            const tabs = allTabs.filter(tb => tb.show);
             return tabs.map(tb=>{
               const isActive = activeTab===tb.key;
               return <button key={tb.key} onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} className={`z-tab${isActive?" z-tab-active":""}`} style={{padding:isMobile?"10px 8px":"9px var(--space-4)",fontSize:12}}>{tb.label}</button>;
