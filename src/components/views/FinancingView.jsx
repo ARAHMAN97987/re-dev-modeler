@@ -1,27 +1,16 @@
-// Extracted from App.jsx lines 2253-3158
-// FinancingView: Full financing configuration + outputs + debt schedule
-
-import { useState, useEffect, useMemo, useRef } from "react";
+// Extracted from App.jsx lines 2225-3158
+import { useState, useEffect, useMemo, useRef, memo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, LineChart, Line, Legend } from "recharts";
 import { useIsMobile } from "../shared/hooks";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
 import { btnS, btnPrim, sideInputStyle, tblStyle, thSt, tdSt, tdN } from "../shared/styles";
 import { FINANCING_FIELDS, getPhaseFinancing, hasPerPhaseFinancing } from "../../engine/phases";
+import { calcIRR } from "../../engine/math";
 
-// ── Metric color utility ──
 // ── Functional Colors — consistent metric coloring across all tabs ──
 const METRIC_COLORS = { success: "#10b981", warning: "#f59e0b", error: "#ef4444", neutral: "#6b7080", muted: "#9ca3af" };
 const METRIC_COLORS_DARK = { success: "#4ade80", warning: "#fbbf24", error: "#f87171", neutral: "#8b90a0", muted: "#6b7080" };
 
-/**
- * Returns the functional color for a financial metric based on its value.
- * @param {string} metric - One of: IRR, DSCR, LTV, NPV, MOIC, cashFlow
- * @param {number|null} value - The numeric value (IRR as decimal e.g. 0.15, DSCR as ratio, LTV as %, NPV as amount, MOIC as multiple)
- * @param {object} [opts] - Options: { dark: false, raw: false }
- *   dark=true returns lighter colors for dark backgrounds
- *   raw=true returns 'success'|'warning'|'error' instead of hex
- * @returns {string} hex color or level string
- */
 const getMetricColor = (metric, value, opts = {}) => {
   const { dark = false, raw = false } = opts;
   if (value === null || value === undefined || (typeof value === "number" && isNaN(value))) {
@@ -54,7 +43,175 @@ const getMetricColor = (metric, value, opts = {}) => {
   return raw ? level : palette[level];
 };
 
-// ── Form helpers (also used by ResultsView) ──
+const _finInpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
+const _finSelSt = {..._finInpSt,cursor:"pointer",appearance:"auto"};
+
+function Tip({text,children}) {
+  const isMobile = useIsMobile();
+  const [show,setShow]=useState(false);
+  const ref=useRef(null);
+  const [pos,setPos]=useState({top:0,left:0});
+  const onEnter=()=>{
+    if(ref.current){const r=ref.current.getBoundingClientRect();setPos({top:r.bottom+6,left:r.left+r.width/2});}
+    setShow(true);
+  };
+  useEffect(()=>{ if(show && isMobile){ const t=setTimeout(()=>setShow(false),4000); return ()=>clearTimeout(t); } },[show,isMobile]);
+  return <span style={{display:"inline-flex",alignItems:"center"}}>
+    {children}
+    <span ref={ref} onMouseEnter={isMobile?undefined:onEnter} onMouseLeave={isMobile?undefined:()=>setShow(false)} onClick={()=>{if(!show)onEnter();else setShow(false);}} style={{cursor:"help",fontSize:isMobile?13:10,color:"#9ca3af",marginInlineStart:3,lineHeight:1,padding:isMobile?"4px":0}}>ⓘ</span>
+    {show&&<>{isMobile&&<div onClick={()=>setShow(false)} style={{position:"fixed",inset:0,zIndex:99998}} />}<div style={{position:"fixed",top:pos.top,...(document.dir==="rtl"?{right:Math.max(10,Math.min(window.innerWidth-pos.left-140,window.innerWidth-300))}:{left:Math.max(10,Math.min(pos.left-140,window.innerWidth-300))}),width:isMobile?Math.min(280,window.innerWidth-24):280,background:"#1a1d23",color:"#d0d4dc",padding:isMobile?"12px 14px":"10px 13px",borderRadius:8,fontSize:isMobile?12:11,lineHeight:1.6,zIndex:99999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",whiteSpace:"normal",textAlign:"start"}}>{text.split("\n").map((line,i)=><div key={i} dir={/[\u0600-\u06FF]/.test(line)?"rtl":"ltr"} style={{marginBottom:i===0?4:0}}>{line}</div>)}</div></>}
+  </span>;
+}
+
+function KPI({label,value,sub,color,tip}) {
+  const isMobile = useIsMobile();
+  return <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:isMobile?"10px 12px":"12px 14px"}}>
+    <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{tip?<Tip text={tip}>{label}</Tip>:label}</div>
+    <div style={{fontSize:isMobile?15:19,fontWeight:700,color:color||"#1a1d23",lineHeight:1.1}}>{value}{sub&&<span style={{fontSize:isMobile?10:11,fontWeight:400,color:"#9ca3af",marginInlineStart:4}}>{sub}</span>}</div>
+  </div>;
+}
+
+function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
+  const ar = lang === "ar";
+  const label = customLabel || (ar ? "ما الفرق؟" : "What's the difference?");
+  return (
+    <span
+      onClick={(e) => { e.stopPropagation(); onOpen(contentKey); }}
+      style={{
+        fontSize: 11,
+        color: "#2563eb",
+        textDecoration: "underline",
+        textDecorationStyle: "dotted",
+        textUnderlineOffset: 3,
+        cursor: "pointer",
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+        userSelect: "none",
+        transition: "color 0.15s",
+      }}
+      onMouseEnter={e => { e.target.style.color = "#1d4ed8"; }}
+      onMouseLeave={e => { e.target.style.color = "#2563eb"; }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function EducationalModal({ contentKey, lang, onClose }) {
+  const isMobile = useIsMobile();
+  const ar = lang === "ar";
+  const EDUCATIONAL_CONTENT = require("../../data/educational-content").EDUCATIONAL_CONTENT;
+  const content = EDUCATIONAL_CONTENT[contentKey]?.[ar ? "ar" : "en"];
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  if (!content) return null;
+
+  const tab = content.tabs[activeTab];
+
+  const renderBlock = (block, i) => {
+    if (block.type === "heading") {
+      return <div key={i} style={{ fontSize: 13, fontWeight: 700, color: "#1a1d23", marginTop: i === 0 ? 0 : 18, marginBottom: 6 }}>{block.text}</div>;
+    }
+    if (block.type === "text") {
+      return <div key={i} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.75, marginBottom: 6 }}>{block.text}</div>;
+    }
+    if (block.type === "list") {
+      return (
+        <div key={i} style={{ marginBottom: 8 }}>
+          {block.items.map((item, j) => (
+            <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5, fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
+              <span style={{ color: "#9ca3af", fontSize: 8, marginTop: 6, flexShrink: 0 }}>●</span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (<>
+    {/* Overlay */}
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9998, backdropFilter: "blur(2px)" }} />
+
+    {/* Modal */}
+    <div style={{
+      position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+      width: isMobile ? "96vw" : 620, maxWidth: "96vw", maxHeight: "88vh",
+      background: "#fff", borderRadius: 16,
+      boxShadow: "0 24px 80px rgba(0,0,0,0.22)",
+      zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden",
+      direction: ar ? "rtl" : "ltr",
+    }}>
+
+      {/* Header */}
+      <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #e5e7ec", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <span style={{ fontSize: 20 }}>📘</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>{content.title}</div>
+          <div style={{ fontSize: 12, color: "#6b7080", marginTop: 3, lineHeight: 1.5 }}>{content.intro}</div>
+        </div>
+        <button onClick={onClose} style={{ background: "#f0f1f5", border: "none", borderRadius: 8, width: 34, height: 34, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7080", fontFamily: "inherit", flexShrink: 0 }}>✕</button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{
+        display: "flex", gap: 0, borderBottom: "1px solid #e5e7ec", flexShrink: 0,
+        overflowX: "auto", WebkitOverflowScrolling: "touch",
+        msOverflowStyle: "none", scrollbarWidth: "none",
+      }}>
+        {content.tabs.map((t, i) => {
+          const isActive = i === activeTab;
+          return (
+            <button key={t.id} onClick={() => setActiveTab(i)} style={{
+              padding: isMobile ? "10px 12px" : "12px 18px",
+              background: "none", border: "none", borderBottom: isActive ? "2.5px solid #2563eb" : "2.5px solid transparent",
+              fontSize: isMobile ? 11 : 12, fontWeight: isActive ? 700 : 500,
+              color: isActive ? "#2563eb" : "#6b7080",
+              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+              transition: "all 0.15s", flexShrink: 0,
+            }}>
+              <span style={{ marginInlineEnd: 5 }}>{t.icon}</span>{t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Content */}
+      <div style={{ flex: 1, overflow: "auto", padding: isMobile ? "16px 18px" : "20px 24px" }}>
+        {tab && tab.content.map(renderBlock)}
+      </div>
+
+      {/* Footer CTA */}
+      {content.cta && (
+        <div style={{ padding: "12px 22px", borderTop: "1px solid #e5e7ec", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+          {window.__zanOpenAcademy ? (
+            <button onClick={() => { onClose(); window.__zanOpenAcademy(contentKey); }} style={{
+              background: "none", border: "none", color: "#C8A96E", fontSize: 11, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4,
+            }}>📚 {ar ? "اقرأ المزيد في الأكاديمية" : "Read more in Academy"}</button>
+          ) : <span />}
+          <button onClick={onClose} style={{
+            padding: "9px 28px", borderRadius: 8, border: "none",
+            background: "#2563eb", color: "#fff", fontSize: 13, fontWeight: 600,
+            cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s",
+          }}
+          onMouseEnter={e => { e.target.style.background = "#1d4ed8"; }}
+          onMouseLeave={e => { e.target.style.background = "#2563eb"; }}
+          >{content.cta}</button>
+        </div>
+      )}
+    </div>
+  </>);
+}
+
 function FieldGroup({icon,title,children,defaultOpen=false,globalExpand}) {
   const [open,setOpen]=useState(defaultOpen);
   useEffect(() => { if (globalExpand > 0) setOpen(globalExpand % 2 === 1); }, [globalExpand]);
@@ -82,7 +239,6 @@ function Inp({value,onChange,type="text",...rest}) {
 function Drp({value,onChange,options,lang:dl}) {
   return <select value={value} onChange={e=>onChange(e.target.value)} style={_finSelSt}>{options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.value} value={o.value}>{o[dl]||o.en||o.label}</option>)}</select>;
 }
-
 
 function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, incentivesResult, t, up, lang, globalExpand }) {
   const isMobile = useIsMobile();
@@ -990,6 +1146,7 @@ When to use:
 
     {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
   </div>);
+}
 
-export { FieldGroup, FL, Inp, Drp };
 export default FinancingView;
+export { FieldGroup, FL, Inp, Drp };
