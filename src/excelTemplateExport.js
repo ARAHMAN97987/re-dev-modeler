@@ -50,17 +50,6 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     cell.value = value; // overwrites formula with static value
   }
 
-  // ── Helper: convert 0-based column index to Excel letter (0=A, 4=E, 53=BB) ──
-  function colFromIndex(idx) {
-    let s = "";
-    let n = idx;
-    while (n >= 0) {
-      s = String.fromCharCode(65 + (n % 26)) + s;
-      n = Math.floor(n / 26) - 1;
-    }
-    return s;
-  }
-
   // ── Helper: percentage (platform stores as whole number e.g. 6.5 = 6.5%, Excel needs 0.065) ──
   function pct(val) {
     if (val === undefined || val === null) return 0;
@@ -331,76 +320,6 @@ export async function generateTemplateExcel(project, results, financing, waterfa
         topLeftCell: 'E1',
         activeCell: 'E47',
       }];
-    }
-
-    // ── Force-write engine-computed waterfall results ──
-    // Template formulas may differ from engine in edge cases (debt schedule,
-    // land rent timing, exit valuation, etc.). Override with engine values
-    // so Excel IRR matches platform exactly.
-    const phaseName = ph?.name || `Phase ${pi + 1}`;
-    const pw = phaseWaterfalls?.[phaseName];
-    const pf = phaseFinancings?.[phaseName];
-
-    if (pw) {
-      const startYear = p.startYear || 2025;
-      const horizon = p.horizon || 50;
-
-      // Force-write LP Net CF per year (row 99) — IRR formula uses this row
-      // Template formula: =-E56*$C$16+E93. Override with engine values.
-      for (let y = 0; y < horizon && y < 50; y++) {
-        const col = colFromIndex(y + 4); // E=col4 is year 0 (startYear+0)
-        forceSet(sheetName, `${col}99`, pw.lpNetCF[y] || 0);
-      }
-
-      // Force-write GP Net CF per year (row 103)
-      for (let y = 0; y < horizon && y < 50; y++) {
-        const col = colFromIndex(y + 4);
-        forceSet(sheetName, `${col}103`, pw.gpNetCF[y] || 0);
-      }
-
-      // Force-write KPI summary (overrides formula references)
-      forceSet(sheetName, "C108", pw.lpIRR != null && isFinite(pw.lpIRR) ? pw.lpIRR : "-");
-      forceSet(sheetName, "C109", pw.gpIRR != null && isFinite(pw.gpIRR) ? pw.gpIRR : "-");
-      forceSet(sheetName, "C110", pw.lpMOIC != null && isFinite(pw.lpMOIC) ? pw.lpMOIC : "-");
-      forceSet(sheetName, "C111", pw.gpMOIC != null && isFinite(pw.gpMOIC) ? pw.gpMOIC : "-");
-    }
-
-    if (pf) {
-      forceSet(sheetName, "C113", pf.totalEquity || 0);
-      forceSet(sheetName, "C114", pf.totalDebt || 0);
-      forceSet(sheetName, "C116", pf.exitProceeds ? pf.exitProceeds.reduce((a, b) => a + b, 0) : 0);
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // 5b. FUND SUMMARY — Consolidated IRR from engine
-  // ═══════════════════════════════════════════════════════════
-  if (waterfall) {
-    const summWs = wb.getWorksheet("Fund_Summary");
-    if (summWs) {
-      // Write consolidated IRR in the dashboard area (after existing content)
-      // Row 27+: Consolidated Performance
-      forceSet("Fund_Summary", "C27", "Consolidated Performance (Engine)");
-      forceSet("Fund_Summary", "C28", "LP Net IRR");
-      forceSet("Fund_Summary", "D28", waterfall.lpIRR != null && isFinite(waterfall.lpIRR) ? waterfall.lpIRR : "-");
-      forceSet("Fund_Summary", "C29", "GP Net IRR");
-      forceSet("Fund_Summary", "D29", waterfall.gpIRR != null && isFinite(waterfall.gpIRR) ? waterfall.gpIRR : "-");
-      forceSet("Fund_Summary", "C30", "LP MOIC");
-      forceSet("Fund_Summary", "D30", waterfall.lpMOIC != null && isFinite(waterfall.lpMOIC) ? waterfall.lpMOIC : "-");
-      forceSet("Fund_Summary", "C31", "GP MOIC");
-      forceSet("Fund_Summary", "D31", waterfall.gpMOIC != null && isFinite(waterfall.gpMOIC) ? waterfall.gpMOIC : "-");
-
-      // Per-phase IRR summary
-      forceSet("Fund_Summary", "C33", "Per-Phase LP IRR");
-      for (let pi = 0; pi < Math.min(phases.length, 6); pi++) {
-        const pName = phases[pi]?.name || `Phase ${pi + 1}`;
-        const pw = phaseWaterfalls?.[pName];
-        forceSet("Fund_Summary", `C${34 + pi}`, `ZAN ${pi + 1}`);
-        forceSet("Fund_Summary", `D${34 + pi}`, pw?.lpIRR != null && isFinite(pw.lpIRR) ? pw.lpIRR : "-");
-        forceSet("Fund_Summary", `E${34 + pi}`, pw?.gpIRR != null && isFinite(pw.gpIRR) ? pw.gpIRR : "-");
-      }
-      forceSet("Fund_Summary", "D33", "LP IRR");
-      forceSet("Fund_Summary", "E33", "GP IRR");
     }
   }
 
