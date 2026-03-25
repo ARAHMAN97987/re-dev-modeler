@@ -360,6 +360,47 @@ async function loadProject(id, ownerId, permission) {
       }
       migrated._feesVersion = 2;
     }
+    // Engine field migration v3: ensure critical engine fields are valid
+    if (!migrated._engineVersion || migrated._engineVersion < 3) {
+      // Validate exitStrategy is a known value
+      if (!['sale', 'caprate', 'hold'].includes(migrated.exitStrategy)) {
+        migrated.exitStrategy = def.exitStrategy;
+      }
+      // Ensure catchupMethod exists (engine needs explicit value)
+      if (!migrated.catchupMethod) {
+        migrated.catchupMethod = def.catchupMethod; // "perYear"
+      }
+      // Ensure debtTrancheMode exists
+      if (!migrated.debtTrancheMode) {
+        migrated.debtTrancheMode = def.debtTrancheMode; // "single"
+      }
+      // Ensure feeTreatment exists
+      if (!migrated.feeTreatment) {
+        migrated.feeTreatment = def.feeTreatment; // "capital"
+      }
+      // Ensure mgmtFeeBase exists
+      if (!migrated.mgmtFeeBase) {
+        migrated.mgmtFeeBase = def.mgmtFeeBase; // "nav"
+      }
+      // Fix legacy field name: annualLandRent → landRentAnnual
+      if (migrated.annualLandRent !== undefined && !migrated.landRentAnnual) {
+        migrated.landRentAnnual = migrated.annualLandRent;
+        delete migrated.annualLandRent;
+      }
+      // Clean phase financing: remove project-level fields that shouldn't be per-phase
+      if (migrated.phases) {
+        migrated.phases = migrated.phases.map(p => {
+          if (p.financing) {
+            const cleaned = { ...p.financing };
+            // catchupMethod is project-level only
+            delete cleaned.catchupMethod;
+            return { ...p, financing: cleaned };
+          }
+          return p;
+        });
+      }
+      migrated._engineVersion = 3;
+    }
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
     if (ownerId) migrated._permission = permission || "edit";
@@ -3353,6 +3394,42 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
+
+  // ── Debug: expose engine state to browser console for diagnostics ──
+  useEffect(() => {
+    if (!project) { window.__debugProject = null; return; }
+    const phaseW = independentPhaseResults?.phaseWaterfalls || {};
+    const phaseF = independentPhaseResults?.phaseFinancings || {};
+    window.__debugProject = {
+      // Key project fields that affect LP IRR
+      exitStrategy: project.exitStrategy,
+      exitCapRate: project.exitCapRate,
+      exitMultiple: project.exitMultiple,
+      catchupMethod: project.catchupMethod,
+      finMode: project.finMode,
+      prefReturnPct: project.prefReturnPct,
+      feeTreatment: project.feeTreatment,
+      mgmtFeeBase: project.mgmtFeeBase,
+      mgmtFeeCapAnnual: project.mgmtFeeCapAnnual,
+      structuringFeeCap: project.structuringFeeCap,
+      landRentAnnual: project.landRentAnnual,
+      debtTrancheMode: project.debtTrancheMode,
+      _feesVersion: project._feesVersion,
+      _engineVersion: project._engineVersion,
+      // Phase financing overrides
+      phaseFinancingOverrides: (project.phases || []).map(p => ({ name: p.name, financing: p.financing })),
+      // Results summary
+      consolidatedLpIRR: waterfall?.lpIRR,
+      legacyLpIRR: _legacyWaterfall?.lpIRR,
+      phaseLpIRRs: Object.fromEntries(Object.entries(phaseW).map(([k, w]) => [k, w?.lpIRR])),
+      phaseCount: Object.keys(phaseW).length,
+      phaseFinancingCount: Object.keys(phaseF).length,
+      usesIndependent: !!independentPhaseResults?.consolidatedWaterfall,
+      usesLegacy: !independentPhaseResults?.consolidatedWaterfall && !!_legacyWaterfall,
+      phaseErrors: independentPhaseResults?.errors || [],
+    };
+    console.log('%c[ZAN Debug]', 'color:#0ea5e9;font-weight:bold', window.__debugProject);
+  }, [project, waterfall, _legacyWaterfall, independentPhaseResults]);
 
   const createProject = async (templateId) => {
     const p = defaultProject();

@@ -277,6 +277,7 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   const h = project.horizon || 50;
   const phaseFinancings = {};
   const phaseWaterfalls = {};
+  const errors = [];
 
   for (const pName of phaseNames) {
     const pr = phases[pName];
@@ -299,10 +300,16 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
           try {
             const pWaterfall = computeWaterfall(vProject, vResults, pFinancing, pIr);
             if (pWaterfall) phaseWaterfalls[pName] = pWaterfall;
-          } catch (e) { console.error(`Phase waterfall error (${pName}):`, e); }
+          } catch (e) {
+            console.error(`Phase waterfall error (${pName}):`, e);
+            errors.push({ phase: pName, type: 'waterfall', error: e.message });
+          }
         }
       }
-    } catch (e) { console.error(`Phase financing error (${pName}):`, e); }
+    } catch (e) {
+      console.error(`Phase financing error (${pName}):`, e);
+      errors.push({ phase: pName, type: 'financing', error: e.message });
+    }
   }
 
   const consolidatedFinancing = aggregatePhaseFinancings(phaseFinancings, h);
@@ -322,7 +329,7 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   }
   const consolidatedWaterfall = aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h);
 
-  return { phaseFinancings, phaseWaterfalls, consolidatedFinancing, consolidatedWaterfall };
+  return { phaseFinancings, phaseWaterfalls, consolidatedFinancing, consolidatedWaterfall, errors };
 }
 
 // ═══ Legacy computePhaseWaterfalls (kept for backward compat) ═══
