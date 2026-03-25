@@ -321,6 +321,70 @@ export async function generateTemplateExcel(project, results, financing, waterfa
         activeCell: 'E47',
       }];
     }
+
+    // ── FIX ROOT CAUSE #1: Total Equity / GP Equity clamping ──
+    // Template: C14 = C18 - C19 (can produce LP < 0 when landCap > equity)
+    // Engine:   totalEquity = MAX(gpEquity, devCostInclLand - debt)
+    // Fix: override C14 (totalEquity) and C12 (gpEquity) with engine values
+    // so LP% is never negative. Formulas C13/C15/C16 derive from these.
+    const phaseName = ph?.name || `Phase ${pi + 1}`;
+    const pFin = phaseFinancings?.[phaseName];
+    if (pFin) {
+      forceSet(sheetName, "C12", pFin.gpEquity ?? 0);       // GP Equity
+      forceSet(sheetName, "C14", pFin.totalEquity ?? 0);     // Total Equity (clamped)
+      forceSet(sheetName, "C19", pFin.totalDebt ?? 0);       // Actual debt drawn (capped at totalCapex)
+    }
+
+    // ── FIX ROOT CAUSE #3: Management Fee Base ──
+    // Template uses: $C$18*$C$30 (fixed devCostInclLand × rate) every year
+    // Engine uses mgmtFeeBase setting (deployed = cumulative CAPEX, nav = NAV, etc.)
+    // Fix: replace C18 reference in mgmt fee formula with engine's actual base
+    // We write the engine's mgmtFeeBase mode as a flag, then override C18
+    // with the engine's devCostExclLand when mgmtFeeBase != "devCost"
+    // Actually, simplest fix: override the mgmt fee formula for each year column
+    // to use the engine's actual fee base. But that's too many cells.
+    // Better: forceSet C18 to match what the engine uses as fee base.
+    // When mgmtFeeBase = "deployed", the fee base changes per year.
+    // Since the template uses C18 as a FIXED base, the cleanest fix is:
+    // Write the engine's per-year management fee directly into row 65.
+    const pWat = phaseWaterfalls?.[phaseName];
+    if (pWat && pFin) {
+      const horizon = p.horizon || 50;
+      // Overwrite management fee per year (row 65) with engine values
+      for (let y = 0; y < Math.min(horizon, 50); y++) {
+        const colIdx = y + 4; // E=4
+        let s = "", n = colIdx;
+        while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+        const mgmtFeeVal = pWat.feeMgmt?.[y] ?? 0;
+        if (mgmtFeeVal !== 0) {
+          forceSet(sheetName, `${s}65`, -Math.abs(mgmtFeeVal)); // fees are negative in template
+        }
+      }
+
+      // ── FIX ROOT CAUSE #2: Land Rent Timing ──
+      // Template: starts rent strictly after grace period
+      // Engine: landRentStartRule='auto' starts at MIN(graceEnd, firstIncomeYear)
+      // Fix: write engine's per-phase land rent into CashFlow rows
+      // Actually, land rent flows through CAPEX sheet → CashFlow → Fund.
+      // Easier: override Fund row 48 (land rent) with engine values
+      for (let y = 0; y < Math.min(horizon, 50); y++) {
+        const colIdx = y + 4;
+        let s = "", n = colIdx;
+        while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+        const lr = results?.phaseResults?.[phaseName]?.landRent?.[y] ?? 0;
+        if (lr !== 0) {
+          forceSet(sheetName, `${s}48`, -Math.abs(lr)); // land rent is negative cost
+        }
+      }
+
+      // ── FIX ROOT CAUSE #4: Debt Draw Cap ──
+      // Template: draws maxDebt pro-rata (can exceed totalCapex)
+      // Engine: actualMaxDebt = MIN(maxDebt, totalCapex)
+      // Already fixed above by forceSet C19 = pFin.totalDebt (capped value)
+      // But the drawdown formula still uses C19 (which is now correct).
+      // The template drawdown formula: MIN(CAPEX/totalCAPEX * C19, MAX(0, C19-prevBal))
+      // With C19 = MIN(maxDebt, totalCapex), drawdowns are now capped. ✓
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
