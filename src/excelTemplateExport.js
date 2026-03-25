@@ -189,17 +189,35 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     setInput(PRG, `J${row}`, pct(a.efficiency));
     // K = Leasable Area (formula: H * J)
     setInput(PRG, `L${row}`, a.leaseRate || 0);
-    // M = EBITDA (for Operating type)
-    if (a.revType === "Operating" && a.opEbitda) {
-      setInput(PRG, `M${row}`, a.opEbitda);
+    // M = EBITDA (for Operating type) — always write so template uses correct value
+    if (a.revType === "Operating") {
+      setInput(PRG, `M${row}`, a.opEbitda || 0);
     }
     setInput(PRG, `O${row}`, a.rampUpYears || 3);
     setInput(PRG, `P${row}`, pct(a.stabilizedOcc || a.occupancy));
     setInput(PRG, `Q${row}`, a.costPerSqm || 0);
-    // Col R = construction start year offset (constrStart) - must always be written
-    // without this, hardcoded template values (e.g. 4 for Parking/Marina) persist
-    // which misaligns CAPEX timing vs platform → wrong IRR in Excel
-    setInput(PRG, `R${row}`, a.constrStart || a.startOffset || 2);
+
+    // Col R = construction start year offset from project startYear
+    // MUST match engine logic (cashflow.js lines 54-76) exactly:
+    //   1. completionYear set → cStart = completionYear - startYear - durYears
+    //   2. constrStart > 0 → cStart = constrStart
+    //   3. completionMonth set → cStart = ceil(completionMonth/12) - durYears
+    //   4. else → cStart = 0
+    const assetPhase = phases.find(ph => ph.name === (a.phase || phases[0]?.name || 'Phase 1'));
+    const durYears = Math.ceil((a.constrDuration || a.constructionMonths || 12) / 12);
+    let actualConstrStart;
+    if (assetPhase && (assetPhase.completionYear || 0) > 0) {
+      const phaseOpenIdx = assetPhase.completionYear - (p.startYear || 2026);
+      actualConstrStart = Math.max(0, phaseOpenIdx - durYears);
+    } else if ((a.constrStart || 0) > 0) {
+      actualConstrStart = a.constrStart;
+    } else if (assetPhase && (assetPhase.completionMonth || 0) > 0) {
+      const phaseOpenIdx = Math.ceil(assetPhase.completionMonth / 12);
+      actualConstrStart = Math.max(0, phaseOpenIdx - durYears);
+    } else {
+      actualConstrStart = 0;
+    }
+    setInput(PRG, `R${row}`, actualConstrStart);
     setInput(PRG, `S${row}`, a.constrDuration || a.constructionMonths || 12);
   }
 
