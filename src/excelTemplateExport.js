@@ -41,19 +41,6 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     cell.value = value;
   }
 
-  // ── Helper: force-write a cell, even if it has a formula ──
-  // Used ONLY for Program sheet computed inputs (R column) where the template
-  // VLOOKUP gives the same startYearOffset for all assets in a phase, but the
-  // engine computes per-asset construction starts (completionYear - durYears).
-  // This is still an INPUT — not a computed result — it's just that the template
-  // formula doesn't support per-asset timing.
-  function forceInput(sheetName, cellRef, value) {
-    const ws = wb.getWorksheet(sheetName);
-    if (!ws) return;
-    const cell = ws.getCell(cellRef);
-    cell.value = value;
-  }
-
   // Note: forceSet (overwrite formulas) was removed — ALL Fund sheet cells
   // are now driven by template formulas for full dynamism.
 
@@ -87,14 +74,7 @@ export async function generateTemplateExcel(project, results, financing, waterfa
   setInput(INP, "C18", p.landRentAnnual || 0);
   setInput(INP, "C19", p.landRentEscalationEveryN || 5);
   setInput(INP, "C20", pct(p.landRentEscalation));
-  // Write effective rent start offset matching engine's auto/grace/income logic.
-  // Template formula: IF(year - startYear + 1 <= grace, 0, rent) — uses grace as rent start.
-  // Engine computes rentStartYear from landRentStartRule (auto=MIN(grace,firstIncome)).
-  // Write the engine-computed effective start offset so template matches.
-  const effectiveGrace = (results && results.landRentMeta && results.landRentMeta.rentStartYear !== undefined)
-    ? results.landRentMeta.rentStartYear
-    : (p.landRentGrace || 5);
-  setInput(INP, "C21", effectiveGrace);
+  setInput(INP, "C21", p.landRentGrace || 5);
   setInput(INP, "C22", p.landRentTerm || 50);
 
   // Section 4: CAPEX
@@ -114,12 +94,6 @@ export async function generateTemplateExcel(project, results, financing, waterfa
 
   // Section 7: Land Capitalization
   setInput(INP, "C63", p.landArea || 0);
-  // Template formula C64 = C63*1000 (hardcoded rate). Override with correct land cap value
-  // matching engine: landCapValue = landCapitalize ? landArea × landCapRate : 0
-  const canCapitalize = p.landType === "lease" || p.landType === "bot";
-  const landCapValue = (p.landCapitalize && canCapitalize)
-    ? (p.landArea || 0) * (p.landCapRate || 1000) : 0;
-  forceInput(INP, "C64", landCapValue);
 
   // Section 8: Debt
   setInput(INP, "C85", pct(p.maxLtvPct));
@@ -219,13 +193,6 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     if (a.revType === "Operating") {
       setInput(PRG, `M${row}`, a.opEbitda || 0);
     }
-    // Col N = Escalation per asset. Template formula reads Inputs!C41 (project-level)
-    // for most assets, but engine supports per-asset override via asset.escalation.
-    // Force-write the effective escalation matching the engine logic.
-    const projectEsc = p.rentEscalation ?? 0;
-    const assetEsc = a.escalation ?? projectEsc;
-    forceInput(PRG, `N${row}`, pct(assetEsc));
-
     setInput(PRG, `O${row}`, a.rampUpYears || 3);
     setInput(PRG, `P${row}`, pct(a.stabilizedOcc || a.occupancy));
     setInput(PRG, `Q${row}`, a.costPerSqm || 0);
@@ -250,10 +217,7 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     } else {
       actualConstrStart = 0;
     }
-    // R column: Template has VLOOKUP formula giving same startYearOffset for all
-    // assets in a phase. Engine computes per-asset: completionYear - durYears.
-    // Must force-write to override the VLOOKUP formula with per-asset timing.
-    forceInput(PRG, `R${row}`, actualConstrStart);
+    setInput(PRG, `R${row}`, actualConstrStart);
     setInput(PRG, `S${row}`, a.constrDuration || a.constructionMonths || 12);
   }
 
