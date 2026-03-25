@@ -3653,8 +3653,11 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div className="z-nav" style={{height:isMobile?44:48,minHeight:isMobile?44:48,background:"var(--surface-nav)",display:"flex",alignItems:"center",padding:isMobile?"0 8px":"0 var(--space-5)",gap:isMobile?4:8}}>
-          {/* Back to projects */}
-          <button onClick={goBack} className="z-nav-btn" style={{padding:isMobile?"4px 8px":"5px 10px",fontSize:isMobile?10:11,flexShrink:0}}>{isMobile?"→":t.back}</button>
+          {/* Logo + Back */}
+          <button onClick={goBack} className="z-nav-btn" style={{padding:isMobile?"4px 8px":"5px 10px",fontSize:isMobile?10:11,flexShrink:0,display:"flex",alignItems:"center",gap:6}}>
+            {!isMobile && <><span className="z-nav-logo" style={{fontSize:15,fontWeight:700}}>H<span className="z-nav-logo-accent">aseef</span></span><span style={{width:1,height:16,background:"var(--nav-tab-border)"}} /></>}
+            <span>{isMobile?"←":"← " + (ar?"المشاريع":"Projects")}</span>
+          </button>
           {(() => {
             // Compute sidebar warning badge
             let _advWarn = 0;
