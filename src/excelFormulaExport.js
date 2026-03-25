@@ -110,6 +110,8 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   sec("Exit / التخارج");
   const rEY = inp("Exit Year (0=auto)", p.exitYear || 0);
   const rEM = inp("Exit Multiple (x rent)", p.exitMultiple || 10);
+  const rECR = inp("Exit Cap Rate %", p.exitCapRate || 9, PCT, true);
+  const rES = inp("Exit Strategy", p.exitStrategy || "sale");
   const rEC = inp("Exit Cost %", p.exitCostPct || 2, PCT, true);
 
   sec("Waterfall / حافز الأداء");
@@ -129,6 +131,9 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const rPRE = inp("Pre-Establishment Fee", p.preEstablishmentFee || 0, NUM);
   const rSPV = inp("SPV Setup Fee", p.spvFee || 0, NUM);
   const rAUD = inp("Annual Auditor Fee", p.auditorFeeAnnual || 0, NUM);
+  const rOPR = inp("Operator Fee %", p.operatorFeePct || 0.15, PCT, true);
+  const rOPRCAP = inp("Operator Fee Cap/yr", p.operatorFeeCap || 0, NUM);
+  const rMISC = inp("Misc Expense %", p.miscExpensePct || 0.5, PCT, true);
 
   sec("Phase Allocation / التوزيع");
   const rPA = R;
@@ -347,8 +352,10 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   fr++;
   const fMGMF=fr;sc(ws5,fr,1,"  Management Fee (annual)",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
   for (let yi = 0; yi < h; yi++) {
-    // Annual % of equity committed, during fund life (up to exit year)
-    sc(ws5,fr,YC(yi),`=IF(${yi+1}<=C${fEXY},-C${fEQ}*Inputs!B${rMGM},0)`,FNS,null,NUMN);
+    // Annual mgmt fee with cap: MIN(cap, base × rate). Cap=0 means no cap.
+    const mgmtRaw = `C${fEQ}*Inputs!B${rMGM}`;
+    const mgmtCapped = `IF(Inputs!B${rMGMCAP}>0,MIN(Inputs!B${rMGMCAP},${mgmtRaw}),${mgmtRaw})`;
+    sc(ws5,fr,YC(yi),`=IF(${yi+1}<=C${fEXY},-${mgmtCapped},0)`,FNS,null,NUMN);
   }
   fr++;
   const fCUSTF=fr;sc(ws5,fr,1,"  Custody & Admin Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
@@ -364,8 +371,8 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   fr++;
   const fSTRF=fr;sc(ws5,fr,1,"  Structuring Fee",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
   for (let yi = 0; yi < h; yi++) {
-    // One-time at fund start, % of equity, with optional cap
-    const raw = `C${fEQ}*Inputs!B${rSTR}`;
+    // One-time at fund start, % of dev cost (excl land), with optional cap
+    const raw = `Calc!D${CXT}*Inputs!B${rSTR}`;
     const capped = `IF(Inputs!B${rSTRCAP}>0,MIN(${raw},Inputs!B${rSTRCAP}),${raw})`;
     sc(ws5,fr,YC(yi),yi===0?`=-${capped}`:0,FNS,null,NUMN);
   }
@@ -385,16 +392,29 @@ export async function generateFormulaExcel(project, results, financing, waterfal
     sc(ws5,fr,YC(yi),`=IF(${yi+1}<=C${fEXY},-Inputs!B${rAUD},0)`,FNS,null,NUMN);
   }
   fr++;
+  const fOPRF=fr;sc(ws5,fr,1,"  Operator Fee (annual)",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    // Operator fee: % of dev cost, annual when income > 0, with optional cap
+    const oprRaw = `Calc!D${CXT}*Inputs!B${rOPR}`;
+    const oprCapped = `IF(Inputs!B${rOPRCAP}>0,MIN(Inputs!B${rOPRCAP},${oprRaw}),${oprRaw})`;
+    sc(ws5,fr,YC(yi),`=IF(AND(${yi+1}<=C${fEXY},CashFlow!${CL(YC(yi))}${ci}>0),-${oprCapped},0)`,FNS,null,NUMN);
+  }
+  fr++;
+  const fMISCF=fr;sc(ws5,fr,1,"  Misc Expense (one-time)",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUMN);
+  for (let yi = 0; yi < h; yi++) {
+    sc(ws5,fr,YC(yi),yi===0?`=-Calc!D${CXT}*Inputs!B${rMISC}`:0,FNS,null,NUMN);
+  }
+  fr++;
   const fTOTFEE=fr;sc(ws5,fr,1,"  Total Fees",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUMN);
   for (let yi = 0; yi < h; yi++) {
     const c = YC(yi);
-    sc(ws5,fr,c,`=${CL(c)}${fSUBF}+${CL(c)}${fMGMF}+${CL(c)}${fCUSTF}+${CL(c)}${fDEVF}+${CL(c)}${fSTRF}+${CL(c)}${fPREF}+${CL(c)}${fSPVF}+${CL(c)}${fAUDF}`,FBS,null,NUMN,BB);
+    sc(ws5,fr,c,`=${CL(c)}${fSUBF}+${CL(c)}${fMGMF}+${CL(c)}${fCUSTF}+${CL(c)}${fDEVF}+${CL(c)}${fSTRF}+${CL(c)}${fPREF}+${CL(c)}${fSPVF}+${CL(c)}${fAUDF}+${CL(c)}${fOPRF}+${CL(c)}${fMISCF}`,FBS,null,NUMN,BB);
   }
   fr += 2;
   secr(ws5,fr,1,LC,"EXIT PROCEEDS"); fr++;
   const fSTI=fr;sc(ws5,fr,1,"  Stabilized Income",FNS);sc(ws5,fr,2,cur,FNS);
   sc(ws5,fr,3,`=IFERROR(INDEX(CashFlow!${CL(YC(0))}${ci}:${CL(LC)}${ci},1,C${fEXY}),0)`,FNS,null,NUM);fr++;
-  const fEXV=fr;sc(ws5,fr,1,"  Exit Value",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=C${fSTI}*Inputs!B${rEM}`,FBS,null,NUM);fr++;
+  const fEXV=fr;sc(ws5,fr,1,"  Exit Value",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=IF(Inputs!B${rES}="caprate",C${fSTI}/Inputs!B${rECR},C${fSTI}*Inputs!B${rEM})`,FBS,null,NUM);fr++;
   sc(ws5,fr,1,"  Exit Cost",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=C${fEXV}*Inputs!B${rEC}*-1`,FNS,null,NUMN);fr++;
   const fEXN=fr;sc(ws5,fr,1,"  Net Exit Proceeds",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=C${fEXV}+C${fr-1}`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=IF(${yi+1}=C${fEXY},C${fEXN},0)`,FNS,null,NUM);
@@ -494,8 +514,11 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const fLPCF=fr;sc(ws5,fr,1,"  LP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fEC}*(1-Inputs!B${rGP})+${CL(YC(yi))}${fLPD}`,FBS,null,NUMN,BB);
   fr++;
-  const fLPI=fr;sc(ws5,fr,1,"  LP IRR",FB);sc(ws5,fr,2,"%",FNS);
+  const fLPI=fr;sc(ws5,fr,1,"  LP IRR (formula)",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF}),"-")`,FB,null,PCT);fr++;
+  // Engine-computed LP IRR (per-phase aggregated — authoritative value matching platform)
+  sc(ws5,fr,1,"  LP IRR (engine)",FB);sc(ws5,fr,2,"%",FNS);
+  sc(ws5,fr,3,waterfall?.lpIRR != null ? waterfall.lpIRR : "-",FB,null,PCT);fr++;
   const fLPMOIC=fr;sc(ws5,fr,1,"  LP MOIC",FB);sc(ws5,fr,2,"x",FNS);
   sc(ws5,fr,3,`=IFERROR(SUM(${YR(fLPD)})/ABS(SUM(${YR(fEC)})*(1-Inputs!B${rGP})),"-")`,FB,null,DX);fr++;
   for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
@@ -515,8 +538,10 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const fGPCF=fr;sc(ws5,fr,1,"  GP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fEC}*Inputs!B${rGP}+${CL(YC(yi))}${fGPD}`,FBS,null,NUMN,BB);
   fr++;
-  const fGPI=fr;sc(ws5,fr,1,"  GP IRR",FB);sc(ws5,fr,2,"%",FNS);
+  const fGPI=fr;sc(ws5,fr,1,"  GP IRR (formula)",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF}),"-")`,FB,null,PCT);fr++;
+  sc(ws5,fr,1,"  GP IRR (engine)",FB);sc(ws5,fr,2,"%",FNS);
+  sc(ws5,fr,3,waterfall?.gpIRR != null ? waterfall.gpIRR : "-",FB,null,PCT);fr++;
   const fGPMOIC=fr;sc(ws5,fr,1,"  GP MOIC",FB);sc(ws5,fr,2,"x",FNS);
   sc(ws5,fr,3,`=IFERROR(SUM(${YR(fGPD)})/ABS(SUM(${YR(fEC)})*Inputs!B${rGP}),"-")`,FB,null,DX);fr++;
   for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
@@ -670,10 +695,19 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   orow("NPV @10%",`=CashFlow!C${cnpv}`); orow("Levered IRR",`=Fund!C${fLI}`,PCT,"%");
   orow("Max Debt",`=Fund!C${fMD}`); orow("Equity",`=Fund!C${fEQ}`);
   orow("Net Exit",`=Fund!C${fEXN}`); orow("Total Fees",`=Fund!C${fTOTFEE}`,NUMN);
-  orow("LP IRR",`=Fund!C${fLPI}`,PCT,"%");
-  orow("LP MOIC",`=Fund!C${fLPMOIC}`,DX,"x");
-  orow("GP IRR",`=Fund!C${fGPI}`,PCT,"%");
-  orow("GP MOIC",`=Fund!C${fGPMOIC}`,DX,"x");
+  // Use engine-computed values (accurate per-phase aggregation) instead of simplified formula
+  orow("LP IRR", waterfall?.lpIRR != null ? waterfall.lpIRR : `=Fund!C${fLPI}`, PCT, "%");
+  orow("LP MOIC", waterfall?.lpMOIC != null ? waterfall.lpMOIC : `=Fund!C${fLPMOIC}`, DX, "x");
+  orow("GP IRR", waterfall?.gpIRR != null ? waterfall.gpIRR : `=Fund!C${fGPI}`, PCT, "%");
+  orow("GP MOIC", waterfall?.gpMOIC != null ? waterfall.gpMOIC : `=Fund!C${fGPMOIC}`, DX, "x");
+  // Per-phase LP IRR
+  if (hasPW) {
+    o++;
+    for (const phaseName of pn) {
+      const pw = phaseWaterfalls[phaseName];
+      if (pw) orow(`LP IRR — ${phaseName}`, pw.lpIRR != null ? pw.lpIRR : "-", PCT, "%");
+    }
+  }
 
   // ═══════════ CHECKS ═══════════
   const ws9 = wb.addWorksheet("Checks", { properties: { tabColor: { argb: "FF059669" } } });
