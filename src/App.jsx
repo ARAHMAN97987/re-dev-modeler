@@ -3850,25 +3850,25 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap"
             });
 
-            return <div className="z-status-bar" style={{borderBottom:"0.5px solid var(--border-default)",position:"sticky",top:0,zIndex:"var(--z-sticky)",flexDirection:"column",padding:0}}>
+            return <div className="z-status-bar" style={{borderBottom:"0.5px solid var(--border-default)",position:"sticky",top:0,zIndex:"var(--z-sticky)",padding:isMobile?"5px 10px":"5px var(--space-5)",display:"flex",alignItems:"center",gap:isMobile?8:14,flexWrap:"nowrap",overflowX:"auto"}}>
+              {/* Phase selector — inline dropdown */}
               {hasPhases && (
-                <div style={{display:"flex",padding:"0 var(--space-5)",borderBottom:"0.5px solid var(--surface-separator)",overflowX:"auto",gap:0}}>
-                  <button onClick={()=>setKpiPhase("all")} className={`z-tab${kpiPhase==="all"?" z-tab-active":""}`} style={{padding:"5px 12px",fontSize:9,background:"var(--surface-card)"}}>{ar?"الإجمالي":"All"}</button>
-                  {phaseNames.map(p => <button key={p} onClick={()=>setKpiPhase(p)} className={`z-tab${kpiPhase===p?" z-tab-active":""}`} style={{padding:"5px 12px",fontSize:9,background:"var(--surface-card)"}}>{p}</button>)}
-                </div>
+                <select value={kpiPhase} onChange={e=>setKpiPhase(e.target.value)} style={{padding:"3px 8px",fontSize:10,fontWeight:600,borderRadius:"var(--radius-sm)",border:"0.5px solid var(--border-default)",background:"var(--surface-card)",color:"var(--text-primary)",cursor:"pointer",fontFamily:"inherit",minWidth:70}}>
+                  <option value="all">{ar?"الإجمالي":"All"}</option>
+                  {phaseNames.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
               )}
-              <div style={{padding:isMobile?"5px 10px":"5px var(--space-5)",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap"}}>
-                {kpis.map(kpi => (
-                  <div key={kpi.k} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:"var(--text-xs)"}}>
-                    <span style={{color:"var(--text-tertiary)",fontSize:9,fontWeight:500}}>{kpi.l}</span>
-                    <span style={{fontWeight:700,color:kpi.c,fontVariantNumeric:"tabular-nums",fontFamily:"var(--font-mono)"}}>{kpi.v}</span>
-                  </div>
-                ))}
-                <div style={{flex:1}} />
-                <button onClick={()=>setGlobalExpand(p=>p+1)} className="z-btn z-btn-ghost z-btn-sm" style={{flexShrink:0}}>
-                  {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
-                </button>
-              </div>
+              {/* KPI metrics */}
+              {kpis.map(kpi => (
+                <div key={kpi.k} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:"var(--text-xs)",flexShrink:0}}>
+                  <span style={{color:"var(--text-tertiary)",fontSize:9,fontWeight:500}}>{kpi.l}</span>
+                  <span style={{fontWeight:700,color:kpi.c,fontVariantNumeric:"tabular-nums",fontFamily:"var(--font-mono)"}}>{kpi.v}</span>
+                </div>
+              ))}
+              <div style={{flex:1}} />
+              <button onClick={()=>setGlobalExpand(p=>p+1)} className="z-btn z-btn-ghost z-btn-sm" style={{flexShrink:0}}>
+                {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
+              </button>
             </div>;
           })()}
           {[
