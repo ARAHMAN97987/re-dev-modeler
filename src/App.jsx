@@ -3773,44 +3773,25 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             const fm = project?.finMode || "self";
             const hasFund = fm === "fund";
             const hasDebt = fm === "debt" || fm === "bank100" || fm === "fund";
-            // Primary tabs: always in tab strip (filtered by mode)
-            const primaryTabs = [
+            // Smart tab visibility by financing mode
+            // Core tabs always visible + conditional tabs based on mode
+            const allTabs = [
               {key:"dashboard",label:t.dashboard,show:true},
               {key:"assets",label:t.assetProgram,show:true},
+              {key:"cashflow",label:t.cashFlow,show:true},
               {key:"financing",label:lang==="ar"?"التمويل":"Financing",show:hasDebt},
               {key:"results",label:lang==="ar"?"النتائج":"Results",show:true},
+              {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",show:true},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",show:hasDebt},
+              {key:"market",label:lang==="ar"?"السوق":"Market",show:true},
+              {key:"checks",label:lang==="ar"?"الفحوصات":"Checks",show:true},
               {key:"reports",label:lang==="ar"?"التقارير":"Reports",show:true},
-            ].filter(tb => tb.show);
-            // Secondary tabs: inside "More" dropdown (always available)
-            const moreTabs = [
-              {key:"cashflow",label:t.cashFlow},
-              {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives"},
-              {key:"market",label:lang==="ar"?"السوق":"Market"},
-              {key:"checks",label:lang==="ar"?"الفحوصات":"Checks"},
             ];
-            const isMoreActive = moreTabs.some(tb => tb.key === activeTab);
-            const [moreOpen, setMoreOpen] = [headerMenuOpen && activeTab === "__more__", (v) => setHeaderMenuOpen(v)];
-            return <>
-              {primaryTabs.map(tb => {
-                const isActive = activeTab===tb.key;
-                return <button key={tb.key} onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} className={`z-tab${isActive?" z-tab-active":""}`} style={{padding:isMobile?"10px 8px":"9px var(--space-4)",fontSize:12}}>{tb.label}</button>;
-              })}
-              {/* More dropdown for secondary tabs */}
-              <div style={{position:"relative",display:"inline-flex"}}>
-                <button onClick={()=>{setMoreOpen(!moreOpen);}} className={`z-tab${isMoreActive?" z-tab-active":""}`} style={{padding:isMobile?"10px 8px":"9px var(--space-4)",fontSize:12}}>
-                  {isMoreActive ? moreTabs.find(tb=>tb.key===activeTab)?.label : (lang==="ar"?"المزيد ▾":"More ▾")}
-                </button>
-                {moreOpen && <>
-                  <div onClick={()=>setMoreOpen(false)} style={{position:"fixed",inset:0,zIndex:98}} />
-                  <div style={{position:"absolute",top:"100%",marginTop:2,background:"var(--surface-card)",border:"0.5px solid var(--border-default)",borderRadius:"var(--radius-md)",boxShadow:"var(--shadow-md)",zIndex:99,minWidth:160,padding:"4px 0",...(lang==="ar"?{right:0}:{left:0})}}>
-                    {moreTabs.map(tb => (
-                      <button key={tb.key} onClick={()=>{setActiveTab(tb.key);setMoreOpen(false);if(isMobile)setSidebarOpen(false);}} style={{width:"100%",display:"block",padding:"8px 16px",background:activeTab===tb.key?"var(--surface-hover)":"none",border:"none",fontSize:12,color:activeTab===tb.key?"var(--text-primary)":"var(--text-secondary)",cursor:"pointer",fontFamily:"inherit",textAlign:"start",fontWeight:activeTab===tb.key?600:400}}>{tb.label}</button>
-                    ))}
-                  </div>
-                </>}
-              </div>
-            </>;
+            const tabs = allTabs.filter(tb => tb.show);
+            return tabs.map(tb=>{
+              const isActive = activeTab===tb.key;
+              return <button key={tb.key} onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} className={`z-tab${isActive?" z-tab-active":""}`} style={{padding:isMobile?"10px 8px":"9px var(--space-4)",fontSize:12}}>{tb.label}</button>;
+            });
           })()}
           </>)}
         </div>
@@ -3911,36 +3892,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           </>)}
         </div>
       </div>
-      {/* ═══ STATUS BAR (bottom) ═══ */}
-      {project && !presentMode && (() => {
-        const passCount = checks.filter(c => c.pass).length;
-        const failCount = checks.filter(c => !c.pass).length;
-        const totalChecks = checks.length;
-        return (
-          <div className="z-status-bar" style={{flexShrink:0,fontSize:"var(--text-xs)",gap:"var(--space-4)"}}>
-            <div style={{display:"flex",alignItems:"center",gap:"var(--space-3)"}}>
-              {failCount > 0 ? (
-                <span style={{display:"flex",alignItems:"center",gap:4,color:"var(--color-danger)"}} onClick={()=>setActiveTab("checks")} role="button" tabIndex={0} title={ar?"عرض الفحوصات":"View checks"} onKeyDown={e=>{if(e.key==="Enter")setActiveTab("checks");}} aria-label="checks">
-                  <span style={{width:6,height:6,borderRadius:3,background:"var(--color-danger)"}} /> {failCount} {ar?"فشل":"fail"}
-                </span>
-              ) : (
-                <span style={{display:"flex",alignItems:"center",gap:4,color:"var(--color-success-text)"}}>
-                  <span style={{width:6,height:6,borderRadius:3,background:"var(--color-success)"}} /> {passCount}/{totalChecks} {ar?"ناجح":"pass"}
-                </span>
-              )}
-              <span style={{color:"var(--text-tertiary)"}}>|</span>
-              <span style={{color:"var(--text-tertiary)"}}>{ar?"الأفق":"Horizon"}: {project.horizon}{ar?" سنة":"yr"}</span>
-              <span style={{color:"var(--text-tertiary)"}}>|</span>
-              <span style={{color:"var(--text-tertiary)"}}>{(project.assets||[]).length} {ar?"أصل":"assets"}</span>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:"var(--space-2)"}}>
-              <span style={{color:"var(--text-tertiary)"}}>{project.finMode === "fund" ? "Fund" : project.finMode === "debt" ? "Debt" : project.finMode === "bank100" ? "Bank 100%" : "Self"}</span>
-              <span style={{color:"var(--text-tertiary)"}}>|</span>
-              <span style={{color:"var(--text-tertiary)"}}>{project.currency || "SAR"}</span>
-            </div>
-          </div>
-        );
-      })()}
       {project && project._setupDone === false && (
         <ProjectSetupWizard project={project} lang={lang}
           onUpdate={(u) => setProject(prev => ({...prev,...u}))}
@@ -3983,7 +3934,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
     { title: t?"اسم المشروع والموقع":"Project Name & Location", content: (
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div><div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4,fontWeight:500}}>{t?"اسم المشروع":"Project Name"}</div>
-        <input value={project.name||""} onChange={e=>onUpdate({name:e.target.value})} placeholder={t?"مثال: مشروع الواجهة البحرية":(lang==="ar"?"مثال: واجهة حصيف البحرية":"e.g. Haseef Waterfront")} style={{width:"100%",padding:"12px 16px",border:"1px solid var(--border-default)",borderRadius:"var(--radius-lg)",fontSize:15,fontWeight:600,fontFamily:"inherit",outline:"none"}} autoFocus /></div>
+        <input value={project.name||""} onChange={e=>onUpdate({name:e.target.value})} placeholder={t?"مثال: مشروع الواجهة البحرية":(lang==="ar"?"مثال: واجهة حصيف البحرية":"e.g. Haseef Waterfront")} style={{width:"100%",padding:"12px 16px",border:"2px solid #e5e7ec",borderRadius:"var(--radius-lg)",fontSize:15,fontWeight:600,fontFamily:"inherit",outline:"none"}} autoFocus /></div>
         <div><div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4,fontWeight:500}}>{t?"الموقع":"Location"}</div>
         <input value={project.location||""} onChange={e=>onUpdate({location:e.target.value})} placeholder={t?"مثال: جازان، السعودية":"e.g. Jazan, Saudi Arabia"} style={{width:"100%",padding:"10px 14px",border:"0.5px solid var(--border-default)",borderRadius:"var(--radius-md)",fontSize:13,fontFamily:"inherit",outline:"none"}} /></div>
       </div>
@@ -5374,7 +5325,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
 
           {/* Rent allocation details */}
           {results?.landRentMeta?.rentStartYear != null && <div style={{padding:"0 14px 10px"}}>
-            <button onClick={()=>setShowLandRentDetail(!showLandRentDetail)} style={{fontSize:11,color:"var(--zan-teal-500)",background:"#f0fdfa",border:"1px solid #ccfbf1",borderRadius:"var(--radius-md)",padding:"4px 8px",cursor:"pointer",width:"100%",textAlign:"start",fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:8,transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#e6fffa"} onMouseLeave={e=>e.currentTarget.style.background="var(--surface-hover)"}>
+            <button onClick={()=>setShowLandRentDetail(!showLandRentDetail)} style={{fontSize:11,color:"var(--zan-teal-500)",background:"#f0fdfa",border:"1px solid #ccfbf1",borderRadius:"var(--radius-md)",padding:"4px 8px",cursor:"pointer",width:"100%",textAlign:"start",fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:8,transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#e6fffa"} onMouseLeave={e=>e.currentTarget.style.background="#f0fdfa"}>
               <span style={{fontSize:10}}>{showLandRentDetail?"▼":"▶"}</span>
               {ar?"تفاصيل توزيع الإيجار بين المراحل":"Land Rent Allocation Details"}
               {results.landRentMeta.rentStartYear != null && <span style={{marginInlineStart:"auto",fontSize:10,color:"var(--color-success)",fontWeight:500}}>{ar?"يبدأ":"Starts"} {results.landRentMeta.rentStartYear + (results?.startYear||2026)}</span>}
@@ -5585,7 +5536,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             </div>
             <div style={{padding:"16px 24px 24px",display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)",gap:10}}>
               {ASSET_TEMPLATES.map(tmpl=>(
-                <button key={tmpl.id} onClick={()=>handleTemplateSelect(tmpl.defaults)} style={{padding:"16px 12px",background:"var(--surface-page)",border:"1px solid var(--border-default)",borderRadius:"var(--radius-xl)",cursor:"pointer",textAlign:"center",transition:"all 0.15s",fontFamily:"inherit"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.background="var(--surface-hover)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border-default)";e.currentTarget.style.background="var(--surface-page)";}}>
+                <button key={tmpl.id} onClick={()=>handleTemplateSelect(tmpl.defaults)} style={{padding:"16px 12px",background:"var(--surface-page)",border:"2px solid #e5e7ec",borderRadius:"var(--radius-xl)",cursor:"pointer",textAlign:"center",transition:"all 0.15s",fontFamily:"inherit"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.background="#f0fdfa";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border-default)";e.currentTarget.style.background="var(--surface-page)";}}>
                   <div style={{fontSize:28,marginBottom:6}}>{tmpl.icon}</div>
                   <div style={{fontSize:12,fontWeight:600,color:"var(--text-primary)"}}>{tmpl.label}</div>
                 </button>
