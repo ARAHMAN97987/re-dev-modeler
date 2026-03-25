@@ -411,17 +411,25 @@ body {
   .z-skeleton { animation: none; }
 }
 
-/* ========== DARK MODE TABLE FIXES ========== */
+/* ========== DARK MODE TABLE & FORM FIXES ========== */
 @media (prefers-color-scheme: dark) {
   table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
   table tbody tr:hover td { background: var(--surface-hover) !important; }
-  select, input[type="text"], input[type="number"] { color: var(--text-primary); background: var(--surface-card); border-color: var(--border-default); }
+  select, input[type="text"], input[type="number"], input[type="email"], input[type="password"], textarea {
+    color: var(--text-primary) !important; background: var(--surface-card) !important; border-color: var(--border-default) !important;
+  }
+  select option { background: var(--surface-card); color: var(--text-primary); }
   .sidebar-input { background: var(--surface-input) !important; color: var(--text-primary) !important; border-color: var(--border-input) !important; }
+  button { color: inherit; }
 }
 [data-theme="dark"] table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
 [data-theme="dark"] table tbody tr:hover td { background: var(--surface-hover) !important; }
-[data-theme="dark"] select, [data-theme="dark"] input[type="text"], [data-theme="dark"] input[type="number"] { color: var(--text-primary); background: var(--surface-card); border-color: var(--border-default); }
+[data-theme="dark"] select, [data-theme="dark"] input[type="text"], [data-theme="dark"] input[type="number"], [data-theme="dark"] input[type="email"], [data-theme="dark"] textarea {
+  color: var(--text-primary) !important; background: var(--surface-card) !important; border-color: var(--border-default) !important;
+}
+[data-theme="dark"] select option { background: var(--surface-card); color: var(--text-primary); }
 [data-theme="dark"] .sidebar-input { background: var(--surface-input) !important; color: var(--text-primary) !important; border-color: var(--border-input) !important; }
+[data-theme="dark"] button { color: inherit; }
 
 /* ========== TAB VISIBILITY RULES ==========
    SELF: dashboard, assets, results, reports

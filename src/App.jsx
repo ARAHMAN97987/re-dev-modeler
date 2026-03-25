@@ -602,7 +602,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p=>{
@@ -942,7 +942,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </>}
 
       {/* ═══ § 9. DISTRIBUTIONS & WATERFALL ═══ */}
-      <tr onClick={()=>setWSec(p=>({...p,s9:!p.s9}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#7c3aed",background:"#f5f3ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #8b5cf6",userSelect:"none"}}>{wSec.s9?"▶":"▼"} {ar?"9. التوزيعات وشلال الأرباح":"9. DISTRIBUTIONS & WATERFALL"}</td></tr>
+      <tr onClick={()=>setWSec(p=>({...p,s9:!p.s9}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#8b5cf6",background:"#f5f3ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #8b5cf6",userSelect:"none"}}>{wSec.s9?"▶":"▼"} {ar?"9. التوزيعات وشلال الأرباح":"9. DISTRIBUTIONS & WATERFALL"}</td></tr>
       {!wSec.s9 && <>
       <CFRow label={ar?"النقد المتاح للتوزيع":"Cash Available for Distribution"} values={w.cashAvail} total={w.cashAvail.reduce((a,b)=>a+b,0)} bold color="var(--color-success-text)" />
 
@@ -966,9 +966,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {years.map(y=><td key={y} style={{...tdN,color:"#8b5cf6",fontSize:10}}>{(w.prefAccrual[y]||0)===0?"—":fmt(w.prefAccrual[y])}</td>)}
       </tr>
       <tr style={{background:"#faf5ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontSize:10,color:"#7c3aed",paddingInlineStart:20}}>{ar?"العائد التفضيلي المتراكم":"Unpaid Pref (Accumulated)"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontSize:10,color:"#8b5cf6",paddingInlineStart:20}}>{ar?"العائد التفضيلي المتراكم":"Unpaid Pref (Accumulated)"}</td>
         <td style={tdN}></td>
-        {years.map(y=><td key={y} style={{...tdN,color:(w.prefAccumulated[y]||0)>0?"#7c3aed":"var(--color-success-text)",fontSize:10,fontWeight:(w.prefAccumulated[y]||0)===0?600:400}}>{(w.prefAccumulated[y]||0)===0?"✓ 0":fmt(w.prefAccumulated[y])}</td>)}
+        {years.map(y=><td key={y} style={{...tdN,color:(w.prefAccumulated[y]||0)>0?"#8b5cf6":"var(--color-success-text)",fontSize:10,fontWeight:(w.prefAccumulated[y]||0)===0?600:400}}>{(w.prefAccumulated[y]||0)===0?"✓ 0":fmt(w.prefAccumulated[y])}</td>)}
       </tr>
       <CFRow label={ar?"T2: العائد التفضيلي":"T2: Preferred Return"} values={w.tier2} total={t2Total} color="#8b5cf6" />
 
@@ -997,7 +997,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       {!wSec.s10 && <>
       <CFRow label={ar?"صافي CF المستثمر (LP)":"LP Net Cash Flow"} values={w.lpNetCF} total={w.lpNetCF.reduce((a,b)=>a+b,0)} bold />
       {(() => { let cum=0; return <tr style={{background:"#faf5ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:600,fontSize:10,color:"#7c3aed",paddingInlineStart:20}}>{ar?"↳ تراكمي LP":"↳ LP Cumulative"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:600,fontSize:10,color:"#8b5cf6",paddingInlineStart:20}}>{ar?"↳ تراكمي LP":"↳ LP Cumulative"}</td>
         <td style={tdN}></td>
         {years.map(y=>{cum+=w.lpNetCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"var(--color-danger)":"var(--color-success-text)"}}>{fmt(cum)}</td>;})}
       </tr>; })()}
@@ -1209,7 +1209,7 @@ function IncentivesImpact({ project, results, financing, incentivesResult, lang,
   const items = [
     ir.capexGrantTotal > 0 && { icon: "🏗", label: ar?"منحة CAPEX":"CAPEX Grant", value: ir.capexGrantTotal, color: "var(--color-success)" },
     ir.interestSubsidyTotal > 0 && { icon: "🏦", label: ar?"دعم الفوائد":"Interest Subsidy", value: ir.interestSubsidyTotal, color: "var(--zan-teal-500)" },
-    ir.landRentSavingTotal > 0 && { icon: "🏠", label: ar?"وفر إيجار الأرض":"Land Rent Savings", value: ir.landRentSavingTotal, color: "#7c3aed" },
+    ir.landRentSavingTotal > 0 && { icon: "🏠", label: ar?"وفر إيجار الأرض":"Land Rent Savings", value: ir.landRentSavingTotal, color: "#8b5cf6" },
     ir.feeRebateTotal > 0 && { icon: "📋", label: ar?"إعفاء رسوم":"Fee Rebates", value: ir.feeRebateTotal, color: "var(--color-warning)" },
   ].filter(Boolean);
 
@@ -1419,7 +1419,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
     {allPhaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {allPhaseNames.map(p => {
@@ -1603,7 +1603,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
       </>}
 
       {/* ═══ § 3. NET RESULT & CAPITAL ═══ */}
-      <tr onClick={()=>setSecOpen(p=>({...p,s3:!p.s3}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s3?"▶":"▼"} {ar?"3. صافي النتيجة ورأس المال":"3. NET RESULT & CAPITAL"}</td></tr>
+      <tr onClick={()=>setSecOpen(p=>({...p,s3:!p.s3}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"var(--zan-navy-700)",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s3?"▶":"▼"} {ar?"3. صافي النتيجة ورأس المال":"3. NET RESULT & CAPITAL"}</td></tr>
       {!secOpen.s3 && <>
       <CFRow label={ar?"= صافي التدفق النهائي":"= Final Net Cash Flow"} values={levCF} total={totalLevCF} bold />
       {/* Cumulative */}
@@ -1623,7 +1623,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
       {/* ═══ § 4. DEVELOPER METRICS ═══ */}
       <tr><td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11,background:"#e0e7ff",borderTop:"2px solid #1e3a5f"}}>
         <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
+          <span style={{fontWeight:700,color:"var(--zan-navy-700)"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
           <span>IRR <strong style={{color:getMetricColor("IRR",levIRR)}}>{levIRR!==null?fmtPct(levIRR*100):"N/A"}</strong></span>
           <span>{ar?"استرداد":"Payback"} <strong style={{color:"var(--zan-teal-500)"}}>{payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
           <span>{ar?"عائد/تكلفة":"Yield"} <strong style={{color:yieldOnCost>0.08?"var(--color-success-text)":"var(--color-warning)"}}>{yieldOnCost>0?fmtPct(yieldOnCost*100):"—"}</strong></span>
@@ -1768,7 +1768,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p => {
@@ -2136,9 +2136,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       {!isBank100 && pf.equityCalls && <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={pf.equityCalls} total={pf.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" negate />}
       {/* Cumulative equity deployed */}
       {!isBank100 && pf.equityCalls && <tr style={{background:"#faf5ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:500,fontSize:10,color:"#7c3aed",paddingInlineStart:20,minWidth:isMobile?120:200}}>{ar?"↳ ملكية تراكمية":"↳ Cumulative Equity"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:500,fontSize:10,color:"#8b5cf6",paddingInlineStart:20,minWidth:isMobile?120:200}}>{ar?"↳ ملكية تراكمية":"↳ Cumulative Equity"}</td>
         <td style={tdN}></td>
-        {(() => { let cum=0; return years.map(y => { cum+=pf.equityCalls[y]||0; return <td key={y} style={{...tdN,fontSize:10,fontWeight:500,color:cum>0?"#7c3aed":"#d0d4dc"}}>{cum>0?fmt(cum):"—"}</td>; }); })()}
+        {(() => { let cum=0; return years.map(y => { cum+=pf.equityCalls[y]||0; return <td key={y} style={{...tdN,fontSize:10,fontWeight:500,color:cum>0?"#8b5cf6":"#d0d4dc"}}>{cum>0?fmt(cum):"—"}</td>; }); })()}
       </tr>}
       <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={pf.drawdown} total={pf.drawdown?.reduce((a,b)=>a+b,0)||0} />
       <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={pf.debtBalOpen} total={null} />
@@ -2183,7 +2183,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       </>}
 
       {/* ═══ § 5. NET CASH FLOW & DEVELOPER RETURNS ═══ */}
-      <tr onClick={()=>setSecOpen(p=>({...p,s5:!p.s5}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s5?"▶":"▼"} {ar?"5. صافي التدفق وعوائد المطور":"5. NET CASH FLOW & DEVELOPER RETURNS"}</td></tr>
+      <tr onClick={()=>setSecOpen(p=>({...p,s5:!p.s5}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"var(--zan-navy-700)",background:"#e0e7ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #1e3a5f",userSelect:"none"}}>{secOpen.s5?"▶":"▼"} {ar?"5. صافي التدفق وعوائد المطور":"5. NET CASH FLOW & DEVELOPER RETURNS"}</td></tr>
       {!secOpen.s5 && <>
       <CFRow label={ar?"= صافي التدفق (بعد التمويل)":"= Levered Net Cash Flow"} values={pf.leveredCF} total={devNetCF} bold />
       {/* Cumulative */}
@@ -2202,7 +2202,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <tr style={{background:"#e0e7ff"}}>
         <td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11}}>
           <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
+            <span style={{fontWeight:700,color:"var(--zan-navy-700)"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
             <span>IRR <strong style={{color:getMetricColor("IRR",pf.leveredIRR)}}>{pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"}</strong></span>
             <span>{ar?"استرداد":"Payback"} <strong style={{color:"var(--zan-teal-500)"}}>{paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
             <span>NPV@10% <strong>{fmtM(calcNPV(pf.leveredCF,0.10))}</strong></span>
@@ -2384,7 +2384,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p=>{
@@ -2966,7 +2966,7 @@ When to use:
       </Sec>}
 
       {/* ═══ SECTION 5: INTEGRATED CASH FLOW (always open) ═══ */}
-      <Sec id="cf" icon="📋" title="Integrated Cash Flow" titleAr="التدفق النقدي المتكامل" color="#1e3a5f" alwaysOpen>
+      <Sec id="cf" icon="📋" title="Integrated Cash Flow" titleAr="التدفق النقدي المتكامل" color="var(--zan-navy-700)" alwaysOpen>
         <div style={{display:"flex",alignItems:"center",marginBottom:10,gap:10}}>
           <div style={{flex:1,fontSize:11,color:"var(--text-secondary)"}}>{ar?"التدفق النقدي بعد خدمة الدين والرسوم":"Cash flow after debt service and fees"}</div>
           <select value={showYrs} onChange={e=>setShowYrs(parseInt(e.target.value))} style={{padding:"4px 8px",borderRadius:4,border:"0.5px solid var(--border-default)",fontSize:12}}>
@@ -3028,7 +3028,7 @@ When to use:
             <CFRow label={ar?"حصيلة التخارج":"Exit Proceeds"} values={f.exitProceeds} total={f.exitProceeds.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
 
             {/* ── Net Result ── */}
-            <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#1e3a5f",background:"var(--color-info-bg)",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #2563eb"}}>{ar?"النتيجة":"NET RESULT"}</td></tr>
+            <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"var(--zan-navy-700)",background:"var(--color-info-bg)",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #2563eb"}}>{ar?"النتيجة":"NET RESULT"}</td></tr>
             <CFRow label={ar?"= صافي التدفق الممول":"= Levered Net CF"} values={f.leveredCF} total={f.leveredCF.reduce((a,b)=>a+b,0)} bold />
             {(() => { let cum=0; return <tr style={{background:"var(--color-warning-bg)"}}>
               <td style={{...tdSt,position:"sticky",left:0,background:"var(--color-warning-bg)",zIndex:1,fontWeight:600,fontSize:10,color:"var(--color-warning-text)",minWidth:isMobile?110:180}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
@@ -3073,8 +3073,8 @@ When to use:
         {tracerOpen && <div style={{border:"0.5px solid var(--border-default)",borderTop:"none",borderRadius:"0 0 10px 10px",overflow:"auto",maxHeight:600}}>
           {/* FORMULA */}
           <div style={{padding:"12px 16px",background:"var(--color-info-bg)",borderBottom:"2px solid #2563eb"}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#1e3a5f",marginBottom:6}}>{ar?"المعادلة:":"FORMULA:"}</div>
-            <div style={{fontFamily:"monospace",fontSize:12,color:"#1e3a5f",lineHeight:1.8}}>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--zan-navy-700)",marginBottom:6}}>{ar?"المعادلة:":"FORMULA:"}</div>
+            <div style={{fontFamily:"monospace",fontSize:12,color:"var(--zan-navy-700)",lineHeight:1.8}}>
               {isSelfMode
                 ? <>{ar?"التدفق الممول":"Levered CF"} = <span style={{color:"var(--color-success-text)"}}>{ar?"الدخل":"Income"}</span> − <span style={{color:"var(--color-danger)"}}>{ar?"إيجار أرض (معدّل)":"Adj Land Rent"}</span> − <span style={{color:"var(--color-danger)"}}>CAPEX</span> + <span style={{color:"var(--color-success-text)"}}>{ar?"منحة":"Grant"}</span> + <span style={{color:"var(--color-success-text)"}}>{ar?"خصم رسوم":"Fee Rebate"}</span> − <span style={{color:"var(--color-danger)"}}>{ar?"رسم المطور":"Dev Fee"}</span> + <span style={{color:"var(--color-success-text)"}}>{ar?"تخارج":"Exit"}</span></>
                 : <>{ar?"التدفق الممول":"Levered CF"} = <span style={{color:"var(--color-success-text)"}}>{ar?"الدخل":"Income"}</span> − <span style={{color:"var(--color-danger)"}}>{ar?"إيجار أرض (معدّل)":"Adj Land Rent"}</span> − <span style={{color:"var(--color-danger)"}}>CAPEX</span> + <span style={{color:"var(--color-success-text)"}}>{ar?"منحة":"Grant"}</span> + <span style={{color:"var(--color-success-text)"}}>{ar?"خصم رسوم":"Fee Rebate"}</span> − <span style={{color:"var(--color-danger)"}}>{ar?"خدمة دين (معدّلة)":"Adj Debt Service"}</span> + <span style={{color:"var(--color-success-text)"}}>{ar?"سحب":"Drawdown"}</span> + <span style={{color:"var(--color-success-text)"}}>{ar?"تخارج":"Exit"}</span> − <span style={{color:"var(--color-danger)"}}>{ar?"رسم المطور":"Dev Fee"}</span></>
@@ -3113,10 +3113,10 @@ When to use:
               <tr><td style={{...tdL,color:"var(--color-danger)"}}>{ar?"(−) رسم المطور":"(−) Dev Fee"}</td><td style={{...tdS,fontSize:9,color:"var(--text-tertiary)"}}>f.devFeeSchedule</td>
                 {tracerYears.map(y=><td key={y} style={{...tdS,color:"var(--color-danger)"}}>{fmtC(-(f.devFeeSchedule?.[y]||0))}</td>)}</tr>
               {/* RESULT */}
-              <tr style={{background:"#1e3a5f"}}>
-                <td style={{...tdL,background:"#1e3a5f",color:"var(--text-inverse)",fontWeight:700,borderTop:"2px solid #2563eb"}}>{ar?"= التدفق الممول":"= Levered CF"}</td>
-                <td style={{...tdS,background:"#1e3a5f",color:"#93c5fd",fontSize:9,borderTop:"2px solid #2563eb"}}>f.leveredCF</td>
-                {tracerYears.map(y=><td key={y} style={{...tdS,background:"#1e3a5f",color:f.leveredCF[y]>0?"#86efac":f.leveredCF[y]<0?"#fca5a5":"#6b7280",fontWeight:700,borderTop:"2px solid #2563eb"}}>{fmtC(f.leveredCF[y])}</td>)}
+              <tr style={{background:"var(--zan-navy-700)"}}>
+                <td style={{...tdL,background:"var(--zan-navy-700)",color:"var(--text-inverse)",fontWeight:700,borderTop:"2px solid #2563eb"}}>{ar?"= التدفق الممول":"= Levered CF"}</td>
+                <td style={{...tdS,background:"var(--zan-navy-700)",color:"#93c5fd",fontSize:9,borderTop:"2px solid #2563eb"}}>f.leveredCF</td>
+                {tracerYears.map(y=><td key={y} style={{...tdS,background:"var(--zan-navy-700)",color:f.leveredCF[y]>0?"#86efac":f.leveredCF[y]<0?"#fca5a5":"#6b7280",fontWeight:700,borderTop:"2px solid #2563eb"}}>{fmtC(f.leveredCF[y])}</td>)}
               </tr>
               {/* VERIFICATION */}
               <tr style={{background:"var(--color-warning-bg)"}}>
@@ -3638,7 +3638,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       )}
       {sidebarOpen && !presentMode && (
         <>
-        {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:90,backdropFilter:"blur(2px)"}} />}
+        {isMobile && <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:90,backdropFilter:"blur(2px)"}} />}
         <div className="sidebar-slide" style={{width:isMobile?"88vw":320,minWidth:isMobile?"auto":320,maxWidth:isMobile?400:320,background:"var(--surface-nav)",color:"var(--nav-btn-text)",display:"flex",flexDirection:"column",overflow:"hidden",position:"relative",...(isMobile?{position:"fixed",top:0,bottom:0,[lang==="ar"?"right":"left"]:0,zIndex:91,boxShadow:"4px 0 24px rgba(0,0,0,0.4)"}:{})}}>
           <div style={{padding:isMobile?"12px 14px":"14px 16px",borderBottom:"1px solid var(--nav-tab-border)",display:"flex",alignItems:"center",gap:8}}>
             <div style={{flex:1,display:"flex",alignItems:"center",gap:8}}><span className="z-nav-logo" style={{fontSize:18,fontWeight:900,letterSpacing:2}}>{lang==="ar"?"حصيف":"Haseef"}</span><span style={{width:1,height:18,background:"var(--zan-teal-500)",opacity:0.6}} /><span style={{fontSize:9,color:"var(--zan-teal-500)",lineHeight:1.3,fontWeight:400}}>{lang==="ar"?"النمذجة":"Financial"}<br/>{lang==="ar"?"المالية":"Modeler"}</span></div>
@@ -3766,7 +3766,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               <span style={{fontSize:12,fontWeight:700,color:"var(--tab-text-active)",letterSpacing:0.5}}>{ar?"وضع العرض":"Presentation Mode"}</span>
               <div style={{width:1,height:20,background:"var(--nav-tab-border)"}} />
               <button onClick={()=>setAudienceView("bank")} className="z-nav-btn" style={{padding:"6px 16px",fontSize:11,fontWeight:600,borderRadius:20,background:audienceView==="bank"?"var(--zan-teal-500)":"var(--nav-btn-bg)",color:audienceView==="bank"?"#fff":"var(--nav-btn-text)"}}>{ar?"🏦 عرض البنك":"🏦 Bank View"}</button>
-              <button onClick={()=>setAudienceView("investor")} className="z-nav-btn" style={{padding:"6px 16px",fontSize:11,fontWeight:600,borderRadius:20,background:audienceView==="investor"?"#7c3aed":"var(--nav-btn-bg)",color:audienceView==="investor"?"#fff":"var(--nav-btn-text)"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
+              <button onClick={()=>setAudienceView("investor")} className="z-nav-btn" style={{padding:"6px 16px",fontSize:11,fontWeight:600,borderRadius:20,background:audienceView==="investor"?"#8b5cf6":"var(--nav-btn-bg)",color:audienceView==="investor"?"#fff":"var(--nav-btn-text)"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
             </div>
           ) : (<>
           {(() => {
@@ -4023,7 +4023,7 @@ function FeaturesGrid({ lang }) {
   return (
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))",gap:16}}>
       {features.map((f, i) => (
-        <div key={i} style={{background:"#f8f7f5",borderRadius:"var(--radius-xl)",border:"0.5px solid var(--border-default)",padding:"20px 18px",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=f.color+"60";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.transform="translateY(0)";}}>
+        <div key={i} style={{background:"#f8f7f5",borderRadius:"var(--radius-xl)",border:"0.5px solid var(--border-default)",padding:"20px 18px",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=f.color+"60";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border-default)";e.currentTarget.style.transform="translateY(0)";}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
             <div style={{width:40,height:40,borderRadius:"var(--radius-lg)",background:f.color+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{f.icon}</div>
             <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>{f.title}</div>
@@ -4136,7 +4136,7 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"12px 14px",borderRadius:"var(--radius-md)",border:"1px solid #1e2230",background:"rgba(11,35,65,0.6)",color:"var(--text-secondary)",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           {error && <div style={{fontSize:11,color:"#f87171",background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",padding:"8px 12px",borderRadius:"var(--radius-sm)"}}>{error}</div>}
-          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:"var(--radius-md)",border:"none",background:"#2EC4B6",color:"var(--text-inverse)",fontSize:14,fontWeight:700,cursor:loading?"wait":"pointer",fontFamily:"'Tajawal',sans-serif",transition:"all 0.2s",letterSpacing:0.3}} onMouseEnter={e=>e.currentTarget.style.background="var(--zan-teal-700)"} onMouseLeave={e=>e.currentTarget.style.background="#2EC4B6"}>
+          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:"var(--radius-md)",border:"none",background:"var(--zan-teal-500)",color:"var(--text-inverse)",fontSize:14,fontWeight:700,cursor:loading?"wait":"pointer",fontFamily:"'Tajawal',sans-serif",transition:"all 0.2s",letterSpacing:0.3}} onMouseEnter={e=>e.currentTarget.style.background="var(--zan-teal-700)"} onMouseLeave={e=>e.currentTarget.style.background="#2EC4B6"}>
             {loading?"...":(mode==="signin"?(ar?"دخول":"Sign In"):(ar?"إنشاء حساب":"Create Account"))}
           </button>
           <div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.4)"}}>
@@ -4174,24 +4174,24 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           <div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
               <span style={{fontSize:32,fontWeight:900,color:"var(--text-primary)",fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>{ar?"حصيف":"Haseef"}</span>
-              <span style={{width:1.5,height:24,background:"#2EC4B6",borderRadius:1}} />
+              <span style={{width:1.5,height:24,background:"var(--zan-teal-500)",borderRadius:1}} />
               <span style={{fontSize:11,color:"var(--text-secondary)",lineHeight:1.3,fontWeight:500}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
             </div>
             <div style={{fontSize:isMobile?22:28,fontWeight:900,color:"var(--text-primary)",letterSpacing:-0.5,fontFamily:"'Tajawal',sans-serif"}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
             <div style={{fontSize:isMobile?11:13,color:"var(--text-secondary)",marginTop:6}}>{t.subtitle}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"#2EC4B6",color:"var(--text-inverse)",padding:"8px 16px",fontSize:12,fontWeight:600,border:"none",borderRadius:"var(--radius-sm)"}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
-            {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"#0B2341",color:"#C8A96E",padding:"8px 16px",fontSize:12,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:"var(--radius-sm)"}} title={ar?"أكاديمية حصيف":"Haseef Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
+            <button onClick={()=>setShowFeatures(true)} style={{...btnS,background:"var(--zan-teal-500)",color:"var(--text-inverse)",padding:"8px 16px",fontSize:12,fontWeight:600,border:"none",borderRadius:"var(--radius-sm)"}} title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
+            {onOpenAcademy && <button onClick={onOpenAcademy} style={{...btnS,background:"var(--zan-navy-900)",color:"#C8A96E",padding:"8px 16px",fontSize:12,fontWeight:600,border:"1px solid rgba(200,169,110,0.3)",borderRadius:"var(--radius-sm)"}} title={ar?"أكاديمية حصيف":"Haseef Academy"}>📚 {ar?"الأكاديمية":"Academy"}</button>}
             {!isMobile && user && <div style={{fontSize:11,color:"var(--text-secondary)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} style={{...btnSm,background:"var(--color-danger-bg)",color:"var(--color-danger)",padding:"8px 16px",fontSize:12,fontWeight:500}}>{ar?"خروج":"Sign Out"}</button>}
-            <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"#e8e5e0",color:"var(--text-secondary)",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
+            <button onClick={()=>setLang(lang==="en"?"ar":"en")} style={{...btnS,background:"var(--surface-sidebar)",color:"var(--text-secondary)",padding:"8px 16px",fontSize:12,fontWeight:600}}>{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>
 
         {/* Features Modal Overlay */}
         {showFeatures && (
-          <><div onClick={()=>setShowFeatures(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9998}} />
+          <><div onClick={()=>setShowFeatures(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9998}} />
           <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:800,maxWidth:"94vw",maxHeight:"85vh",background:"var(--surface-card)",borderRadius:"var(--radius-2xl)",border:"0.5px solid var(--border-default)",boxShadow:"0 24px 80px rgba(0,0,0,0.5)",zIndex:9999,overflow:"auto",padding:"28px 32px"}}>
             <div style={{display:"flex",alignItems:"center",marginBottom:20}}>
               <div style={{flex:1,fontSize:18,fontWeight:700,color:"var(--text-primary)"}}>{ar?"مزايا المنصة":"Platform Features"}</div>
@@ -4227,7 +4227,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           <button className="zan-btn-prim" onClick={()=>onCreate()} style={{...btnPrim,padding:"10px 24px",fontSize:13}}>{t.newProject}</button>
           {index.length > 2 && (
             <div style={{flex:1,minWidth:160,maxWidth:320,position:"relative"}}>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={ar?"🔍 بحث بالاسم أو الموقع...":"🔍 Search by name or location..."} style={{width:"100%",padding:"9px 14px",borderRadius:"var(--radius-md)",border:"0.5px solid var(--border-default)",background:"var(--surface-card)",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",transition:"border-color 0.15s"}} onFocus={e=>e.target.style.borderColor="#2EC4B6"} onBlur={e=>e.target.style.borderColor="#e5e0d8"} />
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={ar?"🔍 بحث بالاسم أو الموقع...":"🔍 Search by name or location..."} style={{width:"100%",padding:"9px 14px",borderRadius:"var(--radius-md)",border:"0.5px solid var(--border-default)",background:"var(--surface-card)",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",transition:"border-color 0.15s"}} onFocus={e=>e.target.style.borderColor="#2EC4B6"} onBlur={e=>e.target.style.borderColor="var(--border-default)"} />
               {search && <button onClick={()=>setSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--text-tertiary)",fontSize:14,cursor:"pointer",padding:0}}>✕</button>}
             </div>
           )}
@@ -4251,7 +4251,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
               {PROJECT_TEMPLATES.map((tmpl)=>(
                 <div key={tmpl.id} onClick={()=>onCreate(tmpl.id)} style={{background:"var(--surface-card)",border:"0.5px solid var(--border-default)",borderRadius:"var(--radius-lg)",padding:"18px 14px",cursor:"pointer",transition:"all 0.15s",textAlign:"center",boxShadow:"var(--shadow-sm)"}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.boxShadow="0 4px 12px rgba(46,196,182,0.12)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";}}>
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border-default)";e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";}}>
                   <div style={{fontSize:28,marginBottom:8}}>{tmpl.icon}</div>
                   <div style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",marginBottom:4}}>{ar?tmpl.ar:tmpl.en}</div>
                   <div style={{fontSize:10,color:"var(--text-secondary)"}}>{ar?tmpl.desc_ar:tmpl.desc_en}</div>
@@ -4278,7 +4278,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {sorted.map(p=>(
               <div key={p.id} style={{background:"var(--surface-card)",borderRadius:"var(--radius-lg)",padding:isMobile?"12px 14px":"16px 20px",display:"flex",alignItems:"center",gap:isMobile?10:14,border:"0.5px solid var(--border-default)",cursor:"pointer",transition:"all 0.15s",boxShadow:"var(--shadow-sm)"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.boxShadow="0 4px 12px rgba(46,196,182,0.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";}} onClick={()=>onOpen(p.id)}>
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.boxShadow="0 4px 12px rgba(46,196,182,0.08)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border-default)";e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)";}} onClick={()=>onOpen(p.id)}>
                 <div style={{width:isMobile?32:38,height:isMobile?32:38,borderRadius:"var(--radius-sm)",background:p._shared?"#dbeafe":p.status==="Complete"?"#dcfce7":p.status==="In Progress"?"#dbeafe":"var(--surface-sidebar)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:isMobile?13:15,flexShrink:0}}>
                   {p._shared?"👤":p.status==="Complete"?"✓":p.status==="In Progress"?"▶":"◇"}
                 </div>
@@ -4287,7 +4287,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                   <div style={{fontSize:isMobile?10:11,color:"var(--text-secondary)",marginTop:2,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <span>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",...(!isMobile?{year:"numeric",hour:"2-digit",minute:"2-digit"}:{})})}</span>
                     {!isMobile && p.assetCount > 0 && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>{p.assetCount} {ar?"أصل":"assets"}</span>}
-                    {!isMobile && p.finMode && p.finMode !== "self" && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:p.finMode==="fund"?"#f3e8ff":"#dbeafe",color:p.finMode==="fund"?"#7c3aed":"var(--zan-teal-500)"}}>{p.finMode==="fund"?(ar?"صندوق":"Fund"):p.finMode==="bank100"?(ar?"بنك 100%":"Bank 100%"):(ar?"بنكي":"Bank")}</span>}
+                    {!isMobile && p.finMode && p.finMode !== "self" && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:p.finMode==="fund"?"#f3e8ff":"#dbeafe",color:p.finMode==="fund"?"#8b5cf6":"var(--zan-teal-500)"}}>{p.finMode==="fund"?(ar?"صندوق":"Fund"):p.finMode==="bank100"?(ar?"بنك 100%":"Bank 100%"):(ar?"بنكي":"Bank")}</span>}
                   </div>
                 </div>
                 <span style={{fontSize:isMobile?9:10,padding:"3px 8px",borderRadius:4,fontWeight:500,background:p._shared?"#dbeafe":p.status==="Complete"?"#dcfce7":p.status==="In Progress"?"#dbeafe":"var(--surface-sidebar)",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"var(--text-tertiary)",flexShrink:0}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة":"View"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
@@ -4839,7 +4839,7 @@ function HotelPLModal({ data, onSave, onClose, t, lang }) {
         <div style={{padding:"12px 20px"}}>
           {/* Presets */}
           <div style={{display:"flex",gap:8,marginBottom:16}}>
-            {Object.keys(HOTEL_PRESETS).map(k=><button key={k} onClick={()=>applyPreset(k)} style={{...btnS,background:"#eef2ff",color:"var(--zan-teal-500)",padding:"6px 12px",fontSize:11,fontWeight:500}}>{k}</button>)}
+            {Object.keys(HOTEL_PRESETS).map(k=><button key={k} onClick={()=>applyPreset(k)} style={{...btnS,background:"var(--color-info-bg)",color:"var(--zan-teal-500)",padding:"6px 12px",fontSize:11,fontWeight:500}}>{k}</button>)}
           </div>
 
           <div style={{fontSize:11,fontWeight:600,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{t.keys}</div>
@@ -4915,7 +4915,7 @@ function MarinaPLModal({ data, onSave, onClose, t, lang }) {
           <button onClick={onClose} style={{...btnSm,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>✕</button>
         </div>
         <div style={{padding:"12px 20px"}}>
-          <button onClick={()=>setM(prev=>({...prev,...MARINA_PRESET}))} style={{...btnS,background:"#eef2ff",color:"var(--zan-teal-500)",padding:"6px 12px",fontSize:11,fontWeight:500,marginBottom:12}}>Marina Preset</button>
+          <button onClick={()=>setM(prev=>({...prev,...MARINA_PRESET}))} style={{...btnS,background:"var(--color-info-bg)",color:"var(--zan-teal-500)",padding:"6px 12px",fontSize:11,fontWeight:500,marginBottom:12}}>Marina Preset</button>
           <Row label={t.berths}><NumIn value={m.berths} onChange={v=>upM({berths:v})} /></Row>
           <Row label={t.avgLength}><NumIn value={m.avgLength} onChange={v=>upM({avgLength:v})} /></Row>
           <Row label={t.unitPrice}><NumIn value={m.unitPrice} onChange={v=>upM({unitPrice:v})} /></Row>
@@ -5214,7 +5214,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             <span style={{fontSize:12,fontWeight:700,color:"var(--text-primary)"}}>{ar?"الأرض":"Land"}</span>
           </div>
           {project.landArea > 0 && <div style={{display:"flex",alignItems:"center",gap:4}}>
-            <span style={{fontSize:9,color:"var(--color-success)",background:"#ecfdf5",padding:"2px 8px",borderRadius:"var(--radius-lg)",fontWeight:600}}>
+            <span style={{fontSize:9,color:"var(--color-success)",background:"var(--color-success-bg)",padding:"2px 8px",borderRadius:"var(--radius-lg)",fontWeight:600}}>
               {LAND_TYPES.find(lt=>lt.value===project.landType)?.[ar?"ar":"en"]||project.landType}
             </span>
             <span style={{fontSize:9,color:"var(--text-secondary)",background:"#f3f4f6",padding:"2px 8px",borderRadius:"var(--radius-lg)",fontWeight:500}}>
@@ -5277,7 +5277,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           {/* Sub-header: عقد الإيجار */}
           <div style={{padding:"8px 14px 4px",borderTop:"1px solid #f0f1f5"}}>
             <div style={{fontSize:10,fontWeight:600,color:"var(--text-tertiary)",textTransform:"uppercase",letterSpacing:0.5,display:"flex",alignItems:"center",gap:6}}>
-              <span style={{width:4,height:4,borderRadius:2,background:"#2EC4B6"}} />
+              <span style={{width:4,height:4,borderRadius:2,background:"var(--zan-teal-500)"}} />
               {ar?"تفاصيل عقد الإيجار":"Lease Contract Details"}
             </div>
           </div>
@@ -5441,8 +5441,8 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         <div style={{fontSize:12,color:"var(--text-secondary)"}}>{isFiltered?`${filteredIndices.length}/${assets.length}`:assets.length} {t.assets}</div>
         <div style={{flex:1}} />
         <div style={{display:"flex",background:"var(--surface-sidebar)",borderRadius:"var(--radius-sm)",padding:2}}>
-          <button onClick={()=>setViewMode("cards")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="cards"?"#fff":"transparent",color:viewMode==="cards"?"var(--text-primary)":"var(--text-tertiary)",boxShadow:viewMode==="cards"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>▦ {lang==="ar"?"بطاقات":"Cards"}</button>
-          <button onClick={()=>setViewMode("table")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="table"?"#fff":"transparent",color:viewMode==="table"?"var(--text-primary)":"var(--text-tertiary)",boxShadow:viewMode==="table"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>☰ {lang==="ar"?"جدول":"Table"}</button>
+          <button onClick={()=>setViewMode("cards")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="cards"?"var(--surface-card)":"transparent",color:viewMode==="cards"?"var(--text-primary)":"var(--text-tertiary)",boxShadow:viewMode==="cards"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>▦ {lang==="ar"?"بطاقات":"Cards"}</button>
+          <button onClick={()=>setViewMode("table")} style={{...btnS,padding:"5px 10px",fontSize:10,fontWeight:600,background:viewMode==="table"?"var(--surface-card)":"transparent",color:viewMode==="table"?"var(--text-primary)":"var(--text-tertiary)",boxShadow:viewMode==="table"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>☰ {lang==="ar"?"جدول":"Table"}</button>
         </div>
         {viewMode==="table" && <div style={{position:"relative"}}>
           <button onClick={()=>setShowColPicker(!showColPicker)} style={{...btnS,background:showColPicker?"#e0e7ff":"var(--surface-sidebar)",color:"var(--text-secondary)",padding:"5px 10px",fontSize:10,fontWeight:500,border:"0.5px solid var(--border-default)"}} title={ar?"إظهار/إخفاء أعمدة":"Show/Hide Columns"}>⚙ {ar?"أعمدة":"Cols"} ({cols.length - hiddenCols.size}/{cols.length})</button>
@@ -5624,7 +5624,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             <thead>
               <tr>
                 {visibleCols.map(c=>(
-                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"var(--color-warning-bg)"}:{})}}>
+                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w, ...(c.key==="totalCapex"?{background:"var(--color-info-bg)"}:c.key==="totalInc"?{background:"var(--color-success-bg)"}:c.key==="score"?{background:"var(--color-warning-bg)"}:{})}}>
                     <div>{c.en}</div>
                     {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"var(--text-tertiary)"}}>{c.ar}</div>}
                   </th>
@@ -5666,7 +5666,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                           {isOp ? (
                             <>
                               <span style={{fontSize:10,color:"var(--text-secondary)",minWidth:55,textAlign:"right"}}>{fmtM(a.opEbitda||0)}</span>
-                              {(isHotel||isMarina) && <button onClick={()=>setModal({type:isHotel?"hotel":"marina",idx:i})} style={{...btnSm,background:"#eef2ff",color:"var(--zan-teal-500)",fontSize:9,padding:"2px 6px",whiteSpace:"nowrap"}}>{isHotel?"P&L":"P&L"}</button>}
+                              {(isHotel||isMarina) && <button onClick={()=>setModal({type:isHotel?"hotel":"marina",idx:i})} style={{...btnSm,background:"var(--color-info-bg)",color:"var(--zan-teal-500)",fontSize:9,padding:"2px 6px",whiteSpace:"nowrap"}}>{isHotel?"P&L":"P&L"}</button>}
                             </>
                           ) : (
                             <EditableCell type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} />
@@ -5678,7 +5678,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <td style={{...tdSt,...hd("occ")}}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
                       <td style={{...tdSt,...hd("cost")}}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("dur")}}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
-                      <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
+                      <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"var(--color-info-bg)",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"var(--color-success-text)",background:"var(--color-success-bg)",fontSize:11,...hd("totalInc")}}>{fmt(comp?.totalRevenue||0)}</td>
                       <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative",...hd("score")}}>{(()=>{
                         const sc = getAssetScore(a, comp);
@@ -6025,7 +6025,7 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
     {phaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p => {
@@ -9465,7 +9465,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
     {allPhaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {allPhaseNames.map(p => {
@@ -9534,7 +9534,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
           <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={pr.noi} total={pr.totalNOI} bold />
           <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="var(--color-danger)" bg="var(--color-danger-bg)" />
           <CFRow label={ar?"(-) تكاليف التطوير":"(-) Development CAPEX"} values={pr.capex} total={pr.totalCapex} color="var(--color-danger)" negate />
-          <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
+          <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="var(--zan-navy-700)" bg="#f0f4ff" />
           <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={pr.netCF} total={pr.totalNetCF} bold />
           <CumRow label={ar?"↳ تراكمي":"↳ Cumulative"} values={pr.netCF} />
         </tbody></table></div>
@@ -9556,7 +9556,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noiArr} total={totalNOI} bold />
         <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="var(--color-danger)" bg="var(--color-danger-bg)" />
         <CFRow label={ar?"(-) تكاليف التطوير":"(-) Development CAPEX"} values={c.capex} total={c.totalCapex} color="var(--color-danger)" negate />
-        <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
+        <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="var(--zan-navy-700)" bg="#f0f4ff" />
         <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={c.netCF} total={c.totalNetCF} bold />
         <CumRow label={ar?"↳ تراكمي":"↳ Cumulative"} values={c.netCF} />
       </tbody></table></div>
@@ -10067,7 +10067,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
         <div style={{background:"var(--surface-card)",borderRadius:"var(--radius-lg)",border:"0.5px solid var(--border-default)",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
             <span style={{fontSize:30,fontWeight:900,color:"var(--text-primary)",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"حصيف":"Haseef"}</span>
-            <span style={{width:1,height:28,background:"#2EC4B6",opacity:0.5}} />
+            <span style={{width:1,height:28,background:"var(--zan-teal-500)",opacity:0.5}} />
             <span style={{fontSize:11,color:"var(--zan-teal-500)",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"var(--text-primary)",fontWeight:800,marginTop:8,marginBottom:4,borderBottom:"none"}}>{project.name}</h1>
@@ -10236,7 +10236,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
         <div style={{background:"var(--surface-card)",borderRadius:"var(--radius-lg)",border:"0.5px solid var(--border-default)",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
             <span style={{fontSize:30,fontWeight:900,color:"var(--text-primary)",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"حصيف":"Haseef"}</span>
-            <span style={{width:1,height:28,background:"#2EC4B6",opacity:0.5}} />
+            <span style={{width:1,height:28,background:"var(--zan-teal-500)",opacity:0.5}} />
             <span style={{fontSize:11,color:"var(--zan-teal-500)",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"var(--text-primary)",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"حزمة تقديم البنك":"Bank Submission Pack"}</h1>
@@ -10465,7 +10465,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
         <div style={{background:"var(--surface-card)",borderRadius:"var(--radius-lg)",border:"0.5px solid var(--border-default)",padding:28,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
             <span style={{fontSize:30,fontWeight:900,color:"var(--text-primary)",fontFamily:"'Tajawal',sans-serif",letterSpacing:-0.5}}>{ar?"حصيف":"Haseef"}</span>
-            <span style={{width:1,height:28,background:"#2EC4B6",opacity:0.5}} />
+            <span style={{width:1,height:28,background:"var(--zan-teal-500)",opacity:0.5}} />
             <span style={{fontSize:11,color:"var(--zan-teal-500)",fontWeight:300,lineHeight:1.3}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
           </div>
           <h1 style={{fontSize:22,color:"var(--text-primary)",fontWeight:800,marginTop:8,marginBottom:4}}>{ar?"مذكرة المستثمر":"Investor Memo"} - {project.name}</h1>
@@ -10669,7 +10669,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       <div style={{textAlign:"center",padding:"56px 24px",background:"var(--zan-navy-900)",borderRadius:"var(--radius-xl)",border:"1px solid #1e2230"}}>
         <div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:16}}>
           <span style={{fontSize:40,fontWeight:900,color:"var(--text-inverse)",fontFamily:"'Tajawal',sans-serif"}}>{ar?"حصيف":"Haseef"}</span>
-          <span style={{width:1,height:36,background:"#2EC4B6",opacity:0.4}} />
+          <span style={{width:1,height:36,background:"var(--zan-teal-500)",opacity:0.4}} />
           <span style={{fontSize:13,color:"var(--zan-teal-500)",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>{ar?"النمذجة":"Financial"}<br/>{ar?"المالية":"Modeler"}</span>
         </div>
         <div style={{fontSize:13,color:"var(--text-secondary)"}}>
@@ -10895,9 +10895,9 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
       {sections.map(s => (
         <button key={s.key} onClick={() => setActiveSection(s.key)}
           style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:500,
-            background:activeSection===s.key?"#1e3a5f":"#fff",
+            background:activeSection===s.key?"var(--zan-navy-700)":"#fff",
             color:activeSection===s.key?"#fff":"var(--text-primary)",
-            border:"1px solid "+(activeSection===s.key?"#1e3a5f":"var(--border-default)")}}>
+            border:"1px solid "+(activeSection===s.key?"var(--zan-navy-700)":"var(--border-default)")}}>
           {s.label}
         </button>
       ))}
@@ -10909,7 +10909,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
       <div style={{marginBottom:14}}>
         <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:6}}>{lang==="ar"?"اختر المراحل للتحليل":"Select phases for analysis"}</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)")}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)")}}>
             {lang==="ar"?"الكل":"All"}
           </button>
           {phaseNames.map(p=>(
@@ -11002,8 +11002,8 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           <div style={{overflowX:"auto"}}>
             <table style={{...tblStyle,fontSize:11}}>
               <thead><tr>
-                <th style={{...thSt,background:"#1e3a5f",color:"var(--text-inverse)",minWidth:100}}>{rowParam.label} \\ {colParam.label}</th>
-                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"var(--zan-teal-500)":"#1e3a5f",color:"var(--text-inverse)",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
+                <th style={{...thSt,background:"var(--zan-navy-700)",color:"var(--text-inverse)",minWidth:100}}>{rowParam.label} \\ {colParam.label}</th>
+                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"var(--zan-teal-500)":"var(--zan-navy-700)",color:"var(--text-inverse)",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
               </tr></thead>
               <tbody>
                 {sensTable.map((row, ri) => (
@@ -11038,8 +11038,8 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
           <div style={{overflowX:"auto"}}>
             <table style={{...tblStyle,fontSize:11}}>
               <thead><tr>
-                <th style={{...thSt,background:"#1e3a5f",color:"var(--text-inverse)",minWidth:100}}>{rowParam.label} \\ {colParam.label}</th>
-                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"var(--zan-teal-500)":"#1e3a5f",color:"var(--text-inverse)",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
+                <th style={{...thSt,background:"var(--zan-navy-700)",color:"var(--text-inverse)",minWidth:100}}>{rowParam.label} \\ {colParam.label}</th>
+                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"var(--zan-teal-500)":"var(--zan-navy-700)",color:"var(--text-inverse)",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
               </tr></thead>
               <tbody>
                 {sensTable.map((row, ri) => (
@@ -11326,7 +11326,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
+          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"var(--zan-navy-700)":"var(--surface-sidebar)",color:selectedPhases.length===0?"#fff":"var(--text-primary)",border:"1px solid "+(selectedPhases.length===0?"var(--zan-navy-700)":"var(--border-default)"),borderRadius:"var(--radius-sm)"}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {allPhaseNames.map(p => {
@@ -11367,7 +11367,7 @@ Government grant covering part of construction CAPEX. Lowers effective cost and 
           <F label={lang === "ar" ? "الحد الأقصى (ريال)" : "Max Cap (SAR)"}><NI value={inc.capexGrant?.maxCap || 50000000} onChange={v => upInc("capexGrant", { maxCap: v })} /></F>
         </div>
         <F label={lang === "ar" ? "توقيت الاستلام" : "Timing"}>
-          <select value={inc.capexGrant?.timing || "construction"} onChange={e => upInc("capexGrant", { timing: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "var(--text-primary)", border: "1px solid #e5e7ec" }}>
+          <select value={inc.capexGrant?.timing || "construction"} onChange={e => upInc("capexGrant", { timing: e.target.value })} style={{ ...sideInputStyle, background: "var(--surface-card)", color: "var(--text-primary)", border: "0.5px solid var(--border-default)" }}>
             <option value="construction">{lang === "ar" ? "خلال البناء" : "During Construction"}</option>
             <option value="completion">{lang === "ar" ? "عند الإنجاز" : "At Completion"}</option>
           </select>
@@ -11381,7 +11381,7 @@ Government grant covering part of construction CAPEX. Lowers effective cost and 
       <ToggleCard title="Finance Support (Interest Subsidy / Soft Loan)" tip="الجهة الحكومية تتحمل جزءاً من تكلفة التمويل أو تقدم قرضاً بدون ربح. يخفض معدل التمويل الفعلي ويحسن DSCR
 Government pays part of financing cost or provides a zero-profit loan. Lowers effective rate and improves DSCR" titleAr="دعم التمويل (تحمل فوائد / قرض حسن)" enabled={inc.financeSupport?.enabled} onToggle={() => upInc("financeSupport", { enabled: !inc.financeSupport?.enabled })} color="#8b5cf6" value={financing?.interestSubsidyTotal}>
         <F label={lang === "ar" ? "نوع الدعم" : "Support Type"}>
-          <select value={inc.financeSupport?.subType || "interestSubsidy"} onChange={e => upInc("financeSupport", { subType: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "var(--text-primary)", border: "1px solid #e5e7ec" }}>
+          <select value={inc.financeSupport?.subType || "interestSubsidy"} onChange={e => upInc("financeSupport", { subType: e.target.value })} style={{ ...sideInputStyle, background: "var(--surface-card)", color: "var(--text-primary)", border: "0.5px solid var(--border-default)" }}>
             <option value="interestSubsidy">{lang === "ar" ? "تحمل فوائد" : "Interest Subsidy"}</option>
             <option value="softLoan">{lang === "ar" ? "قرض حسن" : "Soft Loan"}</option>
           </select>
@@ -11391,7 +11391,7 @@ Government pays part of financing cost or provides a zero-profit loan. Lowers ef
             <F label={lang === "ar" ? "نسبة التحمل %" : "Subsidy %"}><NI value={inc.financeSupport?.subsidyPct || 50} onChange={v => upInc("financeSupport", { subsidyPct: v })} /></F>
             <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"}><NI value={inc.financeSupport?.subsidyYears || 5} onChange={v => upInc("financeSupport", { subsidyYears: v })} /></F>
             <F label={lang === "ar" ? "البداية" : "Start"}>
-              <select value={inc.financeSupport?.subsidyStart || "operation"} onChange={e => upInc("financeSupport", { subsidyStart: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "var(--text-primary)", border: "1px solid #e5e7ec" }}>
+              <select value={inc.financeSupport?.subsidyStart || "operation"} onChange={e => upInc("financeSupport", { subsidyStart: e.target.value })} style={{ ...sideInputStyle, background: "var(--surface-card)", color: "var(--text-primary)", border: "0.5px solid var(--border-default)" }}>
                 <option value="drawdown">{lang === "ar" ? "من السحب" : "From Drawdown"}</option>
                 <option value="operation">{lang === "ar" ? "من التشغيل" : "From Operation"}</option>
               </select>
@@ -11432,13 +11432,13 @@ Rebates or deferrals of municipal charges, permits, and regulatory fees. Even de
         {(inc.feeRebates?.items || []).map((item, i) => (
           <div key={i} style={{ background: "var(--surface-page)", borderRadius: 6, padding: 10, marginBottom: 8 }}>
             <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-              <input value={item.name || ""} onChange={e => updateFeeItem(i, { name: e.target.value })} placeholder={lang === "ar" ? "اسم الرسم" : "Fee name"} style={{ ...sideInputStyle, flex: 1, background: "#fff", color: "var(--text-primary)", border: "1px solid #e5e7ec" }} />
+              <input value={item.name || ""} onChange={e => updateFeeItem(i, { name: e.target.value })} placeholder={lang === "ar" ? "اسم الرسم" : "Fee name"} style={{ ...sideInputStyle, flex: 1, background: "var(--surface-card)", color: "var(--text-primary)", border: "0.5px solid var(--border-default)" }} />
               <button onClick={() => removeFeeItem(i)} style={{ ...btnSm, background: "var(--color-danger-bg)", color: "var(--color-danger)" }}>✕</button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr", gap: 6, fontSize: 11 }}>
               <div>
                 <div style={{ color: "var(--text-secondary)", marginBottom: 2 }}>{lang === "ar" ? "النوع" : "Type"}</div>
-                <select value={item.type || "rebate"} onChange={e => updateFeeItem(i, { type: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "var(--text-primary)", border: "1px solid #e5e7ec", padding: "4px 6px" }}>
+                <select value={item.type || "rebate"} onChange={e => updateFeeItem(i, { type: e.target.value })} style={{ ...sideInputStyle, background: "var(--surface-card)", color: "var(--text-primary)", border: "0.5px solid var(--border-default)", padding: "4px 6px" }}>
                   <option value="rebate">{lang === "ar" ? "استرداد" : "Rebate"}</option>
                   <option value="deferral">{lang === "ar" ? "تأجيل" : "Deferral"}</option>
                 </select>
@@ -11992,13 +11992,13 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
 
       {/* ── Investor View ── */}
       {audienceView === "investor" && !isPhase && (<>
-        <Section title={ar?"عوائد المستثمرين":"Investor Returns"} color="#7c3aed">
+        <Section title={ar?"عوائد المستثمرين":"Investor Returns"} color="#8b5cf6">
           {w ? (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
               {[
-                { label: "LP IRR", value: w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—", color: "#7c3aed" },
+                { label: "LP IRR", value: w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—", color: "#8b5cf6" },
                 { label: "GP IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—", color: "var(--color-success-text)" },
-                { label: "LP MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—", color: "#7c3aed", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.lpTotalInvested)} → ${fmtM(w.lpTotalDist)}` },
+                { label: "LP MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—", color: "#8b5cf6", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.lpTotalInvested)} → ${fmtM(w.lpTotalDist)}` },
                 { label: "GP MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—", color: "var(--color-success-text)", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.gpTotalInvested)} → ${fmtM(w.gpTotalDist)}` },
                 { label: "DPI", value: w.lpTotalInvested > 0 ? (w.lpTotalDist / w.lpTotalInvested).toFixed(2)+"x" : "—", color: "var(--text-primary)" },
               ].map((item, i) => (
@@ -12012,11 +12012,11 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           ) : <div style={{color:"var(--text-secondary)",fontSize:12}}>{ar?"حافز الأداء غير مُعدّ — اختر صندوق استثماري":"Waterfall not configured - select Fund mode"}</div>}
         </Section>
         {w && w.tier1 && (
-          <Section title={ar?"شلال التوزيعات":"Distribution Waterfall"} color="#7c3aed">
+          <Section title={ar?"شلال التوزيعات":"Distribution Waterfall"} color="#8b5cf6">
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)",gap:12}}>
               {[
                 { label: ar?"رد رأس المال":"T1: Return of Capital", value: (w.tier1||[]).reduce((s,v)=>s+v,0), color: "var(--zan-navy-700)" },
-                { label: ar?"العائد التفضيلي":"T2: Pref Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" },
+                { label: ar?"العائد التفضيلي":"T2: Pref Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#8b5cf6" },
                 { label: ar?"تعويض المطور":"T3: GP Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "var(--color-success-text)" },
                 { label: ar?"تقسيم الأرباح":"T4: Profit Split", value: ((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)), color: "var(--color-warning)" },
               ].map((tier, i) => (
