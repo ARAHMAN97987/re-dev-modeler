@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import './styles/design-tokens.css'
 import { AuthGate } from './lib/auth.jsx'
 import { storage } from './lib/storage'
 import App from './App.jsx'
@@ -14,6 +15,12 @@ function Root() {
       }}
     </AuthGate>
   )
+}
+
+// Theme initialization (auto/light/dark)
+const savedTheme = localStorage.getItem('haseef-theme') || 'auto';
+if (savedTheme !== 'auto') {
+  document.documentElement.setAttribute('data-theme', savedTheme);
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
