@@ -3527,7 +3527,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const dir = lang === "ar" ? "rtl" : "ltr";
 
   return (
-    <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",background:"linear-gradient(180deg, #f8f9fb 0%, #f0f2f5 100%)",backgroundImage:"radial-gradient(circle at 15% 50%, rgba(46,196,182,0.03) 0%, transparent 40%), radial-gradient(circle at 85% 80%, rgba(200,169,110,0.02) 0%, transparent 40%)",color:"#1a1d23",fontSize:13}}>
+    <div dir={dir} style={{display:"flex",height:"100vh",fontFamily:"var(--font-family)",background:"var(--surface-page)",color:"var(--text-primary)",fontSize:"var(--text-sm)"}}>
       <style>{`
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -3653,9 +3653,9 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         </>
       )}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-        <div style={{height:isMobile?44:48,minHeight:isMobile?44:48,background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",alignItems:"center",padding:isMobile?"0 8px":"0 12px",gap:isMobile?4:8}}>
+        <div className="z-nav" style={{height:isMobile?44:48,minHeight:isMobile?44:48,background:"var(--surface-nav)",display:"flex",alignItems:"center",padding:isMobile?"0 8px":"0 var(--space-5)",gap:isMobile?4:8}}>
           {/* Back to projects */}
-          <button onClick={goBack} style={{...btnS,background:"#f0f1f5",color:"#6b7080",padding:isMobile?"4px 8px":"5px 10px",fontSize:isMobile?10:11,flexShrink:0,border:"1px solid #e5e7ec"}}>{isMobile?"→":t.back}</button>
+          <button onClick={goBack} className="z-nav-btn" style={{padding:isMobile?"4px 8px":"5px 10px",fontSize:isMobile?10:11,flexShrink:0}}>{isMobile?"→":t.back}</button>
           {(() => {
             // Compute sidebar warning badge
             let _advWarn = 0;
@@ -3678,27 +3678,29 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               });
             }
             return (
-              <button onClick={()=>setSidebarOpen(!sidebarOpen)} title={sidebarOpen?(lang==="ar"?"إخفاء اللوحة":"Hide Panel"):(lang==="ar"?"إظهار اللوحة":"Show Panel")} style={{...btnS,background:sidebarOpen?"#f0f4ff":"#f0f1f5",color:sidebarOpen?"#2563eb":"#6b7080",padding:isMobile?"4px 8px":"6px 10px",fontSize:isMobile?13:14,flexShrink:0,position:"relative",border:sidebarOpen?"1px solid #bfdbfe":"1px solid transparent"}}>
+              <button onClick={()=>setSidebarOpen(!sidebarOpen)} title={sidebarOpen?(lang==="ar"?"إخفاء اللوحة":"Hide Panel"):(lang==="ar"?"إظهار اللوحة":"Show Panel")} className="z-nav-btn" style={{padding:isMobile?"4px 8px":"6px 10px",fontSize:isMobile?13:14,flexShrink:0,position:"relative",background:sidebarOpen?"var(--nav-btn-hover)":"var(--nav-btn-bg)"}}>
                 ☰
-                {!sidebarOpen && _advWarn > 0 && <span style={{position:"absolute",top:1,right:1,width:7,height:7,borderRadius:4,background:"#ef4444",border:"1.5px solid #fff"}} />}
+                {!sidebarOpen && _advWarn > 0 && <span style={{position:"absolute",top:1,right:1,width:7,height:7,borderRadius:4,background:"var(--color-danger)",border:"1.5px solid var(--surface-nav)"}} />}
               </button>
             );
           })()}
-          <div style={{flex:1,minWidth:0}}>
-            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:isMobile?13:15,fontWeight:600,color:"#1a1d23",background:"transparent",width:"100%",padding:"4px 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} placeholder="Project Name" />
+          <div className="z-nav-project" style={{flex:1,minWidth:0,borderLeft:lang==="ar"?"none":"1px solid var(--nav-project-border)",borderRight:lang==="ar"?"1px solid var(--nav-project-border)":"none",paddingLeft:lang==="ar"?0:"var(--space-3)",paddingRight:lang==="ar"?"var(--space-3)":0,marginLeft:lang==="ar"?0:4,marginRight:lang==="ar"?4:0}}>
+            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:isMobile?13:14,fontWeight:500,color:"var(--nav-logo-text)",background:"transparent",width:"100%",padding:"4px 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} placeholder="Project Name" />
           </div>
-          {project?._shared && <span style={{fontSize:9,padding:"3px 10px",borderRadius:4,fontWeight:600,background:project._permission==="view"?"#fef3c7":"#dbeafe",color:project._permission==="view"?"#92400e":"#1d4ed8",flexShrink:0}}>{project._permission==="view"?(lang==="ar"?"🔒 قراءة":"🔒 View"):(lang==="ar"?"✏️ مشارك":"✏️ Edit")}</span>}
+          {project?._shared && <span className="z-badge z-badge-info" style={{flexShrink:0}}>{project._permission==="view"?(lang==="ar"?"🔒 قراءة":"🔒 View"):(lang==="ar"?"✏️ مشارك":"✏️ Edit")}</span>}
           {!isMobile && <StatusBadge status={project?.status} onChange={s=>up({status:s})} />}
           {/* Undo - desktop only */}
-          {!isMobile && <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" style={{...btnS,background:"transparent",color:undoStack.current.length>0?"#6b7080":"#d0d4dc",padding:"5px 8px",fontSize:14,flexShrink:0,border:"none",cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>}
+          {!isMobile && <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" className="z-nav-btn" style={{padding:"5px 8px",fontSize:14,flexShrink:0,opacity:undoStack.current.length>0?1:0.3}}>↩</button>}
+          {/* Theme toggle - desktop only */}
+          {!isMobile && <button onClick={()=>{const cur=document.documentElement.getAttribute('data-theme');const next=cur==='dark'?'light':cur==='light'?'auto':'dark';if(next==='auto'){document.documentElement.removeAttribute('data-theme');}else{document.documentElement.setAttribute('data-theme',next);}localStorage.setItem('haseef-theme',next);}} className="z-nav-btn" style={{padding:"5px 8px",fontSize:13,flexShrink:0}} title="Toggle theme">{document.documentElement.getAttribute('data-theme')==='dark'?'☀️':document.documentElement.getAttribute('data-theme')==='light'?'🌙':'🌓'}</button>}
           {/* Present - desktop only */}
-          {!isMobile && <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"#16a34a":"#f0f4ff",color:presentMode?"#fff":"#2563eb",padding:"5px 10px",fontSize:10,fontWeight:600,border:presentMode?"none":"1px solid #bfdbfe",flexShrink:0}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>}
+          {!isMobile && <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} className="z-nav-btn" style={{padding:"5px 10px",fontSize:10,fontWeight:600,flexShrink:0,background:presentMode?"var(--color-success)":"var(--nav-btn-bg)",color:presentMode?"#fff":"var(--nav-btn-text)"}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>}
           {/* Dropdown menu */}
           {(() => {
             const [menuOpen, setMenuOpen] = [headerMenuOpen, setHeaderMenuOpen];
             return (
               <div style={{position:"relative",flexShrink:0}}>
-                <button onClick={()=>setMenuOpen(!menuOpen)} style={{...btnS,background:menuOpen?"#f0f1f5":"transparent",color:"#4b5060",padding:isMobile?"4px 6px":"5px 8px",fontSize:isMobile?14:16,fontWeight:500,border:"none"}}>⋮</button>
+                <button onClick={()=>setMenuOpen(!menuOpen)} className="z-nav-btn" style={{padding:isMobile?"4px 6px":"5px 8px",fontSize:isMobile?14:16,fontWeight:500}}>⋮</button>
                 {menuOpen && <>
                   <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:998}} />
                   <div style={{position:"absolute",top:"100%",marginTop:4,background:"#fff",border:"1px solid #e5e7ec",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:isMobile?120:200,padding:"6px 0",...(lang==="ar"?{left:0}:{right:0})}}>
@@ -3754,14 +3756,14 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             );
           })()}
         </div>
-        <div className="tab-bar" style={{background:"#fff",borderBottom:"1px solid #e5e7ec",display:"flex",padding:"0 16px",gap:0,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+        <div className="tab-bar z-tab-strip" style={{display:"flex",padding:"0 var(--space-5)",gap:0,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
           {presentMode ? (
             /* Presentation Mode Tab Bar */
             <div style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",width:"100%"}}>
-              <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",letterSpacing:0.5}}>{ar?"وضع العرض":"Presentation Mode"}</span>
-              <div style={{width:1,height:20,background:"#e5e7ec"}} />
-              <button onClick={()=>setAudienceView("bank")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="bank"?"#1e40af":"#f0f1f5",color:audienceView==="bank"?"#fff":"#6b7080",borderRadius:20,border:"none"}}>{ar?"🏦 عرض البنك":"🏦 Bank View"}</button>
-              <button onClick={()=>setAudienceView("investor")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="investor"?"#7c3aed":"#f0f1f5",color:audienceView==="investor"?"#fff":"#6b7080",borderRadius:20,border:"none"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
+              <span style={{fontSize:12,fontWeight:700,color:"var(--tab-text-active)",letterSpacing:0.5}}>{ar?"وضع العرض":"Presentation Mode"}</span>
+              <div style={{width:1,height:20,background:"var(--nav-tab-border)"}} />
+              <button onClick={()=>setAudienceView("bank")} className="z-nav-btn" style={{padding:"6px 16px",fontSize:11,fontWeight:600,borderRadius:20,background:audienceView==="bank"?"var(--zan-teal-500)":"var(--nav-btn-bg)",color:audienceView==="bank"?"#fff":"var(--nav-btn-text)"}}>{ar?"🏦 عرض البنك":"🏦 Bank View"}</button>
+              <button onClick={()=>setAudienceView("investor")} className="z-nav-btn" style={{padding:"6px 16px",fontSize:11,fontWeight:600,borderRadius:20,background:audienceView==="investor"?"#7c3aed":"var(--nav-btn-bg)",color:audienceView==="investor"?"#fff":"var(--nav-btn-text)"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
             </div>
           ) : (<>
           {(() => {
@@ -3791,14 +3793,14 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               const showSep = prevGroup && prevGroup !== tb.group;
               prevGroup = tb.group;
               return <span key={tb.key} style={{display:"inline-flex",alignItems:"center"}}>
-                {showSep && <span style={{width:1,height:20,background:"#e5e7ec",margin:"0 6px",flexShrink:0}} />}
-                <button onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} style={{padding:isMobile?"10px 8px":"10px 12px",fontSize:isMobile?10:11,fontWeight:isActive?700:500,border:"none",cursor:"pointer",background:isActive?`${gc}08`:"none",color:isActive?gc:"#6b7080",borderBottom:isActive?`2.5px solid ${gc}`:"2.5px solid transparent",whiteSpace:"nowrap",transition:"all 0.15s",borderRadius:"4px 4px 0 0"}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
+                {showSep && <span style={{width:1,height:20,background:"var(--nav-tab-border)",margin:"0 6px",flexShrink:0}} />}
+                <button onClick={()=>{setActiveTab(tb.key);if(isMobile)setSidebarOpen(false);}} className={`z-tab${isActive?" z-tab-active":""}`} style={{padding:isMobile?"10px 8px":"9px var(--space-4)",fontSize:12}}>{tb.label}{tb.key==="checks"&&checks.some(c=>!c.pass)?" ⚠":""}</button>
               </span>;
             });
           })()}
           </>)}
         </div>
-        <div style={{flex:1,overflow:"hidden",position:"relative"}}>
+        <div style={{flex:1,overflow:"hidden",position:"relative",background:"var(--surface-page)"}}>
           {presentMode ? (
             <div style={{overflow:"auto",height:"100%",padding:isMobile?10:24}}>
             <PresentationView project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} audienceView={audienceView} liveSliders={liveSliders} setLiveSliders={setLiveSliders} checks={checks} />
