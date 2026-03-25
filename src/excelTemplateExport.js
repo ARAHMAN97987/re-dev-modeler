@@ -350,31 +350,50 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     const pWat = phaseWaterfalls?.[phaseName];
     if (pWat && pFin) {
       const horizon = p.horizon || 50;
-      // Overwrite management fee per year (row 65) with engine values
+      // ── ENGINE → TEMPLATE PARITY: Override fee rows, land rent, exit proceeds ──
+      // Template formulas use simplified bases (C17, C18) and timing rules.
+      // Engine uses dynamic bases (mgmtFeeBase, cumCapex, NAV) and independent phase timing.
+      // Override all fee rows (63-68), land rent (48), and exit (51) with engine values
+      // to ensure LP IRR in the dynamic Excel matches the platform exactly.
+      // Waterfall formulas (rows 69-99) remain dynamic — they use these inputs.
       for (let y = 0; y < Math.min(horizon, 50); y++) {
         const colIdx = y + 4; // E=4
         let s = "", n = colIdx;
         while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
-        const mgmtFeeVal = pWat.feeMgmt?.[y] ?? 0;
-        if (mgmtFeeVal !== 0) {
-          forceSet(sheetName, `${s}65`, -Math.abs(mgmtFeeVal)); // fees are negative in template
-        }
-      }
 
-      // ── FIX ROOT CAUSE #2: Land Rent Timing ──
-      // Template: starts rent strictly after grace period
-      // Engine: landRentStartRule='auto' starts at MIN(graceEnd, firstIncomeYear)
-      // Fix: write engine's per-phase land rent into CashFlow rows
-      // Actually, land rent flows through CAPEX sheet → CashFlow → Fund.
-      // Easier: override Fund row 48 (land rent) with engine values
-      for (let y = 0; y < Math.min(horizon, 50); y++) {
-        const colIdx = y + 4;
-        let s = "", n = colIdx;
-        while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+        // Row 48: Land rent (negative = cost in template)
         const lr = results?.phaseResults?.[phaseName]?.landRent?.[y] ?? 0;
         if (lr !== 0) {
-          forceSet(sheetName, `${s}48`, -Math.abs(lr)); // land rent is negative cost
+          forceSet(sheetName, `${s}48`, -Math.abs(lr));
         }
+
+        // Row 51: Exit proceeds (engine includes exit cost deduction)
+        const exitVal = pWat.exitProceeds?.[y] ?? 0;
+        if (exitVal > 0) {
+          forceSet(sheetName, `${s}51`, exitVal);
+        }
+
+        // Row 63: Other fees = preEst + SPV + misc + auditor + operator (all POSITIVE)
+        const otherFees = (pWat.feePreEst?.[y] ?? 0) + (pWat.feeSpv?.[y] ?? 0) +
+                          (pWat.feeMisc?.[y] ?? 0) + (pWat.feeAuditor?.[y] ?? 0) +
+                          (pWat.feeOperator?.[y] ?? 0);
+        forceSet(sheetName, `${s}63`, otherFees);
+
+        // Row 64: Subscription fee
+        forceSet(sheetName, `${s}64`, pWat.feeSub?.[y] ?? 0);
+
+        // Row 65: Management fee (POSITIVE — template subtracts in Cash Available)
+        const mgmtFeeVal = pWat.feeMgmt?.[y] ?? 0;
+        forceSet(sheetName, `${s}65`, Math.abs(mgmtFeeVal));
+
+        // Row 66: Custody fee
+        forceSet(sheetName, `${s}66`, pWat.feeCustody?.[y] ?? 0);
+
+        // Row 67: Development fee
+        forceSet(sheetName, `${s}67`, pWat.feeDev?.[y] ?? 0);
+
+        // Row 68: Structuring fee
+        forceSet(sheetName, `${s}68`, pWat.feeStruct?.[y] ?? 0);
       }
 
       // ── FIX ROOT CAUSE #4: Debt Draw Cap ──
