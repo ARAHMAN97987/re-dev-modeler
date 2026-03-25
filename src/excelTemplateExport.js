@@ -41,14 +41,8 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     cell.value = value;
   }
 
-  // ── Helper: FORCE set cell value, overwriting even formulas ──
-  // Use for critical values where template formula differs from platform engine
-  function forceSet(sheetName, cellRef, value) {
-    const ws = wb.getWorksheet(sheetName);
-    if (!ws) return;
-    const cell = ws.getCell(cellRef);
-    cell.value = value; // overwrites formula with static value
-  }
+  // Note: forceSet (overwrite formulas) was removed — ALL Fund sheet cells
+  // are now driven by template formulas for full dynamism.
 
   // ── Helper: percentage (platform stores as whole number e.g. 6.5 = 6.5%, Excel needs 0.065) ──
   function pct(val) {
@@ -288,8 +282,12 @@ export async function generateTemplateExcel(project, results, financing, waterfa
 
   // ═══════════════════════════════════════════════════════════
   // 5. FILL FUND SHEET INPUTS (per phase)
-  // Critical: some cells are formulas in the template but the
-  // platform computes them differently. Use forceSet to override.
+  // ALL computation rows remain as template formulas (fully dynamic).
+  // Template formulas for C9, C14, C19 were fixed to match engine logic:
+  //   C9  = Inputs!{col}$151 (fundStartYear, new input row)
+  //   C14 = MAX(C12, C18-C19) (equity clamping to prevent negative LP%)
+  //   C19 = IF(Y, MIN(C18*LTV, ABS(D49)), 0) (debt capped at totalCapex)
+  // Fee rows (63-68), exit (51), waterfall (69-99) are ALL formulas.
   // ═══════════════════════════════════════════════════════════
   for (let pi = 0; pi < 6; pi++) {
     const sheetName = `Fund_ZAN ${pi + 1}`;
@@ -305,10 +303,10 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     setInput(sheetName, "C7", p.fundStrategy || "Develop & Hold");
     setInput(sheetName, "C22", (f.debtAllowed ?? p.debtAllowed) !== false ? "Y" : "N");
 
-    // Fund Start Year: template formula (=startYear+offset-1) differs from platform
-    // Platform stores explicit fundStartYear per phase - force-write it
+    // Fund Start Year: written to Inputs row 151 (per-phase), template reads it via formula
     const fundStart = f.fundStartYear || ((p.startYear || 2026) + (ph?.startYearOffset || pi + 1));
-    forceSet(sheetName, "C9", fundStart);
+    const col = colLetters[pi];
+    if (col) setInput(INP, `${col}151`, fundStart);
 
     // Fix freeze pane: template locks rows 1-46 (E47) which is too many.
     // Change to column-only freeze: A-D always visible, rows scroll freely.
@@ -322,88 +320,9 @@ export async function generateTemplateExcel(project, results, financing, waterfa
       }];
     }
 
-    // ── FIX ROOT CAUSE #1: Total Equity / GP Equity clamping ──
-    // Template: C14 = C18 - C19 (can produce LP < 0 when landCap > equity)
-    // Engine:   totalEquity = MAX(gpEquity, devCostInclLand - debt)
-    // Fix: override C14 (totalEquity) and C12 (gpEquity) with engine values
-    // so LP% is never negative. Formulas C13/C15/C16 derive from these.
-    const phaseName = ph?.name || `Phase ${pi + 1}`;
-    const pFin = phaseFinancings?.[phaseName];
-    if (pFin) {
-      forceSet(sheetName, "C12", pFin.gpEquity ?? 0);       // GP Equity
-      forceSet(sheetName, "C14", pFin.totalEquity ?? 0);     // Total Equity (clamped)
-      forceSet(sheetName, "C19", pFin.totalDebt ?? 0);       // Actual debt drawn (capped at totalCapex)
-    }
-
-    // ── FIX ROOT CAUSE #3: Management Fee Base ──
-    // Template uses: $C$18*$C$30 (fixed devCostInclLand × rate) every year
-    // Engine uses mgmtFeeBase setting (deployed = cumulative CAPEX, nav = NAV, etc.)
-    // Fix: replace C18 reference in mgmt fee formula with engine's actual base
-    // We write the engine's mgmtFeeBase mode as a flag, then override C18
-    // with the engine's devCostExclLand when mgmtFeeBase != "devCost"
-    // Actually, simplest fix: override the mgmt fee formula for each year column
-    // to use the engine's actual fee base. But that's too many cells.
-    // Better: forceSet C18 to match what the engine uses as fee base.
-    // When mgmtFeeBase = "deployed", the fee base changes per year.
-    // Since the template uses C18 as a FIXED base, the cleanest fix is:
-    // Write the engine's per-year management fee directly into row 65.
-    const pWat = phaseWaterfalls?.[phaseName];
-    if (pWat && pFin) {
-      const horizon = p.horizon || 50;
-      // ── ENGINE → TEMPLATE PARITY: Override fee rows, land rent, exit proceeds ──
-      // Template formulas use simplified bases (C17, C18) and timing rules.
-      // Engine uses dynamic bases (mgmtFeeBase, cumCapex, NAV) and independent phase timing.
-      // Override all fee rows (63-68), land rent (48), and exit (51) with engine values
-      // to ensure LP IRR in the dynamic Excel matches the platform exactly.
-      // Waterfall formulas (rows 69-99) remain dynamic — they use these inputs.
-      for (let y = 0; y < Math.min(horizon, 50); y++) {
-        const colIdx = y + 4; // E=4
-        let s = "", n = colIdx;
-        while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
-
-        // Row 48: Land rent (negative = cost in template)
-        const lr = results?.phaseResults?.[phaseName]?.landRent?.[y] ?? 0;
-        if (lr !== 0) {
-          forceSet(sheetName, `${s}48`, -Math.abs(lr));
-        }
-
-        // Row 51: Exit proceeds (engine includes exit cost deduction)
-        const exitVal = pWat.exitProceeds?.[y] ?? 0;
-        if (exitVal > 0) {
-          forceSet(sheetName, `${s}51`, exitVal);
-        }
-
-        // Row 63: Other fees = preEst + SPV + misc + auditor + operator (all POSITIVE)
-        const otherFees = (pWat.feePreEst?.[y] ?? 0) + (pWat.feeSpv?.[y] ?? 0) +
-                          (pWat.feeMisc?.[y] ?? 0) + (pWat.feeAuditor?.[y] ?? 0) +
-                          (pWat.feeOperator?.[y] ?? 0);
-        forceSet(sheetName, `${s}63`, otherFees);
-
-        // Row 64: Subscription fee
-        forceSet(sheetName, `${s}64`, pWat.feeSub?.[y] ?? 0);
-
-        // Row 65: Management fee (POSITIVE — template subtracts in Cash Available)
-        const mgmtFeeVal = pWat.feeMgmt?.[y] ?? 0;
-        forceSet(sheetName, `${s}65`, Math.abs(mgmtFeeVal));
-
-        // Row 66: Custody fee
-        forceSet(sheetName, `${s}66`, pWat.feeCustody?.[y] ?? 0);
-
-        // Row 67: Development fee
-        forceSet(sheetName, `${s}67`, pWat.feeDev?.[y] ?? 0);
-
-        // Row 68: Structuring fee
-        forceSet(sheetName, `${s}68`, pWat.feeStruct?.[y] ?? 0);
-      }
-
-      // ── FIX ROOT CAUSE #4: Debt Draw Cap ──
-      // Template: draws maxDebt pro-rata (can exceed totalCapex)
-      // Engine: actualMaxDebt = MIN(maxDebt, totalCapex)
-      // Already fixed above by forceSet C19 = pFin.totalDebt (capped value)
-      // But the drawdown formula still uses C19 (which is now correct).
-      // The template drawdown formula: MIN(CAPEX/totalCAPEX * C19, MAX(0, C19-prevBal))
-      // With C19 = MIN(maxDebt, totalCapex), drawdowns are now capped. ✓
-    }
+    // ALL other Fund cells (C9, C12, C14, C17, C18, C19, rows 47-99)
+    // remain as template formulas — fully dynamic.
+    // No forceSet needed: template formulas now match engine logic.
   }
 
   // ═══════════════════════════════════════════════════════════
