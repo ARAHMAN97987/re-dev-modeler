@@ -136,6 +136,21 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   const totalFees = fees.reduce((a, b) => a + b, 0);
 
+  // ── Phase A: Fee Attribution ──
+  // Split fees into developer fees vs fund-level operating fees vs subscription/investor costs
+  const _gpIsFundManager = project.gpIsFundManager !== false;
+  const devFeesTotal = feeDev.reduce((a, b) => a + b, 0);
+  const fundLevelFeesTotal = feeMgmt.reduce((a, b) => a + b, 0)
+    + feeStruct.reduce((a, b) => a + b, 0)
+    + feePreEst.reduce((a, b) => a + b, 0)
+    + feeCustody.reduce((a, b) => a + b, 0)
+    + feeSpv.reduce((a, b) => a + b, 0)
+    + feeAuditor.reduce((a, b) => a + b, 0)
+    + feeOperator.reduce((a, b) => a + b, 0)
+    + feeMisc.reduce((a, b) => a + b, 0);
+  const subFeesTotal = feeSub.reduce((a, b) => a + b, 0);
+  const developerFeesReceived = _gpIsFundManager ? devFeesTotal + fundLevelFeesTotal : devFeesTotal;
+
   // ── ZAN: Unfunded Fees ──
   // Fees that operating CF cannot cover → must be funded from equity
   // ZAN: UnfundedFees[y] = MAX(0, Fees[y] - MAX(0, UnlevCF[y] + DS[y] + Exit[y]))
@@ -363,7 +378,57 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     unreturnedClose[y] = rocBase - cumReturned;
   }
 
+  // ── Performance Incentive: IRR-Accurate Settlement ──
+  // Settled at the last positive LP distribution year BEFORE computing lpNetCF/IRR/MOIC.
+  // excessAmount = max clawback that brings Investor IRR down to exactly hurdleRate (binary search).
+  // performanceIncentiveAmount = incentivePct × excessAmount.
+  // If incentivePct < 100%, investor IRR stays above hurdle after settlement.
+  let perfIncentiveAmount = 0;
+  let perfIncentiveExcess = 0;
+  let perfIncentiveYears = 0;
+  let perfIncentiveSettleYear = -1;
+  let lpIRR_preIncentive = null;
+  let gpIRR_preIncentive = null;
+  const perfIncentiveEnabled = !!project.performanceIncentive;
+  if (perfIncentiveEnabled && lpEquity > 0) {
+    const hurdleRate = (project.hurdleIRR ?? 15) / 100;
+    const incPct = (project.incentivePct ?? 20) / 100;
+    perfIncentiveYears = Math.max(1, exitYr - fundStartIdx + 1);
+    // Find last year with positive LP distribution (settlement year)
+    for (let y = h - 1; y >= 0; y--) { if (lpDist[y] > 0) { perfIncentiveSettleYear = y; break; } }
+    if (perfIncentiveSettleYear >= 0) {
+      // Build pre-incentive lpNetCF to get initial IRR
+      const _preCF = new Array(h).fill(0);
+      for (let y = 0; y < h; y++) _preCF[y] = -lpCalls[y] + lpDist[y] - lpLandRentObligation[y];
+      lpIRR_preIncentive = calcIRR(_preCF);
+      if (lpIRR_preIncentive !== null && lpIRR_preIncentive > hurdleRate) {
+        // Binary search: find excessAmount = max clawback so that lpIRR = hurdleRate exactly
+        const sy_ = perfIncentiveSettleYear;
+        const maxClawback = lpDist[sy_]; // can't take more than what's there
+        let lo = 0, hi = maxClawback;
+        for (let iter = 0; iter < 60; iter++) {
+          const mid = (lo + hi) / 2;
+          const tmpCF = [..._preCF];
+          tmpCF[sy_] -= mid;
+          const tmpIRR = calcIRR(tmpCF);
+          if (tmpIRR === null || tmpIRR <= hurdleRate) {
+            hi = mid; // clawed back too much
+          } else {
+            lo = mid; // can clawback more
+          }
+          if (hi - lo < 1) break; // converged to SAR 1 precision
+        }
+        perfIncentiveExcess = lo; // the full excess above hurdle
+        perfIncentiveAmount = Math.min(perfIncentiveExcess * incPct, maxClawback);
+        // Apply settlement: reduce LP distribution, increase GP distribution
+        lpDist[sy_] -= perfIncentiveAmount;
+        gpDist[sy_] += perfIncentiveAmount;
+      }
+    }
+  }
+
   // LP Net Cash Flow: -equity calls (LP share) + distributions - land rent obligation
+  // NOTE: lpDist/gpDist already include performance incentive settlement above
   const lpNetCF = new Array(h).fill(0);
   const gpNetCF = new Array(h).fill(0);
   const gpLandRentTotal = gpLandRentObligation.reduce((a,b) => a+b, 0);
@@ -376,24 +441,42 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const lpIRR = calcIRR(lpNetCF);
   const gpIRR = calcIRR(gpNetCF);
   const projIRR = c.irr;
+  // Pre-incentive IRR: only different when incentive is applied
+  if (lpIRR_preIncentive === null) lpIRR_preIncentive = lpIRR;
+  if (gpIRR_preIncentive === null) gpIRR_preIncentive = gpIRR;
+  // Build pre-incentive gpIRR if incentive was applied
+  if (perfIncentiveAmount > 0) {
+    const _gpPreCF = new Array(h).fill(0);
+    for (let y = 0; y < h; y++) {
+      const gpDistPre = y === perfIncentiveSettleYear ? gpDist[y] - perfIncentiveAmount : gpDist[y];
+      _gpPreCF[y] = -gpCalls[y] + gpDistPre - gpLandRentObligation[y];
+    }
+    gpIRR_preIncentive = calcIRR(_gpPreCF);
+  }
+
   // MOIC: Total Distributions / Paid-In Capital (industry standard default)
-  // Paid-In = actual equity calls × share (cash actually transferred)
-  // Committed MOIC = Distributions / Original Equity (secondary metric)
   const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
   const lpNetDist = lpTotalDist - lpLandRentTotal;
   const gpNetDist = gpTotalDist - gpLandRentTotal;
   const lpTotalCalled = lpCalls.reduce((a, b) => a + b, 0);
   const gpTotalCalled = gpCalls.reduce((a, b) => a + b, 0);
-  // Default MOIC = Paid-In basis (actual cash contributed)
   const lpMOIC = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpMOIC = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
-  // Committed MOIC = Original equity commitment basis (secondary)
   const lpCommittedMOIC = lpEquity > 0 ? lpNetDist / lpEquity : 0;
   const gpCommittedMOIC = gpEquity > 0 ? gpNetDist / gpEquity : 0;
-  // H13: DPI = Total Distributions / Total Equity Called (same as paid-in MOIC for net dist)
   const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
+
+  // ── Phase C: Capital return + sponsor economics buckets ──
+  const t1Total = tier1.reduce((a, b) => a + b, 0);
+  const t2Total = tier2.reduce((a, b) => a + b, 0);
+  const developerCapitalReturn = prefAlloc === "lpOnly"
+    ? t1Total * gpPct
+    : (t1Total + t2Total) * gpPct;
+  const t3Total = tier3.reduce((a, b) => a + b, 0);
+  const t4GPTotal = tier4GP.reduce((a, b) => a + b, 0);
+  const sponsorWaterfallEconomics = t3Total + t4GPTotal;
 
   // NPV - Full 3x3 matrix
   const lpNPV10 = calcNPV(lpNetCF, 0.10);
@@ -422,6 +505,28 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     projNPV10, projNPV12, projNPV14, isFund,
     prefAllocation: prefAlloc, catchupMethod: catchMethod,
     exitYear: exitYr + sy,
+    // Phase A: Fee attribution
+    gpIsFundManager: _gpIsFundManager, devFeesTotal, fundLevelFeesTotal, subFeesTotal, developerFeesReceived,
+    // Phase C: Capital return + sponsor economics buckets
+    developerCapitalReturn, sponsorWaterfallEconomics,
+    // Phase C.1: Clean developer-fee-only field (always = devFeesTotal, never mixed)
+    developerFeeOnlyReceived: devFeesTotal,
+    // Performance Incentive (IRR-accurate, settled in distributions)
+    perfIncentiveEnabled, perfIncentiveAmount, perfIncentiveExcess, perfIncentiveYears,
+    perfIncentiveSettleYear: perfIncentiveSettleYear >= 0 ? perfIncentiveSettleYear + sy : null,
+    lpIRR_preIncentive, gpIRR_preIncentive,
+    // Phase B1: Saudi-style alias outputs (read-only aliases to existing GP/LP fields)
+    developerEquity: gpEquity, investorEquity: lpEquity,
+    developerPct: gpPct, investorPct: lpPct,
+    developerContribution: gpTotalCalled, investorContribution: lpTotalCalled,
+    developerDistributions: gpTotalDist, investorDistributions: lpTotalDist,
+    developerNetDistributions: gpNetDist, investorNetDistributions: lpNetDist,
+    developerNetCF: gpNetCF, investorNetCF: lpNetCF,
+    developerIRR: gpIRR, investorIRR: lpIRR,
+    developerMOIC: gpMOIC, investorMOIC: lpMOIC,
+    developerDPI: gpDPI, investorDPI: lpDPI,
+    developerNPV10: gpNPV10, investorNPV10: lpNPV10,
+    developerNPV12: gpNPV12, investorNPV12: lpNPV12,
   };
 }
 

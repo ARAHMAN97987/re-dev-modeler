@@ -165,12 +165,12 @@
   --surface-sidebar: #F0F1F3; --surface-input: #EBF5FB;
   --surface-hover: #F9FAFB; --surface-active: #F0F1F3;
   --surface-table-header: #FAFAFA; --surface-separator: #F0F1F3;
-  --surface-nav: #0C1829; --surface-tab-bar: #101D2E;
-  --nav-tab-border: #1A2A3E; --nav-logo-text: #E8EBF0;
-  --nav-project-text: #6B7FA3; --nav-project-border: #1E2D42;
-  --nav-btn-bg: #13202F; --nav-btn-border: #2A3A52;
-  --nav-btn-text: #8FA3BF; --nav-btn-hover: #1A2D42;
-  --tab-text: #6B7FA3; --tab-text-hover: #B8C2D3; --tab-text-active: #E8EBF0;
+  --surface-nav: #162D4A; --surface-tab-bar: #1E3A52;
+  --nav-tab-border: #2A3F5A; --nav-logo-text: #E8EBF0;
+  --nav-project-text: #8FA3BF; --nav-project-border: #2A3F5A;
+  --nav-btn-bg: #1E3350; --nav-btn-border: #3A5068;
+  --nav-btn-text: #8FA3BF; --nav-btn-hover: #253D58;
+  --tab-text: #8FA3BF; --tab-text-hover: #C8D0DE; --tab-text-active: #FFFFFF;
   --text-primary: #111827; --text-secondary: #6B7280;
   --text-tertiary: #9CA3AF; --text-inverse: #FFFFFF;
   --text-link: #1B6B93; --text-positive: #1A7A42; --text-negative: #B42318;

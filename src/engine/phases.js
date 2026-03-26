@@ -19,10 +19,11 @@ export const FINANCING_FIELDS = [
   'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
   'feeTreatment','prefAllocation','subscriptionFeePct','annualMgmtFeePct','mgmtFeeCapAnnual','custodyFeeAnnual',
   // NOTE: catchupMethod is intentionally NOT per-phase — it's project-level only (matches ZAN Excel perYear convention)
-  'developerFeePct','structuringFeePct','structuringFeeCap','mgmtFeeBase',
+  'developerFeePct','developerFeeBasis','structuringFeePct','structuringFeeCap','mgmtFeeBase',
   'preEstablishmentFee','spvFee','auditorFeeAnnual',
   'operatorFeePct','operatorFeeCap','miscExpensePct',
   'fundStartYear','fundName','gpIsFundManager','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
+  'performanceIncentive','hurdleIRR','incentivePct',
 ];
 
 /** Get financing settings for a specific phase. Falls back to project-level. */
@@ -263,6 +264,42 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     lpNPV10: calcNPV(lpNetCF, 0.10), lpNPV12: calcNPV(lpNetCF, 0.12), lpNPV14: calcNPV(lpNetCF, 0.14),
     gpNPV10: calcNPV(gpNetCF, 0.10), gpNPV12: calcNPV(gpNetCF, 0.12), gpNPV14: calcNPV(gpNetCF, 0.14),
     isFund: names.some(n => phaseWaterfalls[n]?.isFund),
+    // Phase A: Fee attribution (aggregate across phases)
+    gpIsFundManager: names.some(n => phaseWaterfalls[n]?.gpIsFundManager !== false),
+    devFeesTotal: sum('devFeesTotal'),
+    fundLevelFeesTotal: sum('fundLevelFeesTotal'),
+    subFeesTotal: sum('subFeesTotal'),
+    developerFeesReceived: sum('developerFeesReceived'),
+    // Phase C: Capital return + sponsor economics buckets
+    developerCapitalReturn: sum('developerCapitalReturn'),
+    sponsorWaterfallEconomics: sum('sponsorWaterfallEconomics'),
+    // Phase C.1: Clean developer-fee-only field
+    developerFeeOnlyReceived: sum('developerFeeOnlyReceived'),
+    // Performance Incentive (aggregated — sum of per-phase incentives)
+    perfIncentiveEnabled: names.some(n => phaseWaterfalls[n]?.perfIncentiveEnabled),
+    perfIncentiveAmount: sum('perfIncentiveAmount'),
+    perfIncentiveExcess: sum('perfIncentiveExcess'),
+    perfIncentiveYears: Math.max(...names.map(n => phaseWaterfalls[n]?.perfIncentiveYears || 0)),
+    perfIncentiveSettleYear: Math.max(...names.map(n => phaseWaterfalls[n]?.perfIncentiveSettleYear || 0)) || null,
+    lpIRR_preIncentive: null, // recomputed at aggregate level, not sum
+    gpIRR_preIncentive: null,
+    // Phase B1: Saudi-style alias outputs (recomputed from aggregated data)
+    developerEquity: gpEquity, investorEquity: lpEquity,
+    developerPct: totalEquity > 0 ? gpEquity / totalEquity : 0,
+    investorPct: totalEquity > 0 ? lpEquity / totalEquity : 0,
+    developerContribution: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)),
+    investorContribution: sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)),
+    developerDistributions: sum('gpTotalDist'), investorDistributions: sum('lpTotalDist'),
+    developerNetDistributions: sum('gpNetDist') || sum('gpTotalDist'),
+    investorNetDistributions: sum('lpNetDist') || sum('lpTotalDist'),
+    developerNetCF: gpNetCF, investorNetCF: lpNetCF,
+    developerIRR: calcIRR(gpNetCF), investorIRR: calcIRR(lpNetCF),
+    developerMOIC: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)); const nd = sum('gpNetDist') || sum('gpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    investorMOIC: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)); const nd = sum('lpNetDist') || sum('lpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    developerDPI: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (gpEquity / Math.max(1, totalEquity)); const nd = sum('gpNetDist') || sum('gpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    investorDPI: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)); const nd = sum('lpNetDist') || sum('lpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    developerNPV10: calcNPV(gpNetCF, 0.10), investorNPV10: calcNPV(lpNetCF, 0.10),
+    developerNPV12: calcNPV(gpNetCF, 0.12), investorNPV12: calcNPV(lpNetCF, 0.12),
   };
 }
 
@@ -277,7 +314,6 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   const h = project.horizon || 50;
   const phaseFinancings = {};
   const phaseWaterfalls = {};
-  const errors = [];
 
   for (const pName of phaseNames) {
     const pr = phases[pName];
@@ -300,16 +336,10 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
           try {
             const pWaterfall = computeWaterfall(vProject, vResults, pFinancing, pIr);
             if (pWaterfall) phaseWaterfalls[pName] = pWaterfall;
-          } catch (e) {
-            console.error(`Phase waterfall error (${pName}):`, e);
-            errors.push({ phase: pName, type: 'waterfall', error: e.message });
-          }
+          } catch (e) { console.error(`Phase waterfall error (${pName}):`, e); }
         }
       }
-    } catch (e) {
-      console.error(`Phase financing error (${pName}):`, e);
-      errors.push({ phase: pName, type: 'financing', error: e.message });
-    }
+    } catch (e) { console.error(`Phase financing error (${pName}):`, e); }
   }
 
   const consolidatedFinancing = aggregatePhaseFinancings(phaseFinancings, h);
@@ -329,7 +359,7 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   }
   const consolidatedWaterfall = aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h);
 
-  return { phaseFinancings, phaseWaterfalls, consolidatedFinancing, consolidatedWaterfall, errors };
+  return { phaseFinancings, phaseWaterfalls, consolidatedFinancing, consolidatedWaterfall };
 }
 
 // ═══ Legacy computePhaseWaterfalls (kept for backward compat) ═══

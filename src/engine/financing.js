@@ -105,7 +105,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // ── Dev fee (computed early — needed by ALL modes including self) ──
   const _landInCapex = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
   const _buildCapex = Math.max(0, c.totalCapex - _landInCapex);
-  const devFeeTotal = _buildCapex * (project.developerFeePct ?? 10) / 100;
+  // Developer fee basis: exclLand (construction only, default) or inclLand (construction + land)
+  const devFeeBasis = project.developerFeeBasis === "inclLand" ? devCostInclLand : _buildCapex;
+  const devFeeTotal = devFeeBasis * (project.developerFeePct ?? 10) / 100;
   // DevFee schedule: spread over construction proportional to CAPEX
   const devFeeSchedule = new Array(h).fill(0);
   {

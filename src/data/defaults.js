@@ -23,7 +23,7 @@ export const defaultProject = () => ({
   // Financing (Phase 2)
   finMode: "self", // self | debt | fund
   vehicleType: "fund", // fund | direct | spv
-  gpIsFundManager: true, // true = GP manages the fund (gets all fees). false = separate financial company
+  gpIsFundManager: false, // false = separate fund manager (default). true = GP manages the fund (gets all fees)
   fundName: "",
   fundStartYear: 0, // 0 = auto
   // Land Capitalization
@@ -62,6 +62,7 @@ export const defaultProject = () => ({
   feeTreatment: "capital", // H14: capital (ROC+Pref) | rocOnly (ROC, no Pref) | expense (no ROC, no Pref)
   graceBasis: "cod", // H10: cod | firstDraw
   developerFeePct: 10,
+  developerFeeBasis: "exclLand", // exclLand = construction cost only | inclLand = construction + land
   structuringFeePct: 1,
   structuringFeeCap: 300000, // Max structuring fee (0 = no cap)
   preEstablishmentFee: 200000, // One-time pre-establishment fee
@@ -84,6 +85,10 @@ export const defaultProject = () => ({
   lpProfitSplitPct: 70,
   prefAllocation: "proRata", // proRata (GP+LP share T1+T2) | lpOnly (T2 all to LP)
   catchupMethod: "perYear", // perYear (ZAN) | cumulative
+  // Performance Incentive (IRR-based hurdle — separate from T3 catch-up)
+  performanceIncentive: false, // Toggle on/off
+  hurdleIRR: 15, // Investor IRR hurdle % (e.g. 10-15%)
+  incentivePct: 20, // Developer's share of excess above hurdle % (e.g. 20-100%)
   // Government Incentives
   incentives: {
     capexGrant: { enabled: false, grantPct: 25, maxCap: 50000000, phases: [], timing: "construction" },

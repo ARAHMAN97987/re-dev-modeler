@@ -43,6 +43,7 @@ const defaultProject = () => ({
   feeTreatment: "capital",
   graceBasis: "cod",
   developerFeePct: 10,
+  developerFeeBasis: "exclLand",
   structuringFeePct: 0.1,
   exitStrategy: "sale",
   exitYear: 0,
@@ -53,6 +54,9 @@ const defaultProject = () => ({
   gpCatchup: true,
   carryPct: 30,
   lpProfitSplitPct: 70,
+  performanceIncentive: false,
+  hurdleIRR: 15,
+  incentivePct: 20,
   incentives: {
     capexGrant: { enabled: false, grantPct: 25, maxCap: 50000000, phases: [], timing: "construction" },
     financeSupport: { enabled: false, subType: "interestSubsidy", subsidyPct: 50, subsidyYears: 5, subsidyStart: "operation", softLoanAmount: 0, softLoanTenor: 10, softLoanGrace: 3, phases: [] },
