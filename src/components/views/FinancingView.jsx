@@ -472,7 +472,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
-            <option value="fund">{ar?"صندوق (GP/LP)":"Fund (GP/LP)"}</option>
+            <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
@@ -589,7 +589,7 @@ When to use:
         {/* ── SECTION: LAND & EQUITY ── */}
         </SecWrap>
         <SecWrap visible={hasEq} color="#8b5cf6">
-        <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · GP ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
+        <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · Dev ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
         <AB id="land" visible={hasEq}>
           {(project.landType==="lease"||project.landType==="bot")&&<FL label={ar?"رسملة حق الانتفاع؟":"Capitalize Leasehold?"} tip={ar?"الأرض مؤجرة وليست مملوكة — لكن حق الانتفاع له قيمة مالية. رسملته تعني تحويل هذي القيمة إلى حصة Equity في الصندوق.\nمثال: أرض 50,000 م² × 800 ريال = 40 مليون تُحسب كمساهمة عينية لصاحب الأرض":"The land is leased, not owned — but the leasehold right has financial value. Capitalizing it converts this value into an equity stake in the fund.\nExample: 50,000 sqm × SAR 800 = SAR 40M counted as in-kind equity contribution"}>
             <Drp lang={lang} value={cfg.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
@@ -597,14 +597,14 @@ When to use:
           {cfg.landCapitalize&&(project.landType==="lease"||project.landType==="bot")&&<>
             <div style={g2}>
               <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur} · ${dh("landCapRate")}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
-              <FL label={ar?"رسملة حق الانتفاع لصالح":"Leasehold Cap Credit To"} tip={ar?"من يُحسب له حق الانتفاع كحصة Equity: المطور أو المستثمر أو مقسمة":"Who gets the leasehold capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"}><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer - GP (default)",ar:"المطور - GP (تلقائي)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
+              <FL label={ar?"رسملة حق الانتفاع لصالح":"Leasehold Cap Credit To"} tip={ar?"من يُحسب له حق الانتفاع كحصة Equity: المطور أو المستثمر أو مقسمة":"Who gets the leasehold capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"}><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (default)",ar:"المطور (تلقائي)"},{value:"lp",en:"Investor",ar:"المستثمر"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
             </div>
-            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"}]} /></FL>}
+            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer",ar:"المطور"},{value:"lp",en:"Investor",ar:"المستثمر"}]} /></FL>}
           </>}
 
           {/* ── GP Investment Sources ── */}
           {isFundMode && <>
-            <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"استثمار المطور (GP)":"Developer Investment (GP)"}</div>
+            <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"استثمار المطور":"Developer Investment"}</div>
 
             {/* Source 2: Dev Fee as Investment */}
             <FL label={ar?"إدخال أتعاب التطوير كاستثمار؟":"Invest Dev Fee as Equity?"} tip={ar?"المطور يعيد أتعاب التطوير للصندوق كاستثمار بدل استلامها نقداً":"Developer reinvests dev fee into fund as equity instead of taking cash"}>
@@ -632,7 +632,7 @@ When to use:
                 <span style={{fontWeight:700}}>{fmt(f.totalEquity)} {cur}</span>
               </div>
               {f.gpEquityBreakdown?.landCap > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?"رسملة حق الانتفاع":"Leasehold Cap (GP)"}</span>
+                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?"رسملة حق الانتفاع":"Leasehold Cap"}</span>
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.landCap)} {cur}</span>
               </div>}
               {f.gpEquityBreakdown?.partnerLand > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -648,11 +648,11 @@ When to use:
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.cash)} {cur}</span>
               </div>}
               <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid #e5e7ec",paddingTop:4,marginTop:4}}>
-                <span style={{fontWeight:600,color:"#8b5cf6"}}>GP ({fmtPct(f.gpPct*100)})</span>
+                <span style={{fontWeight:600,color:"#8b5cf6"}}>{ar?"المطور":"Developer"} ({fmtPct(f.gpPct*100)})</span>
                 <span style={{fontWeight:700,color:"#8b5cf6"}}>{fmt(f.gpEquity)} {cur}</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{fontWeight:600,color:"#2563eb"}}>LP ({fmtPct(f.lpPct*100)})</span>
+                <span style={{fontWeight:600,color:"#2563eb"}}>{ar?"المستثمر":"Investor"} ({fmtPct(f.lpPct*100)})</span>
                 <span style={{fontWeight:700,color:"#2563eb"}}>{fmt(f.lpEquity)} {cur}</span>
               </div>
             </div>}
@@ -660,14 +660,14 @@ When to use:
 
           {/* Non-fund modes: just show GP equity */}
           {!isFundMode && hasEq && <div style={g2}>
-            <FL label={ar?"حصة المطور (GP)":"Developer Equity (GP)"} hint="0=auto" tip={ar?"مساهمة المطور النقدية. عادة 100% في وضع الدين":"Developer equity. Usually 100% in debt mode"}><Inp type="number" value={cfg.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
+            <FL label={ar?"حصة المطور":"Developer Equity"} hint="0=auto" tip={ar?"مساهمة المطور النقدية. عادة 100% في وضع الدين":"Developer equity. Usually 100% in debt mode"}><Inp type="number" value={cfg.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
           </div>}
         </AB>
 
         {/* ── SECTION: FUND STRUCTURE ── */}
         </SecWrap>
         <SecWrap visible={isFundMode} color="#16a34a">
-        <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"GP = Mgr")}` : ""} visible={isFundMode} />
+        <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"Dev = Mgr")}` : ""} visible={isFundMode} />
         <AB id="fund" visible={isFundMode}>
           <div style={g2}>
             <FL label={ar?"الهيكل القانوني":"Vehicle"} tip={ar?"صندوق: وعاء استثماري منظم من هيئة السوق المالية. فيه اشتراك وإدارة ومراجع — الأكثر حوكمة وتنظيماً\nمباشر: المطور والمستثمر يدخلون مباشرة بعقد مشاركة بدون وعاء رسمي — أبسط وأقل رسوم\nSPV: شركة ذات غرض خاص تُنشأ للمشروع فقط — تعزل المخاطر عن الأطراف":"Fund: CMA-regulated vehicle with subscription, management, auditor — highest governance\nDirect: Developer and investor enter via partnership agreement — simpler, fewer fees\nSPV: Special Purpose Vehicle created for this project only — isolates risk"}><Drp lang={lang} value={cfg.vehicleType} onChange={v=>{const reset=v!=="fund"?{subscriptionFeePct:0,structuringFeePct:0,structuringFeeCap:0,preEstablishmentFee:0,spvFee:0,auditorFeeAnnual:0,mgmtFeeCapAnnual:0,custodyFeeAnnual:0}:{};upCfg({vehicleType:v,...reset});}} options={[{value:"fund",en:"Fund - Regulated (default)",ar:"صندوق - منظم (تلقائي)"},{value:"direct",en:"Direct (Partnership)",ar:"مباشر (شراكة)"},{value:"spv",en:"SPV (Ring-fenced)",ar:"SPV (معزول)"}]} /></FL>
@@ -696,8 +696,8 @@ When to use:
                 </div>
               </div>;
             })()}
-            <FL label={ar?"المطور = مدير الصندوق؟":"GP = Fund Manager?"} tip={ar?"نعم: المطور يدير الصندوق ويستلم كل الرسوم (تطوير + إدارة + هيكلة)\nلا: شركة مالية مستقلة تدير الصندوق. المطور يأخذ رسوم التطوير فقط":"Yes: Developer manages the fund and receives all fees\nNo: Separate financial company manages. Developer gets dev fee only"}>
-              <Drp lang={lang} value={cfg.gpIsFundManager===false?"N":"Y"} onChange={v=>upCfg({gpIsFundManager:v==="Y"})} options={[{value:"Y",en:"Yes (GP = Manager)",ar:"نعم (المطور = المدير)"},{value:"N",en:"No (Separate Manager)",ar:"لا (مدير مستقل)"}]} />
+            <FL label={ar?"المطور = مدير الصندوق؟":"Developer = Fund Manager?"} tip={ar?"نعم: المطور يدير الصندوق ويستلم كل الرسوم (تطوير + إدارة + هيكلة)\nلا: شركة مالية مستقلة تدير الصندوق. المطور يأخذ رسوم التطوير فقط":"Yes: Developer manages the fund and receives all fees\nNo: Separate financial company manages. Developer gets dev fee only"}>
+              <Drp lang={lang} value={cfg.gpIsFundManager===false?"N":"Y"} onChange={v=>upCfg({gpIsFundManager:v==="Y"})} options={[{value:"Y",en:"Yes (Developer = Manager)",ar:"نعم (المطور = المدير)"},{value:"N",en:"No (Separate Manager)",ar:"لا (مدير مستقل)"}]} />
             </FL>
           </div>
         </AB>
@@ -713,13 +713,13 @@ When to use:
             <FL label={ar?"أتعاب حسن الأداء %":"Performance Carry %"} tip={ar?"نسبة من الأرباح تُدفع للمطور إذا تجاوزت أرباح الصندوق العائد التفضيلي. عادة 20-30%\nمثال: لو العائد التفضيلي 15% والأرباح تجاوزته → 25% من الفائض يروح للمطور كأتعاب حسن أداء":"GP's share of profits after LP receives preferred return. Usually 20-30%\nExample: if pref is 15% and profits exceed it → 25% of excess goes to GP as performance fee"} hint={dh("carryPct")}><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:Math.max(0,Math.min(50,v))})} /></FL>
           </div>
           <div style={g3}>
-            <FL label={ar?"نسبة توزيع الممول (LP)":"Investor Split % (LP)"} tip={ar?"نسبة الأرباح المتبقية للمستثمر بعد العائد التفضيلي والـ catch-up. عادة 70-80%\nالباقي يذهب تلقائياً للمطور (GP)":"LP share of remaining profits after pref and catch-up. Usually 70-80%\nRemainder automatically goes to GP"} hint={`GP = ${100-(cfg.lpProfitSplitPct||70)}% · ${dh("lpProfitSplitPct")}`}><Inp type="number" value={cfg.lpProfitSplitPct} onChange={v=>upCfg({lpProfitSplitPct:Math.max(0,Math.min(100,v))})} /></FL>
-            <FL label={ar?"تعويض المطور (GP Catch-up)":"Developer Catch-up (GP)"} tip="بعد حصول LP على Pref، يأخذ GP حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها\nAfter LP receives pref, GP takes a larger temporary share until agreed economics are reached"><Drp lang={lang} value={cfg.gpCatchup?"Y":"N"} onChange={v=>upCfg({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
+            <FL label={ar?"نسبة توزيع المستثمر":"Investor Split %"} tip={ar?"نسبة الأرباح المتبقية للمستثمر بعد العائد التفضيلي والـ catch-up. عادة 70-80%\nالباقي يذهب تلقائياً للمطور (GP)":"LP share of remaining profits after pref and catch-up. Usually 70-80%\nRemainder automatically goes to GP"} hint={`GP = ${100-(cfg.lpProfitSplitPct||70)}% · ${dh("lpProfitSplitPct")}`}><Inp type="number" value={cfg.lpProfitSplitPct} onChange={v=>upCfg({lpProfitSplitPct:Math.max(0,Math.min(100,v))})} /></FL>
+            <FL label={ar?"التعويض (Catch-up)":"Catch-up"} tip="بعد حصول LP على Pref، يأخذ GP حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها\nAfter LP receives pref, GP takes a larger temporary share until agreed economics are reached"><Drp lang={lang} value={cfg.gpCatchup?"Y":"N"} onChange={v=>upCfg({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>
             <FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip={ar?"رأسمال: الرسوم تُسترد + تحصل عائد تفضيلي\nاسترداد فقط: تُسترد لكن بدون عائد تفضيلي\nمصروف: لا تُسترد ولا تحصل عائد":"Capital: fees earn ROC + Pref\nROC Only: fees returned but no Pref\nExpense: fees not returned, no Pref"}><select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال - استرداد + Pref (تلقائي)":"Capital - ROC + Pref (default)"}</option><option value="rocOnly">{ar?"استرداد فقط (بدون Pref)":"ROC Only (no Pref)"}</option><option value="expense">{ar?"مصروف (لا استرداد)":"Expense (no ROC)"}</option></select></FL>
           </div>
           <div style={g2}>
             <FL label={ar?"توزيع العائد التفضيلي":"Pref Allocation"} tip={ar?"نسبي: العائد التفضيلي يوزع على GP و LP بحسب حصصهم\nللممول فقط: كامل العائد التفضيلي يذهب لـ LP":"Pro Rata: pref distributed to GP and LP by ownership share\nLP Only: all pref goes to LP (default: proRata)"}>
-              <Drp lang={lang} value={cfg.prefAllocation||"proRata"} onChange={v=>upCfg({prefAllocation:v})} options={[{value:"proRata",en:"Pro Rata - GP+LP (default)",ar:"نسبي - GP+LP (تلقائي)"},{value:"lpOnly",en:"LP Only",ar:"للممول فقط"}]} />
+              <Drp lang={lang} value={cfg.prefAllocation||"proRata"} onChange={v=>upCfg({prefAllocation:v})} options={[{value:"proRata",en:"Pro Rata (default)",ar:"نسبي (تلقائي)"},{value:"lpOnly",en:"Investor Only",ar:"للممول فقط"}]} />
             </FL>
             <FL label={ar?"طريقة الـ Catch-up":"Catch-up Method"} tip={ar?"سنوي: يُحسب الـ catch-up كل سنة على حدة\nتراكمي: يُحسب على إجمالي التوزيعات التراكمية":"Per Year: catch-up calculated annually (default)\nCumulative: catch-up on total cumulative distributions"}>
               <Drp lang={lang} value={cfg.catchupMethod||"perYear"} onChange={v=>upCfg({catchupMethod:v})} options={[{value:"perYear",en:"Per Year (default)",ar:"سنوي (تلقائي)"},{value:"cumulative",en:"Cumulative",ar:"تراكمي"}]} />
@@ -824,8 +824,8 @@ When to use:
       {/* LP = 0 warning - only relevant for fund/jv where LP is expected */}
       {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv") && (
         <div style={{background:"#fef3c7",borderRadius:8,border:"1px solid #fde68a",padding:"12px 16px",marginBottom:14,fontSize:12,color:"#92400e"}}>
-          <strong>⚠ {ar?"LP Equity = صفر":"LP Equity = 0"}</strong><br/>
-          {ar ? "لا يوجد مستثمرين (LP). لتفعيل LP: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}
+          <strong>⚠ {ar?"حصة المستثمر = صفر":"Investor Equity = 0"}</strong><br/>
+          {ar ? "لا يوجد مستثمرين. لتفعيل حصة المستثمر: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}
         </div>
       )}
 
@@ -851,8 +851,8 @@ When to use:
             <div style={{fontSize:11,fontWeight:700,color:"#16a34a",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               {f.totalDebt > 0 && <><span style={{color:"#6b7080"}}>{ar?"الدين البنكي":"Bank Debt"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.totalDebt)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct((f.totalDebt/(f.devCostInclLand||1))*100)}</span></span></>}
-              {f.gpEquity > 0 && <><span style={{color:"#3b82f6"}}>{ar?"حصة المطور (GP)":"GP Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.gpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.gpPct*100)}</span></span></>}
-              {f.lpEquity > 0 && <><span style={{color:"#8b5cf6"}}>{ar?"حصة الممول (LP)":"LP Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.lpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.lpPct*100)}</span></span></>}
+              {f.gpEquity > 0 && <><span style={{color:"#3b82f6"}}>{ar?"حصة المطور":"Developer Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.gpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.gpPct*100)}</span></span></>}
+              {f.lpEquity > 0 && <><span style={{color:"#8b5cf6"}}>{ar?"حصة المستثمر":"Investor Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.lpEquity)} <span style={{fontSize:10,color:"#9ca3af"}}>{fmtPct(f.lpPct*100)}</span></span></>}
               <span style={{borderTop:"2px solid #16a34a",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
               <span style={{borderTop:"2px solid #16a34a",paddingTop:4,textAlign:"right",fontWeight:700}}>{fmt(f.totalDebt + f.gpEquity + f.lpEquity)}</span>
             </div>
@@ -870,7 +870,7 @@ When to use:
         {/* Equation */}
         <div style={{background:"#f0f4ff",borderRadius:6,padding:"8px 14px",fontSize:12}}>
           <strong>{ar?"المعادلة":"Equation"}:</strong>{" "}
-          {ar?"دين":"Debt"} ({fmtM(f.totalDebt)}) + GP ({fmtM(f.gpEquity)}){f.lpEquity > 0 ? ` + LP (${fmtM(f.lpEquity)})` : ""} = {fmtM(f.totalDebt + f.gpEquity + f.lpEquity)}{" "}
+          {ar?"دين":"Debt"} ({fmtM(f.totalDebt)}) + {ar?"المطور":"Developer"} ({fmtM(f.gpEquity)}){f.lpEquity > 0 ? ` + ${ar?"المستثمر":"Investor"} (${fmtM(f.lpEquity)})` : ""} = {fmtM(f.totalDebt + f.gpEquity + f.lpEquity)}{" "}
           {Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - f.devCostInclLand) < 1000
             ? <span style={{color:"#16a34a",fontWeight:600}}>✓</span>
             : <span style={{color:"#ef4444",fontWeight:600}}>✗ ≠ {fmtM(f.devCostInclLand)}</span>}

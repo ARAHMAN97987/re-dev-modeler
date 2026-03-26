@@ -304,8 +304,8 @@ function buildDashboard(wb, project, results, financing, waterfall, cur, h, sy) 
     row += 2;
     const finData = [
       ["Total Equity", fm(f.totalEquity), cur, "Max Debt", fm(f.maxDebt), cur],
-      ["GP Equity", fm(f.gpEquity), cur, "Finance Rate", fp(f.rate), "%"],
-      ["LP Equity", fm(f.lpEquity), cur, "Tenor", f.tenor, "years"],
+      ["Developer Equity", fm(f.gpEquity), cur, "Finance Rate", fp(f.rate), "%"],
+      ["Investor Equity", fm(f.lpEquity), cur, "Tenor", f.tenor, "years"],
       ["Dev Cost (excl. land)", fm(f.devCostExclLand), cur, "Grace Period", f.grace, "years"],
       ["Dev Cost (incl. land)", fm(f.devCostInclLand), cur, "Total Interest", fm(f.totalInterest), cur],
       ["Levered IRR", fp(f.leveredIRR), "", "Upfront Fee", fm(f.upfrontFee), cur],
@@ -330,7 +330,7 @@ function buildDashboard(wb, project, results, financing, waterfall, cur, h, sy) 
   if (w) {
     sectionHeader(ws, row, 3, 8, "◆  Investor Returns");
     row += 2;
-    tableHeader(ws, row, ["", "", "Metric", "", "LP", "GP", "", "", "Project", "", "", "", "", ""]);
+    tableHeader(ws, row, ["", "", "Metric", "", "Investor", "Developer", "", "", "Project", "", "", "", "", ""]);
     row++;
     const wData = [
       ["Equity Invested", fm(w.lpEquity), fm(w.gpEquity), fm(w.totalEquity), "#,##0"],
@@ -411,7 +411,7 @@ function buildInputs(wb, project, cur) {
   }
   if (project.landCapitalize) {
     inp("Land Capitalization Rate (" + cur + "/m²)", project.landCapRate || 1000, "معدل رسملة الأرض", "#,##0");
-    inp("Land Cap Assigned To", project.landCapTo === "lp" ? "LP (المستثمر)" : project.landCapTo === "split" ? "Split (مقسم)" : "GP (المطور)", "الرسملة تُسند لـ");
+    inp("Land Cap Assigned To", project.landCapTo === "lp" ? "Investor (المستثمر)" : project.landCapTo === "split" ? "Split (مقسم)" : "Developer (المطور)", "الرسملة تُسند لـ");
   }
   row++;
 
@@ -422,7 +422,7 @@ function buildInputs(wb, project, cur) {
 
   if (project.finMode && project.finMode !== "self") {
     section("FINANCING PARAMETERS  بيانات التمويل");
-    inp("Financing Mode", project.finMode === "fund" ? "Fund (GP/LP)" : project.finMode === "bank" ? "Bank Debt" : project.finMode, "نوع التمويل");
+    inp("Financing Mode", project.finMode === "fund" ? "Fund (Developer/Investor)" : project.finMode === "bank" ? "Bank Debt" : project.finMode, "نوع التمويل");
     inp("Debt Allowed", project.debtAllowed ? "Yes" : "No", "الدين مسموح");
     inp("Max LTV %", (project.maxLtvPct || 70) / 100, "نسبة القرض للقيمة", "0%");
     inp("Finance Rate (annual)", (project.financeRate ?? 6.5) / 100, "معدل الربح السنوي", "0.0%");
@@ -447,9 +447,9 @@ function buildInputs(wb, project, cur) {
 
     section("WATERFALL PARAMETERS  شلال التوزيع");
     inp("Preferred Return %", (project.prefReturnPct ?? 15) / 100, "العائد التفضيلي", "0.0%");
-    inp("GP Catch-up", project.gpCatchup ? "Yes" : "No", "حق اللحاق");
+    inp("Catch-up", project.gpCatchup ? "Yes" : "No", "حق اللحاق");
     inp("Carry %", (project.carryPct ?? 30) / 100, "حصة الأداء", "0.0%");
-    inp("LP Profit Split %", (project.lpProfitSplitPct ?? 70) / 100, "حصة المستثمرين من الأرباح", "0%");
+    inp("Investor Profit Split %", (project.lpProfitSplitPct ?? 70) / 100, "حصة المستثمرين من الأرباح", "0%");
     inp("Fee Treatment", project.feeTreatment === "expense" ? "Expense (مصروف)" : "Capital (رأسمال)", "معاملة الرسوم");
     row++;
 
@@ -757,11 +757,11 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
   sectionHeader(ws, row, 1, 10, "2  هيكل رأس المال  CAPITAL STRUCTURE");
   row++;
   const capStruct = [
-    ["GP Equity  حقوق المطور", fm(f.gpEquity), "#,##0"],
-    ["LP Equity  حقوق المستثمرين", fm(f.lpEquity), "#,##0"],
+    ["Developer Equity  حقوق المطور", fm(f.gpEquity), "#,##0"],
+    ["Investor Equity  حقوق المستثمرين", fm(f.lpEquity), "#,##0"],
     ["Total Equity  إجمالي رأس المال", fm(f.totalEquity), "#,##0"],
     ["Sponsor %", fp(f.gpPct), "0.0%"],
-    ["LP %", fp(f.lpPct), "0.0%"],
+    ["Investor %", fp(f.lpPct), "0.0%"],
     ["Dev Cost Excl Land  تكلفة التطوير بدون الأرض", fm(f.devCostExclLand), "#,##0"],
     ["Dev Cost Incl Land  تكلفة التطوير مع الأرض", fm(f.devCostInclLand), "#,##0"],
   ];
@@ -827,7 +827,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
     ws.getCell(row, 3).value = (project.prefReturn || 15) / 100;
     ws.getCell(row, 3).numFmt = "0.0%";
     row++;
-    ws.getCell(row, 2).value = "GP Catch-up  حق اللحاق";
+    ws.getCell(row, 2).value = "Catch-up  حق اللحاق";
     ws.getCell(row, 3).value = project.gpCatchup ? "Y" : "N";
     row++;
     ws.getCell(row, 2).value = "Carry %  حصة الأداء";
@@ -985,13 +985,13 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
       ["Tier 2: Preferred Return Paid  سداد العائد التفضيلي", w.tier2?.reduce((a, b) => a + b, 0), w.tier2, false],
       [null, null, null, false],
       ["Remaining After ROC + Pref", null, null, false],
-      ["Tier 3: GP Catch-up", w.tier3?.reduce((a, b) => a + b, 0), w.tier3, false],
+      ["Tier 3: Catch-up", w.tier3?.reduce((a, b) => a + b, 0), w.tier3, false],
       ["Tier 4: Profit Split  تقسيم الأرباح", null, null, false],
-      ["  → LP  حصة المستثمرين", w.tier4LP?.reduce((a, b) => a + b, 0), w.tier4LP, false],
-      ["  → GP / Carry  حصة الأداء", w.tier4GP?.reduce((a, b) => a + b, 0), w.tier4GP, false],
+      ["  → Investor  حصة المستثمرين", w.tier4LP?.reduce((a, b) => a + b, 0), w.tier4LP, false],
+      ["  → Developer / Carry  حصة الأداء", w.tier4GP?.reduce((a, b) => a + b, 0), w.tier4GP, false],
       [null, null, null, false],
-      ["Total Distribution to LP  إجمالي التوزيعات للمستثمرين", w.lpTotalDist, w.lpDist, true],
-      ["Total Distribution to GP  إجمالي التوزيعات للمطور", w.gpTotalDist, w.gpDist, true],
+      ["Total Distribution to Investor  إجمالي التوزيعات للمستثمرين", w.lpTotalDist, w.lpDist, true],
+      ["Total Distribution to Developer  إجمالي التوزيعات للمطور", w.gpTotalDist, w.gpDist, true],
       ["Total Distributions  إجمالي التوزيعات", (w.lpTotalDist || 0) + (w.gpTotalDist || 0), null, true],
     ];
 
@@ -1021,8 +1021,8 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
     row++;
 
     const retRows = [
-      ["LP Net Cash Flow", w.lpNetCF?.reduce((a, b) => a + b, 0), w.lpNetCF, false],
-      ["GP Net Cash Flow", w.gpNetCF?.reduce((a, b) => a + b, 0), w.gpNetCF, false],
+      ["Investor Net Cash Flow", w.lpNetCF?.reduce((a, b) => a + b, 0), w.lpNetCF, false],
+      ["Developer Net Cash Flow", w.gpNetCF?.reduce((a, b) => a + b, 0), w.gpNetCF, false],
     ];
     retRows.forEach(([label, total, arr, bold]) => {
       const r = [null, label, cur, fm(total)];
@@ -1033,7 +1033,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
 
     // Summary table
     row += 2;
-    const sumHdr = [null, "Returns Summary", "", "LP", "GP", "Project"];
+    const sumHdr = [null, "Returns Summary", "", "Investor", "Developer", "Project"];
     sumHdr.forEach((v, i) => {
       const cell = ws.getCell(row, i + 1);
       cell.value = v;
@@ -1309,7 +1309,7 @@ function buildDocumentation(wb, project, cur, h, sy) {
     ["MOIC", "Total Distributions / Equity Invested"],
     ["DPI", "Total Distributions / Total Equity Called (paid-in capital, incl. fees if capital treatment)"],
     ["Land Rent", "Base rent with N-year step escalation, grace period applied"],
-    ["Waterfall", "4-tier: ROC → Preferred Return → GP Catch-up → Profit Split"],
+    ["Waterfall", "4-tier: ROC → Preferred Return → Catch-up → Profit Split"],
     ["Interest Calc", "Rate × Average of (Opening Balance + Drawdown + Closing Balance) / 2"],
     ["", ""],
     ["DISCLAIMER  إخلاء المسؤولية", ""],

@@ -342,7 +342,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             const pw = phaseWaterfalls?.[p];
             const irr = pw?.lpIRR;
             return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
-              {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>LP {(irr*100).toFixed(1)}%</span> : ""}
+              {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>{(irr*100).toFixed(1)}%</span> : ""}
             </button>;
           })}
           {isFiltered && !isSinglePhase && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${allPhaseNames.length} مراحل`:`Showing ${activePh.length} of ${allPhaseNames.length} phases`}</span>}
@@ -365,7 +365,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
           <span style={{fontSize:13}}>⚡</span>
           <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تعديل سريع - شروط الصندوق":"Quick Edit - Fund Terms"}</span>
-          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · Carry {cfg.carryPct||20}% · LP {cfg.lpProfitSplitPct||75}%</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · Carry {cfg.carryPct||20}% · Inv {cfg.lpProfitSplitPct||75}%</span>
           <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
         </div>
         {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe",animation:"zanSlide 0.15s ease"}}>
@@ -375,13 +375,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             {[
               {l:ar?"العائد التفضيلي %":"Pref Return %",k:"prefReturnPct",v:cfg.prefReturnPct},
               {l:ar?"أتعاب حسن الأداء %":"Carry %",k:"carryPct",v:cfg.carryPct},
-              {l:ar?"حصة LP %":"LP Split %",k:"lpProfitSplitPct",v:cfg.lpProfitSplitPct},
+              {l:ar?"حصة المستثمر %":"Investor Split %",k:"lpProfitSplitPct",v:cfg.lpProfitSplitPct},
             ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{f.l}</span>
               <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>)}
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"GP Catch-up":"Catch-up"}</span>
+              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"التعويض":"Catch-up"}</span>
               <select value={cfg.gpCatchup?"Y":"N"} onChange={e=>upCfg({gpCatchup:e.target.value==="Y"})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
                 <option value="Y">{ar?"نعم":"Yes"}</option><option value="N">{ar?"لا":"No"}</option>
               </select>
@@ -452,7 +452,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {/* ── GP (Developer) Card ── */}
         <div style={{background:kpiOpen.gp?"#fff":"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:kpiOpen.gp?"2px solid #3b82f6":"1px solid #bfdbfe",padding:"12px 16px",transition:"all 0.2s"}}>
           <div onClick={()=>setKpiOpen(p=>({...p,gp:!p.gp}))} style={cardHd}>
-            <span style={{width:22,height:22,borderRadius:5,background:"#3b82f6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>GP</span>
+            <span style={{width:22,height:22,borderRadius:5,background:"#3b82f6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>Dev</span>
             <span style={{fontSize:11,fontWeight:700,color:"#1e40af",flex:1}}>{ar?"المطور":"Developer"}</span>
             <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.gp?"▲":"▼"}</span>
           </div>
@@ -478,9 +478,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
                 <KR l="SPV" v={fmt(_feeSpv)} c="#a16207" />
                 <KR l={ar?"مراجع":"Auditor"} v={fmt(_feeAuditor)} c="#a16207" />
               </>}
-              {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (GP)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (GP)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
+              {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (المطور)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (Developer)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
               <SecHd text={ar?"الملخص":"NET SUMMARY"} />
-              <KR l={ar?"حصة GP":"GP Equity"} v={fmt(w.gpTotalInvested)} bold />
+              <KR l={ar?"حصة المطور":"Developer Equity"} v={fmt(w.gpTotalInvested)} bold />
               <KR l={ar?"توزيعات حافز الأداء":"Waterfall Dist"} v={fmt(w.gpTotalDist)} />
               <KR l={ar?"رسوم مستلمة":"Fees Received"} v={fmt(gpFeesTotal)} c="#a16207" />
               {(w.gpLandRentTotal||0)>0 && <KR l={ar?"إيجار أرض":"Land Rent"} v={`(${fmt(w.gpLandRentTotal)})`} c="#ef4444" />}
@@ -499,7 +499,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {/* ── LP (Investor) Card ── */}
         <div style={{background:kpiOpen.lp?"#fff":"linear-gradient(135deg, #faf5ff, #f5f3ff)",borderRadius:10,border:kpiOpen.lp?"2px solid #8b5cf6":"1px solid #e9d5ff",padding:"12px 16px",transition:"all 0.2s"}}>
           <div onClick={()=>setKpiOpen(p=>({...p,lp:!p.lp}))} style={cardHd}>
-            <span style={{width:22,height:22,borderRadius:5,background:"#8b5cf6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>LP</span>
+            <span style={{width:22,height:22,borderRadius:5,background:"#8b5cf6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>Inv</span>
             <span style={{fontSize:11,fontWeight:700,color:"#5b21b6",flex:1}}>{ar?"المستثمر":"Investor"}</span>
             <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.lp?"▲":"▼"}</span>
           </div>
@@ -516,7 +516,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={fmt(lpT2)} c="#8b5cf6" />
               <KR l={ar?"توزيع أرباح (T4)":"Profit Split (T4)"} v={fmt(t4LPTotal)} c="#16a34a" />
               <SecHd text={ar?"الصافي":"NET"} />
-              <KR l={ar?"حصة LP":"LP Equity"} v={fmt(w.lpTotalInvested)} bold />
+              <KR l={ar?"حصة المستثمر":"Investor Equity"} v={fmt(w.lpTotalInvested)} bold />
               <KR l={ar?"إجمالي التوزيعات":"Total Distributions"} v={fmt(w.lpTotalDist)} c="#8b5cf6" />
               <KR l={ar?"صافي النقد":"Net Cash"} v={fmtM(lpNetCash)} c={lpNetCash>=0?"#16a34a":"#ef4444"} bold />
               <SecHd text={ar?"المؤشرات":"METRICS"} />
@@ -564,7 +564,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               </div>
               <SecHd text={ar?"رأس المال":"CAPITAL"} />
               <KR l={ar?"إجمالي الملكية":"Total Equity"} v={fmtM(w.totalEquity)} bold />
-              <KR l="LP / GP" v={`${fmtPct(lpPctVal*100)} / ${fmtPct(gpPctVal*100)}`} />
+              <KR l={ar?"المستثمر / المطور":"Investor / Developer"} v={`${fmtPct(lpPctVal*100)} / ${fmtPct(gpPctVal*100)}`} />
               <KR l={ar?"دين":"Debt"} v={f?.totalDebt ? fmtM(f.totalDebt) : "—"} c="#ef4444" />
               <SecHd text={ar?"التخارج":"EXIT"} />
               <KR l={ar?"السنة":"Year"} v={exitYr>0?`${exitYr} (${sy+exitYr-1})`:"—"} />
@@ -605,8 +605,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <YAxis tick={{fontSize:10,fill:"#6b7080"}} tickFormatter={v => v>=1e6?`${(v/1e6).toFixed(0)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:v} />
               <Tooltip formatter={(v) => fmt(v)} />
               <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} />
-              <Area type="monotone" dataKey="lp" stroke="#8b5cf6" strokeWidth={2} fill="url(#lpG)" name="LP" dot={false} />
-              <Area type="monotone" dataKey="gp" stroke="#3b82f6" strokeWidth={2} fill="url(#gpG)" name="GP" dot={false} />
+              <Area type="monotone" dataKey="lp" stroke="#8b5cf6" strokeWidth={2} fill="url(#lpG)" name="Investor" dot={false} />
+              <Area type="monotone" dataKey="gp" stroke="#3b82f6" strokeWidth={2} fill="url(#gpG)" name="Developer" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>}
@@ -706,47 +706,47 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
       {/* Remaining + T3/T4 */}
       {(() => { const rem = new Array(h).fill(0); for(let y=0;y<h;y++) rem[y]=Math.max(0,(w.cashAvail[y]||0)-(w.tier1[y]||0)-(w.tier2[y]||0)); const tot=rem.reduce((a,b)=>a+b,0); return tot>0?<CFRow label={ar?"المتبقي بعد ROC + Pref":"Remaining After ROC + Pref"} values={rem} total={tot} bold />:null; })()}
-      <CFRow label={ar?"T3: تعويض المطور":"T3: GP Catch-up"} values={w.tier3} total={t3Total} color="#f59e0b" />
+      <CFRow label={ar?"T3: التعويض":"T3: Catch-up"} values={w.tier3} total={t3Total} color="#f59e0b" />
       <CFRow label={ar?"T4: توزيع الأرباح":"T4: Profit Split"} values={(() => { const a=new Array(h).fill(0); for(let y=0;y<h;y++) a[y]=(w.tier4LP[y]||0)+(w.tier4GP[y]||0); return a; })()} total={t4LPTotal+t4GPTotal} color="#16a34a" />
       <tr style={{background:"#f0fdf4"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontSize:10,color:"#16a34a",paddingInlineStart:24}}>→ LP ({cfg.lpProfitSplitPct||75}%)</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontSize:10,color:"#16a34a",paddingInlineStart:24}}>→ {ar?"المستثمر":"Investor"} ({cfg.lpProfitSplitPct||75}%)</td>
         <td style={{...tdN,fontSize:10,color:"#16a34a"}}>{fmt(t4LPTotal)}</td>
         {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:"#16a34a"}}>{(w.tier4LP[y]||0)===0?"—":fmt(w.tier4LP[y])}</td>)}
       </tr>
       <tr style={{background:"#f0fdf4"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontSize:10,color:"#3b82f6",paddingInlineStart:24}}>→ GP ({100-(cfg.lpProfitSplitPct||75)}%)</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontSize:10,color:"#3b82f6",paddingInlineStart:24}}>→ {ar?"المطور":"Developer"} ({100-(cfg.lpProfitSplitPct||75)}%)</td>
         <td style={{...tdN,fontSize:10,color:"#3b82f6"}}>{fmt(t4GPTotal)}</td>
         {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:"#3b82f6"}}>{(w.tier4GP[y]||0)===0?"—":fmt(w.tier4GP[y])}</td>)}
       </tr>
 
       {/* Distribution totals */}
-      <CFRow label={ar?"إجمالي توزيعات LP":"Total LP Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
-      <CFRow label={ar?"إجمالي توزيعات GP":"Total GP Distributions"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
+      <CFRow label={ar?"إجمالي توزيعات المستثمر":"Total Investor Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
+      <CFRow label={ar?"إجمالي توزيعات المطور":"Total Developer Distributions"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
       </>}
 
       {/* ═══ § 10. INVESTOR RETURNS ═══ */}
       <tr onClick={()=>setWSec(p=>({...p,s10:!p.s10}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#92400e",background:"#fefce8",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #ca8a04",userSelect:"none"}}>{wSec.s10?"▶":"▼"} {ar?"10. عوائد المستثمر":"10. INVESTOR RETURNS"}</td></tr>
       {!wSec.s10 && <>
-      <CFRow label={ar?"صافي CF المستثمر (LP)":"LP Net Cash Flow"} values={w.lpNetCF} total={w.lpNetCF.reduce((a,b)=>a+b,0)} bold />
+      <CFRow label={ar?"صافي CF المستثمر":"Investor Net Cash Flow"} values={w.lpNetCF} total={w.lpNetCF.reduce((a,b)=>a+b,0)} bold />
       {(() => { let cum=0; return <tr style={{background:"#faf5ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:600,fontSize:10,color:"#7c3aed",paddingInlineStart:20}}>{ar?"↳ تراكمي LP":"↳ LP Cumulative"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:600,fontSize:10,color:"#7c3aed",paddingInlineStart:20}}>{ar?"↳ تراكمي المستثمر":"↳ Investor Cumulative"}</td>
         <td style={tdN}></td>
         {years.map(y=>{cum+=w.lpNetCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
       </tr>; })()}
       {w.lpTotalInvested > 0 && <tr>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>{ar?"عائد نقدي LP %":"LP Cash Yield %"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>{ar?"عائد نقدي المستثمر %":"Investor Cash Yield %"}</td>
         <td style={tdN}></td>
         {years.map(y=>{const v=lpCashYield[y]||0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#d0d4dc"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
       </tr>}
 
-      <CFRow label={ar?"صافي CF المطور (GP)":"GP Net Cash Flow"} values={w.gpNetCF} total={w.gpNetCF.reduce((a,b)=>a+b,0)} bold />
+      <CFRow label={ar?"صافي CF المطور":"Developer Net Cash Flow"} values={w.gpNetCF} total={w.gpNetCF.reduce((a,b)=>a+b,0)} bold />
       {(() => { let cum=0; return <tr style={{background:"#eff6ff"}}>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:600,fontSize:10,color:"#1e40af",paddingInlineStart:20}}>{ar?"↳ تراكمي GP":"↳ GP Cumulative"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:600,fontSize:10,color:"#1e40af",paddingInlineStart:20}}>{ar?"↳ تراكمي المطور":"↳ Developer Cumulative"}</td>
         <td style={tdN}></td>
         {years.map(y=>{cum+=w.gpNetCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:10,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
       </tr>; })()}
       {w.gpTotalInvested > 0 && <tr>
-        <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>{ar?"عائد نقدي GP %":"GP Cash Yield %"}</td>
+        <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>{ar?"عائد نقدي المطور %":"Developer Cash Yield %"}</td>
         <td style={tdN}></td>
         {years.map(y=>{const v=gpCashYield[y]||0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#d0d4dc"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
       </tr>}
@@ -891,8 +891,8 @@ function ExitAnalysisPanel({ project, results, financing, waterfall, lang, globa
               </>}
               {f.totalEquity > 0 && <><span style={{color:"#6b7080"}}>{ar?"العائد / الملكية":"Proceeds / Equity"}</span><span style={{textAlign:"right",fontWeight:600,color:"#16a34a"}}>{(exitProc/f.totalEquity).toFixed(2)}x</span></>}
               {hasWaterfall && <>
-                <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#8b5cf6"}}>{ar?"حصة LP من التخارج":"LP Exit Share"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM((w.lpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
-                <span style={{color:"#3b82f6"}}>{ar?"حصة GP من التخارج":"GP Exit Share"}</span><span style={{textAlign:"right",fontWeight:500,color:"#3b82f6"}}>{fmtM((w.gpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
+                <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#8b5cf6"}}>{ar?"حصة المستثمر من التخارج":"Investor Exit Share"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM((w.lpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
+                <span style={{color:"#3b82f6"}}>{ar?"حصة المطور من التخارج":"Developer Exit Share"}</span><span style={{textAlign:"right",fontWeight:500,color:"#3b82f6"}}>{fmtM((w.gpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
               </>}
             </div>
           </div>

@@ -99,14 +99,14 @@ function _buildXLSX(XLSX, project, results, financing, waterfall) {
       s1.push(['  Land Capitalization', fm(f.landCapValue||0), '  Tenor', project.loanTenor + ' yrs (' + project.debtGrace + ' grace)']);
       s1.push(['  Dev Cost Incl Land', fm(f.devCostInclLand), '  Total Interest', fm(f.totalInterest)]);
       s1.push(['  Max Debt (' + (project.maxLtvPct||70) + '% LTV)', fm(f.maxDebt), '  Levered IRR', f.leveredIRR ? fp(f.leveredIRR) : 'N/A']);
-      s1.push(['  GP Equity', fm(f.gpEquity), '  Upfront Fee', fm(f.upfrontFee)]);
-      if (f.lpEquity > 0) s1.push(['  LP Equity', fm(f.lpEquity)]);
+      s1.push(['  Developer Equity', fm(f.gpEquity), '  Upfront Fee', fm(f.upfrontFee)]);
+      if (f.lpEquity > 0) s1.push(['  Investor Equity', fm(f.lpEquity)]);
       s1.push(['  Total Equity', fm(f.totalEquity)]);
       s1.push([]);
     }
 
     if (w) {
-      s1.push(['\u25B8 INVESTOR RETURNS', '', 'LP', 'GP']);
+      s1.push(['\u25B8 INVESTOR RETURNS', '', 'Investor', 'Developer']);
       s1.push(['  Equity (' + cur + ')', '', fm(w.lpEquity), fm(w.gpEquity)]);
       s1.push(['  Equity %', '', fp(w.lpPct), fp(w.gpPct)]);
       s1.push(['  Total Distributions', '', fm(w.lpTotalDist), fm(w.gpTotalDist)]);
@@ -161,7 +161,7 @@ function _buildXLSX(XLSX, project, results, financing, waterfall) {
       const s4 = [];
       s4.push(['WATERFALL DISTRIBUTIONS', '', '', '', '', '', '', '', '', '', '', '', '', cur]);
       s4.push([]);
-      s4.push(['Year','Calendar','Equity Calls','Cash Available','T1: ROC','T2: Pref Return','T3: GP Catch-up','T4: LP Split','T4: GP Split','LP Distribution','GP Distribution','LP Net CF','GP Net CF']);
+      s4.push(['Year','Calendar','Equity Calls','Cash Available','T1: ROC','T2: Pref Return','T3: Catch-up','T4: Investor Split','T4: Developer Split','Investor Distribution','Developer Distribution','Investor Net CF','Developer Net CF']);
       yrs.forEach(y => {
         s4.push([y+1, sy+y, fm(w.equityCalls[y]), fm(w.cashAvail[y]), fm(w.tier1[y]), fm(w.tier2[y]), fm(w.tier3[y]), fm(w.tier4LP[y]), fm(w.tier4GP[y]), fm(w.lpDist[y]), fm(w.gpDist[y]), fm(w.lpNetCF[y]), fm(w.gpNetCF[y])]);
       });
@@ -250,7 +250,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
 
   if (w) {
     sections.push(["INVESTOR RETURNS"]);
-    sections.push(["", "LP", "GP"]);
+    sections.push(["", "Investor", "Developer"]);
     sections.push(["Equity", w.lpEquity, w.gpEquity]);
     sections.push(["Equity %", (w.lpPct * 100).toFixed(1) + "%", (w.gpPct * 100).toFixed(1) + "%"]);
     sections.push(["Total Distributions", w.lpTotalDist, w.gpTotalDist]);
@@ -280,7 +280,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
 
   if (w) {
     sections.push(["WATERFALL DISTRIBUTIONS"]);
-    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "T1:ROC", "T2:Pref", "T3:Catchup", "T4:Investor Split (LP)", "T4:Developer Split (GPt", "LP Dist", "GP Dist", "LP Net CF", "GP Net CF"]);
+    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "T1:ROC", "T2:Pref", "T3:Catchup", "T4:Investor Split", "T4:Developer Split", "Investor Dist", "Developer Dist", "Investor Net CF", "Developer Net CF"]);
     yrs.forEach(y => {
       sections.push([y + 1, sy + y, w.equityCalls[y], w.cashAvail[y], w.tier1[y], w.tier2[y], w.tier3[y], w.tier4LP[y], w.tier4GP[y], w.lpDist[y], w.gpDist[y], w.lpNetCF[y], w.gpNetCF[y]]);
     });
@@ -543,7 +543,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               {l:ar?"IRR (قبل التمويل)":"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",ac:"#2563eb"},
               {l:"NPV @10%",v:fmtM(fc.npv10),ac:"#06b6d4"},
               ...(f&&f.mode!=="self"&&!isFiltered?[{l:ar?"IRR (بعد التمويل)":"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"إجمالي الدين":"Total Debt",v:fmtM(f.totalDebt),ac:"#f59e0b"}]:[]),
-              ...(fw?[{l:ar?"عائد الممول (LP)":"Investor IRR (LP)",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"مضاعف الممول (LP)":"Investor MOIC (LP)",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e"}]:[]),
+              ...(fw?[{l:ar?"عائد المستثمر":"Investor IRR",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"مضاعف المستثمر":"Investor MOIC",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e"}]:[]),
             ].map((k,i) => (
               <div key={i} style={{...zanKpi(k.ac)}}>
                 <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
@@ -938,9 +938,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           {/* Primary LP metrics - big and prominent */}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3, 1fr)",gap:10,marginBottom:12}}>
             {[
-              {l:ar?"عائد LP المستهدف":"Target LP IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#0f766e",big:true},
-              {l:ar?"مضاعف LP":"LP MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e",big:true},
-              {l:ar?"فترة الاسترداد":"LP Payback",v:(()=>{if(!fw?.lpNetCF)return "—";let cum=0,wasNeg=false;for(let y=0;y<h;y++){cum+=fw.lpNetCF[y]||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"yr");}return "—";})(),ac:"#0f766e",big:true},
+              {l:ar?"عائد المستثمر المستهدف":"Target Investor IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#0f766e",big:true},
+              {l:ar?"مضاعف المستثمر":"Investor MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e",big:true},
+              {l:ar?"فترة الاسترداد":"Investor Payback",v:(()=>{if(!fw?.lpNetCF)return "—";let cum=0,wasNeg=false;for(let y=0;y<h;y++){cum+=fw.lpNetCF[y]||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"yr");}return "—";})(),ac:"#0f766e",big:true},
             ].map((k,i) => (
               <div key={i} style={{...zanKpi(k.ac),textAlign:"center",padding:"14px 12px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
@@ -968,12 +968,12 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <tbody>
               {[
                 [ar?"استراتيجية الصندوق":"Fund Strategy",ar?"تطوير واحتفاظ":"Develop & Hold"],[ar?"العملة":"Currency",cur],
-                [ar?"حقوق ملكية GP (مساهمة الأرض)":"GP Equity (Land Contribution)",fw?fmt(fw.gpEquity)+" "+cur+" ("+fmtPct(fw.gpPct*100)+")":"—"],
-                [ar?"حقوق ملكية LP المطلوبة":"LP Equity Required",fw?fmt(fw.lpEquity)+" "+cur+" ("+fmtPct(fw.lpPct*100)+")":"—"],
+                [ar?"حقوق ملكية المطور":"Developer Equity",fw?fmt(fw.gpEquity)+" "+cur+" ("+fmtPct(fw.gpPct*100)+")":"—"],
+                [ar?"حقوق ملكية المستثمر المطلوبة":"Investor Equity Required",fw?fmt(fw.lpEquity)+" "+cur+" ("+fmtPct(fw.lpPct*100)+")":"—"],
                 [ar?"العائد المفضل":"Preferred Return",(project.prefReturnPct||15)+"% "+(ar?"سنوي على رأس المال غير المسترد":"p.a. on unreturned capital")],
-                [ar?"اللحاق GP":"GP Catch-up",project.gpCatchup?(ar?"نعم":"Yes"):(ar?"لا":"No")],
+                [ar?"التعويض":"Catch-up",project.gpCatchup?(ar?"نعم":"Yes"):(ar?"لا":"No")],
                 [ar?"أداء / حمولة":"Carry / Performance Fee",(project.carryPct||30)+"%"],
-                [ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)","LP "+(project.lpProfitSplitPct||70)+"% / GP "+(100-(project.lpProfitSplitPct||70))+"%"],
+                [ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)",(ar?"المستثمر":"Investor")+" "+(project.lpProfitSplitPct||70)+"% / "+(ar?"المطور":"Developer")+" "+(100-(project.lpProfitSplitPct||70))+"%"],
                 [ar?"رسوم الاشتراك":"Subscription Fee",(project.subscriptionFeePct||2)+"%"],
                 [ar?"رسوم الإدارة السنوية":"Annual Management Fee",(project.annualMgmtFeePct||0.9)+"%"],
                 [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من التكاليف":"of CAPEX")],
@@ -989,7 +989,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               {[
                 {l:ar?"إعادة رأس المال":"Return of Capital",v:fmtM(fw.tier1.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dbeafe,#eff6ff)",bd:"#93c5fd"},
                 {l:ar?"العائد المفضل":"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dcfce7,#f0fdf4)",bd:"#86efac"},
-                {l:ar?"لحاق GP":"GP Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",bd:"#fcd34d"},
+                {l:ar?"التعويض":"Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",bd:"#fcd34d"},
                 {l:ar?"تقسيم الأرباح":"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"linear-gradient(135deg,#ede9fe,#f5f3ff)",bd:"#c4b5fd"},
               ].map((t,i)=>(
                 <div key={i} style={{flex:1,minWidth:isMobile?140:"auto",background:t.bg,borderRadius:8,padding:"12px",textAlign:"center",border:`1px solid ${t.bd}`}}>
@@ -1003,8 +1003,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr style={{background:"#0f1117"}}>
                 <th style={zanTh}>{ar?"المؤشر":"Metric"}</th>
-                <th style={{...zanTh,textAlign:"center",background:"#0f766e"}}>{ar?"المستثمر (LP)":"LP (Investor)"}</th>
-                <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المطور (GP)":"GP (Sponsor)"}</th>
+                <th style={{...zanTh,textAlign:"center",background:"#0f766e"}}>{ar?"المستثمر":"Investor"}</th>
+                <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المطور":"Developer"}</th>
                 <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المشروع":"Project"}</th>
               </tr></thead>
               <tbody>
@@ -1050,8 +1050,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                   </div>
                 ))}
                 <div style={{display:"flex",gap:16,marginTop:6,fontSize:9,color:"#6b7080"}}>
-                  <span><span style={{display:"inline-block",width:10,height:6,background:"#8b5cf6",borderRadius:2,marginRight:3}} />LP {ar?"التراكمي":"Cumulative"}</span>
-                  <span><span style={{display:"inline-block",width:10,height:6,background:"#0f766e",borderRadius:2,marginRight:3}} />GP {ar?"التراكمي":"Cumulative"}</span>
+                  <span><span style={{display:"inline-block",width:10,height:6,background:"#8b5cf6",borderRadius:2,marginRight:3}} />{ar?"المستثمر":"Investor"} {ar?"التراكمي":"Cumulative"}</span>
+                  <span><span style={{display:"inline-block",width:10,height:6,background:"#0f766e",borderRadius:2,marginRight:3}} />{ar?"المطور":"Developer"} {ar?"التراكمي":"Cumulative"}</span>
                 </div>
               </div>;
             })()}

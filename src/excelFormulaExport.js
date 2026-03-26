@@ -115,10 +115,10 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const rEC = inp("Exit Cost %", p.exitCostPct || 2, PCT, true);
 
   sec("Waterfall / حافز الأداء");
-  const rGP = inp("GP Equity %", p.gpEquityPct || 20, PCT, true);
+  const rGP = inp("Developer Equity %", p.gpEquityPct || 20, PCT, true);
   const rPF = inp("Preferred Return %", p.prefReturnPct || 15, PCT, true);
   const rCR_ = inp("Carry %", p.carryPct || 25, PCT, true);
-  const rLS = inp("LP Profit Split %", p.lpProfitSplitPct || 70, PCT, true);
+  const rLS = inp("Investor Profit Split %", p.lpProfitSplitPct || 70, PCT, true);
 
   sec("Fees / الرسوم");
   const rSUB = inp("Subscription Fee %", p.subscriptionFeePct || 2, PCT, true);
@@ -312,8 +312,8 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const fDC=fr;sc(ws5,fr,1,"  Total Dev Cost",FNS);sc(ws5,fr,3,`=Calc!D${CXT}`,FR,null,NUM);fr++;
   const fMD=fr;sc(ws5,fr,1,"  Max Debt (LTV)",FNS);sc(ws5,fr,3,`=C${fDC}*Inputs!B${rLV}`,FNS,null,NUM);fr++;
   const fEQ=fr;sc(ws5,fr,1,"  Total Equity",FBS);sc(ws5,fr,3,`=C${fDC}-C${fMD}`,FBS,null,NUM);fr++;
-  sc(ws5,fr,1,"  GP Equity",FNS);sc(ws5,fr,3,`=C${fEQ}*Inputs!B${rGP}`,FNS,null,NUM);fr++;
-  sc(ws5,fr,1,"  LP Equity",FNS);sc(ws5,fr,3,`=C${fEQ}*(1-Inputs!B${rGP})`,FNS,null,NUM);fr++;
+  sc(ws5,fr,1,"  Developer Equity",FNS);sc(ws5,fr,3,`=C${fEQ}*Inputs!B${rGP}`,FNS,null,NUM);fr++;
+  sc(ws5,fr,1,"  Investor Equity",FNS);sc(ws5,fr,3,`=C${fEQ}*(1-Inputs!B${rGP})`,FNS,null,NUM);fr++;
   const fEXY=fr;sc(ws5,fr,1,"  Exit Year",FBS);sc(ws5,fr,3,`=IF(Inputs!B${rEY}=0,Inputs!B${rTN}+1,Inputs!B${rEY})`,FBS);fr+=2;
 
   secr(ws5,fr,1,LC,"DEBT SCHEDULE"); fr++;
@@ -493,62 +493,62 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const fREM=fr;sc(ws5,fr,1,"  Remaining after ROC + Pref",FNS);sc(ws5,fr,2,cur,FNS);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MAX(0,${CL(YC(yi))}${fCA}-${CL(YC(yi))}${fT1}-${CL(YC(yi))}${fT2})`,FNS,null,NUM);
   fr++;
-  const fT3=fr;sc(ws5,fr,1,"  T3: GP Catch-Up",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+  const fT3=fr;sc(ws5,fr,1,"  T3: Catch-Up",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=IF(Inputs!B${rCR_}=0,0,MIN(${CL(YC(yi))}${fREM},${CL(YC(yi))}${fT2}*Inputs!B${rCR_}/(1-Inputs!B${rCR_})))`,FBS,null,NUM);
   fr++;
   const fT4=fr;sc(ws5,fr,1,"  T4: Profit Split",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MAX(0,${CL(YC(yi))}${fREM}-${CL(YC(yi))}${fT3})`,FNS,null,NUM);
   fr++;
-  const fT4LP=fr;sc(ws5,fr,1,"  → LP Profit Split",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
+  const fT4LP=fr;sc(ws5,fr,1,"  → Investor Profit Split",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fT4}*Inputs!B${rLS}`,FNS,null,NUM);
   fr++;
-  const fT4GP=fr;sc(ws5,fr,1,"  → GP / Carry",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
+  const fT4GP=fr;sc(ws5,fr,1,"  → Developer / Carry",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fT4}*(1-Inputs!B${rLS})`,FNS,null,NUM);
   fr += 2;
 
   // LP/GP Returns — ALL FORMULAS
   secr(ws5,fr,1,LC,"INVESTOR RETURNS"); fr++;
-  const fLPD=fr;sc(ws5,fr,1,"  LP Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+  const fLPD=fr;sc(ws5,fr,1,"  Investor Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) { const c = CL(YC(yi)); sc(ws5,fr,YC(yi),`=(${c}${fT1}+${c}${fT2})*(1-Inputs!B${rGP})+${c}${fT4LP}`,FNS,null,NUM); }
   fr++;
-  const fLPCF=fr;sc(ws5,fr,1,"  LP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
+  const fLPCF=fr;sc(ws5,fr,1,"  Investor Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fEC}*(1-Inputs!B${rGP})+${CL(YC(yi))}${fLPD}`,FBS,null,NUMN,BB);
   fr++;
-  const fLPI=fr;sc(ws5,fr,1,"  LP IRR (formula)",FB);sc(ws5,fr,2,"%",FNS);
+  const fLPI=fr;sc(ws5,fr,1,"  Investor IRR (formula)",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF}),"-")`,FB,null,PCT);fr++;
   // Engine-computed LP IRR (per-phase aggregated — authoritative value matching platform)
-  sc(ws5,fr,1,"  LP IRR (engine)",FB);sc(ws5,fr,2,"%",FNS);
+  sc(ws5,fr,1,"  Investor IRR (engine)",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,waterfall?.lpIRR != null ? waterfall.lpIRR : "-",FB,null,PCT);fr++;
-  const fLPMOIC=fr;sc(ws5,fr,1,"  LP MOIC",FB);sc(ws5,fr,2,"x",FNS);
+  const fLPMOIC=fr;sc(ws5,fr,1,"  Investor MOIC",FB);sc(ws5,fr,2,"x",FNS);
   sc(ws5,fr,3,`=IFERROR(SUM(${YR(fLPD)})/ABS(SUM(${YR(fEC)})*(1-Inputs!B${rGP})),"-")`,FB,null,DX);fr++;
   for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
-    sc(ws5,fr,1,`  LP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
+    sc(ws5,fr,1,`  Investor NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
     sc(ws5,fr,3,`=NPV(${d},${CL(YC(0))}${fLPCF}:${CL(LC)}${fLPCF})`,FNS,null,NUM);fr++;
   }
-  const fLPCUM=fr;sc(ws5,fr,1,"  LP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
+  const fLPCUM=fr;sc(ws5,fr,1,"  Investor Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
   for (let yi = 0; yi < h; yi++) {
     const c = CL(YC(yi));
     sc(ws5,fr,YC(yi),yi===0?`=${c}${fLPCF}`:`=${CL(YC(yi-1))}${fLPCUM}+${c}${fLPCF}`,FNS,null,NUMN);
   }
   fr+=2;
 
-  const fGPD=fr;sc(ws5,fr,1,"  GP Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+  const fGPD=fr;sc(ws5,fr,1,"  Developer Distribution",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) { const c = CL(YC(yi)); sc(ws5,fr,YC(yi),`=(${c}${fT1}+${c}${fT2})*Inputs!B${rGP}+${c}${fT3}+${c}${fT4GP}`,FNS,null,NUM); }
   fr++;
-  const fGPCF=fr;sc(ws5,fr,1,"  GP Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
+  const fGPCF=fr;sc(ws5,fr,1,"  Developer Net Cash Flow",FB);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FB,null,NUMN);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fEC}*Inputs!B${rGP}+${CL(YC(yi))}${fGPD}`,FBS,null,NUMN,BB);
   fr++;
-  const fGPI=fr;sc(ws5,fr,1,"  GP IRR (formula)",FB);sc(ws5,fr,2,"%",FNS);
+  const fGPI=fr;sc(ws5,fr,1,"  Developer IRR (formula)",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,`=IFERROR(IRR(${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF}),"-")`,FB,null,PCT);fr++;
-  sc(ws5,fr,1,"  GP IRR (engine)",FB);sc(ws5,fr,2,"%",FNS);
+  sc(ws5,fr,1,"  Developer IRR (engine)",FB);sc(ws5,fr,2,"%",FNS);
   sc(ws5,fr,3,waterfall?.gpIRR != null ? waterfall.gpIRR : "-",FB,null,PCT);fr++;
-  const fGPMOIC=fr;sc(ws5,fr,1,"  GP MOIC",FB);sc(ws5,fr,2,"x",FNS);
+  const fGPMOIC=fr;sc(ws5,fr,1,"  Developer MOIC",FB);sc(ws5,fr,2,"x",FNS);
   sc(ws5,fr,3,`=IFERROR(SUM(${YR(fGPD)})/ABS(SUM(${YR(fEC)})*Inputs!B${rGP}),"-")`,FB,null,DX);fr++;
   for (const [d,l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
-    sc(ws5,fr,1,`  GP NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
+    sc(ws5,fr,1,`  Developer NPV @${l}`,FNS);sc(ws5,fr,2,cur,FNS);
     sc(ws5,fr,3,`=NPV(${d},${CL(YC(0))}${fGPCF}:${CL(LC)}${fGPCF})`,FNS,null,NUM);fr++;
   }
-  const fGPCUM=fr;sc(ws5,fr,1,"  GP Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
+  const fGPCUM=fr;sc(ws5,fr,1,"  Developer Cumulative CF",FNS);sc(ws5,fr,2,cur,FNS);
   for (let yi = 0; yi < h; yi++) {
     const c = CL(YC(yi));
     sc(ws5,fr,YC(yi),yi===0?`=${c}${fGPCF}`:`=${CL(YC(yi-1))}${fGPCUM}+${c}${fGPCF}`,FNS,null,NUMN);
@@ -587,9 +587,9 @@ export async function generateFormulaExcel(project, results, financing, waterfal
         sc(wsp, pr, 1, `  ${label}`, bold ? FBS : FNS);
         sc(wsp, pr, 3, val, bold ? FBS : FNS, null, nf); pr++;
       };
-      kv("GP Equity", pw.gpEquity || 0); kv("LP Equity", pw.lpEquity || 0);
+      kv("Developer Equity", pw.gpEquity || 0); kv("Investor Equity", pw.lpEquity || 0);
       kv("Total Equity", pw.totalEquity || 0, NUM, true);
-      kv("GP %", pw.gpPct || 0, PCT); kv("LP %", pw.lpPct || 0, PCT);
+      kv("Developer %", pw.gpPct || 0, PCT); kv("Investor %", pw.lpPct || 0, PCT);
       kv("Dev Cost (excl land)", pf?.devCostExclLand || 0); kv("Dev Cost (incl land)", pf?.devCostInclLand || 0);
       pr++;
 
@@ -632,45 +632,45 @@ export async function generateFormulaExcel(project, results, financing, waterfal
       writeRow("Unpaid Pref (Opening)", pwUnpaidOpen);
       writeRow("T2: Preferred Return Paid", pw.tier2, NUM, true);
       writeRow("Unpaid Pref (Closing)", pw.prefAccumulated);
-      writeRow("T3: GP Catch-Up", pw.tier3, NUM, true);
-      writeRow("T4: LP Profit Split", pw.tier4LP);
-      writeRow("T4: GP Profit Split", pw.tier4GP);
+      writeRow("T3: Catch-Up", pw.tier3, NUM, true);
+      writeRow("T4: Investor Profit Split", pw.tier4LP);
+      writeRow("T4: Developer Profit Split", pw.tier4GP);
       pr++;
 
       secr(wsp, pr, 1, LC, "7  DISTRIBUTIONS / التوزيعات"); pr++;
-      writeRow("LP Distribution", pw.lpDist, NUM, true);
-      writeRow("GP Distribution", pw.gpDist, NUM, true);
+      writeRow("Investor Distribution", pw.lpDist, NUM, true);
+      writeRow("Developer Distribution", pw.gpDist, NUM, true);
       pr++;
 
       secr(wsp, pr, 1, LC, "8  INVESTOR RETURNS / عوائد المستثمرين"); pr++;
-      writeRow("LP Net Cash Flow", pw.lpNetCF, NUMN, true);
-      // LP Cumulative
-      sc(wsp,pr,1,"  LP Cumulative CF",FNS); sc(wsp,pr,2,cur,FNS);
+      writeRow("Investor Net Cash Flow", pw.lpNetCF, NUMN, true);
+      // Investor Cumulative
+      sc(wsp,pr,1,"  Investor Cumulative CF",FNS); sc(wsp,pr,2,cur,FNS);
       let lpC = 0;
       for (let yi = 0; yi < h; yi++) { lpC += (pw.lpNetCF?.[yi] || 0); sc(wsp,pr,YC(yi),lpC,FNS,null,NUMN); }
       pr++;
 
-      writeRow("GP Net Cash Flow", pw.gpNetCF, NUMN, true);
-      sc(wsp,pr,1,"  GP Cumulative CF",FNS); sc(wsp,pr,2,cur,FNS);
+      writeRow("Developer Net Cash Flow", pw.gpNetCF, NUMN, true);
+      sc(wsp,pr,1,"  Developer Cumulative CF",FNS); sc(wsp,pr,2,cur,FNS);
       let gpC = 0;
       for (let yi = 0; yi < h; yi++) { gpC += (pw.gpNetCF?.[yi] || 0); sc(wsp,pr,YC(yi),gpC,FNS,null,NUMN); }
       pr += 2;
 
       // KPI Summary
       secr(wsp, pr, 1, 6, "9  KPI SUMMARY / ملخص الأداء"); pr++;
-      kv("LP IRR", pw.lpIRR != null ? pw.lpIRR : "-", PCT);
-      kv("GP IRR", pw.gpIRR != null ? pw.gpIRR : "-", PCT);
-      kv("LP MOIC", pw.lpMOIC || 0, DX);
-      kv("GP MOIC", pw.gpMOIC || 0, DX);
+      kv("Investor IRR", pw.lpIRR != null ? pw.lpIRR : "-", PCT);
+      kv("Developer IRR", pw.gpIRR != null ? pw.gpIRR : "-", PCT);
+      kv("Investor MOIC", pw.lpMOIC || 0, DX);
+      kv("Developer MOIC", pw.gpMOIC || 0, DX);
       kv("Total Equity", pw.totalEquity || 0);
-      kv("Total LP Distributions", pw.lpTotalDist || 0);
-      kv("Total GP Distributions", pw.gpTotalDist || 0);
+      kv("Total Investor Distributions", pw.lpTotalDist || 0);
+      kv("Total Developer Distributions", pw.gpTotalDist || 0);
       kv("Exit Proceeds", (pw.exitProceeds || []).reduce((a,b) => a+(b||0), 0));
       pr++;
 
       // NPV Analysis
       secr(wsp, pr, 1, 6, "10  NPV ANALYSIS"); pr++;
-      sc(wsp,pr,1,"  Discount Rate",FBS); sc(wsp,pr,2,"Project",FBS); sc(wsp,pr,3,"LP",FBS); sc(wsp,pr,4,"GP",FBS); pr++;
+      sc(wsp,pr,1,"  Discount Rate",FBS); sc(wsp,pr,2,"Project",FBS); sc(wsp,pr,3,"Investor",FBS); sc(wsp,pr,4,"Developer",FBS); pr++;
       for (const [d, l] of [[0.10,"10%"],[0.12,"12%"],[0.14,"14%"]]) {
         sc(wsp,pr,1,`  ${l}`,FNS);
         const lpKey = `lpNPV${Math.round(d*100)}`, gpKey = `gpNPV${Math.round(d*100)}`;
@@ -696,16 +696,16 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   orow("Max Debt",`=Fund!C${fMD}`); orow("Equity",`=Fund!C${fEQ}`);
   orow("Net Exit",`=Fund!C${fEXN}`); orow("Total Fees",`=Fund!C${fTOTFEE}`,NUMN);
   // Use engine-computed values (accurate per-phase aggregation) instead of simplified formula
-  orow("LP IRR", waterfall?.lpIRR != null ? waterfall.lpIRR : `=Fund!C${fLPI}`, PCT, "%");
-  orow("LP MOIC", waterfall?.lpMOIC != null ? waterfall.lpMOIC : `=Fund!C${fLPMOIC}`, DX, "x");
-  orow("GP IRR", waterfall?.gpIRR != null ? waterfall.gpIRR : `=Fund!C${fGPI}`, PCT, "%");
-  orow("GP MOIC", waterfall?.gpMOIC != null ? waterfall.gpMOIC : `=Fund!C${fGPMOIC}`, DX, "x");
+  orow("Investor IRR", waterfall?.lpIRR != null ? waterfall.lpIRR : `=Fund!C${fLPI}`, PCT, "%");
+  orow("Investor MOIC", waterfall?.lpMOIC != null ? waterfall.lpMOIC : `=Fund!C${fLPMOIC}`, DX, "x");
+  orow("Developer IRR", waterfall?.gpIRR != null ? waterfall.gpIRR : `=Fund!C${fGPI}`, PCT, "%");
+  orow("Developer MOIC", waterfall?.gpMOIC != null ? waterfall.gpMOIC : `=Fund!C${fGPMOIC}`, DX, "x");
   // Per-phase LP IRR
   if (hasPW) {
     o++;
     for (const phaseName of pn) {
       const pw = phaseWaterfalls[phaseName];
-      if (pw) orow(`LP IRR — ${phaseName}`, pw.lpIRR != null ? pw.lpIRR : "-", PCT, "%");
+      if (pw) orow(`Investor IRR — ${phaseName}`, pw.lpIRR != null ? pw.lpIRR : "-", PCT, "%");
     }
   }
 
@@ -738,7 +738,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   sc(ws9,ck,2,`=SUMPRODUCT((Program!I${PD}:I${PE}="Operating")*(Program!M${PD}:M${PE}<=0))`,FNS,null,NUM);
   sc(ws9,ck,3,`=IF(B${ck}=0,"PASS","WARN")`,FBS); ck++;
   // LP+GP = Total
-  chk("LP+GP Dist = Total Available",`=ABS(SUM(${YR(fLPD)})+SUM(${YR(fGPD)})-SUM(${YR(fCA)}))`);
+  chk("Investor+Developer Dist = Total Available",`=ABS(SUM(${YR(fLPD)})+SUM(${YR(fGPD)})-SUM(${YR(fCA)}))`);
   // Overall
   sc(ws9,ck,1,"OVERALL STATUS",FB,FILL_TOT);
   sc(ws9,ck,2,"",null,FILL_TOT);
@@ -748,7 +748,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   wsd.getColumn(1).width = 65;
   hdr(wsd, 1, 1, 1, "Documentation / التوثيق");
   ["","Sheet Guide:","  Inputs — Editable assumptions (blue text)","  Program — Asset table",
-    "  Calc — Engine (all formulas)","  CashFlow — Unlevered cash flows","  Fund — Debt + Exit + Waterfall + LP/GP",
+    "  Calc — Engine (all formulas)","  CashFlow — Unlevered cash flows","  Fund — Debt + Exit + Waterfall + Investor/Developer",
     "  Outputs — Summary KPIs","  Checks — Integrity checks","",
     "Color: Blue=Input, Black=Formula, Green=Cross-sheet","",
     `Project: ${p.name||""}`,`Horizon: ${h}yr from ${sy}`,
@@ -783,10 +783,10 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   dashKpi("Net Exit Proceeds / عوائد التخارج", `=Fund!C${fEXN}`);
   dashKpi("Total Fees / إجمالي الرسوم", `=Fund!C${fTOTFEE}`, NUMN);
   dr++;
-  dashKpi("LP IRR", `=Fund!C${fLPI}`, PCT, "%");
-  dashKpi("LP MOIC", `=Fund!C${fLPMOIC}`, DX, "x");
-  dashKpi("GP IRR", `=Fund!C${fGPI}`, PCT, "%");
-  dashKpi("GP MOIC", `=Fund!C${fGPMOIC}`, DX, "x");
+  dashKpi("Investor IRR", `=Fund!C${fLPI}`, PCT, "%");
+  dashKpi("Investor MOIC", `=Fund!C${fLPMOIC}`, DX, "x");
+  dashKpi("Developer IRR", `=Fund!C${fGPI}`, PCT, "%");
+  dashKpi("Developer MOIC", `=Fund!C${fGPMOIC}`, DX, "x");
   dr++;
 
   // Phase summary table
@@ -825,7 +825,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   // NPV Analysis table
   dr += 1;
   secr(wdb, dr, 1, 6, "NPV ANALYSIS / تحليل صافي القيمة الحالية"); dr++;
-  chdr(wdb, dr, ["Discount Rate", "Project (Unlevered)", "Project (Levered)", "LP", "GP", ""]); dr++;
+  chdr(wdb, dr, ["Discount Rate", "Project (Unlevered)", "Project (Levered)", "Investor", "Developer", ""]); dr++;
   for (const [d, l] of [[0.10, "10%"], [0.12, "12%"], [0.14, "14%"]]) {
     sc(wdb, dr, 1, l, FBS);
     sc(wdb, dr, 2, `=NPV(${d},CashFlow!${CL(YC(0))}${cn}:${CL(LC)}${cn})`, FNS, null, NUM);
@@ -841,7 +841,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   if (hasPW && pn.length > 1) {
     dr++;
     secr(wdb, dr, 1, 6, "FUND PERFORMANCE COMPARISON / مقارنة أداء الصناديق"); dr++;
-    chdr(wdb, dr, ["Phase / المرحلة", "Equity", "LP IRR", "GP IRR", "LP MOIC", "GP MOIC"]); dr++;
+    chdr(wdb, dr, ["Phase / المرحلة", "Equity", "Investor IRR", "Developer IRR", "Investor MOIC", "Developer MOIC"]); dr++;
     for (const pName of pn) {
       const pw = phaseWaterfalls[pName];
       if (!pw) continue;

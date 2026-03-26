@@ -569,7 +569,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             const pw = phaseWaterfalls?.[p];
             const irr = pw?.lpIRR;
             return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
-              {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>LP {(irr*100).toFixed(1)}%</span> : ""}
+              {p}{irr !== null && irr !== undefined ? <span style={{fontSize:9,opacity:0.8,marginInlineStart:4}}>Investor {(irr*100).toFixed(1)}%</span> : ""}
             </button>;
           })}
           {isFiltered && !isSinglePhase && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`عرض ${activePh.length} من ${allPhaseNames.length} مراحل`:`Showing ${activePh.length} of ${allPhaseNames.length} phases`}</span>}
@@ -592,7 +592,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
           <span style={{fontSize:13}}>⚡</span>
           <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تعديل سريع - شروط الصندوق":"Quick Edit - Fund Terms"}</span>
-          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · Carry {cfg.carryPct||20}% · LP {cfg.lpProfitSplitPct||75}%</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · Carry {cfg.carryPct||20}% · Investor {cfg.lpProfitSplitPct||75}%</span>
           <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
         </div>
         {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe",animation:"zanSlide 0.15s ease"}}>
@@ -712,7 +712,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
                 <KR l={ar?"مراجع":"Auditor"} v={fmt(_feeAuditor)} c="#a16207" />
               </>}
               {w.perfIncentiveEnabled && w.perfIncentiveAmount > 0 && <KR l={ar?"حافز أداء (IRR)":"Perf. Incentive"} v={fmt(w.perfIncentiveAmount)} c="#059669" />}
-              {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (GP)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (GP)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
+              {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (المطور)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (Developer)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
               <SecHd text={ar?"الملخص":"NET SUMMARY"} />
               <KR l={ar?"مساهمة المطور":"Developer Contribution"} v={fmt(w.gpTotalInvested)} bold />
               <KR l={ar?"توزيعات حافز الأداء":"Waterfall Dist"} v={fmt(w.gpTotalDist)} />
@@ -1128,8 +1128,8 @@ function ExitAnalysisPanel({ project, results, financing, waterfall, lang, globa
               </>}
               {f.totalEquity > 0 && <><span style={{color:"#6b7080"}}>{ar?"العائد / الملكية":"Proceeds / Equity"}</span><span style={{textAlign:"right",fontWeight:600,color:"#16a34a"}}>{(exitProc/f.totalEquity).toFixed(2)}x</span></>}
               {hasWaterfall && <>
-                <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#8b5cf6"}}>{ar?"حصة LP من التخارج":"LP Exit Share"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM((w.lpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
-                <span style={{color:"#3b82f6"}}>{ar?"حصة GP من التخارج":"GP Exit Share"}</span><span style={{textAlign:"right",fontWeight:500,color:"#3b82f6"}}>{fmtM((w.gpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
+                <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#8b5cf6"}}>{ar?"حصة المستثمر من التخارج":"Investor Exit Share"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM((w.lpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
+                <span style={{color:"#3b82f6"}}>{ar?"حصة المطور من التخارج":"Developer Exit Share"}</span><span style={{textAlign:"right",fontWeight:500,color:"#3b82f6"}}>{fmtM((w.gpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
               </>}
             </div>
           </div>
@@ -2451,7 +2451,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
-            <option value="fund">{ar?"صندوق (GP/LP)":"Fund (GP/LP)"}</option>
+            <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
@@ -2568,7 +2568,7 @@ When to use:
         {/* ── SECTION: LAND & EQUITY ── */}
         </SecWrap>
         <SecWrap visible={hasEq} color="#8b5cf6">
-        <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · GP ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
+        <AH id="land" color="#8b5cf6" label={ar?"الأرض والملكية":"Land & Equity"} summary={hasEq ? `${cfg.landCapitalize?(ar?"مرسملة":"Cap"):""} · Dev ${cfg.gpEquityManual||"auto"}` : ""} visible={hasEq} />
         <AB id="land" visible={hasEq}>
           {(project.landType==="lease"||project.landType==="bot")&&<FL label={ar?"رسملة حق الانتفاع؟":"Capitalize Leasehold?"} tip={ar?"الأرض مؤجرة وليست مملوكة — لكن حق الانتفاع له قيمة مالية. رسملته تعني تحويل هذي القيمة إلى حصة Equity في الصندوق.\nمثال: أرض 50,000 م² × 800 ريال = 40 مليون تُحسب كمساهمة عينية لصاحب الأرض":"The land is leased, not owned — but the leasehold right has financial value. Capitalizing it converts this value into an equity stake in the fund.\nExample: 50,000 sqm × SAR 800 = SAR 40M counted as in-kind equity contribution"}>
             <Drp lang={lang} value={cfg.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
@@ -2576,14 +2576,14 @@ When to use:
           {cfg.landCapitalize&&(project.landType==="lease"||project.landType==="bot")&&<>
             <div style={g2}>
               <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur} · ${dh("landCapRate")}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
-              <FL label={ar?"رسملة حق الانتفاع لصالح":"Leasehold Cap Credit To"} tip={ar?"من يُحسب له حق الانتفاع كحصة Equity: المطور أو المستثمر أو مقسمة":"Who gets the leasehold capitalization as equity credit: Developer (GP), Investor (LP), or split 50/50"}><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer - GP (default)",ar:"المطور - GP (تلقائي)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
+              <FL label={ar?"رسملة حق الانتفاع لصالح":"Leasehold Cap Credit To"} tip={ar?"من يُحسب له حق الانتفاع كحصة Equity: المطور أو المستثمر أو مقسمة":"Who gets the leasehold capitalization as equity credit: Developer, Investor, or split 50/50"}><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (default)",ar:"المطور (تلقائي)"},{value:"lp",en:"Investor",ar:"المستثمر"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
             </div>
-            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer (GP)",ar:"المطور (GP)"},{value:"lp",en:"Investor (LP)",ar:"المستثمر (LP)"}]} /></FL>}
+            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer",ar:"المطور"},{value:"lp",en:"Investor",ar:"المستثمر"}]} /></FL>}
           </>}
 
           {/* ── GP Investment Sources ── */}
           {isFundMode && <>
-            <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"استثمار المطور (GP)":"Developer Investment (GP)"}</div>
+            <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"استثمار المطور":"Developer Investment"}</div>
 
             {/* Source 2: Dev Fee as Investment */}
             <FL label={ar?"إدخال أتعاب التطوير كاستثمار؟":"Invest Dev Fee as Equity?"} tip={ar?"المطور يعيد أتعاب التطوير للصندوق كاستثمار بدل استلامها نقداً":"Developer reinvests dev fee into fund as equity instead of taking cash"}>
@@ -2611,7 +2611,7 @@ When to use:
                 <span style={{fontWeight:700}}>{fmt(f.totalEquity)} {cur}</span>
               </div>
               {f.gpEquityBreakdown?.landCap > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?"رسملة حق الانتفاع":"Leasehold Cap (GP)"}</span>
+                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?"رسملة حق الانتفاع":"Leasehold Cap (Developer)"}</span>
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.landCap)} {cur}</span>
               </div>}
               {f.gpEquityBreakdown?.partnerLand > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -2627,11 +2627,11 @@ When to use:
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.cash)} {cur}</span>
               </div>}
               <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid #e5e7ec",paddingTop:4,marginTop:4}}>
-                <span style={{fontWeight:600,color:"#8b5cf6"}}>GP ({fmtPct(f.gpPct*100)})</span>
+                <span style={{fontWeight:600,color:"#8b5cf6"}}>Developer ({fmtPct(f.gpPct*100)})</span>
                 <span style={{fontWeight:700,color:"#8b5cf6"}}>{fmt(f.gpEquity)} {cur}</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{fontWeight:600,color:"#2563eb"}}>LP ({fmtPct(f.lpPct*100)})</span>
+                <span style={{fontWeight:600,color:"#2563eb"}}>Investor ({fmtPct(f.lpPct*100)})</span>
                 <span style={{fontWeight:700,color:"#2563eb"}}>{fmt(f.lpEquity)} {cur}</span>
               </div>
             </div>}
@@ -2646,7 +2646,7 @@ When to use:
         {/* ── SECTION: FUND STRUCTURE ── */}
         </SecWrap>
         <SecWrap visible={isFundMode} color="#16a34a">
-        <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"GP = Mgr")}` : ""} visible={isFundMode} />
+        <AH id="fund" color="#16a34a" label={ar?"هيكل الصندوق":"Fund Structure"} summary={isFundMode ? `${({fund:ar?"صندوق":"Fund",direct:ar?"مباشر":"Direct",spv:"SPV"})[cfg.vehicleType]||""} · ${cfg.gpIsFundManager===false?(ar?"مدير مستقل":"Sep. Mgr"):(ar?"المطور = المدير":"Dev = Mgr")}` : ""} visible={isFundMode} />
         <AB id="fund" visible={isFundMode}>
           <div style={g2}>
             <FL label={ar?"الهيكل القانوني":"Vehicle"} tip={ar?"صندوق: وعاء استثماري منظم من هيئة السوق المالية. فيه اشتراك وإدارة ومراجع — الأكثر حوكمة وتنظيماً\nمباشر: المطور والمستثمر يدخلون مباشرة بعقد مشاركة بدون وعاء رسمي — أبسط وأقل رسوم\nSPV: شركة ذات غرض خاص تُنشأ للمشروع فقط — تعزل المخاطر عن الأطراف":"Fund: CMA-regulated vehicle with subscription, management, auditor — highest governance\nDirect: Developer and investor enter via partnership agreement — simpler, fewer fees\nSPV: Special Purpose Vehicle created for this project only — isolates risk"}><Drp lang={lang} value={cfg.vehicleType} onChange={v=>{const reset=v!=="fund"?{subscriptionFeePct:0,structuringFeePct:0,structuringFeeCap:0,preEstablishmentFee:0,spvFee:0,auditorFeeAnnual:0,mgmtFeeCapAnnual:0,custodyFeeAnnual:0}:{};upCfg({vehicleType:v,...reset});}} options={[{value:"fund",en:"Fund - Regulated (default)",ar:"صندوق - منظم (تلقائي)"},{value:"direct",en:"Direct (Partnership)",ar:"مباشر (شراكة)"},{value:"spv",en:"SPV (Ring-fenced)",ar:"SPV (معزول)"}]} /></FL>
@@ -2675,8 +2675,8 @@ When to use:
                 </div>
               </div>;
             })()}
-            <FL label={ar?"المطور = مدير الصندوق؟":"GP = Fund Manager?"} tip={ar?"نعم: المطور يدير الصندوق ويستلم كل الرسوم (تطوير + إدارة + هيكلة)\nلا: شركة مالية مستقلة تدير الصندوق. المطور يأخذ رسوم التطوير فقط":"Yes: Developer manages the fund and receives all fees\nNo: Separate financial company manages. Developer gets dev fee only"}>
-              <Drp lang={lang} value={cfg.gpIsFundManager===false?"N":"Y"} onChange={v=>upCfg({gpIsFundManager:v==="Y"})} options={[{value:"Y",en:"Yes (GP = Manager)",ar:"نعم (المطور = المدير)"},{value:"N",en:"No (Separate Manager)",ar:"لا (مدير مستقل)"}]} />
+            <FL label={ar?"المطور = مدير الصندوق؟":"Developer = Fund Manager?"} tip={ar?"نعم: المطور يدير الصندوق ويستلم كل الرسوم (تطوير + إدارة + هيكلة)\nلا: شركة مالية مستقلة تدير الصندوق. المطور يأخذ رسوم التطوير فقط":"Yes: Developer manages the fund and receives all fees\nNo: Separate financial company manages. Developer gets dev fee only"}>
+              <Drp lang={lang} value={cfg.gpIsFundManager===false?"N":"Y"} onChange={v=>upCfg({gpIsFundManager:v==="Y"})} options={[{value:"Y",en:"Yes (Developer = Manager)",ar:"نعم (المطور = المدير)"},{value:"N",en:"No (Separate Manager)",ar:"لا (مدير مستقل)"}]} />
             </FL>
           </div>
         </AB>
@@ -2688,8 +2688,8 @@ When to use:
         <AB id="wf" visible={isFundMode}>
           <div style={{gridColumn:"1/-1",marginBottom:4}}><HelpLink contentKey="waterfallConcepts" lang={lang} onOpen={setEduModal} label={ar?"اعرف أكثر عن حافز الأداء":"Learn about Waterfall"} /></div>
           <div style={g2}>
-            <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip={ar?"الحد الأدنى للعائد السنوي الذي يحصل عليه المستثمر (LP) قبل أن يشارك المطور (GP) بالأرباح. عادة 8-15%\nيتراكم سنوياً على رأس المال غير المسترد":"Minimum annual return for LP before GP shares profits. Usually 8-15%\nAccrues annually on unreturned capital"} hint={dh("prefReturnPct")}><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:Math.max(0,Math.min(50,v))})} /></FL>
-            <FL label={ar?"أتعاب حسن الأداء %":"Performance Carry %"} tip={ar?"نسبة من الأرباح تُدفع للمطور إذا تجاوزت أرباح الصندوق العائد التفضيلي. عادة 20-30%\nمثال: لو العائد التفضيلي 15% والأرباح تجاوزته → 25% من الفائض يروح للمطور كأتعاب حسن أداء":"GP's share of profits after LP receives preferred return. Usually 20-30%\nExample: if pref is 15% and profits exceed it → 25% of excess goes to GP as performance fee"} hint={dh("carryPct")}><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:Math.max(0,Math.min(50,v))})} /></FL>
+            <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip={ar?"الحد الأدنى للعائد السنوي الذي يحصل عليه المستثمر قبل أن يشارك المطور بالأرباح. عادة 8-15%\nيتراكم سنوياً على رأس المال غير المسترد":"Minimum annual return for Investor before Developer shares profits. Usually 8-15%\nAccrues annually on unreturned capital"} hint={dh("prefReturnPct")}><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:Math.max(0,Math.min(50,v))})} /></FL>
+            <FL label={ar?"أتعاب حسن الأداء %":"Performance Carry %"} tip={ar?"نسبة من الأرباح تُدفع للمطور إذا تجاوزت أرباح الصندوق العائد التفضيلي. عادة 20-30%\nمثال: لو العائد التفضيلي 15% والأرباح تجاوزته → 25% من الفائض يروح للمطور كأتعاب حسن أداء":"Developer's share of profits after Investor receives preferred return. Usually 20-30%\nExample: if pref is 15% and profits exceed it → 25% of excess goes to Developer as performance fee"} hint={dh("carryPct")}><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:Math.max(0,Math.min(50,v))})} /></FL>
           </div>
           <div style={g3}>
             <FL label={ar?"نسبة توزيع المستثمر":"Investor Split %"} tip={ar?"نسبة الأرباح المتبقية للمستثمر بعد العائد التفضيلي والـ catch-up. عادة 70-80%\nالباقي يذهب تلقائياً للمطور":"Investor share of remaining profits after pref and catch-up. Usually 70-80%\nRemainder automatically goes to Developer"} hint={`${ar?"مطور":"Dev"} = ${100-(cfg.lpProfitSplitPct||70)}% · ${dh("lpProfitSplitPct")}`}><Inp type="number" value={cfg.lpProfitSplitPct} onChange={v=>upCfg({lpProfitSplitPct:Math.max(0,Math.min(100,v))})} /></FL>
@@ -2697,8 +2697,8 @@ When to use:
             <FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip={ar?"رأسمال: الرسوم تُسترد + تحصل عائد تفضيلي\nاسترداد فقط: تُسترد لكن بدون عائد تفضيلي\nمصروف: لا تُسترد ولا تحصل عائد":"Capital: fees earn ROC + Pref\nROC Only: fees returned but no Pref\nExpense: fees not returned, no Pref"}><select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال - استرداد + Pref (تلقائي)":"Capital - ROC + Pref (default)"}</option><option value="rocOnly">{ar?"استرداد فقط (بدون Pref)":"ROC Only (no Pref)"}</option><option value="expense">{ar?"مصروف (لا استرداد)":"Expense (no ROC)"}</option></select></FL>
           </div>
           <div style={g2}>
-            <FL label={ar?"توزيع العائد التفضيلي":"Pref Allocation"} tip={ar?"نسبي: العائد التفضيلي يوزع على GP و LP بحسب حصصهم\nللممول فقط: كامل العائد التفضيلي يذهب لـ LP":"Pro Rata: pref distributed to GP and LP by ownership share\nLP Only: all pref goes to LP (default: proRata)"}>
-              <Drp lang={lang} value={cfg.prefAllocation||"proRata"} onChange={v=>upCfg({prefAllocation:v})} options={[{value:"proRata",en:"Pro Rata - GP+LP (default)",ar:"نسبي - GP+LP (تلقائي)"},{value:"lpOnly",en:"LP Only",ar:"للممول فقط"}]} />
+            <FL label={ar?"توزيع العائد التفضيلي":"Pref Allocation"} tip={ar?"نسبي: العائد التفضيلي يوزع على المطور و المستثمر بحسب حصصهم\nللمستثمر فقط: كامل العائد التفضيلي يذهب للمستثمر":"Pro Rata: pref distributed to Developer and Investor by ownership share\nInvestor Only: all pref goes to Investor (default: proRata)"}>
+              <Drp lang={lang} value={cfg.prefAllocation||"proRata"} onChange={v=>upCfg({prefAllocation:v})} options={[{value:"proRata",en:"Pro Rata - Developer+Investor (default)",ar:"نسبي - المطور+المستثمر (تلقائي)"},{value:"lpOnly",en:"Investor Only",ar:"للمستثمر فقط"}]} />
             </FL>
             <FL label={ar?"طريقة الـ Catch-up":"Catch-up Method"} tip={ar?"سنوي: يُحسب الـ catch-up كل سنة على حدة\nتراكمي: يُحسب على إجمالي التوزيعات التراكمية":"Per Year: catch-up calculated annually (default)\nCumulative: catch-up on total cumulative distributions"}>
               <Drp lang={lang} value={cfg.catchupMethod||"perYear"} onChange={v=>upCfg({catchupMethod:v})} options={[{value:"perYear",en:"Per Year (default)",ar:"سنوي (تلقائي)"},{value:"cumulative",en:"Cumulative",ar:"تراكمي"}]} />
@@ -2814,8 +2814,8 @@ When to use:
       {/* LP = 0 warning - only relevant for fund/jv where LP is expected */}
       {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv") && (
         <div style={{background:"#fef3c7",borderRadius:8,border:"1px solid #fde68a",padding:"12px 16px",marginBottom:14,fontSize:12,color:"#92400e"}}>
-          <strong>⚠ {ar?"LP Equity = صفر":"LP Equity = 0"}</strong><br/>
-          {ar ? "لا يوجد مستثمرين (LP). لتفعيل LP: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}
+          <strong>⚠ {ar?"حصة المستثمر = صفر":"Investor Equity = 0"}</strong><br/>
+          {ar ? "لا يوجد مستثمرين. لتفعيل حصة المستثمر: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}
         </div>
       )}
 
@@ -2860,7 +2860,7 @@ When to use:
         {/* Equation */}
         <div style={{background:"#f0f4ff",borderRadius:6,padding:"8px 14px",fontSize:12}}>
           <strong>{ar?"المعادلة":"Equation"}:</strong>{" "}
-          {ar?"دين":"Debt"} ({fmtM(f.totalDebt)}) + GP ({fmtM(f.gpEquity)}){f.lpEquity > 0 ? ` + LP (${fmtM(f.lpEquity)})` : ""} = {fmtM(f.totalDebt + f.gpEquity + f.lpEquity)}{" "}
+          {ar?"دين":"Debt"} ({fmtM(f.totalDebt)}) + {ar?"المطور":"Developer"} ({fmtM(f.gpEquity)}){f.lpEquity > 0 ? ` + ${ar?"المستثمر":"Investor"} (${fmtM(f.lpEquity)})` : ""} = {fmtM(f.totalDebt + f.gpEquity + f.lpEquity)}{" "}
           {Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - f.devCostInclLand) < 1000
             ? <span style={{color:"#16a34a",fontWeight:600}}>✓</span>
             : <span style={{color:"#ef4444",fontWeight:600}}>✗ ≠ {fmtM(f.devCostInclLand)}</span>}
@@ -3785,7 +3785,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               kpis.push({ k: "ltv",  l: "LTV",  v: effLTV > 0 ? effLTV.toFixed(0) + "%" : "—", c: getMetricColor("LTV", effLTV) });
             }
             if (hasFund) {
-              kpis.push({ k: "lpirr", l: "LP IRR", v: w.lpIRR != null ? (w.lpIRR * 100).toFixed(1) + "%" : "—", c: getMetricColor("IRR", w.lpIRR) });
+              kpis.push({ k: "lpirr", l: ar?"عائد المستثمر":"Investor IRR", v: w.lpIRR != null ? (w.lpIRR * 100).toFixed(1) + "%" : "—", c: getMetricColor("IRR", w.lpIRR) });
               kpis.push({ k: "moic",  l: "MOIC",   v: w.lpMOIC ? w.lpMOIC.toFixed(2) + "x" : "—", c: getMetricColor("MOIC", w.lpMOIC) });
             }
             if (hasDebt && notHold && exitVal > 0)
@@ -3901,7 +3901,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
         <Option icon="💰" label={t?"تمويل ذاتي (رأس مال كامل)":"Self-Funded (100% Equity)"} desc={t?"المطور يموّل كل شي من جيبه":"Developer funds everything"} selected={project.finMode==="self"} onClick={()=>onUpdate({finMode:"self"})} />
         <Option icon="🏦" label={t?"تمويل بنكي 100% (ملك المطور)":"100% Bank Debt (Developer-Owned)"} desc={t?"البنك يموّل كامل التكلفة، المطور هو المالك":"Bank finances 100%, developer owns"} selected={project.finMode==="bank100"} onClick={()=>onUpdate({finMode:"bank100",debtAllowed:true,maxLtvPct:100})} />
         <Option icon="🏗" label={t?"دين بنكي + رأس مال المطور":"Bank Debt + Developer Equity"} desc={t?"جزء من البنك وجزء من المطور":"Part bank loan, part developer equity"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
-        <Option icon="📊" label={t?"صندوق استثماري (GP/LP)":"Fund Structure (GP/LP)"} desc={t?"مطور + مستثمرين مع شلال توزيعات":"Developer + investors with waterfall"} selected={project.finMode==="fund"} onClick={()=>onUpdate({finMode:"fund",debtAllowed:true})} />
+        <Option icon="📊" label={t?"صندوق استثماري (مطور/مستثمر)":"Fund Structure (Developer/Investor)"} desc={t?"مطور + مستثمرين مع شلال توزيعات":"Developer + investors with waterfall"} selected={project.finMode==="fund"} onClick={()=>onUpdate({finMode:"fund",debtAllowed:true})} />
         <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} /></div>
       </div>
     )},
@@ -3961,7 +3961,7 @@ function FeaturesGrid({ lang }) {
   const ar = lang === "ar";
   const features = [
     { icon: "🏗", color: "#2563eb", title: ar?"نمذجة متعددة الأصول":"Multi-Asset Modeling", desc: ar?"فنادق، محلات، مكاتب، مارينا، سكني - كل أنواع العقارات في نموذج واحد مع P&L مفصّل للفنادق والمارينا":"Hotels, retail, offices, marina, residential - all property types in one model with detailed Hotel & Marina P&L" },
-    { icon: "🏦", color: "#8b5cf6", title: ar?"تمويل متقدم":"Advanced Financing", desc: ar?"تمويل بنكي، صندوق استثماري GP/LP، تمويل إسلامي (مرابحة/إجارة)، رسملة حق الانتفاع، هيكل رأس المال":"Bank debt, GP/LP fund structure, Islamic finance (Murabaha/Ijara), leasehold capitalization, capital structure" },
+    { icon: "🏦", color: "#8b5cf6", title: ar?"تمويل متقدم":"Advanced Financing", desc: ar?"تمويل بنكي، صندوق استثماري (مطور/مستثمر)، تمويل إسلامي (مرابحة/إجارة)، رسملة حق الانتفاع، هيكل رأس المال":"Bank debt, Developer/Investor fund structure, Islamic finance (Murabaha/Ijara), leasehold capitalization, capital structure" },
     { icon: "📊", color: "#16a34a", title: ar?"شلال توزيعات 4 مراحل":"4-Tier Waterfall", desc: ar?"رد رأس المال → العائد التفضيلي → التعويض → تقسيم الأرباح مع IRR وMOIC لكل طرف":"Return of Capital → Preferred Return → Catch-up → Profit Split with IRR & MOIC per party" },
     { icon: "📈", color: "#f59e0b", title: ar?"سيناريوهات وتحليل حساسية":"Scenarios & Sensitivity", desc: ar?"8 سيناريوهات جاهزة، جدول حساسية ثنائي المتغيرات، تحليل نقطة التعادل مع ملخص المخاطر":"8 built-in scenarios, 2-variable sensitivity table, break-even analysis with risk summary" },
     { icon: "📄", color: "#ef4444", title: ar?"تقارير جاهزة للبنك والمستثمر":"Bank & Investor Reports", desc: ar?"ملخص تنفيذي، حزمة البنك (مع DSCR)، مذكرة المستثمر - كلها بصيغة PDF وExcel":"Executive summary, Bank pack (with DSCR), Investor memo - all exportable as PDF & Excel" },
@@ -4561,8 +4561,8 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
     info.push({ icon: "🏦", text: `${ar ? "دين" : "Debt"}: ${fmtM(f.totalDebt)} (LTV ${ltv}%)` });
   }
   if (!isPhase && w) {
-    info.push({ icon: "👤", text: `LP: ${w.lpMOIC?.toFixed(2) || "—"}x · ${w.lpIRR !== null ? (w.lpIRR * 100).toFixed(1) + "%" : "—"}` });
-    info.push({ icon: "🏢", text: `GP: ${w.gpMOIC?.toFixed(2) || "—"}x · ${w.gpIRR !== null ? (w.gpIRR * 100).toFixed(1) + "%" : "—"}` });
+    info.push({ icon: "👤", text: `Investor: ${w.lpMOIC?.toFixed(2) || "—"}x · ${w.lpIRR !== null ? (w.lpIRR * 100).toFixed(1) + "%" : "—"}` });
+    info.push({ icon: "🏢", text: `Developer: ${w.gpMOIC?.toFixed(2) || "—"}x · ${w.gpIRR !== null ? (w.gpIRR * 100).toFixed(1) + "%" : "—"}` });
   }
   // Phase weight
   if (isPhase && c.totalCapex > 0) {
@@ -6403,11 +6403,11 @@ const EDUCATIONAL_CONTENT = {
         },
         {
           id: "fund",
-          label: "صندوق (GP/LP)",
+          label: "صندوق (مطور/مستثمر)",
           icon: "📊",
           content: [
-            { type: "heading", text: "ما هو الصندوق الاستثماري (GP/LP)؟" },
-            { type: "text", text: "هيكل استثماري يجمع رأس المال من مستثمرين متعددين (LP - شركاء محدودون) ويديره المطور أو مدير استثمار (GP - الشريك العام). يُستخدم للمشاريع الكبيرة التي تحتاج رؤوس أموال تتجاوز قدرة مطور واحد." },
+            { type: "heading", text: "ما هو الصندوق الاستثماري (مطور/مستثمر)؟" },
+            { type: "text", text: "هيكل استثماري يجمع رأس المال من مستثمرين متعددين (المستثمرون - شركاء محدودون) ويديره المطور أو مدير استثمار (المطور - الشريك العام). يُستخدم للمشاريع الكبيرة التي تحتاج رؤوس أموال تتجاوز قدرة مطور واحد." },
             { type: "heading", text: "متى يُستخدم؟" },
             { type: "list", items: [
               "المشاريع الكبيرة (عادة أكثر من 100 مليون ريال)",
@@ -6417,9 +6417,9 @@ const EDUCATIONAL_CONTENT = {
             ]},
             { type: "heading", text: "الأطراف المطلوبة" },
             { type: "list", items: [
-              "GP (الشريك العام): المطور أو مدير الاستثمار - يدير المشروع",
-              "LP (الشركاء المحدودون): المستثمرون - يساهمون برأس المال",
-              "مدير الصندوق: قد يكون GP نفسه أو جهة مالية مرخصة (CMA)",
+              "المطور (الشريك العام): المطور أو مدير الاستثمار - يدير المشروع",
+              "المستثمرون (الشركاء المحدودون): المستثمرون - يساهمون برأس المال",
+              "مدير الصندوق: قد يكون المطور نفسه أو جهة مالية مرخصة (CMA)",
               "أمين حفظ (Custodian): يحفظ أصول الصندوق - مطلوب نظامياً",
               "مدقق حسابات: تدقيق سنوي إلزامي",
               "مستشار قانوني: لصياغة وثائق الصندوق والاتفاقيات"
@@ -6438,8 +6438,8 @@ const EDUCATIONAL_CONTENT = {
             { type: "list", items: [
               "المرحلة 1: إرجاع رأس المال للمستثمرين أولاً",
               "المرحلة 2: عائد مفضّل (Preferred Return) - عادة 8% - 12% سنوياً",
-              "المرحلة 3: تعويض GP (Catch-up) حتى يصل لنسبة الأرباح المتفق عليها",
-              "المرحلة 4: توزيع الأرباح المتبقية (عادة 70/30 أو 80/20 لصالح LP)"
+              "المرحلة 3: تعويض المطور (Catch-up) حتى يصل لنسبة الأرباح المتفق عليها",
+              "المرحلة 4: توزيع الأرباح المتبقية (عادة 70/30 أو 80/20 لصالح المستثمر)"
             ]},
             { type: "heading", text: "المتطلبات التنظيمية (السعودية)" },
             { type: "list", items: [
@@ -6550,11 +6550,11 @@ const EDUCATIONAL_CONTENT = {
         },
         {
           id: "fund",
-          label: "Fund (GP/LP)",
+          label: "Fund (Developer/Investor)",
           icon: "📊",
           content: [
-            { type: "heading", text: "What is a Fund Structure (GP/LP)?" },
-            { type: "text", text: "An investment vehicle pooling capital from multiple investors (LPs) managed by the developer or investment manager (GP). Used for large projects exceeding a single developer's capacity." },
+            { type: "heading", text: "What is a Fund Structure (Developer/Investor)?" },
+            { type: "text", text: "An investment vehicle pooling capital from multiple investors managed by the developer or investment manager. Used for large projects exceeding a single developer's capacity." },
             { type: "heading", text: "When is it used?" },
             { type: "list", items: [
               "Large projects (usually >SAR 100M)",
@@ -6564,9 +6564,9 @@ const EDUCATIONAL_CONTENT = {
             ]},
             { type: "heading", text: "Parties Required" },
             { type: "list", items: [
-              "GP (General Partner): Developer/investment manager",
-              "LP (Limited Partners): Investors providing capital",
-              "Fund Manager: GP or licensed financial entity (CMA)",
+              "Developer (General Partner): Developer/investment manager",
+              "Investors (Limited Partners): Investors providing capital",
+              "Fund Manager: Developer or licensed financial entity (CMA)",
               "Custodian, Auditor, Legal Counsel"
             ]},
             { type: "heading", text: "Fees & Costs" },
@@ -6581,8 +6581,8 @@ const EDUCATIONAL_CONTENT = {
             { type: "list", items: [
               "Tier 1: Return of Capital to investors",
               "Tier 2: Preferred Return (8-12% annual)",
-              "Tier 3: GP Catch-up",
-              "Tier 4: Profit Split (usually 70/30 or 80/20 to LP)"
+              "Tier 3: Developer Catch-up",
+              "Tier 4: Profit Split (usually 70/30 or 80/20 to Investor)"
             ]},
             { type: "heading", text: "Key Risks" },
             { type: "list", items: [
@@ -7019,7 +7019,7 @@ const EDUCATIONAL_CONTENT = {
   waterfallConcepts: {
     ar: {
       title: "شلال التوزيعات - المفاهيم الأساسية",
-      intro: "حافز الأداء (Waterfall) هو الآلية التي تحدد ترتيب وأولوية توزيع الأرباح بين المطور (GP) والمستثمرين (LP). فهم كل مرحلة ضروري لتقييم عدالة الهيكل.",
+      intro: "حافز الأداء (Waterfall) هو الآلية التي تحدد ترتيب وأولوية توزيع الأرباح بين المطور والمستثمرين. فهم كل مرحلة ضروري لتقييم عدالة الهيكل.",
       cta: "فهمت",
       tabs: [
         {
@@ -7040,11 +7040,11 @@ const EDUCATIONAL_CONTENT = {
             { type: "list", items: [
               "المرحلة 1: إرجاع رأس المال (Return of Capital)",
               "المرحلة 2: العائد التفضيلي (Preferred Return)",
-              "المرحلة 3: تعويض المطور (GP Catch-up)",
+              "المرحلة 3: تعويض المطور (Catch-up)",
               "المرحلة 4: تقسيم الأرباح (Profit Split)"
             ]},
             { type: "heading", text: "مثال مبسّط" },
-            { type: "text", text: "صندوق بـ 100 مليون Equity، عائد تفضيلي 10%، Carry 20%. بعد 5 سنوات حقق 180 مليون. التوزيع: (1) أول 100 مليون ترجع للمستثمرين، (2) الـ 50 مليون التالية تغطي العائد التفضيلي التراكمي، (3) GP يأخذ catch-up، (4) الباقي يتقسم 80/20." }
+            { type: "text", text: "صندوق بـ 100 مليون Equity، عائد تفضيلي 10%، Carry 20%. بعد 5 سنوات حقق 180 مليون. التوزيع: (1) أول 100 مليون ترجع للمستثمرين، (2) الـ 50 مليون التالية تغطي العائد التفضيلي التراكمي، (3) المطور يأخذ catch-up، (4) الباقي يتقسم 80/20." }
           ]
         },
         {
@@ -7053,7 +7053,7 @@ const EDUCATIONAL_CONTENT = {
           icon: "⭐",
           content: [
             { type: "heading", text: "ما هو العائد التفضيلي (Preferred Return)؟" },
-            { type: "text", text: "حد أدنى للعائد السنوي يحصل عليه المستثمرون (LP) قبل أن يشارك المطور (GP) في أي أرباح. يُحسب كنسبة مئوية سنوية على رأس المال غير المسترد." },
+            { type: "text", text: "حد أدنى للعائد السنوي يحصل عليه المستثمرون قبل أن يشارك المطور في أي أرباح. يُحسب كنسبة مئوية سنوية على رأس المال غير المسترد." },
             { type: "heading", text: "كيف يعمل؟" },
             { type: "list", items: [
               "يتراكم سنوياً على رأس المال غير المسترد",
@@ -7063,9 +7063,9 @@ const EDUCATIONAL_CONTENT = {
             ]},
             { type: "heading", text: "نسبي أم للمستثمر فقط؟" },
             { type: "list", items: [
-              "نسبي (Pro Rata): العائد التفضيلي يوزع على GP و LP حسب حصصهم في رأس المال",
-              "للمستثمر فقط (LP Only): كامل العائد التفضيلي يذهب للمستثمرين",
-              "الطريقة المختارة تؤثر على عوائد GP بشكل كبير"
+              "نسبي (Pro Rata): العائد التفضيلي يوزع على المطور والمستثمر حسب حصصهم في رأس المال",
+              "للمستثمر فقط: كامل العائد التفضيلي يذهب للمستثمرين",
+              "الطريقة المختارة تؤثر على عوائد المطور بشكل كبير"
             ]},
             { type: "heading", text: "معدلات شائعة في السعودية" },
             { type: "list", items: [
@@ -7081,13 +7081,13 @@ const EDUCATIONAL_CONTENT = {
           label: "تعويض المطور",
           icon: "🔄",
           content: [
-            { type: "heading", text: "ما هو تعويض المطور (GP Catch-up)؟" },
+            { type: "heading", text: "ما هو تعويض المطور (Catch-up)؟" },
             { type: "text", text: "بعد حصول المستثمرين على العائد التفضيلي، يأخذ المطور حصة أكبر مؤقتاً حتى يصل لنسبة الأرباح المتفق عليها (Carry)." },
             { type: "heading", text: "لماذا يوجد؟" },
             { type: "list", items: [
               "بدونه: المطور يحصل على Carry فقط على الأرباح فوق Pref",
               "معه: المطور يصل لنسبة Carry الكاملة من إجمالي الأرباح",
-              "يضمن أن نسبة GP النهائية تعكس الـ Carry المتفق عليه",
+              "يضمن أن نسبة المطور النهائية تعكس الـ Carry المتفق عليه",
               "شائع في معظم الصناديق العقارية المهنية"
             ]},
             { type: "heading", text: "طريقة الحساب" },
@@ -7097,13 +7097,13 @@ const EDUCATIONAL_CONTENT = {
               "الطريقة السنوية هي الافتراضية في النموذج المرجعي"
             ]},
             { type: "heading", text: "مثال" },
-            { type: "text", text: "أرباح = 100، Pref = 60 ذهبت لـ LP، Carry = 20%. بدون catch-up: GP يأخذ 20% من المتبقي (40 × 20% = 8). مع catch-up: GP يأخذ حتى يصل لـ 20% من إجمالي الأرباح (100 × 20% = 20)." },
+            { type: "text", text: "أرباح = 100، Pref = 60 ذهبت للمستثمر، Carry = 20%. بدون catch-up: المطور يأخذ 20% من المتبقي (40 × 20% = 8). مع catch-up: المطور يأخذ حتى يصل لـ 20% من إجمالي الأرباح (100 × 20% = 20)." },
             { type: "heading", text: "ملاحظات مهمة" },
             { type: "list", items: [
-              "في السعودية: معظم الصناديق تستخدم catch-up بنسبة 100% (GP يأخذ كل شي حتى يتعادل)",
+              "في السعودية: معظم الصناديق تستخدم catch-up بنسبة 100% (المطور يأخذ كل شي حتى يتعادل)",
               "بعض الصناديق تستخدم catch-up جزئي (مثلاً 50%) - أبطأ للمطور",
-              "بدون catch-up: GP يخسر جزء كبير من حصته خاصة إذا كان Pref عالي",
-              "يجب أن يكون واضحاً في وثائق الصندوق لأنه يؤثر بشكل كبير على عوائد GP"
+              "بدون catch-up: المطور يخسر جزء كبير من حصته خاصة إذا كان Pref عالي",
+              "يجب أن يكون واضحاً في وثائق الصندوق لأنه يؤثر بشكل كبير على عوائد المطور"
             ]}
           ]
         },
@@ -7149,7 +7149,7 @@ const EDUCATIONAL_CONTENT = {
     },
     en: {
       title: "Waterfall Distribution - Core Concepts",
-      intro: "The Waterfall defines the order and priority of profit distribution between developer (GP) and investors (LP). Understanding each tier is essential to evaluate deal fairness.",
+      intro: "The Waterfall defines the order and priority of profit distribution between Developer and Investors. Understanding each tier is essential to evaluate deal fairness.",
       cta: "Got it",
       tabs: [
         {
@@ -7170,7 +7170,7 @@ const EDUCATIONAL_CONTENT = {
             { type: "list", items: [
               "Tier 1: Return of Capital",
               "Tier 2: Preferred Return",
-              "Tier 3: GP Catch-up",
+              "Tier 3: Developer Catch-up",
               "Tier 4: Profit Split"
             ]}
           ]
@@ -7181,7 +7181,7 @@ const EDUCATIONAL_CONTENT = {
           icon: "⭐",
           content: [
             { type: "heading", text: "What is Preferred Return?" },
-            { type: "text", text: "Minimum annual return to LPs before GP shares in any profits. Calculated as annual % on unreturned capital." },
+            { type: "text", text: "Minimum annual return to Investors before Developer shares in any profits. Calculated as annual % on unreturned capital." },
             { type: "heading", text: "How it works" },
             { type: "list", items: [
               "Accrues annually on unreturned capital",
@@ -7189,26 +7189,26 @@ const EDUCATIONAL_CONTENT = {
               "Must be fully paid before Tier 3 begins",
               "Typically 8-15% depending on risk level"
             ]},
-            { type: "heading", text: "Pro Rata vs LP Only" },
+            { type: "heading", text: "Pro Rata vs Investor Only" },
             { type: "list", items: [
-              "Pro Rata: Pref distributed to GP and LP by ownership share",
-              "LP Only: All pref goes exclusively to investors",
-              "Choice significantly impacts GP economics"
+              "Pro Rata: Pref distributed to Developer and Investor by ownership share",
+              "Investor Only: All pref goes exclusively to investors",
+              "Choice significantly impacts Developer economics"
             ]}
           ]
         },
         {
           id: "catchup",
-          label: "GP Catch-up",
+          label: "Developer Catch-up",
           icon: "🔄",
           content: [
-            { type: "heading", text: "What is GP Catch-up?" },
-            { type: "text", text: "After LPs receive their preferred return, GP temporarily takes a larger share until reaching their agreed carry percentage of total profits." },
+            { type: "heading", text: "What is Developer Catch-up?" },
+            { type: "text", text: "After Investors receive their preferred return, Developer temporarily takes a larger share until reaching their agreed carry percentage of total profits." },
             { type: "heading", text: "Why it exists" },
             { type: "list", items: [
-              "Without it: GP only earns carry on profits above pref",
-              "With it: GP reaches full carry % of total profits",
-              "Ensures GP's final share reflects the agreed carry",
+              "Without it: Developer only earns carry on profits above pref",
+              "With it: Developer reaches full carry % of total profits",
+              "Ensures Developer's final share reflects the agreed carry",
               "Standard in most professional real estate funds"
             ]},
             { type: "heading", text: "Calculation Method" },
@@ -7225,13 +7225,13 @@ const EDUCATIONAL_CONTENT = {
           icon: "💰",
           content: [
             { type: "heading", text: "What is Profit Split?" },
-            { type: "text", text: "Final tier: remaining profits after all previous tiers are split at a fixed ratio between LP and GP." },
+            { type: "text", text: "Final tier: remaining profits after all previous tiers are split at a fixed ratio between Investor and Developer." },
             { type: "heading", text: "Common Ratios" },
             { type: "list", items: [
-              "80/20: LP 80% / GP 20% (most common)",
+              "80/20: Investor 80% / Developer 20% (most common)",
               "70/30: For developers with proven track record",
               "90/10: Large funds with lower risk",
-              "Carry = GP's share in this tier (usually 20-30%)"
+              "Carry = Developer's share in this tier (usually 20-30%)"
             ]},
             { type: "heading", text: "MOIC & IRR" },
             { type: "list", items: [
@@ -7712,7 +7712,7 @@ const EDUCATIONAL_CONTENT = {
             { type: "heading", text: "معدلات شائعة في السوق السعودي" },
             { type: "list", items: [
               "مشروع عقاري تجاري ناجح: Unlevered 12%-18%",
-              "صندوق عقاري (LP): 15%-25%",
+              "صندوق عقاري (مستثمر): 15%-25%",
               "مشروع فندقي/سياحي: 10%-20% (أعلى مخاطرة)",
               "أقل من 8% عادة غير جاذب للمستثمرين"
             ]},
@@ -7778,7 +7778,7 @@ const EDUCATIONAL_CONTENT = {
               "IRR ممكن يكون عالي لكن MOIC منخفض (مشروع سريع لكن ربح قليل)",
               "MOIC ممكن يكون عالي لكن IRR منخفض (مشروع بطيء لكن ربح كبير)",
               "المستثمر المؤسسي يبحث عن IRR > 15% مع MOIC > 2x كحد أدنى",
-              "في الصناديق: GP يهتم بـ IRR (يحدد الأداء)، LP يهتم بـ MOIC (يحدد الربح الفعلي)"
+              "في الصناديق: المطور يهتم بـ IRR (يحدد الأداء)، المستثمر يهتم بـ MOIC (يحدد الربح الفعلي)"
             ]},
             { type: "heading", text: "مثال" },
             { type: "text", text: "استثمرت 10 مليون. بعد 7 سنوات حصلت 35 مليون إجمالي. MOIC = 35 ÷ 10 = 3.5x. يعني 3.5 أضعاف رأس المال. الربح الصافي = 25 مليون (250%)." }
@@ -7887,7 +7887,7 @@ const EDUCATIONAL_CONTENT = {
             { type: "heading", text: "Saudi market ranges" },
             { type: "list", items: [
               "Successful commercial project: Unlevered 12%-18%",
-              "RE Fund (LP): 15%-25%",
+              "RE Fund (Investor): 15%-25%",
               "Hospitality/tourism: 10%-20% (higher risk)",
               "Below 8% usually not attractive to investors"
             ]},
@@ -7951,7 +7951,7 @@ const EDUCATIONAL_CONTENT = {
               "High IRR + low MOIC = fast but small return",
               "Low IRR + high MOIC = slow but large return",
               "Institutional investors typically target IRR > 15% with MOIC > 2x minimum",
-              "In funds: GP focuses on IRR (performance), LP focuses on MOIC (actual profit)"
+              "In funds: Developer focuses on IRR (performance), Investor focuses on MOIC (actual profit)"
             ]}
           ]
         },
@@ -8452,7 +8452,7 @@ const EDUCATIONAL_CONTENT = {
           { type: "heading", text: "أهم الأرقام التي تبحث عنها:" },
           { type: "list", items: ["إجمالي CAPEX: التكلفة الإجمالية للمشروع", "IRR: العائد الداخلي - هل المشروع مجدي؟ (أعلى من 10% عادة جيد)", "NPV: صافي القيمة الحالية - هل يضيف قيمة؟ (موجب = جيد)", "DSCR: تغطية الدين - هل يقدر يسدد القرض؟ (أعلى من 1.2x)"] },
           { type: "heading", text: "التبويبات المهمة" },
-          { type: "list", items: ["التمويل: اضبط شروط القرض والصندوق", "حافز الأداء: شاهد توزيع الأرباح بين GP و LP", "السيناريوهات: قارن 8 سيناريوهات مختلفة", "الفحوصات: تأكد من عدم وجود أخطاء", "التقارير: صدّر حزمة البنك أو تقرير المستثمر"] }
+          { type: "list", items: ["التمويل: اضبط شروط القرض والصندوق", "حافز الأداء: شاهد توزيع الأرباح بين المطور و المستثمر", "السيناريوهات: قارن 8 سيناريوهات مختلفة", "الفحوصات: تأكد من عدم وجود أخطاء", "التقارير: صدّر حزمة البنك أو تقرير المستثمر"] }
         ]},
         { id: "tips", label: "نصائح ذهبية", icon: "💡", content: [
           { type: "heading", text: "نصائح من الممارسة" },
@@ -8489,7 +8489,7 @@ const EDUCATIONAL_CONTENT = {
           { type: "heading", text: "Key Numbers to Look For:" },
           { type: "list", items: ["Total CAPEX: total project cost", "IRR: internal rate of return - is the project viable? (above 10% is usually good)", "NPV: net present value - does it add value? (positive = good)", "DSCR: debt coverage - can it repay the loan? (above 1.2x)"] },
           { type: "heading", text: "Important Tabs" },
-          { type: "list", items: ["Financing: adjust loan and fund terms", "Waterfall: see profit distribution between GP and LP", "Scenarios: compare 8 different scenarios", "Checks: verify no errors exist", "Reports: export bank pack or investor report"] }
+          { type: "list", items: ["Financing: adjust loan and fund terms", "Waterfall: see profit distribution between Developer and Investor", "Scenarios: compare 8 different scenarios", "Checks: verify no errors exist", "Reports: export bank pack or investor report"] }
         ]},
         { id: "tips", label: "Pro Tips", icon: "💡", content: [
           { type: "heading", text: "Tips from Practice" },
@@ -8666,7 +8666,7 @@ const ACADEMY_TERM_REGISTRY = {
   "Waterfall": { key: "waterfallConcepts", tab: 0 },
   "العائد المفضل": { key: "waterfallConcepts", tab: 1 },
   "Preferred Return": { key: "waterfallConcepts", tab: 1 },
-  "GP Catch-up": { key: "waterfallConcepts", tab: 2 },
+  "Developer Catch-up": { key: "waterfallConcepts", tab: 2 },
   "Profit Split": { key: "waterfallConcepts", tab: 3 },
   "SAIBOR": { key: "islamicFinance", tab: 0 },
   "LTV": { key: "financingMode", tab: 2 },
@@ -8775,7 +8775,7 @@ const ACADEMY_DEMO_PROJECTS = [
     id: "demo_fund_hotel",
     icon: "🏨",
     title: { ar: "فندق 5 نجوم - صندوق استثماري", en: "5-Star Hotel - Investment Fund" },
-    desc: { ar: "فندق فاخر بهيكل صندوق GP/LP مع شلال توزيعات. أعقد سيناريو.", en: "Luxury hotel with GP/LP fund structure and waterfall. Most complex scenario." },
+    desc: { ar: "فندق فاخر بهيكل صندوق (مطور/مستثمر) مع شلال توزيعات. أعقد سيناريو.", en: "Luxury hotel with Developer/Investor fund structure and waterfall. Most complex scenario." },
     tags: ["fund", "lease", "sale"],
     overrides: {
       name: "", landType: "lease", landArea: 12000, landRentAnnual: 4500000, landRentGrace: 5,
@@ -9586,7 +9586,7 @@ function _buildXLSX(XLSX, project, results, financing, waterfall) {
     }
 
     if (w) {
-      s1.push(['▸ INVESTOR RETURNS', '', 'LP', 'GP']);
+      s1.push(['▸ INVESTOR RETURNS', '', 'Investor', 'Developer']);
       s1.push(['  Equity (' + cur + ')', '', fm(w.lpEquity), fm(w.gpEquity)]);
       s1.push(['  Equity %', '', fp(w.lpPct), fp(w.gpPct)]);
       s1.push(['  Total Distributions', '', fm(w.lpTotalDist), fm(w.gpTotalDist)]);
@@ -9734,7 +9734,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
   // Section 3: Waterfall Returns
   if (w) {
     sections.push(["INVESTOR RETURNS"]);
-    sections.push(["", "LP", "GP"]);
+    sections.push(["", "Investor", "Developer"]);
     sections.push(["Equity", w.lpEquity, w.gpEquity]);
     sections.push(["Equity %", (w.lpPct * 100).toFixed(1) + "%", (w.gpPct * 100).toFixed(1) + "%"]);
     sections.push(["Total Distributions", w.lpTotalDist, w.gpTotalDist]);
@@ -10027,7 +10027,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
               {l:ar?"IRR (قبل التمويل)":"Unlevered IRR",v:fc.irr?fmtPct(fc.irr*100):"N/A",ac:"#2563eb"},
               {l:"NPV @10%",v:fmtM(fc.npv10),ac:"#06b6d4"},
               ...(f&&f.mode!=="self"&&!isFiltered?[{l:ar?"IRR (بعد التمويل)":"Levered IRR",v:f.leveredIRR?fmtPct(f.leveredIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"إجمالي الدين":"Total Debt",v:fmtM(f.totalDebt),ac:"#f59e0b"}]:[]),
-              ...(fw?[{l:ar?"عائد الممول (LP)":"Investor IRR (LP)",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"مضاعف الممول (LP)":"Investor MOIC (LP)",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e"}]:[]),
+              ...(fw?[{l:ar?"عائد المستثمر":"Investor IRR",v:fw.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#8b5cf6"},{l:ar?"مضاعف المستثمر":"Investor MOIC",v:fw.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e"}]:[]),
             ].map((k,i) => (
               <div key={i} style={{...zanKpi(k.ac)}}>
                 <div style={{fontSize:9,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
@@ -10422,9 +10422,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           {/* Primary LP metrics - big and prominent */}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3, 1fr)",gap:10,marginBottom:12}}>
             {[
-              {l:ar?"عائد LP المستهدف":"Target LP IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#0f766e",big:true},
-              {l:ar?"مضاعف LP":"LP MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e",big:true},
-              {l:ar?"فترة الاسترداد":"LP Payback",v:(()=>{if(!fw?.lpNetCF)return "—";let cum=0,wasNeg=false;for(let y=0;y<h;y++){cum+=fw.lpNetCF[y]||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"yr");}return "—";})(),ac:"#0f766e",big:true},
+              {l:ar?"عائد المستثمر المستهدف":"Target Investor IRR",v:fw?.lpIRR?fmtPct(fw.lpIRR*100):"N/A",ac:"#0f766e",big:true},
+              {l:ar?"مضاعف المستثمر":"Investor MOIC",v:fw?.lpMOIC?fw.lpMOIC.toFixed(2)+"x":"N/A",ac:"#0f766e",big:true},
+              {l:ar?"فترة الاسترداد":"Investor Payback",v:(()=>{if(!fw?.lpNetCF)return "—";let cum=0,wasNeg=false;for(let y=0;y<h;y++){cum+=fw.lpNetCF[y]||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return(y+1)+" "+(ar?"سنة":"yr");}return "—";})(),ac:"#0f766e",big:true},
             ].map((k,i) => (
               <div key={i} style={{...zanKpi(k.ac),textAlign:"center",padding:"14px 12px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.3}}>{k.l}</div>
@@ -10457,7 +10457,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 [ar?"العائد المفضل":"Preferred Return",(project.prefReturnPct||15)+"% "+(ar?"سنوي على رأس المال غير المسترد":"p.a. on unreturned capital")],
                 [ar?"التعويض":"Catch-up",project.gpCatchup?(ar?"نعم":"Yes"):(ar?"لا":"No")],
                 [ar?"أداء / حمولة":"Carry / Performance Fee",(project.carryPct||30)+"%"],
-                [ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)","LP "+(project.lpProfitSplitPct||70)+"% / GP "+(100-(project.lpProfitSplitPct||70))+"%"],
+                [ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)","Investor "+(project.lpProfitSplitPct||70)+"% / Developer "+(100-(project.lpProfitSplitPct||70))+"%"],
                 [ar?"رسوم الاشتراك":"Subscription Fee",(project.subscriptionFeePct||2)+"%"],
                 [ar?"رسوم الإدارة السنوية":"Annual Management Fee",(project.annualMgmtFeePct||0.9)+"%"],
                 [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من التكاليف":"of CAPEX")],
@@ -10487,8 +10487,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr style={{background:"#0f1117"}}>
                 <th style={zanTh}>{ar?"المؤشر":"Metric"}</th>
-                <th style={{...zanTh,textAlign:"center",background:"#0f766e"}}>{ar?"المستثمر (LP)":"LP (Investor)"}</th>
-                <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المطور (GP)":"GP (Sponsor)"}</th>
+                <th style={{...zanTh,textAlign:"center",background:"#0f766e"}}>{ar?"المستثمر":"Investor"}</th>
+                <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المطور":"Developer"}</th>
                 <th style={{...zanTh,textAlign:"center",opacity:0.7}}>{ar?"المشروع":"Project"}</th>
               </tr></thead>
               <tbody>
@@ -10534,8 +10534,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                   </div>
                 ))}
                 <div style={{display:"flex",gap:16,marginTop:6,fontSize:9,color:"#6b7080"}}>
-                  <span><span style={{display:"inline-block",width:10,height:6,background:"#8b5cf6",borderRadius:2,marginRight:3}} />LP {ar?"التراكمي":"Cumulative"}</span>
-                  <span><span style={{display:"inline-block",width:10,height:6,background:"#0f766e",borderRadius:2,marginRight:3}} />GP {ar?"التراكمي":"Cumulative"}</span>
+                  <span><span style={{display:"inline-block",width:10,height:6,background:"#8b5cf6",borderRadius:2,marginRight:3}} />{ar?"المستثمر التراكمي":"Investor Cumulative"}</span>
+                  <span><span style={{display:"inline-block",width:10,height:6,background:"#0f766e",borderRadius:2,marginRight:3}} />{ar?"المطور التراكمي":"Developer Cumulative"}</span>
                 </div>
               </div>;
             })()}
@@ -10890,8 +10890,8 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
                 ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل العائد بعد التمويل\nReturn after debt service" }]:[]),
                 { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => getScenarioData(s).totalNetCF, fmt: v => fmtM(v), tip:"صافي التدفق = إيرادات - تكاليف - إيجار أرض\nNet CF = Income - CAPEX - Land Rent" },
                 ...(!isFiltered?[
-                  { label: ar?"عائد الممول (LP)":"Investor IRR (LP)", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
-                  { label: ar?"مضاعف الممول (LP)":"Investor MOIC (LP)", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
+                  { label: ar?"عائد المستثمر":"Investor IRR", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
+                  { label: ar?"مضاعف المستثمر":"Investor MOIC", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
                 ]:[]),
               ].map((metric, mi) => {
                 const baseVal = metric.fn(scenarioResults[0]);
@@ -11807,7 +11807,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           <KPI label="IRR" value={displayIRR !== null ? (displayIRR*100).toFixed(1)+"%" : "—"} color={getMetricColor("IRR",displayIRR,{dark:true})} />
           {displayNPV !== null && <KPI label={ar?"صافي القيمة الحالية":"NPV @10%"} value={fmtM(displayNPV)} color={getMetricColor("NPV",displayNPV,{dark:true})} />}
           {minDscr !== null && !isPhase && <KPI label={ar?"أدنى DSCR":"Min DSCR"} value={minDscr.toFixed(2)+"x"} color={getMetricColor("DSCR",minDscr,{dark:true})} />}
-          {w && !isPhase && <KPI label="LP MOIC" value={w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"} color={getMetricColor("MOIC",w.lpMOIC,{dark:true})} />}
+          {w && !isPhase && <KPI label={ar?"مضاعف المستثمر":"Investor MOIC"} value={w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"} color={getMetricColor("MOIC",w.lpMOIC,{dark:true})} />}
           {isPhase && <KPI label={ar?"إجمالي الإيرادات":"Total Income"} value={fmtM(displayIncome)} color="#4ade80" />}
           {isPhase && <KPI label={ar?"عدد الأصول":"Assets"} value={String(displayAssets.length)} color="#fff" />}
         </div>
@@ -11862,7 +11862,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
               <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"إجمالي حقوق الملكية":"Total Equity"}</div>
                 <div style={{fontSize:20,fontWeight:700,color:"#16a34a"}}>{fmtM(f.totalEquity)}</div>
-                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>GP: {fmtM(f.gpEquity)}{f.lpEquity > 0 ? ` | LP: ${fmtM(f.lpEquity)}` : ""}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{ar?"المطور":"Developer"}: {fmtM(f.gpEquity)}{f.lpEquity > 0 ? ` | ${ar?"المستثمر":"Investor"}: ${fmtM(f.lpEquity)}` : ""}</div>
               </div>
               <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"معدل التمويل":"Finance Rate"}</div>
@@ -11943,10 +11943,10 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           {w ? (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
               {[
-                { label: "LP IRR", value: w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—", color: "#7c3aed" },
-                { label: "GP IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—", color: "#16a34a" },
-                { label: "LP MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—", color: "#7c3aed", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.lpTotalInvested)} → ${fmtM(w.lpTotalDist)}` },
-                { label: "GP MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—", color: "#16a34a", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.gpTotalInvested)} → ${fmtM(w.gpTotalDist)}` },
+                { label: ar?"عائد المستثمر":"Investor IRR", value: w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—", color: "#7c3aed" },
+                { label: ar?"عائد المطور":"Developer IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—", color: "#16a34a" },
+                { label: ar?"مضاعف المستثمر":"Investor MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—", color: "#7c3aed", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.lpTotalInvested)} → ${fmtM(w.lpTotalDist)}` },
+                { label: ar?"مضاعف المطور":"Developer MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—", color: "#16a34a", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.gpTotalInvested)} → ${fmtM(w.gpTotalDist)}` },
                 { label: "DPI", value: w.lpTotalInvested > 0 ? (w.lpTotalDist / w.lpTotalInvested).toFixed(2)+"x" : "—", color: "#1a1d23" },
               ].map((item, i) => (
                 <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
@@ -11976,7 +11976,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           </Section>
         )}
         {w && (
-          <Section title={ar?"اقتصاديات المطور (GP)":"GP Economics"} color="#16a34a">
+          <Section title={ar?"اقتصاديات المطور":"Developer Economics"} color="#16a34a">
             <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
                 {[
@@ -11984,8 +11984,8 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
                   { label: ar?"توزيعات المطور":"Developer Distributions", value: fmtM(w.gpTotalDist) },
                   { label: ar?"رسوم المطور":"Developer Fee", value: fmtM(w.developerFeeTotal||0) },
                   { label: ar?"رسوم الإدارة":"Mgmt Fees", value: fmtM(w.mgmtFeeTotal||0) },
-                  { label: "GP IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—" },
-                  { label: "GP MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—" },
+                  { label: ar?"عائد المطور":"Developer IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—" },
+                  { label: ar?"مضاعف المطور":"Developer MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—" },
                 ].map((item, i) => (
                   <div key={i}>
                     <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{item.label}</div>

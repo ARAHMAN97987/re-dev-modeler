@@ -160,7 +160,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           <KPI label="IRR" value={displayIRR !== null ? (displayIRR*100).toFixed(1)+"%" : "—"} color={getMetricColor("IRR",displayIRR,{dark:true})} />
           {displayNPV !== null && <KPI label={ar?"صافي القيمة الحالية":"NPV @10%"} value={fmtM(displayNPV)} color={getMetricColor("NPV",displayNPV,{dark:true})} />}
           {minDscr !== null && !isPhase && <KPI label={ar?"أدنى DSCR":"Min DSCR"} value={minDscr.toFixed(2)+"x"} color={getMetricColor("DSCR",minDscr,{dark:true})} />}
-          {w && !isPhase && <KPI label="LP MOIC" value={w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"} color={getMetricColor("MOIC",w.lpMOIC,{dark:true})} />}
+          {w && !isPhase && <KPI label={ar?"مضاعف المستثمر":"Investor MOIC"} value={w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—"} color={getMetricColor("MOIC",w.lpMOIC,{dark:true})} />}
           {isPhase && <KPI label={ar?"إجمالي الإيرادات":"Total Income"} value={fmtM(displayIncome)} color="#4ade80" />}
           {isPhase && <KPI label={ar?"عدد الأصول":"Assets"} value={String(displayAssets.length)} color="#fff" />}
         </div>
@@ -215,7 +215,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
               <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"إجمالي حقوق الملكية":"Total Equity"}</div>
                 <div style={{fontSize:20,fontWeight:700,color:"#16a34a"}}>{fmtM(f.totalEquity)}</div>
-                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>GP: {fmtM(f.gpEquity)}{f.lpEquity > 0 ? ` | LP: ${fmtM(f.lpEquity)}` : ""}</div>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>{ar?"المطور":"Dev"}: {fmtM(f.gpEquity)}{f.lpEquity > 0 ? ` | ${ar?"المستثمر":"Inv"}: ${fmtM(f.lpEquity)}` : ""}</div>
               </div>
               <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"معدل التمويل":"Finance Rate"}</div>
@@ -260,8 +260,8 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
                 <div style={{fontSize:11,fontWeight:700,color:"#1a1d23",marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>{ar?"المصادر":"Sources"}</div>
                 {[
                   { label: ar?"دين بنكي":"Bank Debt", value: f.totalDebt, color: "#1e40af" },
-                  { label: ar?"حقوق ملكية GP":"GP Equity", value: f.gpEquity, color: "#16a34a" },
-                  { label: ar?"حقوق ملكية LP":"LP Equity", value: f.lpEquity, color: "#8b5cf6" },
+                  { label: ar?"حقوق ملكية المطور":"Developer Equity", value: f.gpEquity, color: "#16a34a" },
+                  { label: ar?"حقوق ملكية المستثمر":"Investor Equity", value: f.lpEquity, color: "#8b5cf6" },
                 ].filter(s => s.value > 0).map((s, i) => (
                   <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #f0f1f5"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:2,background:s.color}} /><span style={{fontSize:12}}>{s.label}</span></div>
@@ -296,10 +296,10 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           {w ? (
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
               {[
-                { label: "LP IRR", value: w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—", color: "#7c3aed" },
-                { label: "GP IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—", color: "#16a34a" },
-                { label: "LP MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—", color: "#7c3aed", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.lpTotalInvested)} → ${fmtM(w.lpTotalDist)}` },
-                { label: "GP MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—", color: "#16a34a", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.gpTotalInvested)} → ${fmtM(w.gpTotalDist)}` },
+                { label: ar?"عائد المستثمر":"Investor IRR", value: w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—", color: "#7c3aed" },
+                { label: ar?"عائد المطور":"Developer IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—", color: "#16a34a" },
+                { label: ar?"مضاعف المستثمر":"Investor MOIC", value: w.lpMOIC ? w.lpMOIC.toFixed(2)+"x" : "—", color: "#7c3aed", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.lpTotalInvested)} → ${fmtM(w.lpTotalDist)}` },
+                { label: ar?"مضاعف المطور":"Developer MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—", color: "#16a34a", sub: `${ar?"الاستثمار":"Invested"}: ${fmtM(w.gpTotalInvested)} → ${fmtM(w.gpTotalDist)}` },
                 { label: "DPI", value: w.lpTotalInvested > 0 ? (w.lpTotalDist / w.lpTotalInvested).toFixed(2)+"x" : "—", color: "#1a1d23" },
               ].map((item, i) => (
                 <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
@@ -317,7 +317,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
               {[
                 { label: ar?"رد رأس المال":"T1: Return of Capital", value: (w.tier1||[]).reduce((s,v)=>s+v,0), color: "#1e40af" },
                 { label: ar?"العائد التفضيلي":"T2: Pref Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" },
-                { label: ar?"تعويض المطور":"T3: GP Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "#16a34a" },
+                { label: ar?"التعويض":"T3: Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "#16a34a" },
                 { label: ar?"تقسيم الأرباح":"T4: Profit Split", value: ((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)), color: "#f59e0b" },
               ].map((tier, i) => (
                 <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px",borderTop:`3px solid ${tier.color}`}}>
@@ -329,16 +329,16 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
           </Section>
         )}
         {w && (
-          <Section title={ar?"اقتصاديات المطور (GP)":"GP Economics"} color="#16a34a">
+          <Section title={ar?"اقتصاديات المطور":"Developer Economics"} color="#16a34a">
             <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"16px 18px"}}>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
                 {[
-                  { label: ar?"رأس مال GP":"GP Equity", value: fmtM(w.gpTotalInvested) },
-                  { label: ar?"إجمالي توزيعات GP":"GP Distributions", value: fmtM(w.gpTotalDist) },
+                  { label: ar?"رأس مال المطور":"Developer Equity", value: fmtM(w.gpTotalInvested) },
+                  { label: ar?"إجمالي توزيعات المطور":"Developer Distributions", value: fmtM(w.gpTotalDist) },
                   { label: ar?"رسوم المطور":"Developer Fee", value: fmtM(w.developerFeeTotal||0) },
                   { label: ar?"رسوم الإدارة":"Mgmt Fees", value: fmtM(w.mgmtFeeTotal||0) },
-                  { label: "GP IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—" },
-                  { label: "GP MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—" },
+                  { label: ar?"عائد المطور":"Developer IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—" },
+                  { label: ar?"مضاعف المطور":"Developer MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—" },
                 ].map((item, i) => (
                   <div key={i}>
                     <div style={{fontSize:10,color:"#6b7080",marginBottom:2}}>{item.label}</div>
