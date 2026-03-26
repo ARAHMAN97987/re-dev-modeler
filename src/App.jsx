@@ -5156,6 +5156,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
     { key:"occ", en:"Occ%", ar:"إشغال", w:42 },
     { key:"cost", en:"Cost/sqm", ar:"تكلفة/م²", w:65 },
     { key:"dur", en:"Build (mo)", ar:"مدة البناء", w:70 },
+    { key:"hardCost", en:"Hard Cost", ar:"تكلفة البناء", w:80 },
     { key:"totalCapex", en:"CAPEX", ar:"التكاليف", w:80 },
     { key:"totalInc", en:"Revenue", ar:"الإيرادات", w:80 },
     { key:"score", en:"Score", ar:"تقييم", w:90 },
@@ -5621,9 +5622,10 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             <thead>
               <tr>
                 {visibleCols.map(c=>(
-                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w, ...(c.key==="totalCapex"?{background:"var(--color-info-bg)"}:c.key==="totalInc"?{background:"var(--color-success-bg)"}:c.key==="score"?{background:"var(--color-warning-bg)"}:{})}}>
+                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w, ...(c.key==="totalCapex"?{background:"var(--color-info-bg)"}:c.key==="hardCost"?{background:"rgba(59,130,246,0.04)"}:c.key==="totalInc"?{background:"var(--color-success-bg)"}:c.key==="score"?{background:"var(--color-warning-bg)"}:{})}}>
                     <div>{c.en}</div>
                     {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"var(--text-tertiary)"}}>{c.ar}</div>}
+                    {c.key==="totalCapex"&&(project.softCostPct>0||project.contingencyPct>0)&&<div style={{fontWeight:400,fontSize:8,color:"var(--text-tertiary)",whiteSpace:"nowrap"}}>{ar?`(+${project.softCostPct||0}% ناعمة +${project.contingencyPct||0}% احتياطي)`:`(+${project.softCostPct||0}% soft +${project.contingencyPct||0}% cont)`}</div>}
                   </th>
                 ))}
               </tr>
@@ -5675,7 +5677,8 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <td style={{...tdSt,...hd("occ")}}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
                       <td style={{...tdSt,...hd("cost")}}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("dur")}}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
-                      <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"var(--color-info-bg)",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
+                      <td style={{...tdSt,textAlign:"right",color:"var(--text-secondary)",fontSize:11,background:"rgba(59,130,246,0.04)",...hd("hardCost")}}>{fmt((a.gfa||0)*(a.costPerSqm||0))}</td>
+                      {(()=>{const tc=comp?.totalCapex||computeAssetCapex(a,project);const hc=(a.gfa||0)*(a.costPerSqm||0);const sp=project.softCostPct||0;const cp=project.contingencyPct||0;const softAmt=hc*sp/100;const contAmt=hc*(1+sp/100)*cp/100;const tipText=ar?`تكلفة البناء: ${fmt(hc)} ريال\n+ تكاليف ناعمة (${sp}%): ${fmt(softAmt)} ريال\n+ احتياطي (${cp}%): ${fmt(contAmt)} ريال\n= إجمالي: ${fmt(tc)} ريال`:`Hard Cost: ${fmt(hc)} SAR\n+ Soft Cost (${sp}%): ${fmt(softAmt)} SAR\n+ Contingency (${cp}%): ${fmt(contAmt)} SAR\n= Total: ${fmt(tc)} SAR`;return <td title={tipText} style={{...tdSt,textAlign:"right",fontWeight:600,background:"var(--color-info-bg)",fontSize:11,cursor:"help",...hd("totalCapex")}}>{fmt(tc)}</td>;})()}
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"var(--color-success-text)",background:"var(--color-success-bg)",fontSize:11,...hd("totalInc")}}>{fmt(comp?.totalRevenue||0)}</td>
                       <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative",...hd("score")}}>{(()=>{
                         const sc = getAssetScore(a, comp);
