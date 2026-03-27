@@ -727,15 +727,15 @@ When to use:
           </div>)}
           {/* Performance Incentive */}
           <div style={{borderTop:"1px solid #e5e7ec",margin:"12px 0",paddingTop:12}}>
-            <div style={{fontSize:11,fontWeight:600,color:"#6b7080",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>{ar?"حافز حسن الأداء":"PERFORMANCE INCENTIVE"}</div>
-            <FL label={ar?"تفعيل حافز حسن الأداء":"Enable Performance Incentive"} tip={ar?"إذا تجاوز عائد المستثمر الحد الأدنى، يحصل المطور على نسبة من الزيادة":"If investor IRR exceeds hurdle, developer gets share of excess"}>
+            <div style={{fontSize:11,fontWeight:600,color:"#6b7080",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>{ar?"حافز حسن الأداء للمطور":"DEVELOPER PERFORMANCE INCENTIVE"}</div>
+            <FL label={ar?"تفعيل حافز حسن الأداء للمطور":"Enable Developer Performance Incentive"} tip={ar?"إذا تجاوز عائد المستثمر (IRR) العائد المتوقع السنوي، يحصل المطور على نسبة من الفائض فوق هذا الحد":"If Investor IRR exceeds the Expected Annual Return, the developer receives a share of the excess above that threshold"}>
               <Drp lang={lang} value={cfg.performanceIncentive?"Y":"N"} onChange={v=>upCfg({performanceIncentive:v==="Y"})} options={[{value:"N",en:"Off",ar:"معطل"},{value:"Y",en:"On",ar:"مفعل"}]} />
             </FL>
             {cfg.performanceIncentive && <>
-              <FL label={ar?"العائد المتوقع السنوي %":"Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر قبل تفعيل الحافز":"Minimum investor IRR before incentive kicks in"}>
+              <FL label={ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر (IRR) قبل أن يستحق المطور أي حافز. إذا لم يتجاوز العائد هذا الحد، حافز المطور = صفر":"Minimum Investor IRR threshold. If investor returns do not exceed this rate, developer incentive = zero"}>
                 <Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} />
               </FL>
-              <FL label={ar?"نسبة حافز حسن الأداء %":"Performance Incentive %"} tip={ar?"نسبة الزيادة فوق الحد التي يحصل عليها المطور":"Developer's share of excess above hurdle"}>
+              <FL label={ar?"نسبة حافز المطور من الفائض %":"Developer Share of Excess %"} tip={ar?"نسبة الفائض فوق العائد المتوقع التي يحصل عليها المطور كحافز حسن أداء.\nمثال: لو العائد المتوقع 15% والفائض 100 ريال والنسبة 50% → المطور يحصل 50 ريال":"Developer's percentage of the excess above the Expected Annual Return.\nExample: if Expected Return is 15%, excess is 100 SAR, and share is 50% → Developer gets 50 SAR"}>
                 <Inp type="number" value={cfg.incentivePct} onChange={v=>upCfg({incentivePct:Math.max(0,Math.min(100,v))})} />
               </FL>
             </>}

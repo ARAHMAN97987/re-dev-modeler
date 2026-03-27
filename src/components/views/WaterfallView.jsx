@@ -370,7 +370,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         </div>
         {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe",animation:"zanSlide 0.15s ease"}}>
           {/* Row 1: Waterfall Terms */}
-          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"حافز حسن الأداء":"PERFORMANCE INCENTIVE"}</div>
+          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"حافز حسن الأداء للمطور":"DEVELOPER PERFORMANCE INCENTIVE"}</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
             {false && ([
               {l:ar?"العائد التفضيلي %":"Pref Return %",k:"prefReturnPct",v:cfg.prefReturnPct},
@@ -387,18 +387,18 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               </select>
             </div>)}
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"تفعيل حافز حسن الأداء":"Enable Performance Incentive"}</span>
+              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"تفعيل حافز حسن الأداء للمطور":"Enable Developer Performance Incentive"}</span>
               <select value={cfg.performanceIncentive?"Y":"N"} onChange={e=>upCfg({performanceIncentive:e.target.value==="Y"})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
                 <option value="N">{ar?"لا":"Off"}</option><option value="Y">{ar?"نعم":"On"}</option>
               </select>
             </div>
             {cfg.performanceIncentive && <>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"العائد المتوقع السنوي %":"Expected Annual Return %"}</span>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"}</span>
               <input type="number" value={cfg.hurdleIRR||""} onChange={e=>upCfg({hurdleIRR:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"نسبة حافز حسن الأداء %":"Performance Incentive %"}</span>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"نسبة حافز المطور من الفائض %":"Developer Share of Excess %"}</span>
               <input type="number" value={cfg.incentivePct||""} onChange={e=>upCfg({incentivePct:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>
             </>}
