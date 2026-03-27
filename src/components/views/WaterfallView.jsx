@@ -174,9 +174,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [selectedPhases, setSelectedPhases] = useState([]);
   const [showTerms, setShowTerms] = useState(false);
   const [wSec, setWSec] = useState({});  // chart toggle state
-  const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false}); // expandable KPI cards
+  const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false,devTotal:false}); // expandable KPI cards
   const [eduModal, setEduModal] = useState(null);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand,devTotal:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
@@ -410,7 +410,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </div>
     )}
 
-    {/* ═══ EXPANDABLE KPI CARDS: GP | LP | Fund ═══ */}
+    {/* ═══ EXPANDABLE KPI CARDS: Investors | Developer | Fund | Total Dev Returns ═══ */}
     {(() => {
       const gpIsManager = cfg.gpIsFundManager !== false;
       const _feeDev = (w.feeDev||[]).reduce((a,b)=>a+b,0);
@@ -423,104 +423,67 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const _feeAuditor = (w.feeAuditor||[]).reduce((a,b)=>a+b,0);
       const _feeOperator = (w.feeOperator||[]).reduce((a,b)=>a+b,0);
       const _feeMisc = (w.feeMisc||[]).reduce((a,b)=>a+b,0);
-      const gpFeesTotal = gpIsManager ? _feeDev+_feeMgmt+_feeStruct+_feeCustody+_feePreEst+_feeSpv+_feeAuditor+_feeOperator+_feeMisc : _feeDev;
-      const gpNetCash = (w.gpTotalDist||0) + gpFeesTotal - (w.gpLandRentTotal||0);
-      const gpNetProfit = gpNetCash - (w.gpTotalInvested||0);
-      // Project-level land rent for this phase (shown when not GP-specific obligation)
-      const phaseLR = pc?.totalLandRent || 0;
-      const showLandRent = (w.gpLandRentTotal||0) > 0 || phaseLR > 0;
       const gpPctVal = w.gpPct||0;
       const lpPctVal = w.lpPct||0;
       const isLpOnlyPref = (w.prefAllocation||cfg.prefAllocation) === "lpOnly";
-      const gpT1 = t1Total * gpPctVal;
-      const gpT2 = isLpOnlyPref ? 0 : t2Total * gpPctVal;
       const lpT1 = t1Total * lpPctVal;
       const lpT2 = isLpOnlyPref ? t2Total : t2Total * lpPctVal;
+      const gpT1 = t1Total * gpPctVal;
+      const gpT2 = isLpOnlyPref ? 0 : t2Total * gpPctVal;
       const lpNetCash = (w.lpTotalDist||0) - (w.lpTotalInvested||0);
       const lpStabYieldVal = lpCashYield.length > 0 && exitYr > 2 ? lpCashYield[Math.min(exitYr - 2, lpCashYield.length - 1)] : 0;
+      // Developer as investor distributions
+      const devAsInvestor = w.developerAsInvestor ?? ((w.gpTotalDist||0) - (w.perfIncentiveAmount||0));
+      // Total invested across both parties
+      const totalInvested = (w.lpTotalInvested||0) + (w.gpTotalInvested||0);
+      const totalDist = (w.lpTotalDist||0) + devAsInvestor;
+      // Developer card: non-investor income only
+      const devFeeTotal = w.developerDevFees ?? (w.devFeesTotal || _feeDev);
+      const perfIncentive = w.developerPerfIncentive ?? (w.perfIncentiveAmount||0);
+      const devRoleIncome = devFeeTotal + (w.perfIncentiveEnabled && perfIncentive > 0 ? perfIncentive : 0);
+      // Card 4: total developer economics
+      const devTotalEconomics = w.developerTotalEconomics ?? (devAsInvestor + devFeeTotal + (w.perfIncentiveEnabled && perfIncentive > 0 ? perfIncentive : 0));
+      const devNetProfit = devTotalEconomics - (w.gpTotalInvested||0);
+
       const cardHd = {cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"};
       const badge = (label, value, color) => <span style={{display:"inline-flex",alignItems:"center",gap:4,background:color+"18",color,borderRadius:5,padding:"3px 8px",fontSize:10,fontWeight:700}}>{label} <strong>{value}</strong></span>;
       const KR = ({l,v,c,bold}) => <><span style={{color:"#6b7080",fontSize:11}}>{l}</span><span style={{textAlign:"right",fontWeight:bold?700:500,fontSize:11,color:c||"#1a1d23"}}>{v}</span></>;
       const SecHd = ({text}) => <div style={{gridColumn:"1/-1",fontSize:9,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:"#9ca3af",paddingTop:6,borderTop:"1px solid #f0f1f5",marginTop:2}}>{text}</div>;
-      return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:16}}>
-        {/* ── GP (Developer) Card ── */}
-        <div style={{background:kpiOpen.gp?"#fff":"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:kpiOpen.gp?"2px solid #3b82f6":"1px solid #bfdbfe",padding:"12px 16px",transition:"all 0.2s"}}>
-          <div onClick={()=>setKpiOpen(p=>({...p,gp:!p.gp}))} style={cardHd}>
-            <span style={{width:22,height:22,borderRadius:5,background:"#3b82f6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>Dev</span>
-            <span style={{fontSize:11,fontWeight:700,color:"#1e40af",flex:1}}>{ar?"المطور":"Developer"}</span>
-            <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.gp?"▲":"▼"}</span>
-          </div>
-          {!kpiOpen.gp ? (
-            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-              {badge(ar?"صافي":"Net", fmtM(gpNetCash), "#16a34a")}
-              {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
-              {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
-            </div>
-          ) : (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
-              <SecHd text={ar?"كمستثمر":"AS INVESTOR"} />
-              <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(gpT1)} />
-              <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={isLpOnlyPref?"—":fmt(gpT2)} />
-              <SecHd text={ar?"كمطور":"AS DEVELOPER"} />
-              {t3Total > 0 && <KR l={ar?"التعويض":"Catch-up"} v={fmt(t3Total)} c="#f59e0b" />}
-              <KR l={ar?"توزيع الأرباح":"Profit Split"} v={fmt(t4GPTotal)} c="#16a34a" />
-              <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(_feeDev)} c="#a16207" />
-              {gpIsManager && <>
-                <KR l={ar?"رسوم إدارة":"Mgmt Fee"} v={fmt(_feeMgmt)} c="#a16207" />
-                <KR l={ar?"رسوم هيكلة":"Struct Fee"} v={fmt(_feeStruct)} c="#a16207" />
-                <KR l={ar?"ما قبل التأسيس":"Pre-Est"} v={fmt(_feePreEst)} c="#a16207" />
-                <KR l="SPV" v={fmt(_feeSpv)} c="#a16207" />
-                <KR l={ar?"مراجع":"Auditor"} v={fmt(_feeAuditor)} c="#a16207" />
-              </>}
-              {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (المطور)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (Developer)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
-              <SecHd text={ar?"ملخص المطور":"DEVELOPER SUMMARY"} />
-              <KR l={ar?"① كمستثمر (توزيعات)":"① As Investor (distributions)"} v={fmt(w.developerAsInvestor ?? ((w.gpTotalDist||0) - (w.perfIncentiveAmount||0)))} c="#3b82f6" />
-              <KR l={ar?"② رسوم التطوير":"② Dev Fees"} v={fmt(w.developerDevFees ?? (w.devFeesTotal||0))} c="#a16207" />
-              {w.perfIncentiveEnabled && (w.perfIncentiveAmount||0) > 0 && <KR l={ar?"③ حافز الأداء":"③ Perf. Incentive"} v={fmt(w.developerPerfIncentive ?? w.perfIncentiveAmount)} c="#059669" />}
-              <div style={{gridColumn:"1/-1",height:1,background:"#e5e7ec",margin:"2px 0"}} />
-              <KR l={ar?"إجمالي عوائد المطور":"Total Developer Returns"} v={fmtM(w.developerTotalEconomics ?? gpNetCash)} c="#16a34a" bold />
-              {(w.gpLandRentTotal||0)>0 && <KR l={ar?"إيجار أرض":"Land Rent"} v={`(${fmt(w.gpLandRentTotal)})`} c="#ef4444" />}
-              <KR l={ar?"مساهمة (حق انتفاع)":"Contribution (Usufruct)"} v={fmt(w.gpTotalInvested)} />
-              <KR l={ar?"صافي الربح":"Net Profit"} v={fmtM(gpNetProfit)} c={gpNetProfit>=0?"#16a34a":"#ef4444"} bold />
-              <SecHd text={ar?"المؤشرات":"METRICS"} />
-              <div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap",paddingTop:4}}>
-                {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
-                {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
-                {badge(ar?"استرداد":"Payback", gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—", "#6366f1")}
-              </div>
-            </div>
-          )}
-        </div>
+      return <>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:12}}>
 
-        {/* ── LP (Investor) Card ── */}
+        {/* ── Card 1: Investors (All Equity) ── */}
         <div style={{background:kpiOpen.lp?"#fff":"linear-gradient(135deg, #faf5ff, #f5f3ff)",borderRadius:10,border:kpiOpen.lp?"2px solid #8b5cf6":"1px solid #e9d5ff",padding:"12px 16px",transition:"all 0.2s"}}>
           <div onClick={()=>setKpiOpen(p=>({...p,lp:!p.lp}))} style={cardHd}>
             <span style={{width:22,height:22,borderRadius:5,background:"#8b5cf6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>Inv</span>
-            <span style={{fontSize:11,fontWeight:700,color:"#5b21b6",flex:1}}>{ar?"المستثمر":"Investor"}</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#5b21b6",flex:1}}>{ar?"المستثمرون":"Investors"}</span>
             <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.lp?"▲":"▼"}</span>
           </div>
           {!kpiOpen.lp ? (
             <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-              {badge("IRR", w.lpIRR!==null?fmtPct(w.lpIRR*100):"—", getMetricColor("IRR",w.lpIRR))}
-              {badge("MOIC", w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.lpMOIC))}
-              {badge(ar?"استرداد":"Payback", lpPayback?`Yr ${lpPayback}`:"—", "#6366f1")}
+              {badge(ar?"إجمالي مستثمر":"Total Inv.", fmtM(totalInvested), "#8b5cf6")}
+              {badge(ar?"إجمالي توزيعات":"Total Dist.", fmtM(totalDist), "#16a34a")}
             </div>
           ) : (
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
-              <SecHd text={ar?"مصادر التوزيعات":"DISTRIBUTION SOURCES"} />
-              <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(lpT1)} />
-              <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={fmt(lpT2)} c="#8b5cf6" />
-              <KR l={ar?"توزيع الأرباح":"Profit Split"} v={fmt(t4LPTotal)} c="#16a34a" />
-              <SecHd text={ar?"الصافي":"NET"} />
-              <KR l={ar?"حصة المستثمر":"Investor Equity"} v={fmt(w.lpTotalInvested)} bold />
-              <KR l={ar?"إجمالي التوزيعات":"Total Distributions"} v={fmt(w.lpTotalDist)} c="#8b5cf6" />
-              <KR l={ar?"صافي النقد":"Net Cash"} v={fmtM(lpNetCash)} c={lpNetCash>=0?"#16a34a":"#ef4444"} bold />
-              <SecHd text={ar?"المؤشرات":"METRICS"} />
+              <SecHd text={ar?"المساهمات":"CONTRIBUTIONS"} />
+              <KR l={ar?"مساهمة المستثمر":"Investor Contribution"} v={fmt(w.lpTotalInvested)} c="#8b5cf6" />
+              <KR l={ar?"مساهمة المطور (كمستثمر)":"Developer Contribution"} v={fmt(w.gpTotalInvested)} c="#3b82f6" />
+              <KR l={ar?"إجمالي المستثمر":"Total Invested"} v={fmt(totalInvested)} bold />
+              <SecHd text={ar?"التوزيعات":"DISTRIBUTIONS"} />
+              <KR l={ar?"توزيعات المستثمر":"Investor Distributions"} v={fmt(w.lpTotalDist)} c="#8b5cf6" />
+              <KR l={ar?"توزيعات المطور (كمستثمر)":"Developer Dist. (as Inv.)"} v={fmt(devAsInvestor)} c="#3b82f6" />
+              <KR l={ar?"إجمالي التوزيعات":"Total Distributions"} v={fmt(totalDist)} bold />
+              <SecHd text={ar?"مؤشرات المستثمر":"INVESTOR METRICS"} />
               <KR l="IRR" v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={getMetricColor("IRR",w.lpIRR)} bold />
               <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.lpMOIC)} bold />
               <KR l="DPI" v={w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"} />
               <KR l={ar?"استرداد":"Payback"} v={lpPayback?`${lpPayback} ${ar?"سنة":"yr"}`:"—"} />
               <KR l={ar?"عائد نقدي":"Cash Yield"} v={lpStabYieldVal>0?fmtPct(lpStabYieldVal*100):"—"} />
+              <SecHd text={ar?"مؤشرات المطور (كمستثمر)":"DEV. METRICS (AS INVESTOR)"} />
+              <KR l="IRR" v={w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"} c={getMetricColor("IRR",w.gpIRR)} bold />
+              <KR l="MOIC" v={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.gpMOIC)} bold />
+              <KR l={ar?"استرداد":"Payback"} v={gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—"} />
               <SecHd text="NPV" />
               <KR l="@10%" v={fmtM(w.lpNPV10)} />
               <KR l="@12%" v={fmtM(w.lpNPV12)} c="#8b5cf6" bold />
@@ -529,11 +492,33 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           )}
         </div>
 
-        {/* ── Fund Manager Card ── */}
+        {/* ── Card 2: Developer (Fees + Incentive Only) ── */}
+        <div style={{background:kpiOpen.gp?"#fff":"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:10,border:kpiOpen.gp?"2px solid #3b82f6":"1px solid #bfdbfe",padding:"12px 16px",transition:"all 0.2s"}}>
+          <div onClick={()=>setKpiOpen(p=>({...p,gp:!p.gp}))} style={cardHd}>
+            <span style={{width:22,height:22,borderRadius:5,background:"#3b82f6",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>Dev</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#1e40af",flex:1}}>{ar?"المطور":"Developer"}</span>
+            <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.gp?"▲":"▼"}</span>
+          </div>
+          {!kpiOpen.gp ? (
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
+              {badge(ar?"دخل المطور":"Dev Income", fmtM(devRoleIncome), "#3b82f6")}
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
+              <SecHd text={ar?"دخل الدور":"ROLE INCOME"} />
+              <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(devFeeTotal)} c="#a16207" />
+              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"حافز الأداء":"Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
+              <div style={{gridColumn:"1/-1",height:1,background:"#e5e7ec",margin:"2px 0"}} />
+              <KR l={ar?"إجمالي دخل المطور":"Total Developer Income"} v={fmtM(devRoleIncome)} c="#3b82f6" bold />
+            </div>
+          )}
+        </div>
+
+        {/* ── Card 3: Fund Manager ── */}
         <div style={{background:kpiOpen.fund?"#fff":"linear-gradient(135deg, #fefce8, #fff7ed)",borderRadius:10,border:kpiOpen.fund?"2px solid #f59e0b":"1px solid #fde68a",padding:"12px 16px",transition:"all 0.2s"}}>
           <div onClick={()=>setKpiOpen(p=>({...p,fund:!p.fund}))} style={cardHd}>
             <span style={{width:22,height:22,borderRadius:5,background:"#f59e0b",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10}}>📊</span>
-            <span style={{fontSize:11,fontWeight:700,color:"#92400e",flex:1}}>{ar?"الصندوق":"Fund"}</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#92400e",flex:1}}>{ar?"مدير الصندوق":"Fund Manager"}</span>
             <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.fund?"▲":"▼"}</span>
           </div>
           {!kpiOpen.fund ? (
@@ -573,7 +558,45 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             </div>
           )}
         </div>
-      </div>;
+
+      </div>
+
+      {/* ── Card 4: Total Developer Returns (full-width) ── */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr",gap:12,marginBottom:16}}>
+        <div style={{background:kpiOpen.devTotal?"#fff":"linear-gradient(135deg, #f0fdf4, #ecfdf5)",borderRadius:10,border:kpiOpen.devTotal?"2px solid #16a34a":"1px solid #bbf7d0",padding:"12px 16px",transition:"all 0.2s"}}>
+          <div onClick={()=>setKpiOpen(p=>({...p,devTotal:!p.devTotal}))} style={cardHd}>
+            <span style={{width:22,height:22,borderRadius:5,background:"#16a34a",display:"inline-flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:800}}>Σ</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#166534",flex:1}}>{ar?"إجمالي عوائد المطور":"Total Developer Returns"}</span>
+            <span style={{fontSize:10,color:"#6b7080"}}>{kpiOpen.devTotal?"▲":"▼"}</span>
+          </div>
+          {!kpiOpen.devTotal ? (
+            <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
+              {badge(ar?"إجمالي":"Total", fmtM(devTotalEconomics), "#16a34a")}
+              {badge(ar?"صافي الربح":"Net Profit", fmtM(devNetProfit), devNetProfit>=0?"#16a34a":"#ef4444")}
+              {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
+              {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
+            </div>
+          ) : (
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:"3px 16px",marginTop:10,animation:"zanScale 0.15s ease"}}>
+              <SecHd text={ar?"مكونات العائد":"RETURN COMPONENTS"} />
+              <KR l={ar?"① كمستثمر (توزيعات)":"① As Investor (distributions)"} v={fmt(devAsInvestor)} c="#8b5cf6" />
+              <KR l={ar?"② رسوم التطوير":"② Dev Fees"} v={fmt(devFeeTotal)} c="#a16207" />
+              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"③ حافز الأداء":"③ Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
+              <div style={{gridColumn:"1/-1",height:1,background:"#bbf7d0",margin:"2px 0"}} />
+              <KR l={ar?"إجمالي العوائد":"Total Returns"} v={fmtM(devTotalEconomics)} c="#16a34a" bold />
+              <KR l={ar?"مساهمة (حق انتفاع)":"Contribution (Usufruct)"} v={fmt(w.gpTotalInvested)} />
+              <KR l={ar?"صافي الربح":"Net Profit"} v={fmtM(devNetProfit)} c={devNetProfit>=0?"#16a34a":"#ef4444"} bold />
+              <SecHd text={ar?"المؤشرات":"METRICS"} />
+              <div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap",paddingTop:4}}>
+                {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
+                {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
+                {badge(ar?"استرداد":"Payback", gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—", "#6366f1")}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      </>;
     })()}
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
@@ -720,9 +743,11 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       <CFRow label={ar?"إجمالي توزيعات المطور":"Total Developer Distributions"} values={w.gpDist} total={w.gpTotalDist} bold color="#3b82f6" />
       </>}
 
-      {/* ═══ § 10. INVESTOR RETURNS ═══ */}
-      <tr onClick={()=>setWSec(p=>({...p,s10:!p.s10}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#92400e",background:"#fefce8",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #ca8a04",userSelect:"none"}}>{wSec.s10?"▶":"▼"} {ar?"10. عوائد المستثمر":"10. INVESTOR RETURNS"}</td></tr>
+      {/* ═══ § 10. PARTY RETURNS ═══ */}
+      <tr onClick={()=>setWSec(p=>({...p,s10:!p.s10}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#92400e",background:"#fefce8",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #ca8a04",userSelect:"none"}}>{wSec.s10?"▶":"▼"} {ar?"10. عوائد الأطراف":"10. PARTY RETURNS"}</td></tr>
       {!wSec.s10 && <>
+      {/* Sub-header: Investor */}
+      <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:9,fontWeight:700,color:"#8b5cf6",background:"#faf5ff",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"المستثمر":"Investor"}</td></tr>
       <CFRow label={ar?"صافي CF المستثمر":"Investor Net Cash Flow"} values={w.lpNetCF} total={w.lpNetCF.reduce((a,b)=>a+b,0)} bold />
       {(() => { let cum=0; return <tr style={{background:"#faf5ff"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:600,fontSize:10,color:"#7c3aed",paddingInlineStart:20}}>{ar?"↳ تراكمي المستثمر":"↳ Investor Cumulative"}</td>
@@ -735,6 +760,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {years.map(y=>{const v=lpCashYield[y]||0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#d0d4dc"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
       </tr>}
 
+      {/* Sub-header: Developer (as Investor) */}
+      <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:9,fontWeight:700,color:"#3b82f6",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"المطور (كمستثمر)":"Developer (as Investor)"}</td></tr>
       <CFRow label={ar?"صافي CF المطور":"Developer Net Cash Flow"} values={w.gpNetCF} total={w.gpNetCF.reduce((a,b)=>a+b,0)} bold />
       {(() => { let cum=0; return <tr style={{background:"#eff6ff"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:600,fontSize:10,color:"#1e40af",paddingInlineStart:20}}>{ar?"↳ تراكمي المطور":"↳ Developer Cumulative"}</td>
@@ -746,6 +773,29 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <td style={tdN}></td>
         {years.map(y=>{const v=gpCashYield[y]||0;return <td key={y} style={{...tdN,fontSize:10,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#d0d4dc"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
       </tr>}
+
+      {/* Separator + Developer Fees & Incentive rows */}
+      <tr><td colSpan={years.length+2} style={{padding:"2px 0",background:"#e5e7ec",height:1}}></td></tr>
+      <tr><td colSpan={years.length+2} style={{padding:"4px 12px",fontSize:9,fontWeight:700,color:"#a16207",background:"#fefce8",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"دخل المطور (الدور)":"Developer Income (Role)"}</td></tr>
+      {(() => {
+        const feeDevArr = w.feeDev||[];
+        const feeDevTotal = feeDevArr.reduce((a,b)=>a+b,0);
+        return <tr>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#a16207",paddingInlineStart:20}}>{ar?"رسوم المطور":"Developer Fees"}</td>
+          <td style={{...tdN,fontSize:10,fontWeight:600,color:"#a16207"}}>{fmt(feeDevTotal)}</td>
+          {years.map(y=>{const v=feeDevArr[y]||0;return <td key={y} style={{...tdN,fontSize:10,color:v>0?"#a16207":"#d0d4dc"}}>{v>0?fmt(v):"—"}</td>;})}
+        </tr>;
+      })()}
+      {(() => {
+        const perfAmt = w.perfIncentiveAmount||0;
+        if (!w.perfIncentiveEnabled || perfAmt <= 0) return null;
+        const settleYr = w.exitYear ? w.exitYear - (w.startYear||results.startYear||0) : years.length - 1;
+        return <tr>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#059669",paddingInlineStart:20}}>{ar?"حافز الأداء":"Performance Incentive"}</td>
+          <td style={{...tdN,fontSize:10,fontWeight:600,color:"#059669"}}>{fmt(perfAmt)}</td>
+          {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:y===settleYr?"#059669":"#d0d4dc"}}>{y===settleYr?fmt(perfAmt):"—"}</td>)}
+        </tr>;
+      })()}
       </>}
 
     </tbody></table></div>
