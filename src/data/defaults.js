@@ -23,7 +23,7 @@ export const defaultProject = () => ({
   // Financing (Phase 2)
   finMode: "self", // self | debt | fund
   vehicleType: "fund", // fund | direct | spv
-  gpIsFundManager: false, // false = separate fund manager (default). true = GP manages the fund (gets all fees)
+  gpIsFundManager: false, // ALWAYS false = separate fund manager. Developer ≠ Fund Manager.
   fundName: "",
   fundStartYear: 0, // 0 = auto
   // Land Capitalization
@@ -80,11 +80,11 @@ export const defaultProject = () => ({
   exitStabilizationYears: 3, // Years after construction to stabilize before auto-exit (self mode). Debt/fund use debtGrace instead.
   // Waterfall (Phase 3)
   prefReturnPct: 15,
-  gpCatchup: true,
+  gpCatchup: false, // HIDDEN: catch-up disabled in simplified model
   carryPct: 30,
   lpProfitSplitPct: 70,
-  prefAllocation: "proRata", // proRata (GP+LP share T1+T2) | lpOnly (T2 all to LP)
-  catchupMethod: "perYear", // perYear (ZAN) | cumulative
+  prefAllocation: "lpOnly", // HIDDEN: always Investor Only in simplified model
+  catchupMethod: "perYear", // HIDDEN: kept for backward compat
   // Performance Incentive (IRR-based hurdle — separate from T3 catch-up)
   performanceIncentive: false, // Toggle on/off
   hurdleIRR: 15, // Investor IRR hurdle % (e.g. 10-15%)

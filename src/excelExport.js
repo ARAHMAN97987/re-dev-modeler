@@ -827,9 +827,11 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
     ws.getCell(row, 3).value = (project.prefReturn || 15) / 100;
     ws.getCell(row, 3).numFmt = "0.0%";
     row++;
-    ws.getCell(row, 2).value = "Catch-up  حق اللحاق";
-    ws.getCell(row, 3).value = project.gpCatchup ? "Y" : "N";
-    row++;
+    if (project.gpCatchup) {
+      ws.getCell(row, 2).value = "Catch-up  حق اللحاق";
+      ws.getCell(row, 3).value = "Y";
+      row++;
+    }
     ws.getCell(row, 2).value = "Carry %  حصة الأداء";
     ws.getCell(row, 3).value = (project.carryPct || 30) / 100;
     ws.getCell(row, 3).numFmt = "0.0%";
@@ -978,15 +980,15 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
       ["Cash Available for Distribution  النقد المتاح", w.cashAvail?.reduce((a, b) => a + b, 0), w.cashAvail, false],
       [null, null, null, false], // blank
       ["Unreturned Capital (Open)  رأس المال غير المسترد", null, w.unreturnedOpen, false],
-      ["Tier 1: Return of Capital  رد رأس المال", w.tier1?.reduce((a, b) => a + b, 0), w.tier1, false],
+      ["Return of Capital  رد رأس المال", w.tier1?.reduce((a, b) => a + b, 0), w.tier1, false],
       ["Unreturned Capital (Close)", null, w.unreturnedClose, false],
       [null, null, null, false],
       ["Pref Accrual  احتساب العائد التفضيلي", w.prefAccrual?.reduce((a, b) => a + b, 0), w.prefAccrual, false],
-      ["Tier 2: Preferred Return Paid  سداد العائد التفضيلي", w.tier2?.reduce((a, b) => a + b, 0), w.tier2, false],
+      ["Preferred Return  سداد العائد التفضيلي", w.tier2?.reduce((a, b) => a + b, 0), w.tier2, false],
       [null, null, null, false],
       ["Remaining After ROC + Pref", null, null, false],
-      ["Tier 3: Catch-up", w.tier3?.reduce((a, b) => a + b, 0), w.tier3, false],
-      ["Tier 4: Profit Split  تقسيم الأرباح", null, null, false],
+      ["Catch-up", w.tier3?.reduce((a, b) => a + b, 0), w.tier3, false],
+      ["Profit Split  تقسيم الأرباح", null, null, false],
       ["  → Investor  حصة المستثمرين", w.tier4LP?.reduce((a, b) => a + b, 0), w.tier4LP, false],
       ["  → Developer / Carry  حصة الأداء", w.tier4GP?.reduce((a, b) => a + b, 0), w.tier4GP, false],
       [null, null, null, false],
@@ -1309,7 +1311,7 @@ function buildDocumentation(wb, project, cur, h, sy) {
     ["MOIC", "Total Distributions / Equity Invested"],
     ["DPI", "Total Distributions / Total Equity Called (paid-in capital, incl. fees if capital treatment)"],
     ["Land Rent", "Base rent with N-year step escalation, grace period applied"],
-    ["Waterfall", "4-tier: ROC → Preferred Return → Catch-up → Profit Split"],
+    ["Waterfall", "ROC → Preferred Return → Profit Split"],
     ["Interest Calc", "Rate × Average of (Opening Balance + Drawdown + Closing Balance) / 2"],
     ["", ""],
     ["DISCLAIMER  إخلاء المسؤولية", ""],

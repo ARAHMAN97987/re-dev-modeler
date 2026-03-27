@@ -381,12 +381,6 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>)}
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"التعويض":"Catch-up"}</span>
-              <select value={cfg.gpCatchup?"Y":"N"} onChange={e=>upCfg({gpCatchup:e.target.value==="Y"})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
-                <option value="Y">{ar?"نعم":"Yes"}</option><option value="N">{ar?"لا":"No"}</option>
-              </select>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080"}}>{ar?"معاملة الرسوم":"Fee Treatment"}</span>
               <select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
                 <option value="capital">{ar?"رأسمال":"Capital"}</option><option value="rocOnly">{ar?"استرداد فقط":"ROC Only"}</option><option value="expense">{ar?"مصروف":"Expense"}</option>
@@ -468,8 +462,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(gpT1)} />
               <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={isLpOnlyPref?"—":fmt(gpT2)} />
               <SecHd text={ar?"كمطور":"AS DEVELOPER"} />
-              <KR l={ar?"تعويض (T3)":"Catch-up (T3)"} v={fmt(t3Total)} c="#f59e0b" />
-              <KR l={ar?"توزيع أرباح (T4)":"Profit Split (T4)"} v={fmt(t4GPTotal)} c="#16a34a" />
+              {t3Total > 0 && <KR l={ar?"التعويض":"Catch-up"} v={fmt(t3Total)} c="#f59e0b" />}
+              <KR l={ar?"توزيع الأرباح":"Profit Split"} v={fmt(t4GPTotal)} c="#16a34a" />
               <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(_feeDev)} c="#a16207" />
               {gpIsManager && <>
                 <KR l={ar?"رسوم إدارة":"Mgmt Fee"} v={fmt(_feeMgmt)} c="#a16207" />
@@ -514,7 +508,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"مصادر التوزيعات":"DISTRIBUTION SOURCES"} />
               <KR l={ar?"استرداد رأسمال (T1)":"Capital Return (T1)"} v={fmt(lpT1)} />
               <KR l={ar?"عائد مفضل (T2)":"Pref Return (T2)"} v={fmt(lpT2)} c="#8b5cf6" />
-              <KR l={ar?"توزيع أرباح (T4)":"Profit Split (T4)"} v={fmt(t4LPTotal)} c="#16a34a" />
+              <KR l={ar?"توزيع الأرباح":"Profit Split"} v={fmt(t4LPTotal)} c="#16a34a" />
               <SecHd text={ar?"الصافي":"NET"} />
               <KR l={ar?"حصة المستثمر":"Investor Equity"} v={fmt(w.lpTotalInvested)} bold />
               <KR l={ar?"إجمالي التوزيعات":"Total Distributions"} v={fmt(w.lpTotalDist)} c="#8b5cf6" />
@@ -673,8 +667,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       <CFRow label={ar?"حصيلة التخارج":"Exit Proceeds"} values={w.exitProceeds} total={exitProc} color="#16a34a" />
       </>}
 
-      {/* ═══ § 9. DISTRIBUTIONS & WATERFALL ═══ */}
-      <tr onClick={()=>setWSec(p=>({...p,s9:!p.s9}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#7c3aed",background:"#f5f3ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #8b5cf6",userSelect:"none"}}>{wSec.s9?"▶":"▼"} {ar?"9. التوزيعات وشلال الأرباح":"9. DISTRIBUTIONS & WATERFALL"}</td></tr>
+      {/* ═══ § 9. DISTRIBUTIONS & RETURNS ═══ */}
+      <tr onClick={()=>setWSec(p=>({...p,s9:!p.s9}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#7c3aed",background:"#f5f3ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #8b5cf6",userSelect:"none"}}>{wSec.s9?"▶":"▼"} {ar?"9. توزيعات وأرباح":"9. DISTRIBUTIONS & RETURNS"}</td></tr>
       {!wSec.s9 && <>
       <CFRow label={ar?"النقد المتاح للتوزيع":"Cash Available for Distribution"} values={w.cashAvail} total={w.cashAvail.reduce((a,b)=>a+b,0)} bold color="#16a34a" />
 
@@ -684,7 +678,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <td style={tdN}></td>
         {years.map(y=><td key={y} style={{...tdN,color:"#3b82f6",fontSize:10}}>{(w.unreturnedOpen[y]||0)===0?"—":fmt(w.unreturnedOpen[y])}</td>)}
       </tr>
-      <CFRow label={ar?"T1: رد رأس المال":"T1: Return of Capital"} values={w.tier1} total={t1Total} color="#2563eb" />
+      <CFRow label={ar?"رد رأس المال":"Return of Capital"} values={w.tier1} total={t1Total} color="#2563eb" />
       <tr style={{background:"#fafbff"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#fafbff",zIndex:1,fontSize:10,color:"#3b82f6",paddingInlineStart:20,fontWeight:500}}>{ar?"رأس المال غير المسترد (نهاية)":"Unreturned Capital (Close)"}</td>
         <td style={tdN}></td>
@@ -702,12 +696,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <td style={tdN}></td>
         {years.map(y=><td key={y} style={{...tdN,color:(w.prefAccumulated[y]||0)>0?"#7c3aed":"#16a34a",fontSize:10,fontWeight:(w.prefAccumulated[y]||0)===0?600:400}}>{(w.prefAccumulated[y]||0)===0?"✓ 0":fmt(w.prefAccumulated[y])}</td>)}
       </tr>
-      <CFRow label={ar?"T2: العائد التفضيلي":"T2: Preferred Return"} values={w.tier2} total={t2Total} color="#8b5cf6" />
+      <CFRow label={ar?"العائد التفضيلي":"Preferred Return"} values={w.tier2} total={t2Total} color="#8b5cf6" />
 
       {/* Remaining + T3/T4 */}
       {(() => { const rem = new Array(h).fill(0); for(let y=0;y<h;y++) rem[y]=Math.max(0,(w.cashAvail[y]||0)-(w.tier1[y]||0)-(w.tier2[y]||0)); const tot=rem.reduce((a,b)=>a+b,0); return tot>0?<CFRow label={ar?"المتبقي بعد ROC + Pref":"Remaining After ROC + Pref"} values={rem} total={tot} bold />:null; })()}
-      <CFRow label={ar?"T3: التعويض":"T3: Catch-up"} values={w.tier3} total={t3Total} color="#f59e0b" />
-      <CFRow label={ar?"T4: توزيع الأرباح":"T4: Profit Split"} values={(() => { const a=new Array(h).fill(0); for(let y=0;y<h;y++) a[y]=(w.tier4LP[y]||0)+(w.tier4GP[y]||0); return a; })()} total={t4LPTotal+t4GPTotal} color="#16a34a" />
+      {w.tier3?.some(v=>v>0) && <CFRow label={ar?"التعويض":"Catch-up"} values={w.tier3} total={t3Total} color="#f59e0b" />}
+      <CFRow label={ar?"توزيع الأرباح":"Profit Split"} values={(() => { const a=new Array(h).fill(0); for(let y=0;y<h;y++) a[y]=(w.tier4LP[y]||0)+(w.tier4GP[y]||0); return a; })()} total={t4LPTotal+t4GPTotal} color="#16a34a" />
       <tr style={{background:"#f0fdf4"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontSize:10,color:"#16a34a",paddingInlineStart:24}}>→ {ar?"المستثمر":"Investor"} ({cfg.lpProfitSplitPct||75}%)</td>
         <td style={{...tdN,fontSize:10,color:"#16a34a"}}>{fmt(t4LPTotal)}</td>

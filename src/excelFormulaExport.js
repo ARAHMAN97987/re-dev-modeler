@@ -467,7 +467,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
     sc(ws5,fr,YC(yi),yi===0?`=ABS(${c}${fEC})`:`=MAX(0,${CL(YC(yi-1))}${fUO}-${CL(YC(yi-1))}${fUO+2}+ABS(${c}${fEC}))`,FNS,null,NUM);
   }
   fr++;
-  const fT1=fr;sc(ws5,fr,1,"  T1: Return of Capital",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+  const fT1=fr;sc(ws5,fr,1,"  Return of Capital",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MIN(${CL(YC(yi))}${fCA},${CL(YC(yi))}${fUO})`,FBS,null,NUM);
   fr++;
   const fUC=fr;sc(ws5,fr,1,"  Unreturned Capital (Close)",FNS);sc(ws5,fr,2,cur,FNS);
@@ -483,7 +483,7 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const fTPO=fr;sc(ws5,fr,1,"  Total Pref Owed",FNS);sc(ws5,fr,2,cur,FNS);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fPAC}+${CL(YC(yi))}${fUPO}`,FNS,null,NUM);
   fr++;
-  const fT2=fr;sc(ws5,fr,1,"  T2: Preferred Return Paid",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+  const fT2=fr;sc(ws5,fr,1,"  Preferred Return",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MIN(MAX(0,${CL(YC(yi))}${fCA}-${CL(YC(yi))}${fT1}),${CL(YC(yi))}${fTPO})`,FBS,null,NUM);
   fr++;
   const fUPC=fr;sc(ws5,fr,1,"  Unpaid Pref (Closing)",FNS);sc(ws5,fr,2,cur,FNS);
@@ -493,13 +493,13 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const fREM=fr;sc(ws5,fr,1,"  Remaining after ROC + Pref",FNS);sc(ws5,fr,2,cur,FNS);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MAX(0,${CL(YC(yi))}${fCA}-${CL(YC(yi))}${fT1}-${CL(YC(yi))}${fT2})`,FNS,null,NUM);
   fr++;
-  const fT3=fr;sc(ws5,fr,1,"  T3: Catch-Up",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
+  const fT3=fr;sc(ws5,fr,1,"  Catch-up",FBS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FBS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=IF(Inputs!B${rCR_}=0,0,MIN(${CL(YC(yi))}${fREM},${CL(YC(yi))}${fT2}*Inputs!B${rCR_}/(1-Inputs!B${rCR_})))`,FBS,null,NUM);
   fr++;
-  const fT4=fr;sc(ws5,fr,1,"  T4: Profit Split",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
+  const fT4=fr;sc(ws5,fr,1,"  Profit Split",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=MAX(0,${CL(YC(yi))}${fREM}-${CL(YC(yi))}${fT3})`,FNS,null,NUM);
   fr++;
-  const fT4LP=fr;sc(ws5,fr,1,"  → Investor Profit Split",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
+  const fT4LP=fr;sc(ws5,fr,1,"  → Investor Split",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
   for (let yi = 0; yi < h; yi++) sc(ws5,fr,YC(yi),`=${CL(YC(yi))}${fT4}*Inputs!B${rLS}`,FNS,null,NUM);
   fr++;
   const fT4GP=fr;sc(ws5,fr,1,"  → Developer / Carry",FNS);sc(ws5,fr,2,cur,FNS);sc(ws5,fr,3,`=SUM(${YR(fr)})`,FNS,null,NUM);
@@ -624,17 +624,17 @@ export async function generateFormulaExcel(project, results, financing, waterfal
 
       secr(wsp, pr, 1, LC, "6  WATERFALL / حافز الأداء"); pr++;
       writeRow("Unreturned Capital (Open)", pw.unreturnedOpen);
-      writeRow("T1: Return of Capital", pw.tier1, NUM, true);
+      writeRow("Return of Capital", pw.tier1, NUM, true);
       writeRow("Unreturned Capital (Close)", pw.unreturnedClose);
       const pwUnpaidOpen = new Array(h).fill(0);
       for (let yi = 1; yi < h; yi++) pwUnpaidOpen[yi] = (pw.prefAccumulated?.[yi-1]) || 0;
       writeRow("Pref Accrual", pw.prefAccrual);
       writeRow("Unpaid Pref (Opening)", pwUnpaidOpen);
-      writeRow("T2: Preferred Return Paid", pw.tier2, NUM, true);
+      writeRow("Preferred Return", pw.tier2, NUM, true);
       writeRow("Unpaid Pref (Closing)", pw.prefAccumulated);
-      writeRow("T3: Catch-Up", pw.tier3, NUM, true);
-      writeRow("T4: Investor Profit Split", pw.tier4LP);
-      writeRow("T4: Developer Profit Split", pw.tier4GP);
+      writeRow("Catch-up", pw.tier3, NUM, true);
+      writeRow("Investor Split", pw.tier4LP);
+      writeRow("Developer Split", pw.tier4GP);
       pr++;
 
       secr(wsp, pr, 1, LC, "7  DISTRIBUTIONS / التوزيعات"); pr++;
