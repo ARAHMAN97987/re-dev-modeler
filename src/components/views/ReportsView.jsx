@@ -1095,7 +1095,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 {[
                   [ar?"رسوم الاشتراك":"Subscription",(project.subscriptionFeePct||2)+"%",fmt(fw.feeSubscription||0),ar?"مرة واحدة":"One-time"],
                   [ar?"رسوم الإدارة":"Management",(project.annualMgmtFeePct||0.9)+"%",fmt(fw.feeMgmtTotal||fw.fees||0),ar?"سنوي":"Annual"],
-                  [ar?"رسوم المطور":"Developer",(project.developerFeePct||10)+"% "+(ar?"من CAPEX":"of CAPEX"),fmt(fw.feeDeveloper||0),ar?"خلال البناء":"During construction"],
+                  [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من CAPEX":"of CAPEX"),fmt(fw.feeDeveloper||0),ar?"خلال البناء":"During construction"],
                   [ar?"رسوم الهيكلة":"Structuring",(project.structuringFeePct||1)+"%",fmt(fw.feeStructuring||0),ar?"مرة واحدة":"One-time"],
                   [ar?"رسوم الحفظ":"Custody",fmt(project.custodyFeeAnnual||50000)+"/"+(ar?"سنة":"yr"),fmt(fw.feeCustodyTotal||0),ar?"سنوي":"Annual"],
                 ].map(([ff,r,t,ti],i)=>(

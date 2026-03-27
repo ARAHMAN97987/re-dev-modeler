@@ -309,7 +309,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
                 </div>
               ))}
             </div>
-          ) : <div style={{color:"#6b7080",fontSize:12}}>{ar?"حافز الأداء غير مُعدّ — اختر صندوق استثماري":"Waterfall not configured - select Fund mode"}</div>}
+          ) : <div style={{color:"#6b7080",fontSize:12}}>{ar?"حافز حسن الأداء غير مُعدّ — اختر صندوق استثماري":"Waterfall not configured - select Fund mode"}</div>}
         </Section>
         {w && w.tier1 && (
           <Section title={ar?"شلال التوزيعات":"Distribution Waterfall"} color="#7c3aed">

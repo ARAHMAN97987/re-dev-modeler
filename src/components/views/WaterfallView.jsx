@@ -522,7 +522,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           ) : (
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"دخل الدور":"ROLE INCOME"} />
-              <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(devFeeTotal)} c="#a16207" />
+              <KR l={ar?"رسوم المطور":"Developer Fee"} v={fmt(devFeeTotal)} c="#a16207" />
               {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"حافز حسن الأداء":"Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
               <div style={{gridColumn:"1/-1",height:1,background:"#e5e7ec",margin:"2px 0"}} />
               <KR l={ar?"إجمالي دخل المطور":"Total Developer Income"} v={fmtM(devRoleIncome)} c="#3b82f6" bold />
@@ -596,7 +596,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:"3px 16px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"مكونات العائد":"RETURN COMPONENTS"} />
               <KR l={ar?"① كمستثمر (توزيعات)":"① As Investor (distributions)"} v={fmt(devAsInvestor)} c="#8b5cf6" />
-              <KR l={ar?"② رسوم التطوير":"② Dev Fees"} v={fmt(devFeeTotal)} c="#a16207" />
+              <KR l={ar?"② رسوم المطور":"② Developer Fee"} v={fmt(devFeeTotal)} c="#a16207" />
               {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"③ حافز حسن الأداء":"③ Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
               <div style={{gridColumn:"1/-1",height:1,background:"#bbf7d0",margin:"2px 0"}} />
               <KR l={ar?"إجمالي العوائد":"Total Returns"} v={fmtM(devTotalEconomics)} c="#16a34a" bold />
@@ -801,7 +801,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         const feeDevArr = w.feeDev||[];
         const feeDevTotal = feeDevArr.reduce((a,b)=>a+b,0);
         return <tr>
-          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#a16207",paddingInlineStart:20}}>{ar?"رسوم المطور":"Developer Fees"}</td>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#a16207",paddingInlineStart:20}}>{ar?"رسوم المطور":"Developer Fee"}</td>
           <td style={{...tdN,fontSize:10,fontWeight:600,color:"#a16207"}}>{fmt(feeDevTotal)}</td>
           {years.map(y=>{const v=feeDevArr[y]||0;return <td key={y} style={{...tdN,fontSize:10,color:v>0?"#a16207":"#d0d4dc"}}>{v>0?fmt(v):"—"}</td>;})}
         </tr>;

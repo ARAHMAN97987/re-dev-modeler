@@ -462,7 +462,7 @@ function buildInputs(wb, project, cur) {
     inp("Management Fee %", (project.annualMgmtFeePct || 0) / 100, "رسوم الإدارة السنوية", "0.0%");
     inp("Management Fee Base", project.mgmtFeeBase === "equity" ? "Equity" : "Development Cost", "أساس رسوم الإدارة");
     inp("Custody Fee (annual, fixed)", project.custodyFeeAnnual || 0, "رسوم الحفظ", "#,##0");
-    inp("Developer Fee % (CAPEX)", (project.developerFeePct || 0) / 100, "رسوم التطوير", "0.0%");
+    inp("Developer Fee % (CAPEX)", (project.developerFeePct || 0) / 100, "رسوم المطور", "0.0%");
     inp("Structuring Fee %", (project.structuringFeePct || 0) / 100, "رسوم الهيكلة", "0.0%");
   }
 }
@@ -810,7 +810,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
       ["Subscription Fee  رسوم الاكتتاب", (project.subscriptionFee || 0) / 100, "0.0%"],
       ["Annual Management Fee  رسوم الإدارة", (project.mgmtFee || 0) / 100, "0.0%"],
       ["Custody Fee (Fixed)  رسوم الحفظ", project.custodyFee || 0, "#,##0"],
-      ["Developer Fee % (CAPEX)  رسوم التطوير", (project.devFee || 0) / 100, "0.0%"],
+      ["Developer Fee % (CAPEX)  رسوم المطور", (project.devFee || 0) / 100, "0.0%"],
       ["Structuring Fee  رسوم الهيكلة", (project.structFee || 0) / 100, "0.0%"],
     ];
     feesInfo.forEach(([l, v, nf]) => {
@@ -828,7 +828,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
     sectionHeader(ws, row, 1, 10, "5  شلال التوزيع  WATERFALL");
     row++;
     ws.getCell(row, 2).value = "Preferred Return %  العائد التفضيلي";
-    ws.getCell(row, 3).value = (project.prefReturnPct || project.prefReturn || 15) / 100;
+    ws.getCell(row, 3).value = (project.prefReturnPct ?? project.prefReturn ?? 15) / 100;
     ws.getCell(row, 3).numFmt = "0.0%";
     row++;
     if (project.gpCatchup) {
@@ -837,7 +837,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
       row++;
     }
     ws.getCell(row, 2).value = "Carry %  حصة الأداء";
-    ws.getCell(row, 3).value = (project.carryPct || 30) / 100;
+    ws.getCell(row, 3).value = (project.carryPct ?? 30) / 100;
     ws.getCell(row, 3).numFmt = "0.0%";
     row++;
     if (project.performanceIncentive) {
@@ -947,7 +947,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
         ["Subscription Fee  رسوم الاكتتاب", w.feeSub],
         ["Management Fee  رسوم الإدارة", w.feeMgmt],
         ["Custody Fee  رسوم الحفظ", w.feeCustody],
-        ["Developer Fee  رسوم التطوير", w.feeDev],
+        ["Developer Fee  رسوم المطور", w.feeDev],
         ["Structuring Fee  رسوم الهيكلة", w.feeStruct],
         ["Pre-Establishment  ما قبل التأسيس", w.feePreEst],
         ["SPV Setup  إنشاء SPV", w.feeSpv],
