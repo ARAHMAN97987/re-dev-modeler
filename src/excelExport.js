@@ -448,9 +448,13 @@ function buildInputs(wb, project, cur) {
     section("WATERFALL PARAMETERS  شلال التوزيع");
     inp("Preferred Return %", (project.prefReturnPct ?? 15) / 100, "العائد التفضيلي", "0.0%");
     inp("Catch-up", project.gpCatchup ? "Yes" : "No", "حق اللحاق");
-    inp("Carry %", (project.carryPct ?? 30) / 100, "حصة الأداء", "0.0%");
+    inp("Carry %", (project.carryPct ?? 30) / 100, "حصة المطور", "0.0%");
     inp("Investor Profit Split %", (project.lpProfitSplitPct ?? 70) / 100, "حصة المستثمرين من الأرباح", "0%");
     inp("Fee Treatment", project.feeTreatment === "expense" ? "Expense (مصروف)" : "Capital (رأسمال)", "معاملة الرسوم");
+    if (project.performanceIncentive) {
+      inp("Expected Annual Return %", (project.hurdleIRR ?? 15) / 100, "العائد المتوقع السنوي", "0.0%");
+      inp("Performance Incentive %", (project.incentivePct ?? 20) / 100, "حافز حسن الأداء", "0.0%");
+    }
     row++;
 
     section("FEES  الرسوم");
@@ -824,7 +828,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
     sectionHeader(ws, row, 1, 10, "5  شلال التوزيع  WATERFALL");
     row++;
     ws.getCell(row, 2).value = "Preferred Return %  العائد التفضيلي";
-    ws.getCell(row, 3).value = (project.prefReturn || 15) / 100;
+    ws.getCell(row, 3).value = (project.prefReturnPct || project.prefReturn || 15) / 100;
     ws.getCell(row, 3).numFmt = "0.0%";
     row++;
     if (project.gpCatchup) {
@@ -836,6 +840,16 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
     ws.getCell(row, 3).value = (project.carryPct || 30) / 100;
     ws.getCell(row, 3).numFmt = "0.0%";
     row++;
+    if (project.performanceIncentive) {
+      ws.getCell(row, 2).value = "Expected Annual Return %  العائد المتوقع السنوي";
+      ws.getCell(row, 3).value = (project.hurdleIRR ?? 15) / 100;
+      ws.getCell(row, 3).numFmt = "0.0%";
+      row++;
+      ws.getCell(row, 2).value = "Performance Incentive %  حافز حسن الأداء";
+      ws.getCell(row, 3).value = (project.incentivePct ?? 20) / 100;
+      ws.getCell(row, 3).numFmt = "0.0%";
+      row++;
+    }
 
     // ── Section 6: Exit ──
     row++;
@@ -1311,7 +1325,7 @@ function buildDocumentation(wb, project, cur, h, sy) {
     ["MOIC", "Total Distributions / Equity Invested"],
     ["DPI", "Total Distributions / Total Equity Called (paid-in capital, incl. fees if capital treatment)"],
     ["Land Rent", "Base rent with N-year step escalation, grace period applied"],
-    ["Waterfall", "ROC → Preferred Return → Profit Split"],
+    ["Waterfall", "ROC → Preferred Return → Catch-up → Profit Split"],
     ["Interest Calc", "Rate × Average of (Opening Balance + Drawdown + Closing Balance) / 2"],
     ["", ""],
     ["DISCLAIMER  إخلاء المسؤولية", ""],

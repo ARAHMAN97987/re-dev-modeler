@@ -705,18 +705,18 @@ When to use:
         {/* ── SECTION: WATERFALL ── */}
         </SecWrap>
         <SecWrap visible={isFundMode} color="#16a34a">
-        <AH id="wf" color="#16a34a" label={ar?"توزيع الأرباح":"Profit Distribution"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||15}% · Investor ${cfg.lpProfitSplitPct||70}%` : ""} visible={isFundMode} />
+        <AH id="wf" color="#16a34a" label={ar?"توزيع الأرباح":"Profit Distribution"} summary={isFundMode ? `${ar?"العائد المتوقع":"Expected Return"} ${cfg.hurdleIRR||15}% · ${ar?"الحافز":"Incentive"} ${cfg.incentivePct||20}%` : ""} visible={isFundMode} />
         <AB id="wf" visible={isFundMode}>
           <div style={{gridColumn:"1/-1",marginBottom:4}}><HelpLink contentKey="waterfallConcepts" lang={lang} onOpen={setEduModal} label={ar?"اعرف أكثر عن توزيع الأرباح":"Learn about Profit Distribution"} /></div>
-          <div style={g2}>
+          {false && (<div style={g2}>
             <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip={ar?"الحد الأدنى للعائد السنوي الذي يحصل عليه المستثمر قبل أن يشارك المطور بالأرباح. عادة 8-15%\nيتراكم سنوياً على رأس المال غير المسترد":"Minimum annual return for Investor before Developer shares profits. Usually 8-15%\nAccrues annually on unreturned capital"} hint={dh("prefReturnPct")}><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:Math.max(0,Math.min(50,v))})} /></FL>
             <FL label={ar?"حصة المطور من الأرباح %":"Developer Profit Share %"} tip={ar?"نسبة من الأرباح تُدفع للمطور إذا تجاوزت أرباح الصندوق العائد التفضيلي. عادة 20-30%\nمثال: لو العائد التفضيلي 15% والأرباح تجاوزته → 25% من الفائض يروح للمطور كأتعاب حسن أداء":"Developer's share of profits after Investor receives preferred return. Usually 20-30%\nExample: if pref is 15% and profits exceed it → 25% of excess goes to Developer as performance fee"} hint={dh("carryPct")}><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:Math.max(0,Math.min(50,v))})} /></FL>
-          </div>
-          <div style={g3}>
+          </div>)}
+          {false && (<div style={g3}>
             <FL label={ar?"نسبة توزيع المستثمر":"Investor Split %"} tip={ar?"نسبة الأرباح المتبقية للمستثمر بعد العائد التفضيلي والـ catch-up. عادة 70-80%\nالباقي يذهب تلقائياً للمطور":"Investor share of remaining profits after pref and catch-up. Usually 70-80%\nRemainder automatically goes to Developer"} hint={`${ar?"المطور":"Dev"} = ${100-(cfg.lpProfitSplitPct||70)}% · ${dh("lpProfitSplitPct")}`}><Inp type="number" value={cfg.lpProfitSplitPct} onChange={v=>upCfg({lpProfitSplitPct:Math.max(0,Math.min(100,v))})} /></FL>
             {false && (<FL label={ar?"التعويض (Catch-up)":"Catch-up"} tip={ar?"بعد حصول المستثمر على العائد التفضيلي، يأخذ المطور حصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها":"After Investor receives pref, Developer takes a larger temporary share until agreed economics are reached"}><Drp lang={lang} value={cfg.gpCatchup?"Y":"N"} onChange={v=>upCfg({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>)}
             {false && (<FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip={ar?"رأسمال: الرسوم تُسترد + تحصل عائد تفضيلي\nاسترداد فقط: تُسترد لكن بدون عائد تفضيلي\nمصروف: لا تُسترد ولا تحصل عائد":"Capital: fees earn ROC + Pref\nROC Only: fees returned but no Pref\nExpense: fees not returned, no Pref"}><select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال - استرداد + Pref (تلقائي)":"Capital - ROC + Pref (default)"}</option><option value="rocOnly">{ar?"استرداد فقط (بدون Pref)":"ROC Only (no Pref)"}</option><option value="expense">{ar?"مصروف (لا استرداد)":"Expense (no ROC)"}</option></select></FL>)}
-          </div>
+          </div>)}
           {false && (<div style={g2}>
             <FL label={ar?"توزيع العائد التفضيلي":"Pref Allocation"} tip={ar?"نسبي: العائد التفضيلي يوزع على المطور والمستثمر بحسب حصصهم\nللممول فقط: كامل العائد التفضيلي يذهب للمستثمر":"Pro Rata: pref distributed to Developer and Investor by ownership share\nInvestor Only: all pref goes to Investor (default: proRata)"}>
               <Drp lang={lang} value={cfg.prefAllocation||"proRata"} onChange={v=>upCfg({prefAllocation:v})} options={[{value:"proRata",en:"Pro Rata (default)",ar:"نسبي (تلقائي)"},{value:"lpOnly",en:"Investor Only",ar:"للممول فقط"}]} />
@@ -727,15 +727,15 @@ When to use:
           </div>)}
           {/* Performance Incentive */}
           <div style={{borderTop:"1px solid #e5e7ec",margin:"12px 0",paddingTop:12}}>
-            <div style={{fontSize:11,fontWeight:600,color:"#6b7080",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>{ar?"حافز الأداء (IRR)":"PERFORMANCE INCENTIVE (IRR)"}</div>
-            <FL label={ar?"حافز الأداء":"Performance Incentive"} tip={ar?"إذا تجاوز عائد المستثمر الحد الأدنى، يحصل المطور على نسبة من الزيادة":"If investor IRR exceeds hurdle, developer gets share of excess"}>
+            <div style={{fontSize:11,fontWeight:600,color:"#6b7080",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>{ar?"حافز حسن الأداء":"PERFORMANCE INCENTIVE"}</div>
+            <FL label={ar?"تفعيل حافز حسن الأداء":"Enable Performance Incentive"} tip={ar?"إذا تجاوز عائد المستثمر الحد الأدنى، يحصل المطور على نسبة من الزيادة":"If investor IRR exceeds hurdle, developer gets share of excess"}>
               <Drp lang={lang} value={cfg.performanceIncentive?"Y":"N"} onChange={v=>upCfg({performanceIncentive:v==="Y"})} options={[{value:"N",en:"Off",ar:"معطل"},{value:"Y",en:"On",ar:"مفعل"}]} />
             </FL>
             {cfg.performanceIncentive && <>
-              <FL label={ar?"حد أدنى IRR %":"Hurdle IRR %"} tip={ar?"الحد الأدنى لعائد المستثمر قبل تفعيل الحافز":"Minimum investor IRR before incentive kicks in"}>
+              <FL label={ar?"العائد المتوقع السنوي %":"Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر قبل تفعيل الحافز":"Minimum investor IRR before incentive kicks in"}>
                 <Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} />
               </FL>
-              <FL label={ar?"نسبة الحافز %":"Incentive %"} tip={ar?"نسبة الزيادة فوق الحد التي يحصل عليها المطور":"Developer's share of excess above hurdle"}>
+              <FL label={ar?"نسبة حافز حسن الأداء %":"Performance Incentive %"} tip={ar?"نسبة الزيادة فوق الحد التي يحصل عليها المطور":"Developer's share of excess above hurdle"}>
                 <Inp type="number" value={cfg.incentivePct} onChange={v=>upCfg({incentivePct:Math.max(0,Math.min(100,v))})} />
               </FL>
             </>}
@@ -774,10 +774,10 @@ When to use:
             <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
             <FL label={ar?"رسوم التطوير %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
-            <FL label={ar?"أساس احتساب الرسوم":"Fee Basis"} tip={ar?"بدون الأرض: رسوم التطوير تُحسب على تكلفة البناء فقط\nمع الأرض: تُحسب على تكلفة البناء + قيمة الأرض":"Excl. Land: dev fee on construction cost only\nIncl. Land: dev fee on construction + land value"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Excl. Land (default)",ar:"بدون الأرض (تلقائي)"},{value:"inclLand",en:"Incl. Land",ar:"مع الأرض"}]} /></FL>
+            <FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون الأرض: رسوم التطوير تُحسب على تكلفة البناء فقط\nمع الأرض: تُحسب على تكلفة البناء + قيمة الأرض":"Excl. Land: dev fee on construction cost only\nIncl. Land: dev fee on construction + land value"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excl. Land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs incl. Land",ar:"تكاليف التطوير مع الأرض"}]} /></FL>
           </>;
           if (isFundMode) return <><FL label={ar?"رسوم التطوير %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
-          <FL label={ar?"أساس احتساب الرسوم":"Fee Basis"} tip={ar?"بدون الأرض: رسوم التطوير تُحسب على تكلفة البناء فقط\nمع الأرض: تُحسب على تكلفة البناء + قيمة الأرض":"Excl. Land: dev fee on construction cost only\nIncl. Land: dev fee on construction + land value"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Excl. Land (default)",ar:"بدون الأرض (تلقائي)"},{value:"inclLand",en:"Incl. Land",ar:"مع الأرض"}]} /></FL></>;
+          <FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون الأرض: رسوم التطوير تُحسب على تكلفة البناء فقط\nمع الأرض: تُحسب على تكلفة البناء + قيمة الأرض":"Excl. Land: dev fee on construction cost only\nIncl. Land: dev fee on construction + land value"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excl. Land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs incl. Land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
           // Debt + Equity mode (not fund)
           return <FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>;
         })()}</AB>

@@ -316,9 +316,9 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)",gap:12}}>
               {[
                 { label: ar?"رد رأس المال":"T1: Return of Capital", value: (w.tier1||[]).reduce((s,v)=>s+v,0), color: "#1e40af" },
-                { label: ar?"العائد التفضيلي":"T2: Pref Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" },
-                { label: ar?"التعويض":"T3: Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "#16a34a" },
-                { label: ar?"تقسيم الأرباح":"T4: Profit Split", value: ((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)), color: "#f59e0b" },
+                ...((w.tier2||[]).reduce((s,v)=>s+v,0) > 0 ? [{ label: ar?"العائد التفضيلي":"T2: Preferred Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" }] : []),
+                ...((w.tier3||[]).reduce((s,v)=>s+v,0) > 0 ? [{ label: ar?"التعويض":"T3: Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "#16a34a" }] : []),
+                ...(((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)) > 0 ? [{ label: ar?"تقسيم الأرباح":"T4: Profit Split", value: ((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)), color: "#f59e0b" }] : []),
               ].map((tier, i) => (
                 <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px",borderTop:`3px solid ${tier.color}`}}>
                   <div style={{fontSize:10,color:"#6b7080",marginBottom:4}}>{tier.label}</div>

@@ -78,17 +78,17 @@ export const defaultProject = () => ({
   exitCapRate: 9, // NOI / Cap Rate %
   exitCostPct: 2,
   exitStabilizationYears: 3, // Years after construction to stabilize before auto-exit (self mode). Debt/fund use debtGrace instead.
-  // Waterfall (Phase 3)
-  prefReturnPct: 15,
-  gpCatchup: false, // HIDDEN: catch-up disabled in simplified model
-  carryPct: 30,
-  lpProfitSplitPct: 70,
-  prefAllocation: "lpOnly", // HIDDEN: always Investor Only in simplified model
-  catchupMethod: "perYear", // HIDDEN: kept for backward compat
-  // Performance Incentive (IRR-based hurdle — separate from T3 catch-up)
-  performanceIncentive: false, // Toggle on/off
-  hurdleIRR: 15, // Investor IRR hurdle % (e.g. 10-15%)
-  incentivePct: 20, // Developer's share of excess above hurdle % (e.g. 20-100%)
+  // Waterfall (Phase 3) — Simplified: all profits to investor, then Performance Incentive shares excess
+  prefReturnPct: 0, // HIDDEN: no separate pref tier (Performance Incentive replaces it)
+  gpCatchup: false, // HIDDEN: disabled
+  carryPct: 0, // HIDDEN: no carry (Performance Incentive replaces it)
+  lpProfitSplitPct: 100, // HIDDEN: all profits to investor first
+  prefAllocation: "lpOnly", // HIDDEN: always Investor Only
+  catchupMethod: "perYear", // HIDDEN: backward compat
+  // حافز حسن الأداء — Performance Incentive (IRR-based, compound)
+  performanceIncentive: true, // تفعيل حافز حسن الأداء — Enable Performance Incentive
+  hurdleIRR: 15, // العائد المتوقع السنوي — Expected Annual Return %
+  incentivePct: 20, // نسبة حافز حسن الأداء — Performance Incentive %
   // Government Incentives
   incentives: {
     capexGrant: { enabled: false, grantPct: 25, maxCap: 50000000, phases: [], timing: "construction" },

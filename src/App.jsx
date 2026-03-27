@@ -592,21 +592,21 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
           <span style={{fontSize:13}}>⚡</span>
           <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تعديل سريع - شروط الصندوق":"Quick Edit - Fund Terms"}</span>
-          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · {ar?"مستثمر":"Investor"} {cfg.lpProfitSplitPct||75}%</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"العائد المتوقع":"Expected Return"} {cfg.hurdleIRR||15}% · {ar?"الحافز":"Incentive"} {cfg.incentivePct||20}%</span>
           <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
         </div>
         {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe",animation:"zanSlide 0.15s ease"}}>
-          {/* Row 1: Waterfall Terms */}
-          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"شروط توزيع الأرباح":"PROFIT DISTRIBUTION TERMS"}</div>
+          {/* Row 1: Performance Incentive Terms */}
+          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"حافز حسن الأداء":"PERFORMANCE INCENTIVE"}</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
-            {[
+            {false && ([
               {l:ar?"العائد التفضيلي %":"Pref Return %",k:"prefReturnPct",v:cfg.prefReturnPct},
               {l:ar?"حصة المطور %":"Dev Profit %",k:"carryPct",v:cfg.carryPct},
               {l:ar?"حصة المستثمر %":"Investor Split %",k:"lpProfitSplitPct",v:cfg.lpProfitSplitPct},
             ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{f.l}</span>
               <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
-            </div>)}
+            </div>))}
             {false && (<div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080"}}>{ar?"التعويض":"Catch-up"}</span>
               <select value={cfg.gpCatchup?"Y":"N"} onChange={e=>upCfg({gpCatchup:e.target.value==="Y"})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
@@ -620,11 +620,21 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               </select>
             </div>)}
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"حافز أداء":"Perf. Incentive"}</span>
+              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"تفعيل حافز حسن الأداء":"Enable Performance Incentive"}</span>
               <select value={cfg.performanceIncentive?"Y":"N"} onChange={e=>upCfg({performanceIncentive:e.target.value==="Y"})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
                 <option value="N">{ar?"لا":"Off"}</option><option value="Y">{ar?"نعم":"On"}</option>
               </select>
             </div>
+            {cfg.performanceIncentive && <>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"العائد المتوقع السنوي %":"Expected Annual Return %"}</span>
+              <input type="number" value={cfg.hurdleIRR||""} onChange={e=>upCfg({hurdleIRR:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"نسبة حافز حسن الأداء %":"Performance Incentive %"}</span>
+              <input type="number" value={cfg.incentivePct||""} onChange={e=>upCfg({incentivePct:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>
+            </>}
           </div>
           {/* Row 2: Fund Fees */}
           <div style={{fontSize:10,fontWeight:700,color:"#f59e0b",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"رسوم الصندوق":"FUND FEES"}</div>
@@ -746,7 +756,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"دخل الدور":"ROLE INCOME"} />
               <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(devFeeTotal)} c="#a16207" />
-              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"حافز الأداء":"Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
+              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"حافز حسن الأداء":"Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
               <div style={{gridColumn:"1/-1",height:1,background:"#e5e7ec",margin:"2px 0"}} />
               <KR l={ar?"إجمالي دخل المطور":"Total Developer Income"} v={fmtM(devRoleIncome)} c="#3b82f6" bold />
             </div>
@@ -820,7 +830,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"مكونات العائد":"RETURN COMPONENTS"} />
               <KR l={ar?"① كمستثمر (توزيعات)":"① As Investor (distributions)"} v={fmt(devAsInvestor)} c="#8b5cf6" />
               <KR l={ar?"② رسوم التطوير":"② Dev Fees"} v={fmt(devFeeTotal)} c="#a16207" />
-              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"③ حافز الأداء":"③ Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
+              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"③ حافز حسن الأداء":"③ Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
               <div style={{gridColumn:"1/-1",height:1,background:"#bbf7d0",margin:"2px 0"}} />
               <KR l={ar?"إجمالي العوائد":"Total Returns"} v={fmtM(devTotalEconomics)} c="#16a34a" bold />
               <KR l={ar?"مساهمة (حق انتفاع)":"Contribution (Usufruct)"} v={fmt(w.gpTotalInvested)} />
@@ -949,7 +959,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {years.map(y=><td key={y} style={{...tdN,color:w.unreturnedClose[y]>0?"#3b82f6":"#16a34a",fontSize:10,fontWeight:w.unreturnedClose[y]===0?600:400}}>{w.unreturnedClose[y]===0?"✓ 0":fmt(w.unreturnedClose[y])}</td>)}
       </tr>
 
-      {/* Pref tracking */}
+      {/* Pref tracking - only show if prefReturnPct > 0 */}
+      {t2Total > 0 && <>
       <tr style={{background:"#faf5ff"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontSize:10,color:"#8b5cf6",paddingInlineStart:20}}>{ar?"استحقاق العائد التفضيلي":"Pref Accrual"}</td>
         <td style={tdN}></td>
@@ -961,10 +972,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {years.map(y=><td key={y} style={{...tdN,color:(w.prefAccumulated[y]||0)>0?"#7c3aed":"#16a34a",fontSize:10,fontWeight:(w.prefAccumulated[y]||0)===0?600:400}}>{(w.prefAccumulated[y]||0)===0?"✓ 0":fmt(w.prefAccumulated[y])}</td>)}
       </tr>
       <CFRow label={ar?"العائد التفضيلي":"Preferred Return"} values={w.tier2} total={t2Total} color="#8b5cf6" />
+      </>}
 
       {/* Remaining + T3/T4 */}
       {(() => { const rem = new Array(h).fill(0); for(let y=0;y<h;y++) rem[y]=Math.max(0,(w.cashAvail[y]||0)-(w.tier1[y]||0)-(w.tier2[y]||0)); const tot=rem.reduce((a,b)=>a+b,0); return tot>0?<CFRow label={ar?"المتبقي بعد ROC + Pref":"Remaining After ROC + Pref"} values={rem} total={tot} bold />:null; })()}
       {w.tier3?.some(v=>v>0) && <CFRow label={ar?"T3: تعويض":"T3: Catch-up"} values={w.tier3} total={t3Total} color="#f59e0b" />}
+      {(t4LPTotal+t4GPTotal) > 0 && <>
       <CFRow label={ar?"توزيع الأرباح":"Profit Split"} values={(() => { const a=new Array(h).fill(0); for(let y=0;y<h;y++) a[y]=(w.tier4LP[y]||0)+(w.tier4GP[y]||0); return a; })()} total={t4LPTotal+t4GPTotal} color="#16a34a" />
       <tr style={{background:"#f0fdf4"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontSize:10,color:"#16a34a",paddingInlineStart:24}}>→ {ar?"مستثمر":"Investor"} ({cfg.lpProfitSplitPct||75}%)</td>
@@ -976,6 +989,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <td style={{...tdN,fontSize:10,color:"#3b82f6"}}>{fmt(t4GPTotal)}</td>
         {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:"#3b82f6"}}>{(w.tier4GP[y]||0)===0?"—":fmt(w.tier4GP[y])}</td>)}
       </tr>
+      </>}
 
       {/* Distribution totals */}
       <CFRow label={ar?"إجمالي توزيعات المستثمر":"Total Investor Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
@@ -2705,18 +2719,18 @@ When to use:
         {/* ── SECTION: WATERFALL ── */}
         </SecWrap>
         <SecWrap visible={isFundMode} color="#16a34a">
-        <AH id="wf" color="#16a34a" label={ar?"توزيع الأرباح":"Profit Distribution"} summary={isFundMode ? `Pref ${cfg.prefReturnPct||15}% · ${ar?"مستثمر":"Investor"} ${cfg.lpProfitSplitPct||70}%` : ""} visible={isFundMode} />
+        <AH id="wf" color="#16a34a" label={ar?"توزيع الأرباح":"Profit Distribution"} summary={isFundMode ? `${ar?"العائد المتوقع":"Expected Return"} ${cfg.hurdleIRR||15}% · ${ar?"الحافز":"Incentive"} ${cfg.incentivePct||20}%` : ""} visible={isFundMode} />
         <AB id="wf" visible={isFundMode}>
           <div style={{gridColumn:"1/-1",marginBottom:4}}><HelpLink contentKey="waterfallConcepts" lang={lang} onOpen={setEduModal} label={ar?"اعرف أكثر عن توزيع الأرباح":"Learn about Profit Distribution"} /></div>
-          <div style={g2}>
+          {false && (<div style={g2}>
             <FL label={ar?"العائد التفضيلي %":"Pref Return %"} tip={ar?"الحد الأدنى للعائد السنوي الذي يحصل عليه المستثمر قبل أن يشارك المطور بالأرباح. عادة 8-15%\nيتراكم سنوياً على رأس المال غير المسترد":"Minimum annual return for Investor before Developer shares profits. Usually 8-15%\nAccrues annually on unreturned capital"} hint={dh("prefReturnPct")}><Inp type="number" value={cfg.prefReturnPct} onChange={v=>upCfg({prefReturnPct:Math.max(0,Math.min(50,v))})} /></FL>
             <FL label={ar?"حصة المطور من الأرباح %":"Developer Profit Share %"} tip={ar?"حصة المطور من الأرباح بعد حصول المستثمر على العائد التفضيلي. عادة 20-30%\nمثال: لو العائد التفضيلي 15% والأرباح تجاوزته → 25% من الفائض يروح للمطور":"Developer's share of profits after investor gets preferred return. Usually 20-30%"} hint={dh("carryPct")}><Inp type="number" value={cfg.carryPct} onChange={v=>upCfg({carryPct:Math.max(0,Math.min(50,v))})} /></FL>
-          </div>
-          <div style={g3}>
+          </div>)}
+          {false && (<div style={g3}>
             <FL label={ar?"نسبة توزيع المستثمر":"Investor Split %"} tip={ar?"نسبة الأرباح المتبقية للمستثمر بعد العائد التفضيلي والـ catch-up. عادة 70-80%\nالباقي يذهب تلقائياً للمطور":"Investor share of remaining profits after pref and catch-up. Usually 70-80%\nRemainder automatically goes to Developer"} hint={`${ar?"مطور":"Dev"} = ${100-(cfg.lpProfitSplitPct||70)}% · ${dh("lpProfitSplitPct")}`}><Inp type="number" value={cfg.lpProfitSplitPct} onChange={v=>upCfg({lpProfitSplitPct:Math.max(0,Math.min(100,v))})} /></FL>
             {false && (<FL label={ar?"التعويض (Catch-up)":"Catch-up"} tip={ar?"بعد حصول المستثمر على العائد التفضيلي، يتم تعويض الطرف المستحق بحصة أكبر مؤقتاً حتى يصل للنسبة المتفق عليها":"After investor receives preferred return, the entitled party takes a larger temporary share until agreed economics are reached"}><Drp lang={lang} value={cfg.gpCatchup?"Y":"N"} onChange={v=>upCfg({gpCatchup:v==="Y"})} options={["Y","N"]} /></FL>)}
             {false && (<FL label={ar?"معاملة الرسوم":"Fee Treatment"} tip={ar?"رأسمال: الرسوم تُسترد + تحصل عائد تفضيلي\nاسترداد فقط: تُسترد لكن بدون عائد تفضيلي\nمصروف: لا تُسترد ولا تحصل عائد":"Capital: fees earn ROC + Pref\nROC Only: fees returned but no Pref\nExpense: fees not returned, no Pref"}><select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{width:"100%",padding:"7px 10px",border:"1px solid #e5e7ec",borderRadius:6,background:"#fff",fontSize:13}}><option value="capital">{ar?"رأسمال - استرداد + Pref (تلقائي)":"Capital - ROC + Pref (default)"}</option><option value="rocOnly">{ar?"استرداد فقط (بدون Pref)":"ROC Only (no Pref)"}</option><option value="expense">{ar?"مصروف (لا استرداد)":"Expense (no ROC)"}</option></select></FL>)}
-          </div>
+          </div>)}
           {false && (<div style={g2}>
             <FL label={ar?"توزيع العائد التفضيلي":"Pref Allocation"} tip={ar?"نسبي: العائد التفضيلي يوزع على المطور و المستثمر بحسب حصصهم\nللمستثمر فقط: كامل العائد التفضيلي يذهب للمستثمر":"Pro Rata: pref distributed to Developer and Investor by ownership share\nInvestor Only: all pref goes to Investor (default: proRata)"}>
               <Drp lang={lang} value={cfg.prefAllocation||"proRata"} onChange={v=>upCfg({prefAllocation:v})} options={[{value:"proRata",en:"Pro Rata - Developer+Investor (default)",ar:"نسبي - المطور+المستثمر (تلقائي)"},{value:"lpOnly",en:"Investor Only",ar:"للمستثمر فقط"}]} />
@@ -2728,12 +2742,12 @@ When to use:
           {/* Performance Incentive (IRR-based hurdle) */}
           <div style={{borderTop:"1px solid #eef0f4",marginTop:10,paddingTop:10}} />
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-            <span style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"حافز الأداء (IRR)":"PERFORMANCE INCENTIVE (IRR)"}</span>
+            <span style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"حافز حسن الأداء":"PERFORMANCE INCENTIVE"}</span>
           </div>
           <div style={g3}>
-            <FL label={ar?"حافز الأداء":"Performance Incentive"} tip={ar?"تفعيل حافز الأداء: إذا تجاوز عائد المستثمر (IRR) الحد الأدنى، يحصل المطور على نسبة من الفائض\nمختلف تماماً عن الـ Catch-up":"Enable IRR-based incentive: if investor IRR exceeds hurdle, developer gets a share of excess distributions\nCompletely separate from T3 catch-up"}><Drp lang={lang} value={cfg.performanceIncentive?"Y":"N"} onChange={v=>upCfg({performanceIncentive:v==="Y"})} options={[{value:"N",en:"Off",ar:"معطل"},{value:"Y",en:"On",ar:"مفعل"}]} /></FL>
-            <FL label={ar?"حد العائد (Hurdle) %":"Hurdle IRR %"} tip={ar?"الحد الأدنى لعائد المستثمر (IRR) الذي يجب تجاوزه قبل احتساب حافز الأداء. عادة 10-15%":"Minimum investor IRR threshold before incentive applies. Usually 10-15%"}><Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} /></FL>
-            <FL label={ar?"نسبة الحافز %":"Incentive %"} tip={ar?"نسبة الفائض فوق الحد الأدنى التي يحصل عليها المطور. مثال: 20% يعني المطور يأخذ 20% من التوزيعات الزائدة عن الحد":"Developer's share of distributions exceeding the hurdle threshold. Example: 20% means developer gets 20% of excess"}><Inp type="number" value={cfg.incentivePct} onChange={v=>upCfg({incentivePct:Math.max(0,Math.min(100,v))})} /></FL>
+            <FL label={ar?"تفعيل حافز حسن الأداء":"Enable Performance Incentive"} tip={ar?"تفعيل حافز الأداء: إذا تجاوز عائد المستثمر (IRR) الحد الأدنى، يحصل المطور على نسبة من الفائض\nمختلف تماماً عن الـ Catch-up":"Enable IRR-based incentive: if investor IRR exceeds hurdle, developer gets a share of excess distributions\nCompletely separate from T3 catch-up"}><Drp lang={lang} value={cfg.performanceIncentive?"Y":"N"} onChange={v=>upCfg({performanceIncentive:v==="Y"})} options={[{value:"N",en:"Off",ar:"معطل"},{value:"Y",en:"On",ar:"مفعل"}]} /></FL>
+            <FL label={ar?"العائد المتوقع السنوي %":"Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر (IRR) الذي يجب تجاوزه قبل احتساب حافز الأداء. عادة 10-15%":"Minimum investor IRR threshold before incentive applies. Usually 10-15%"}><Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} /></FL>
+            <FL label={ar?"نسبة حافز حسن الأداء %":"Performance Incentive %"} tip={ar?"نسبة الفائض فوق الحد الأدنى التي يحصل عليها المطور. مثال: 20% يعني المطور يأخذ 20% من التوزيعات الزائدة عن الحد":"Developer's share of distributions exceeding the hurdle threshold. Example: 20% means developer gets 20% of excess"}><Inp type="number" value={cfg.incentivePct} onChange={v=>upCfg({incentivePct:Math.max(0,Math.min(100,v))})} /></FL>
           </div>
         </AB>
         </SecWrap>
@@ -2769,11 +2783,11 @@ When to use:
             <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
             <FL label={ar?"رسوم التطوير %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
-            <FL label={ar?"أساس رسوم التطوير":"Dev Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Excl. Land (default)",ar:"بدون أرض (تلقائي)"},{value:"inclLand",en:"Incl. Land",ar:"مع الأرض"}]} /></FL>
+            <FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excl. Land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs incl. Land",ar:"تكاليف التطوير مع الأرض"}]} /></FL>
           </>;
-          if (isFundMode) return <><FL label={ar?"رسوم التطوير %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس رسوم التطوير":"Dev Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Excl. Land (default)",ar:"بدون أرض (تلقائي)"},{value:"inclLand",en:"Incl. Land",ar:"مع الأرض"}]} /></FL></>;
+          if (isFundMode) return <><FL label={ar?"رسوم التطوير %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excl. Land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs incl. Land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
           // Debt + Equity mode (not fund)
-          return <><FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس رسوم التطوير":"Dev Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Excl. Land (default)",ar:"بدون أرض (تلقائي)"},{value:"inclLand",en:"Incl. Land",ar:"مع الأرض"}]} /></FL></>;
+          return <><FL label={ar?"رسوم التطوير %":"Dev Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excl. Land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs incl. Land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
         })()}</AB>
 
         </SecWrap>
@@ -9664,7 +9678,7 @@ function _buildXLSX(XLSX, project, results, financing, waterfall) {
       const s4 = [];
       s4.push(['WATERFALL DISTRIBUTIONS', '', '', '', '', '', '', '', '', '', '', '', '', cur]);
       s4.push([]);
-      s4.push(['Year','Calendar','Equity Calls','Cash Available','T1: ROC','T2: Pref Return','T3: Catch-up','T4: Investor Split','T4: Developer Split','Investor Distribution','Developer Distribution','Investor Net CF','Developer Net CF']);
+      s4.push(['Year','Calendar','Equity Calls','Cash Available','T1: ROC','T2: Preferred Return','T3: Catch-up','T4: Investor Split','T4: Developer Split','Investor Distribution','Developer Distribution','Investor Net CF','Developer Net CF']);
       yrs.forEach(y => {
         s4.push([y+1, sy+y, fm(w.equityCalls[y]), fm(w.cashAvail[y]), fm(w.tier1[y]), fm(w.tier2[y]), fm(w.tier3[y]), fm(w.tier4LP[y]), fm(w.tier4GP[y]), fm(w.lpDist[y]), fm(w.gpDist[y]), fm(w.lpNetCF[y]), fm(w.gpNetCF[y])]);
       });
@@ -9790,7 +9804,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
   // Section 6: Waterfall
   if (w) {
     sections.push(["WATERFALL DISTRIBUTIONS"]);
-    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "T1:ROC", "T2:Pref", "T3:Catch-up", "T4:Investor Split", "T4:Developer Split", "Investor Dist", "Developer Dist", "Investor Net CF", "Developer Net CF"]);
+    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "T1:ROC", "T2:Preferred Return", "T3:Catch-up", "T4:Investor Split", "T4:Developer Split", "Investor Dist", "Developer Dist", "Investor Net CF", "Developer Net CF"]);
     yrs.forEach(y => {
       sections.push([y + 1, sy + y, w.equityCalls[y], w.cashAvail[y], w.tier1[y], w.tier2[y], w.tier3[y], w.tier4LP[y], w.tier4GP[y], w.lpDist[y], w.gpDist[y], w.lpNetCF[y], w.gpNetCF[y]]);
     });
@@ -10458,7 +10472,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           {/* Secondary LP metrics */}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4, 1fr)",gap:8,marginBottom:18}}>
             {[
-              {l:ar?"العائد المفضل":"Preferred Return",v:(project.prefReturnPct||15)+"%",ac:"#2563eb"},
+              ...((project.prefReturnPct||0) > 0 ? [{l:ar?"العائد المفضل":"Preferred Return",v:(project.prefReturnPct)+"%",ac:"#2563eb"}] : []),
               {l:ar?"سنة التخارج":"Exit Year",v:fw?.exitYear||"TBD",ac:"#f59e0b"},
               {l:"DPI",v:fw?.lpTotalInvested>0?(fw.lpTotalDist/fw.lpTotalInvested).toFixed(2)+"x":"—",ac:"#8b5cf6"},
               {l:ar?"العائد النقدي":"Cash Yield",v:(()=>{if(!fw?.lpDist||!fw?.lpTotalInvested)return "—";const stabYr=Math.min(10,h-1);const dist=fw.lpDist[stabYr]||0;return dist>0&&fw.lpTotalInvested>0?fmtPct(dist/fw.lpTotalInvested*100):"—";})(),ac:"#06b6d4"},
@@ -10477,10 +10491,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 [ar?"استراتيجية الصندوق":"Fund Strategy",ar?"تطوير واحتفاظ":"Develop & Hold"],[ar?"العملة":"Currency",cur],
                 [ar?"مساهمة المطور (الأرض)":"Developer Equity (Land Contribution)",fw?fmt(fw.gpEquity)+" "+cur+" ("+fmtPct(fw.gpPct*100)+")":"—"],
                 [ar?"مساهمة المستثمر المطلوبة":"Investor Equity Required",fw?fmt(fw.lpEquity)+" "+cur+" ("+fmtPct(fw.lpPct*100)+")":"—"],
-                [ar?"العائد المفضل":"Preferred Return",(project.prefReturnPct||15)+"% "+(ar?"سنوي على رأس المال غير المسترد":"p.a. on unreturned capital")],
-                [ar?"التعويض":"Catch-up",project.gpCatchup?(ar?"نعم":"Yes"):(ar?"لا":"No")],
-                [ar?"أداء / حمولة":"Carry / Performance Fee",(project.carryPct||30)+"%"],
-                [ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)","Investor "+(project.lpProfitSplitPct||70)+"% / Developer "+(100-(project.lpProfitSplitPct||70))+"%"],
+                ...((project.prefReturnPct||0) > 0 ? [[ar?"العائد المفضل":"Preferred Return",(project.prefReturnPct)+"% "+(ar?"سنوي على رأس المال غير المسترد":"p.a. on unreturned capital")]] : []),
+                ...(project.gpCatchup ? [[ar?"التعويض":"Catch-up",ar?"نعم":"Yes"]] : []),
+                ...((project.carryPct||0) > 0 ? [[ar?"أداء / حمولة":"Carry / Performance Fee",(project.carryPct)+"%"]] : []),
+                ...((100-(project.lpProfitSplitPct||100)) > 0 ? [[ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)","Investor "+(project.lpProfitSplitPct||70)+"% / Developer "+(100-(project.lpProfitSplitPct||70))+"%"]] : []),
                 [ar?"رسوم الاشتراك":"Subscription Fee",(project.subscriptionFeePct||2)+"%"],
                 [ar?"رسوم الإدارة السنوية":"Annual Management Fee",(project.annualMgmtFeePct||0.9)+"%"],
                 [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من التكاليف":"of CAPEX")],
@@ -10495,9 +10509,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:isMobile?"wrap":"nowrap"}}>
               {[
                 {l:ar?"إعادة رأس المال":"Return of Capital",v:fmtM(fw.tier1.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dbeafe,#eff6ff)",bd:"#93c5fd"},
-                {l:ar?"العائد المفضل":"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dcfce7,#f0fdf4)",bd:"#86efac"},
-                {l:ar?"التعويض":"Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",bd:"#fcd34d"},
-                {l:ar?"تقسيم الأرباح":"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"linear-gradient(135deg,#ede9fe,#f5f3ff)",bd:"#c4b5fd"},
+                ...(fw.tier2.reduce((a,b)=>a+b,0) > 0 ? [{l:ar?"العائد المفضل":"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dcfce7,#f0fdf4)",bd:"#86efac"}] : []),
+                ...(fw.tier3.reduce((a,b)=>a+b,0) > 0 ? [{l:ar?"التعويض":"Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",bd:"#fcd34d"}] : []),
+                ...((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0)) > 0 ? [{l:ar?"تقسيم الأرباح":"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"linear-gradient(135deg,#ede9fe,#f5f3ff)",bd:"#c4b5fd"}] : []),
               ].map((t,i)=>(
                 <div key={i} style={{flex:1,minWidth:isMobile?140:"auto",background:t.bg,borderRadius:8,padding:"12px",textAlign:"center",border:`1px solid ${t.bd}`}}>
                   <div style={{fontSize:9,fontWeight:700,color:"#374151",letterSpacing:0.3}}>{t.l}</div>
@@ -11986,9 +12000,9 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)",gap:12}}>
               {[
                 { label: ar?"رد رأس المال":"T1: Return of Capital", value: (w.tier1||[]).reduce((s,v)=>s+v,0), color: "#1e40af" },
-                { label: ar?"العائد التفضيلي":"T2: Pref Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" },
-                { label: ar?"التعويض":"T3: Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "#16a34a" },
-                { label: ar?"تقسيم الأرباح":"T4: Profit Split", value: ((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)), color: "#f59e0b" },
+                ...((w.tier2||[]).reduce((s,v)=>s+v,0) > 0 ? [{ label: ar?"العائد التفضيلي":"T2: Preferred Return", value: (w.tier2||[]).reduce((s,v)=>s+v,0), color: "#7c3aed" }] : []),
+                ...((w.tier3||[]).reduce((s,v)=>s+v,0) > 0 ? [{ label: ar?"التعويض":"T3: Catch-up", value: (w.tier3||[]).reduce((s,v)=>s+v,0), color: "#16a34a" }] : []),
+                ...(((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)) > 0 ? [{ label: ar?"تقسيم الأرباح":"T4: Profit Split", value: ((w.tier4LP||[]).reduce((s,v)=>s+v,0))+((w.tier4GP||[]).reduce((s,v)=>s+v,0)), color: "#f59e0b" }] : []),
               ].map((tier, i) => (
                 <div key={i} style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px",borderTop:`3px solid ${tier.color}`}}>
                   <div style={{fontSize:10,color:"#6b7080",marginBottom:4}}>{tier.label}</div>

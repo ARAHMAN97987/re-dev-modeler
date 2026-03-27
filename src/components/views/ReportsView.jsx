@@ -280,7 +280,7 @@ function generateFallbackCSV(project, results, financing, waterfall) {
 
   if (w) {
     sections.push(["WATERFALL DISTRIBUTIONS"]);
-    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "ROC", "Pref Return", "Catch-up", "Investor Split", "Developer Split", "Investor Dist", "Developer Dist", "Investor Net CF", "Developer Net CF"]);
+    sections.push(["Year", "Calendar", "Equity Calls", "Cash Available", "ROC", "Preferred Return", "Catch-up", "Investor Split", "Developer Split", "Investor Dist", "Developer Dist", "Investor Net CF", "Developer Net CF"]);
     yrs.forEach(y => {
       sections.push([y + 1, sy + y, w.equityCalls[y], w.cashAvail[y], w.tier1[y], w.tier2[y], w.tier3[y], w.tier4LP[y], w.tier4GP[y], w.lpDist[y], w.gpDist[y], w.lpNetCF[y], w.gpNetCF[y]]);
     });
@@ -951,7 +951,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
           {/* Secondary LP metrics */}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4, 1fr)",gap:8,marginBottom:18}}>
             {[
-              {l:ar?"العائد المفضل":"Preferred Return",v:(project.prefReturnPct||15)+"%",ac:"#2563eb"},
+              ...((project.prefReturnPct||0) > 0 ? [{l:ar?"العائد المفضل":"Preferred Return",v:(project.prefReturnPct)+"%",ac:"#2563eb"}] : []),
               {l:ar?"سنة التخارج":"Exit Year",v:fw?.exitYear||"TBD",ac:"#f59e0b"},
               {l:"DPI",v:fw?.lpTotalInvested>0?(fw.lpTotalDist/fw.lpTotalInvested).toFixed(2)+"x":"—",ac:"#8b5cf6"},
               {l:ar?"العائد النقدي":"Cash Yield",v:(()=>{if(!fw?.lpDist||!fw?.lpTotalInvested)return "—";const stabYr=Math.min(10,h-1);const dist=fw.lpDist[stabYr]||0;return dist>0&&fw.lpTotalInvested>0?fmtPct(dist/fw.lpTotalInvested*100):"—";})(),ac:"#06b6d4"},
@@ -970,10 +970,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 [ar?"استراتيجية الصندوق":"Fund Strategy",ar?"تطوير واحتفاظ":"Develop & Hold"],[ar?"العملة":"Currency",cur],
                 [ar?"حقوق ملكية المطور":"Developer Equity",fw?fmt(fw.gpEquity)+" "+cur+" ("+fmtPct(fw.gpPct*100)+")":"—"],
                 [ar?"حقوق ملكية المستثمر المطلوبة":"Investor Equity Required",fw?fmt(fw.lpEquity)+" "+cur+" ("+fmtPct(fw.lpPct*100)+")":"—"],
-                [ar?"العائد المفضل":"Preferred Return",(project.prefReturnPct||15)+"% "+(ar?"سنوي على رأس المال غير المسترد":"p.a. on unreturned capital")],
+                ...((project.prefReturnPct||0) > 0 ? [[ar?"العائد المفضل":"Preferred Return",(project.prefReturnPct)+"% "+(ar?"سنوي على رأس المال غير المسترد":"p.a. on unreturned capital")]] : []),
                 ...(project.gpCatchup ? [[ar?"التعويض":"Catch-up",ar?"نعم":"Yes"]] : []),
-                [ar?"أداء / حمولة":"Carry / Performance Fee",(project.carryPct||30)+"%"],
-                [ar?"تقسيم الأرباح":"Profit Split",(ar?"المستثمر":"Investor")+" "+(project.lpProfitSplitPct||70)+"% / "+(ar?"المطور":"Developer")+" "+(100-(project.lpProfitSplitPct||70))+"%"],
+                ...((project.carryPct||0) > 0 ? [[ar?"أداء / حمولة":"Carry / Performance Fee",(project.carryPct)+"%"]] : []),
+                ...((100-(project.lpProfitSplitPct||100)) > 0 ? [[ar?"تقسيم الأرباح":"Profit Split",(ar?"المستثمر":"Investor")+" "+(project.lpProfitSplitPct||70)+"% / "+(ar?"المطور":"Developer")+" "+(100-(project.lpProfitSplitPct||70))+"%"]] : []),
                 [ar?"رسوم الاشتراك":"Subscription Fee",(project.subscriptionFeePct||2)+"%"],
                 [ar?"رسوم الإدارة السنوية":"Annual Management Fee",(project.annualMgmtFeePct||0.9)+"%"],
                 [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من التكاليف":"of CAPEX")],
@@ -988,9 +988,9 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:isMobile?"wrap":"nowrap"}}>
               {[
                 {l:ar?"إعادة رأس المال":"Return of Capital",v:fmtM(fw.tier1.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dbeafe,#eff6ff)",bd:"#93c5fd"},
-                {l:ar?"العائد المفضل":"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dcfce7,#f0fdf4)",bd:"#86efac"},
-                ...(fw.tier3.reduce((a,b)=>a+b,0)>0?[{l:ar?"التعويض":"Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",bd:"#fcd34d"}]:[]),
-                {l:ar?"تقسيم الأرباح":"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"linear-gradient(135deg,#ede9fe,#f5f3ff)",bd:"#c4b5fd"},
+                ...(fw.tier2.reduce((a,b)=>a+b,0) > 0 ? [{l:ar?"العائد المفضل":"Preferred Return",v:fmtM(fw.tier2.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#dcfce7,#f0fdf4)",bd:"#86efac"}] : []),
+                ...(fw.tier3.reduce((a,b)=>a+b,0) > 0 ? [{l:ar?"التعويض":"Catch-up",v:fmtM(fw.tier3.reduce((a,b)=>a+b,0)),bg:"linear-gradient(135deg,#fef3c7,#fffbeb)",bd:"#fcd34d"}] : []),
+                ...((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0)) > 0 ? [{l:ar?"تقسيم الأرباح":"Profit Split",v:fmtM((fw.tier4LP.reduce((a,b)=>a+b,0))+(fw.tier4GP.reduce((a,b)=>a+b,0))),bg:"linear-gradient(135deg,#ede9fe,#f5f3ff)",bd:"#c4b5fd"}] : []),
               ].map((t,i)=>(
                 <div key={i} style={{flex:1,minWidth:isMobile?140:"auto",background:t.bg,borderRadius:8,padding:"12px",textAlign:"center",border:`1px solid ${t.bd}`}}>
                   <div style={{fontSize:9,fontWeight:700,color:"#374151",letterSpacing:0.3}}>{t.l}</div>

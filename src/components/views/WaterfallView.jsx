@@ -365,27 +365,43 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
           <span style={{fontSize:13}}>⚡</span>
           <span style={{fontSize:12,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"تعديل سريع - شروط الصندوق":"Quick Edit - Fund Terms"}</span>
-          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"Pref":"Pref"} {cfg.prefReturnPct||15}% · Carry {cfg.carryPct||20}% · Inv {cfg.lpProfitSplitPct||75}%</span>
+          <span style={{fontSize:10,color:"#6b7080"}}>{ar?"العائد المتوقع":"Expected Return"} {cfg.hurdleIRR||15}% · {ar?"الحافز":"Incentive"} {cfg.incentivePct||20}%</span>
           <span style={{fontSize:11,color:"#9ca3af",marginInlineStart:8}}>{showTerms?"▲":"▼"}</span>
         </div>
         {showTerms && <div style={{padding:"12px 16px",borderTop:"1px solid #ede9fe",animation:"zanSlide 0.15s ease"}}>
           {/* Row 1: Waterfall Terms */}
-          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"شروط حافز الأداء":"WATERFALL TERMS"}</div>
+          <div style={{fontSize:10,fontWeight:700,color:"#8b5cf6",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"حافز حسن الأداء":"PERFORMANCE INCENTIVE"}</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
-            {[
+            {false && ([
               {l:ar?"العائد التفضيلي %":"Pref Return %",k:"prefReturnPct",v:cfg.prefReturnPct},
-              {l:ar?"أتعاب حسن الأداء %":"Carry %",k:"carryPct",v:cfg.carryPct},
+              {l:ar?"حصة المطور %":"Carry %",k:"carryPct",v:cfg.carryPct},
               {l:ar?"حصة المستثمر %":"Investor Split %",k:"lpProfitSplitPct",v:cfg.lpProfitSplitPct},
             ].map(f=><div key={f.k} style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{f.l}</span>
               <input type="number" value={f.v||""} onChange={e=>upCfg({[f.k]:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
-            </div>)}
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
+            </div>))}
+            {false && (<div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080"}}>{ar?"معاملة الرسوم":"Fee Treatment"}</span>
               <select value={cfg.feeTreatment||"capital"} onChange={e=>upCfg({feeTreatment:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
                 <option value="capital">{ar?"رأسمال":"Capital"}</option><option value="rocOnly">{ar?"استرداد فقط":"ROC Only"}</option><option value="expense">{ar?"مصروف":"Expense"}</option>
               </select>
+            </div>)}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080"}}>{ar?"تفعيل حافز حسن الأداء":"Enable Performance Incentive"}</span>
+              <select value={cfg.performanceIncentive?"Y":"N"} onChange={e=>upCfg({performanceIncentive:e.target.value==="Y"})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="N">{ar?"لا":"Off"}</option><option value="Y">{ar?"نعم":"On"}</option>
+              </select>
             </div>
+            {cfg.performanceIncentive && <>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"العائد المتوقع السنوي %":"Expected Annual Return %"}</span>
+              <input type="number" value={cfg.hurdleIRR||""} onChange={e=>upCfg({hurdleIRR:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"نسبة حافز حسن الأداء %":"Performance Incentive %"}</span>
+              <input type="number" value={cfg.incentivePct||""} onChange={e=>upCfg({incentivePct:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
+            </div>
+            </>}
           </div>
           {/* Row 2: Fund Fees */}
           <div style={{fontSize:10,fontWeight:700,color:"#f59e0b",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8}}>{ar?"رسوم الصندوق":"FUND FEES"}</div>
@@ -507,7 +523,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
               <SecHd text={ar?"دخل الدور":"ROLE INCOME"} />
               <KR l={ar?"رسوم تطوير":"Dev Fee"} v={fmt(devFeeTotal)} c="#a16207" />
-              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"حافز الأداء":"Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
+              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"حافز حسن الأداء":"Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
               <div style={{gridColumn:"1/-1",height:1,background:"#e5e7ec",margin:"2px 0"}} />
               <KR l={ar?"إجمالي دخل المطور":"Total Developer Income"} v={fmtM(devRoleIncome)} c="#3b82f6" bold />
             </div>
@@ -581,7 +597,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"مكونات العائد":"RETURN COMPONENTS"} />
               <KR l={ar?"① كمستثمر (توزيعات)":"① As Investor (distributions)"} v={fmt(devAsInvestor)} c="#8b5cf6" />
               <KR l={ar?"② رسوم التطوير":"② Dev Fees"} v={fmt(devFeeTotal)} c="#a16207" />
-              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"③ حافز الأداء":"③ Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
+              {w.perfIncentiveEnabled && perfIncentive > 0 && <KR l={ar?"③ حافز حسن الأداء":"③ Performance Incentive"} v={fmt(perfIncentive)} c="#059669" />}
               <div style={{gridColumn:"1/-1",height:1,background:"#bbf7d0",margin:"2px 0"}} />
               <KR l={ar?"إجمالي العوائد":"Total Returns"} v={fmtM(devTotalEconomics)} c="#16a34a" bold />
               <KR l={ar?"مساهمة (حق انتفاع)":"Contribution (Usufruct)"} v={fmt(w.gpTotalInvested)} />
@@ -711,6 +727,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </tr>
 
       {/* Pref tracking */}
+      {t2Total > 0 && <>
       <tr style={{background:"#faf5ff"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontSize:10,color:"#8b5cf6",paddingInlineStart:20}}>{ar?"استحقاق العائد التفضيلي":"Pref Accrual"}</td>
         <td style={tdN}></td>
@@ -722,10 +739,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {years.map(y=><td key={y} style={{...tdN,color:(w.prefAccumulated[y]||0)>0?"#7c3aed":"#16a34a",fontSize:10,fontWeight:(w.prefAccumulated[y]||0)===0?600:400}}>{(w.prefAccumulated[y]||0)===0?"✓ 0":fmt(w.prefAccumulated[y])}</td>)}
       </tr>
       <CFRow label={ar?"العائد التفضيلي":"Preferred Return"} values={w.tier2} total={t2Total} color="#8b5cf6" />
+      </>}
 
       {/* Remaining + T3/T4 */}
       {(() => { const rem = new Array(h).fill(0); for(let y=0;y<h;y++) rem[y]=Math.max(0,(w.cashAvail[y]||0)-(w.tier1[y]||0)-(w.tier2[y]||0)); const tot=rem.reduce((a,b)=>a+b,0); return tot>0?<CFRow label={ar?"المتبقي بعد ROC + Pref":"Remaining After ROC + Pref"} values={rem} total={tot} bold />:null; })()}
       {w.tier3?.some(v=>v>0) && <CFRow label={ar?"التعويض":"Catch-up"} values={w.tier3} total={t3Total} color="#f59e0b" />}
+      {(t4LPTotal+t4GPTotal) > 0 && <>
       <CFRow label={ar?"توزيع الأرباح":"Profit Split"} values={(() => { const a=new Array(h).fill(0); for(let y=0;y<h;y++) a[y]=(w.tier4LP[y]||0)+(w.tier4GP[y]||0); return a; })()} total={t4LPTotal+t4GPTotal} color="#16a34a" />
       <tr style={{background:"#f0fdf4"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#f0fdf4",zIndex:1,fontSize:10,color:"#16a34a",paddingInlineStart:24}}>→ {ar?"المستثمر":"Investor"} ({cfg.lpProfitSplitPct||75}%)</td>
@@ -737,6 +756,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <td style={{...tdN,fontSize:10,color:"#3b82f6"}}>{fmt(t4GPTotal)}</td>
         {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:"#3b82f6"}}>{(w.tier4GP[y]||0)===0?"—":fmt(w.tier4GP[y])}</td>)}
       </tr>
+      </>}
 
       {/* Distribution totals */}
       <CFRow label={ar?"إجمالي توزيعات المستثمر":"Total Investor Distributions"} values={w.lpDist} total={w.lpTotalDist} bold color="#8b5cf6" />
@@ -791,7 +811,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         if (!w.perfIncentiveEnabled || perfAmt <= 0) return null;
         const settleYr = w.exitYear ? w.exitYear - (w.startYear||results.startYear||0) : years.length - 1;
         return <tr>
-          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#059669",paddingInlineStart:20}}>{ar?"حافز الأداء":"Performance Incentive"}</td>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontSize:10,color:"#059669",paddingInlineStart:20}}>{ar?"حافز حسن الأداء":"Performance Incentive"}</td>
           <td style={{...tdN,fontSize:10,fontWeight:600,color:"#059669"}}>{fmt(perfAmt)}</td>
           {years.map(y=><td key={y} style={{...tdN,fontSize:10,color:y===settleYr?"#059669":"#d0d4dc"}}>{y===settleYr?fmt(perfAmt):"—"}</td>)}
         </tr>;
