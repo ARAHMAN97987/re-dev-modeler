@@ -283,6 +283,11 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     perfIncentiveSettleYear: Math.max(...names.map(n => phaseWaterfalls[n]?.perfIncentiveSettleYear || 0)) || null,
     lpIRR_preIncentive: null, // recomputed at aggregate level, not sum
     gpIRR_preIncentive: null,
+    // Developer Two-Hats breakdown
+    developerAsInvestor: sum('developerAsInvestor'),
+    developerDevFees: sum('developerDevFees'),
+    developerPerfIncentive: sum('developerPerfIncentive'),
+    developerTotalEconomics: sum('developerTotalEconomics'),
     // Phase B1: Saudi-style alias outputs (recomputed from aggregated data)
     developerEquity: gpEquity, investorEquity: lpEquity,
     developerPct: totalEquity > 0 ? gpEquity / totalEquity : 0,

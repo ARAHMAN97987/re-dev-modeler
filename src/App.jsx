@@ -713,12 +713,14 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               </>}
               {w.perfIncentiveEnabled && w.perfIncentiveAmount > 0 && <KR l={ar?"حافز أداء (IRR)":"Perf. Incentive"} v={fmt(w.perfIncentiveAmount)} c="#059669" />}
               {showLandRent && <KR l={ar?((w.gpLandRentTotal||0)>0?"إيجار أرض (المطور)":"إيجار أرض (مشروع)"):((w.gpLandRentTotal||0)>0?"Land Rent (Developer)":"Land Rent (Project)")} v={`(${fmt((w.gpLandRentTotal||0) > 0 ? w.gpLandRentTotal : phaseLR)})`} c="#ef4444" />}
-              <SecHd text={ar?"الملخص":"NET SUMMARY"} />
-              <KR l={ar?"مساهمة المطور":"Developer Contribution"} v={fmt(w.gpTotalInvested)} bold />
-              <KR l={ar?"توزيعات حافز الأداء":"Waterfall Dist"} v={fmt(w.gpTotalDist)} />
-              <KR l={ar?"رسوم مستلمة":"Fees Received"} v={fmt(gpFeesTotal)} c="#a16207" />
+              <SecHd text={ar?"ملخص المطور":"DEVELOPER SUMMARY"} />
+              <KR l={ar?"① كمستثمر (توزيعات)":"① As Investor (distributions)"} v={fmt(w.developerAsInvestor ?? ((w.gpTotalDist||0) - (w.perfIncentiveAmount||0)))} c="#3b82f6" />
+              <KR l={ar?"② رسوم التطوير":"② Dev Fees"} v={fmt(w.developerDevFees ?? _feeDev)} c="#a16207" />
+              {w.perfIncentiveEnabled && (w.perfIncentiveAmount||0) > 0 && <KR l={ar?"③ حافز الأداء":"③ Perf. Incentive"} v={fmt(w.developerPerfIncentive ?? w.perfIncentiveAmount)} c="#059669" />}
+              <div style={{gridColumn:"1/-1",height:1,background:"#e5e7ec",margin:"2px 0"}} />
+              <KR l={ar?"إجمالي عوائد المطور":"Total Developer Returns"} v={fmtM(w.developerTotalEconomics ?? gpNetCash)} c="#16a34a" bold />
               {(w.gpLandRentTotal||0)>0 && <KR l={ar?"إيجار أرض":"Land Rent"} v={`(${fmt(w.gpLandRentTotal)})`} c="#ef4444" />}
-              <KR l={ar?"صافي النقد":"Net Cash"} v={fmtM(gpNetCash)} c="#16a34a" bold />
+              <KR l={ar?"مساهمة (حق انتفاع)":"Contribution (Usufruct)"} v={fmt(w.gpTotalInvested)} />
               <KR l={ar?"صافي الربح":"Net Profit"} v={fmtM(gpNetProfit)} c={gpNetProfit>=0?"#16a34a":"#ef4444"} bold />
               <SecHd text={ar?"المؤشرات":"METRICS"} />
               <div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap",paddingTop:4}}>

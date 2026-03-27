@@ -478,6 +478,15 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const t4GPTotal = tier4GP.reduce((a, b) => a + b, 0);
   const sponsorWaterfallEconomics = t3Total + t4GPTotal;
 
+  // ── Developer Economics: Two Hats ──
+  // Hat 1: Developer-as-Investor (returns from equity position only, no incentive)
+  const developerAsInvestor = gpTotalDist - perfIncentiveAmount;
+  // Hat 2: Developer-as-Developer (fees + performance incentive)
+  const developerDevFees = devFeesTotal; // paid during construction from project CF
+  const developerPerfIncentive = perfIncentiveAmount; // settled in final distribution
+  // Combined: total developer economics
+  const developerTotalEconomics = developerAsInvestor + developerDevFees + developerPerfIncentive;
+
   // NPV - Full 3x3 matrix
   const lpNPV10 = calcNPV(lpNetCF, 0.10);
   const lpNPV12 = calcNPV(lpNetCF, 0.12);
@@ -515,6 +524,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     perfIncentiveEnabled, perfIncentiveAmount, perfIncentiveExcess, perfIncentiveYears,
     perfIncentiveSettleYear: perfIncentiveSettleYear >= 0 ? perfIncentiveSettleYear + sy : null,
     lpIRR_preIncentive, gpIRR_preIncentive,
+    // Developer Two-Hats breakdown
+    developerAsInvestor, developerDevFees, developerPerfIncentive, developerTotalEconomics,
     // Phase B1: Saudi-style alias outputs (read-only aliases to existing GP/LP fields)
     developerEquity: gpEquity, investorEquity: lpEquity,
     developerPct: gpPct, investorPct: lpPct,
