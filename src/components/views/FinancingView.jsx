@@ -732,7 +732,10 @@ When to use:
               <Drp lang={lang} value={cfg.performanceIncentive?"Y":"N"} onChange={v=>upCfg({performanceIncentive:v==="Y"})} options={[{value:"N",en:"Off",ar:"معطل"},{value:"Y",en:"On",ar:"مفعل"}]} />
             </FL>
             {cfg.performanceIncentive && <>
-              <FL label={ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر (IRR) قبل أن يستحق المطور أي حافز. إذا لم يتجاوز العائد هذا الحد، حافز المطور = صفر":"Minimum Investor IRR threshold. If investor returns do not exceed this rate, developer incentive = zero"}>
+              <FL label={ar?"طريقة احتساب العائد المتوقع":"Expected Return Mode"} tip={ar?"العائد السنوي المبسط: المبلغ المطلوب = الاستثمار × (1 + النسبة × السنوات) — الطريقة الشائعة في السوق المحلي\nالعائد المركب / IRR: يستخدم التدفقات النقدية الفعلية وتوقيتها — أدق لكن أعقد":"Simple Annual Return: Required = Investment × (1 + Rate × Years) — common market convention\nCompounded / IRR: uses actual cash flow timing — more precise but complex"}>
+                <Drp lang={lang} value={cfg.hurdleMode||"simple"} onChange={v=>upCfg({hurdleMode:v})} options={[{value:"simple",en:"Simple Annual Return (Market Convention)",ar:"العائد السنوي المبسط (وفق العرف السوقي)"},{value:"irr",en:"Compounded Return / IRR",ar:"العائد المركب / IRR"}]} />
+              </FL>
+              <FL label={ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر قبل أن يستحق المطور أي حافز. إذا لم يتجاوز العائد هذا الحد، حافز المطور = صفر":"Minimum Investor return threshold. If investor returns do not exceed this rate, developer incentive = zero"}>
                 <Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} />
               </FL>
               <FL label={ar?"نسبة حافز المطور من الفائض %":"Developer Share of Excess %"} tip={ar?"نسبة الفائض فوق العائد المتوقع التي يحصل عليها المطور كحافز حسن أداء.\nمثال: لو العائد المتوقع 15% والفائض 100 ريال والنسبة 50% → المطور يحصل 50 ريال":"Developer's percentage of the excess above the Expected Annual Return.\nExample: if Expected Return is 15%, excess is 100 SAR, and share is 50% → Developer gets 50 SAR"}>

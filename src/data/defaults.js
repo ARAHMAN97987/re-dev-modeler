@@ -87,6 +87,7 @@ export const defaultProject = () => ({
   catchupMethod: "perYear", // HIDDEN: backward compat
   // حافز حسن الأداء — Performance Incentive (IRR-based, compound)
   performanceIncentive: true, // تفعيل حافز حسن الأداء — Enable Performance Incentive
+  hurdleMode: "simple", // "simple" = العائد السنوي المبسط (العرف السوقي) | "irr" = العائد المركب / IRR
   hurdleIRR: 15, // العائد المتوقع السنوي — Expected Annual Return %
   incentivePct: 20, // نسبة حافز حسن الأداء — Performance Incentive %
   // Government Incentives

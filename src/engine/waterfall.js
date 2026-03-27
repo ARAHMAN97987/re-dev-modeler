@@ -378,18 +378,20 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     unreturnedClose[y] = rocBase - cumReturned;
   }
 
-  // ── Performance Incentive: IRR-Accurate Settlement ──
-  // Settled at the last positive LP distribution year BEFORE computing lpNetCF/IRR/MOIC.
-  // excessAmount = max clawback that brings Investor IRR down to exactly hurdleRate (binary search).
-  // performanceIncentiveAmount = incentivePct × excessAmount.
-  // If incentivePct < 100%, investor IRR stays above hurdle after settlement.
+  // ── Performance Incentive: Developer share of excess above Expected Annual Return ──
+  // Two modes:
+  //   "simple" (default, market convention): requiredAmount = lpCalled × (1 + rate × years)
+  //   "irr" (compound/advanced): binary search on actual cash flows to find IRR-accurate excess
+  // Settlement: deducted from last positive LP distribution, added to GP.
   let perfIncentiveAmount = 0;
   let perfIncentiveExcess = 0;
   let perfIncentiveYears = 0;
   let perfIncentiveSettleYear = -1;
+  let perfIncentiveRequired = 0; // المبلغ المطلوب لتحقيق العائد المتوقع
   let lpIRR_preIncentive = null;
   let gpIRR_preIncentive = null;
   const perfIncentiveEnabled = !!project.performanceIncentive;
+  const hurdleMode = project.hurdleMode || "simple";
   if (perfIncentiveEnabled && lpEquity > 0) {
     const hurdleRate = (project.hurdleIRR ?? 15) / 100;
     const incPct = (project.incentivePct ?? 20) / 100;
@@ -397,32 +399,50 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     // Find last year with positive LP distribution (settlement year)
     for (let y = h - 1; y >= 0; y--) { if (lpDist[y] > 0) { perfIncentiveSettleYear = y; break; } }
     if (perfIncentiveSettleYear >= 0) {
-      // Build pre-incentive lpNetCF to get initial IRR
+      const sy_ = perfIncentiveSettleYear;
+      const maxClawback = lpDist[sy_]; // can't take more than what's there
+      // Pre-incentive LP totals
+      const lpTotalDist_pre = lpDist.reduce((a, b) => a + b, 0);
+      const lpTotalCalled_pre = lpCalls.reduce((a, b) => a + b, 0);
+      // Build pre-incentive lpNetCF (needed for both modes — IRR reporting)
       const _preCF = new Array(h).fill(0);
       for (let y = 0; y < h; y++) _preCF[y] = -lpCalls[y] + lpDist[y] - lpLandRentObligation[y];
       lpIRR_preIncentive = calcIRR(_preCF);
-      if (lpIRR_preIncentive !== null && lpIRR_preIncentive > hurdleRate) {
-        // Binary search: find excessAmount = max clawback so that lpIRR = hurdleRate exactly
-        const sy_ = perfIncentiveSettleYear;
-        const maxClawback = lpDist[sy_]; // can't take more than what's there
-        let lo = 0, hi = maxClawback;
-        for (let iter = 0; iter < 60; iter++) {
-          const mid = (lo + hi) / 2;
-          const tmpCF = [..._preCF];
-          tmpCF[sy_] -= mid;
-          const tmpIRR = calcIRR(tmpCF);
-          if (tmpIRR === null || tmpIRR <= hurdleRate) {
-            hi = mid; // clawed back too much
-          } else {
-            lo = mid; // can clawback more
-          }
-          if (hi - lo < 1) break; // converged to SAR 1 precision
+
+      if (hurdleMode === "simple") {
+        // ═══ Mode 1: Simple Annual Return (Market Convention) ═══
+        // requiredAmount = totalInvested × (1 + rate × years)
+        // excess = max(0, totalDistributions - requiredAmount)
+        perfIncentiveRequired = lpTotalCalled_pre * (1 + hurdleRate * perfIncentiveYears);
+        perfIncentiveExcess = Math.max(0, lpTotalDist_pre - perfIncentiveRequired);
+        if (perfIncentiveExcess > 0) {
+          perfIncentiveAmount = Math.min(perfIncentiveExcess * incPct, maxClawback);
+          lpDist[sy_] -= perfIncentiveAmount;
+          gpDist[sy_] += perfIncentiveAmount;
         }
-        perfIncentiveExcess = lo; // the full excess above hurdle
-        perfIncentiveAmount = Math.min(perfIncentiveExcess * incPct, maxClawback);
-        // Apply settlement: reduce LP distribution, increase GP distribution
-        lpDist[sy_] -= perfIncentiveAmount;
-        gpDist[sy_] += perfIncentiveAmount;
+      } else {
+        // ═══ Mode 2: Compounded Return / IRR (Binary Search) ═══
+        // Find max clawback that keeps Investor IRR = hurdleRate exactly
+        perfIncentiveRequired = lpTotalCalled_pre * Math.pow(1 + hurdleRate, perfIncentiveYears);
+        if (lpIRR_preIncentive !== null && lpIRR_preIncentive > hurdleRate) {
+          let lo = 0, hi = maxClawback;
+          for (let iter = 0; iter < 60; iter++) {
+            const mid = (lo + hi) / 2;
+            const tmpCF = [..._preCF];
+            tmpCF[sy_] -= mid;
+            const tmpIRR = calcIRR(tmpCF);
+            if (tmpIRR === null || tmpIRR <= hurdleRate) {
+              hi = mid;
+            } else {
+              lo = mid;
+            }
+            if (hi - lo < 1) break;
+          }
+          perfIncentiveExcess = lo;
+          perfIncentiveAmount = Math.min(perfIncentiveExcess * incPct, maxClawback);
+          lpDist[sy_] -= perfIncentiveAmount;
+          gpDist[sy_] += perfIncentiveAmount;
+        }
       }
     }
   }
@@ -522,6 +542,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     developerFeeOnlyReceived: devFeesTotal,
     // Performance Incentive (IRR-accurate, settled in distributions)
     perfIncentiveEnabled, perfIncentiveAmount, perfIncentiveExcess, perfIncentiveYears,
+    perfIncentiveRequired, hurdleMode,
     perfIncentiveSettleYear: perfIncentiveSettleYear >= 0 ? perfIncentiveSettleYear + sy : null,
     lpIRR_preIncentive, gpIRR_preIncentive,
     // Developer Two-Hats breakdown

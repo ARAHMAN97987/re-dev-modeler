@@ -23,7 +23,7 @@ export const FINANCING_FIELDS = [
   'preEstablishmentFee','spvFee','auditorFeeAnnual',
   'operatorFeePct','operatorFeeCap','miscExpensePct',
   'fundStartYear','fundName','gpIsFundManager','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
-  'performanceIncentive','hurdleIRR','incentivePct',
+  'performanceIncentive','hurdleMode','hurdleIRR','incentivePct',
 ];
 
 /** Get financing settings for a specific phase. Falls back to project-level. */
@@ -279,6 +279,8 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     perfIncentiveEnabled: names.some(n => phaseWaterfalls[n]?.perfIncentiveEnabled),
     perfIncentiveAmount: sum('perfIncentiveAmount'),
     perfIncentiveExcess: sum('perfIncentiveExcess'),
+    perfIncentiveRequired: sum('perfIncentiveRequired'),
+    hurdleMode: names.length > 0 ? (phaseWaterfalls[names[0]]?.hurdleMode || "simple") : "simple",
     perfIncentiveYears: Math.max(...names.map(n => phaseWaterfalls[n]?.perfIncentiveYears || 0)),
     perfIncentiveSettleYear: Math.max(...names.map(n => phaseWaterfalls[n]?.perfIncentiveSettleYear || 0)) || null,
     lpIRR_preIncentive: null, // recomputed at aggregate level, not sum

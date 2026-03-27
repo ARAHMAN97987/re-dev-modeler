@@ -55,6 +55,7 @@ const defaultProject = () => ({
   carryPct: 30,
   lpProfitSplitPct: 70,
   performanceIncentive: false,
+  hurdleMode: "simple",
   hurdleIRR: 15,
   incentivePct: 20,
   incentives: {
