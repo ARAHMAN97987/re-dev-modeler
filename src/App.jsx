@@ -637,6 +637,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             </div>
             {cfg.performanceIncentive && <>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7080",minWidth:70}}>{ar?"نوع العتبة":"Hurdle Type"}</span>
+              <select value={cfg.hurdleMode||"simple"} onChange={e=>upCfg({hurdleMode:e.target.value})} style={{padding:"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,background:"#fff"}}>
+                <option value="simple">{ar?"عائد بسيط (عرف السوق)":"Simple (Market)"}</option>
+                <option value="irr">{ar?"IRR مركب":"IRR (Compounded)"}</option>
+              </select>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"#6b7080",minWidth:90}}>{ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"}</span>
               <input type="number" value={cfg.hurdleIRR||""} onChange={e=>upCfg({hurdleIRR:parseFloat(e.target.value)||0})} style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:12,textAlign:"center",background:"#fff"}} />
             </div>
@@ -2790,7 +2797,8 @@ When to use:
           </div>
           <div style={g3}>
             <FL label={ar?"تفعيل حافز حسن الأداء للمطور":"Enable Developer Performance Incentive"} tip={ar?"تفعيل حافز الأداء: إذا تجاوز عائد المستثمر (IRR) الحد الأدنى، يحصل المطور على نسبة من الفائض\nمختلف تماماً عن الـ Catch-up":"Enable IRR-based incentive: if investor IRR exceeds hurdle, developer gets a share of excess distributions\nCompletely separate from T3 catch-up"}><Drp lang={lang} value={cfg.performanceIncentive?"Y":"N"} onChange={v=>upCfg({performanceIncentive:v==="Y"})} options={[{value:"N",en:"Off",ar:"معطل"},{value:"Y",en:"On",ar:"مفعل"}]} /></FL>
-            <FL label={ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر (IRR) الذي يجب تجاوزه قبل احتساب حافز الأداء. عادة 10-15%":"Minimum investor IRR threshold before incentive applies. Usually 10-15%"}><Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} /></FL>
+            <FL label={ar?"نوع العتبة":"Hurdle Type"} tip={ar?"عائد سنوي بسيط (عرف السوق السعودي) = رأس المال × النسبة × السنوات\nIRR مركب = معدل العائد الداخلي المركب على التدفقات النقدية":"Simple Annual Return (Saudi market convention) = Capital × Rate × Years\nCompounded IRR = Internal rate of return on actual cash flows"}><Drp lang={lang} value={cfg.hurdleMode||"simple"} onChange={v=>upCfg({hurdleMode:v})} options={[{value:"simple",en:"Simple Annual (Market Convention)",ar:"عائد سنوي بسيط (عرف السوق)"},{value:"irr",en:"Compounded IRR",ar:"IRR مركب"}]} /></FL>
+            <FL label={ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر الذي يجب تجاوزه قبل احتساب حافز الأداء. عادة 10-15%":"Minimum investor return threshold before incentive applies. Usually 10-15%"}><Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} /></FL>
             <FL label={ar?"نسبة حافز المطور من الفائض %":"Developer Share of Excess %"} tip={ar?"نسبة الفائض فوق الحد الأدنى التي يحصل عليها المطور. مثال: 20% يعني المطور يأخذ 20% من التوزيعات الزائدة عن الحد":"Developer's share of distributions exceeding the hurdle threshold. Example: 20% means developer gets 20% of excess"}><Inp type="number" value={cfg.incentivePct} onChange={v=>upCfg({incentivePct:Math.max(0,Math.min(100,v))})} /></FL>
           </div>
         </AB>
