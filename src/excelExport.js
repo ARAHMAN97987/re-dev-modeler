@@ -422,7 +422,7 @@ function buildInputs(wb, project, cur) {
 
   if (project.finMode && project.finMode !== "self") {
     section("FINANCING PARAMETERS  بيانات التمويل");
-    inp("Financing Mode", project.finMode === "fund" ? "Fund (Developer/Investor)" : project.finMode === "bank" ? "Bank Debt" : project.finMode, "نوع التمويل");
+    inp("Financing Mode", project.finMode === "fund" ? "Fund (Developer/Investor)" : project.finMode === "hybrid" ? "Hybrid (Government + Fund)" : project.finMode === "bank" ? "Bank Debt" : project.finMode, "نوع التمويل");
     inp("Debt Allowed", project.debtAllowed ? "Yes" : "No", "الدين مسموح");
     inp("Max LTV %", (project.maxLtvPct || 70) / 100, "نسبة القرض للقيمة", "0%");
     inp("Finance Rate (annual)", (project.financeRate ?? 6.5) / 100, "معدل الربح السنوي", "0.0%");
@@ -432,6 +432,17 @@ function buildInputs(wb, project, cur) {
     inp("Upfront Fee %", (project.upfrontFeePct || 0) / 100, "رسوم التأسيس", "0.0%");
     inp("Repayment Type", project.repaymentType || "amortizing", "نوع السداد");
     inp("Islamic Finance", project.islamicFinance || "conventional", "نوع التمويل الإسلامي");
+    if (project.finMode === "hybrid") {
+      row++;
+      section("GOVERNMENT FINANCING  التمويل الحكومي");
+      inp("Gov. Financing %", (project.govFinancingPct ?? 70) / 100, "نسبة التمويل الحكومي", "0%");
+      inp("Loan Beneficiary", (project.govBeneficiary || "project") === "project" ? "Project (SPV)" : "Developer (Personal)", "المستفيد من القرض");
+      inp("Gov. Rate %", (project.govFinanceRate ?? 3) / 100, "سعر الفائدة الحكومي", "0.0%");
+      inp("Gov. Tenor (years)", project.govLoanTenor ?? 15, "مدة القرض الحكومي");
+      inp("Gov. Grace (years)", project.govGrace ?? 5, "فترة السماح الحكومية");
+      inp("Gov. Repayment", project.govRepaymentType || "amortizing", "نوع السداد الحكومي");
+      inp("Draw Order", project.hybridDrawOrder === "finFirst" ? "Financing First" : "Pro-Rata", "ترتيب السحب");
+    }
     row++;
 
     section("EXIT PARAMETERS  بيانات التخارج");
@@ -743,7 +754,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
   row++;
   const info = [
     ["Fund Name  اسم الصندوق", project.name || "Development Fund"],
-    ["Vehicle Type  نوع الأداة", project.finMode === "fund" ? "Fund" : "SPV"],
+    ["Vehicle Type  نوع الأداة", project.finMode === "fund" ? "Fund" : project.finMode === "hybrid" ? "Hybrid Fund" : "SPV"],
     ["Strategy  الاستراتيجية", "Develop & Hold"],
     ["Currency  العملة", cur],
     ["Fund Start Year  سنة بداية الصندوق", sy],
@@ -939,6 +950,27 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
       dataRow(ws, row, r, { numFmt: NF });
       row++;
     });
+
+    // Hybrid-specific cash flow rows
+    if (f?.isHybrid && f.financingCF) {
+      row++;
+      sectionHeader(ws, row, 1, colCount, "HYBRID CASH FLOWS  التدفقات النقدية المختلطة");
+      row++;
+      const hybridRows = [
+        ["Gov. Loan Amount  مبلغ القرض الحكومي", f.govLoanAmount, null],
+        ["Financing CF  تدفق التمويل", f.financingCF?.reduce((a, b) => a + b, 0), f.financingCF],
+        ["Fund CF  تدفق الصندوق", f.fundCF?.reduce((a, b) => a + b, 0), f.fundCF],
+      ];
+      if (f.gpPersonalDebt) {
+        hybridRows.push(["GP Personal Debt Service  خدمة دين المطور الشخصي", -(f.gpPersonalDebt.ds?.reduce((a, b) => a + b, 0) || 0), f.gpPersonalDebt.ds?.map(v => -v)]);
+      }
+      hybridRows.forEach(([label, total, arr]) => {
+        const r = [null, label, cur, total !== null ? fm(total) : null];
+        yrs.forEach(y => r.push(fm(arr?.[y] || 0)));
+        dataRow(ws, row, r, { numFmt: NF });
+        row++;
+      });
+    }
 
     // Fees
     if (w) {

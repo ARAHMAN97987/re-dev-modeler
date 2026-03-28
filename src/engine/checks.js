@@ -61,8 +61,10 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     if ((project.govFinanceRate ?? 3) < 0)
       add("T0","Gov Rate < 0", false, "Government financing rate cannot be negative");
   }
-  if ((project.maxLtvPct ?? 70) >= 100 && project.finMode === "fund")
+  if ((project.maxLtvPct ?? 70) >= 100 && (project.finMode === "fund" || project.finMode === "hybrid"))
     add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
+  if (project.finMode === "hybrid" && (project.govFinancingPct ?? 70) >= 100)
+    add("T0","Gov 100%", true, "100% government financing leaves no fund equity — consider using debt mode instead");
   const maxConstrEnd = Math.max(0, ...as.map(a => a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0)));
   if (maxConstrEnd > (project.horizon||50))
     add("T0","Horizon < Construction", false, "Horizon doesn't cover full construction period", `Constr ends Y${maxConstrEnd}, Horizon Y${project.horizon||50}`);
