@@ -57,8 +57,8 @@ function computeIncentives(project,projectResults){if(!project||!projectResults)
   if(inc.feeRebates?.enabled&&inc.feeRebates.items?.length>0){for(const item of inc.feeRebates.items){const amt=item.amount||0;const yr=Math.max(0,Math.min((item.year||1)-1,h-1));if(item.type==="rebate"){result.feeRebateSchedule[yr]+=amt;result.feeRebateTotal+=amt;}else if(item.type==="deferral"){const deferYrs=Math.ceil((item.deferralMonths||12)/12);const benefit=amt-amt/Math.pow(1.1,deferYrs);result.feeRebateSchedule[yr]+=benefit;result.feeRebateTotal+=benefit;}}}
   for(let y=0;y<h;y++)result.netCFImpact[y]=result.capexGrantSchedule[y]+result.landRentSavingSchedule[y]+result.feeRebateSchedule[y];result.totalIncentiveValue=result.capexGrantTotal+result.landRentSavingTotal+result.feeRebateTotal;return result;}
 
-function computeFinancing(project,projectResults,ir){if(!project||!projectResults)return null;const h=project.horizon||50;const startYear=project.startYear||2026;const c=projectResults.consolidated;const landCapValue=project.landCapitalize?(project.landArea||0)*(project.landCapRate||1000):0;const devCostExclLand=ir?ir.adjustedCapex.reduce((a,b)=>a+b,0):c.totalCapex;const devCostInclLand=devCostExclLand+landCapValue;
-  if(project.finMode==="self")return{mode:"self",landCapValue,devCostExclLand,devCostInclLand,gpEquity:devCostInclLand,lpEquity:0,totalEquity:devCostInclLand,gpPct:1,lpPct:0,leveredCF:[...c.netCF],debtBalClose:new Array(h).fill(0),debtService:new Array(h).fill(0),interest:new Array(h).fill(0),originalInterest:new Array(h).fill(0),repayment:new Array(h).fill(0),drawdown:new Array(h).fill(0),equityCalls:c.capex.map((v,i)=>Math.max(0,v)),dscr:new Array(h).fill(null),totalDebt:0,totalInterest:0,interestSubsidyTotal:0,interestSubsidySchedule:new Array(h).fill(0),upfrontFee:0,leveredIRR:c.irr,exitProceeds:new Array(h).fill(0),maxDebt:0,rate:0,tenor:0,grace:0,repayYears:0,constrEnd:0,repayStart:0,graceStartIdx:0,exitYear:0};
+function computeFinancing(project,projectResults,ir){if(!project||!projectResults)return null;const h=project.horizon||50;const startYear=project.startYear||2026;const c=projectResults.consolidated;const landCapValue=project.landCapitalize?(project.landArea||0)*(project.landCapRate||1000):0;const effectiveLandCap=landCapValue;const devCostExclLand=ir?ir.adjustedCapex.reduce((a,b)=>a+b,0):c.totalCapex;const devCostInclLand=devCostExclLand+landCapValue;
+  if(project.finMode==="self")return{mode:"self",landCapValue,effectiveLandCap,devCostExclLand,devCostInclLand,gpEquity:devCostInclLand,lpEquity:0,totalEquity:devCostInclLand,gpPct:1,lpPct:0,leveredCF:[...c.netCF],debtBalClose:new Array(h).fill(0),debtService:new Array(h).fill(0),interest:new Array(h).fill(0),originalInterest:new Array(h).fill(0),repayment:new Array(h).fill(0),drawdown:new Array(h).fill(0),equityCalls:c.capex.map((v,i)=>Math.max(0,v)),dscr:new Array(h).fill(null),totalDebt:0,totalInterest:0,interestSubsidyTotal:0,interestSubsidySchedule:new Array(h).fill(0),upfrontFee:0,leveredIRR:c.irr,exitProceeds:new Array(h).fill(0),maxDebt:0,rate:0,tenor:0,grace:0,repayYears:0,constrEnd:0,repayStart:0,graceStartIdx:0,exitYear:0};
   const rate=(project.financeRate||6.5)/100;const tenor=project.loanTenor||7;const grace=project.debtGrace||3;const repayYears=tenor-grace;const maxDebt=project.debtAllowed?devCostInclLand*(project.maxLtvPct||70)/100:0;const upfrontFee=maxDebt*(project.upfrontFeePct||0)/100;const totalEquity=Math.max(0,devCostInclLand-maxDebt);let gpEquity,lpEquity;
   if((project.gpEquityManual||0)>0)gpEquity=Math.min(project.gpEquityManual,totalEquity);else if(landCapValue>0)gpEquity=Math.min(landCapValue,totalEquity);else gpEquity=totalEquity*0.5;
   if((project.lpEquityManual||0)>0)lpEquity=Math.min(project.lpEquityManual,Math.max(0,totalEquity-gpEquity));else lpEquity=Math.max(0,totalEquity-gpEquity);
@@ -76,7 +76,7 @@ function computeFinancing(project,projectResults,ir){if(!project||!projectResult
   const intSub=applyInterestSubsidy(project,interest2,constrEnd);const adjInt=intSub.adjusted;const adjDS=new Array(h).fill(0);for(let y=0;y<h;y++)adjDS[y]=repay[y]+adjInt[y];
   const adjLR=ir?.adjustedLandRent||c.landRent;const leveredCF=new Array(h).fill(0);for(let y=0;y<h;y++)leveredCF[y]=c.income[y]-adjLR[y]-c.capex[y]+(ir?.capexGrantSchedule?.[y]||0)+(ir?.feeRebateSchedule?.[y]||0)-adjDS[y]+drawdown[y]+exitProceeds[y];
   const dscr=new Array(h).fill(null);for(let y=0;y<h;y++){if(adjDS[y]>0)dscr[y]=(c.income[y]-adjLR[y])/adjDS[y];}
-  return{mode:project.finMode,landCapValue,devCostExclLand,devCostInclLand,gpEquity,lpEquity,totalEquity,gpPct,lpPct,drawdown,equityCalls,debtBalOpen,debtBalClose,repayment:repay,interest:adjInt,originalInterest:interest2,debtService:adjDS,leveredCF,dscr,exitProceeds,totalDebt:totalDrawn,totalInterest:adjInt.reduce((a,b)=>a+b,0),interestSubsidyTotal:intSub.total,interestSubsidySchedule:intSub.savings,upfrontFee,maxDebt,rate,tenor,grace,repayYears,graceStartIdx,leveredIRR:calcIRR(leveredCF),constrEnd,repayStart,exitYear:exitYr+startYear};
+  return{mode:project.finMode,landCapValue,effectiveLandCap,devCostExclLand,devCostInclLand,gpEquity,lpEquity,totalEquity,gpPct,lpPct,drawdown,equityCalls,debtBalOpen,debtBalClose,repayment:repay,interest:adjInt,originalInterest:interest2,debtService:adjDS,leveredCF,dscr,exitProceeds,totalDebt:totalDrawn,totalInterest:adjInt.reduce((a,b)=>a+b,0),interestSubsidyTotal:intSub.total,interestSubsidySchedule:intSub.savings,upfrontFee,maxDebt,rate,tenor,grace,repayYears,graceStartIdx,leveredIRR:calcIRR(leveredCF),constrEnd,repayStart,exitYear:exitYr+startYear};
 }
 
 // ── Test Framework ──
@@ -253,6 +253,13 @@ S("T6: LAND CAPITALIZATION [P0]");
   // Manual override
   const fm=computeFinancing(P({landCapitalize:true,landCapRate:2000,finMode:"fund",gpEquityManual:5000000}),r,null);
   Tc(fm.gpEquity,5000000,1,"T6.06","Manual overrides cap","P0");
+  // T6.07: effectiveLandCap is exported from financing
+  T(ff.effectiveLandCap>0,"T6.07","effectiveLandCap exported","P0");
+  Tc(ff.effectiveLandCap,20000000,1,"T6.08","effectiveLandCap=area×rate","P0");
+  // T6.09: Land cap increases devCostInclLand which increases totalEquity in fund mode
+  T(ff.totalEquity>f0.totalEquity,"T6.09","LandCap↑totalEquity(fund)","P0");
+  // T6.10: GP share > 50% when land cap credited to GP
+  T(ff.gpPct>0.5,"T6.10","LandCap→GP>50%","P0");
 })();
 console.log("");
 

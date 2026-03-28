@@ -166,7 +166,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     }
     const selfIRR = calcIRR(selfCF);
     return {
-      mode: "self", landCapValue, devCostExclLand, devCostInclLand, totalProjectCost: devCostInclLand, capexGrantTotal,
+      mode: "self", landCapValue, effectiveLandCap, devCostExclLand, devCostInclLand, totalProjectCost: devCostInclLand, capexGrantTotal,
       gpEquity: devCostInclLand, lpEquity: 0, totalEquity: devCostInclLand, gpPct: 1, lpPct: 0,
       leveredCF: selfCF, debtBalOpen: new Array(h).fill(0), debtBalClose: new Array(h).fill(0),
       debtService: new Array(h).fill(0),
@@ -604,7 +604,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   return {
-    mode: project.finMode, landCapValue, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
+    mode: project.finMode, landCapValue, effectiveLandCap, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
     gpEquity, lpEquity, totalEquity, gpPct, lpPct, gpEquityBreakdown,
     capitalizedFinCosts, estimatedIDC, estimatedUpfrontFees,
     drawdown, equityCalls, debtBalOpen, debtBalClose,

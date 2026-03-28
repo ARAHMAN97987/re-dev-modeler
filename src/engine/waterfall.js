@@ -170,27 +170,34 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // "capital" = fees count as invested capital (earn ROC + Pref) - default, current behavior
   // "expense" = fees are expenses (outside capital base - don't earn Pref, smaller unreturned capital)
   const feeTreatment = project.feeTreatment || "capital";
+  // ── Land Capitalization (in-kind equity at fund start) ──
+  // effectiveLandCap is a non-cash equity contribution recognized at fund start.
+  // It must be added as a lump-sum equity call (matching financing.js line 352).
+  const effectiveLandCap = f.effectiveLandCap || 0;
+  // cashEquity = equity excluding the in-kind land cap portion (what is actually called in cash)
+  const cashEquity = Math.max(0, totalEquity - effectiveLandCap);
+
   // ── Equity Calls ──
   // capitalCallOrder: "prorata" (default) = equity pro-rata to CAPEX each year
   //                   "debtFirst" = exhaust debt before calling equity (back-loaded calls, boosts IRR)
   const callOrder = project.capitalCallOrder || "prorata";
   const equityCalls = new Array(h).fill(0);
   if (callOrder === "debtFirst" && f.drawdown && c.totalCapex > 0) {
-    // Debt-First: equity = residual after debt drawdown each year, scaled to totalEquity
+    // Debt-First: equity = residual after debt drawdown each year, scaled to cashEquity (not total)
     const finEquityCalls = new Array(h).fill(0);
     let finTotalEquity = 0;
     for (let y = 0; y < h; y++) {
       finEquityCalls[y] = Math.max(0, (c.capex[y] || 0) - (f.drawdown[y] || 0));
       finTotalEquity += finEquityCalls[y];
     }
-    const scale = finTotalEquity > 0 ? totalEquity / finTotalEquity : 0;
+    const scale = finTotalEquity > 0 ? cashEquity / finTotalEquity : 0;
     for (let y = 0; y < h; y++) {
       equityCalls[y] = finEquityCalls[y] * scale + unfundedFees[y];
     }
   } else {
-    // Pro-Rata (default): equity distributed proportionally to CAPEX each year
+    // Pro-Rata (default): cash equity distributed proportionally to CAPEX each year
     for (let y = 0; y < h; y++) {
-      const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
+      const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * cashEquity : 0;
       equityCalls[y] = capexPortion + unfundedFees[y];
     }
   }
@@ -203,6 +210,10 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
       equityCalls[y] = 0;
     }
     equityCalls[fundStartIdx] += preFundCalls;
+  }
+  // Add land cap as lump-sum in-kind equity call at fund start (matches financing.js)
+  if (effectiveLandCap > 0) {
+    equityCalls[fundStartIdx] += effectiveLandCap;
   }
 
   // GP/LP call split (for transparency and proper net CF calculation)
