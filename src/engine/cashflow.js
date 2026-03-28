@@ -113,7 +113,7 @@ export function computeProjectCashFlows(project) {
       // Pre-sales during construction (last year of construction)
       if (preSalePct > 0 && cStart + durYears - 1 >= 0 && cStart + durYears - 1 < horizon) {
         const preSaleAmt = totalSaleValue * preSalePct * (1 - commissionPct);
-        revSch[cStart + durYears - 1] = preSaleAmt;
+        revSch[cStart + durYears - 1] += preSaleAmt;
       }
       // Post-construction absorption
       const remainingValue = totalSaleValue * (1 - preSalePct);

@@ -504,13 +504,18 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // This depresses IRR because a large "outflow" appears in year 1 that wasn't actually cash.
   // gpCashIRR removes the land cap portion from the call, showing return on actual cash invested.
   let gpCashIRR = gpIRR;
+  let lpCashIRR = lpIRR;
   if (effectiveLandCap > 0) {
     const gpCashNetCF = new Array(h).fill(0);
+    const lpCashNetCF = new Array(h).fill(0);
     for (let y = 0; y < h; y++) {
-      const landCapInCall = (y === fundStartIdx) ? effectiveLandCap * gpPct : 0;
-      gpCashNetCF[y] = gpNetCF[y] + landCapInCall;
+      const gpLandCapInCall = (y === fundStartIdx) ? effectiveLandCap * gpPct : 0;
+      const lpLandCapInCall = (y === fundStartIdx) ? effectiveLandCap * lpPct : 0;
+      gpCashNetCF[y] = gpNetCF[y] + gpLandCapInCall;
+      lpCashNetCF[y] = lpNetCF[y] + lpLandCapInCall;
     }
     gpCashIRR = calcIRR(gpCashNetCF);
+    lpCashIRR = calcIRR(lpCashNetCF);
   }
 
   // MOIC: Total Distributions / Paid-In Capital (industry standard default)
@@ -528,7 +533,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // When GP contributes land (in-kind), their total called includes the land cap value,
   // which dilutes the MOIC. Cash MOIC shows return on actual cash invested only.
   const gpCashCalled = Math.max(0, gpTotalCalled - effectiveLandCap * gpPct);
+  const lpCashCalled = Math.max(0, lpTotalCalled - effectiveLandCap * lpPct);
   const gpCashMOIC = gpCashCalled > 0 ? gpNetDist / gpCashCalled : gpMOIC;
+  const lpCashMOIC = lpCashCalled > 0 ? lpNetDist / lpCashCalled : lpMOIC;
   const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
 
@@ -579,7 +586,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
-    lpIRR, gpIRR, gpCashIRR, projIRR, lpMOIC, gpMOIC, gpCashMOIC, gpCashCalled, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
+    lpIRR, gpIRR, gpCashIRR, lpCashIRR, projIRR, lpMOIC, gpMOIC, gpCashMOIC, gpCashCalled, lpCashMOIC, lpCashCalled, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
     lpSimpleROE, gpSimpleROE, lpSimpleAnnual, gpSimpleAnnual, investYears,
     lpTotalInvested: lpTotalCalled, gpTotalInvested: gpTotalCalled, // aliases for UI backward compat
     lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,

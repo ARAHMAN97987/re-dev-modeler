@@ -778,7 +778,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={lpSimpleAnnual?fmtPct(lpSimpleAnnual*100):"—"} c="#8b5cf6" />
               {(w.lpIRR && lpSimpleAnnual && w.lpIRR > lpSimpleAnnual * 1.05) && <div style={{gridColumn:"1/-1",fontSize:9,color:"#6b7280",fontStyle:"italic",margin:"-2px 0 2px",lineHeight:1.3}}>{ar?"⚡ IRR أعلى من العائد البسيط لأن طلبات رأس المال موزعة على سنوات — IRR يحسب توقيت كل دفعة":"⚡ IRR > Simple because capital calls are staggered — IRR accounts for timing of each call"}</div>}
               <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={getMetricColor("IRR",w.lpIRR)} bold />
+              {w.lpCashIRR != null && w.lpCashIRR !== w.lpIRR ? <KR l={ar?"IRR نقدي":"Cash IRR"} v={fmtPct(w.lpCashIRR*100)} c={getMetricColor("IRR",w.lpCashIRR)} /> : null}
               <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.lpMOIC)} bold />
+              {w.lpCashMOIC && w.lpCashMOIC !== w.lpMOIC ? <KR l={ar?"MOIC نقدي":"Cash MOIC"} v={w.lpCashMOIC.toFixed(2)+"x"} c={getMetricColor("MOIC",w.lpCashMOIC)} /> : null}
               <KR l="DPI" v={w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"} />
               <KR l={ar?"استرداد":"Payback"} v={lpPayback?`${lpPayback} ${ar?"سنة":"yr"}`:"—"} />
               <KR l={ar?"عائد نقدي":"Cash Yield"} v={lpStabYieldVal>0?fmtPct(lpStabYieldVal*100):"—"} />
@@ -4859,7 +4861,8 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
             <div style={{ marginTop: 10 }}>
               <div style={{ fontSize: 9, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, marginBottom: 6 }}>{ar ? "أصول المرحلة" : "Phase Assets"}</div>
               {phaseSchedules.map((a, i) => {
-                const aYoc = a.totalCapex > 0 ? ((a.totalRevenue / Math.max(1, h)) / a.totalCapex * 100).toFixed(1) : "0.0";
+                const _stabRev = a.revenueSchedule ? a.revenueSchedule.find((v,i)=>i>0&&v>0&&a.revenueSchedule[i-1]>0) || Math.max(...(a.revenueSchedule||[0])) : (a.totalRevenue/Math.max(1,h));
+                const aYoc = a.totalCapex > 0 ? (_stabRev / a.totalCapex * 100).toFixed(1) : "0.0";
                 const viable = Number(aYoc) > 8 ? "#4ade80" : Number(aYoc) > 4 ? "#fbbf24" : a.totalRevenue > 0 ? "#f87171" : "#4b5060";
                 return (
                   <div key={i} style={{ background: "#0F2D4F", borderRadius: 6, padding: "6px 10px", marginBottom: 4, border: "1px solid #1e2230" }}>
