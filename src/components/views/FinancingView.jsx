@@ -469,11 +469,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff"}}>
           <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
             <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
+            <option value="hybrid">{ar?"مختلط (حكومي + صندوق)":"Hybrid (Government + Fund)"}</option>
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
