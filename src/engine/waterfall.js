@@ -39,11 +39,13 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // Subscription fee: for hybrid, apply only to fund portion equity (LP raise), not government-borrowed GP equity
   const subFeeBase = fundEquityBasis;
   const subFee = isFund ? subFeeBase * (project.subscriptionFeePct || 0) / 100 : 0;
-  // DevFee: for hybrid, scale to fund portion only (fund pays fee on its share, not full project)
+  // DevFee: developer manages FULL project → fee on full project cost (not scaled for hybrid)
+  // The dev fee is a project expense NOT included in devCostInclLand, so the government
+  // loan doesn't cover it. The full fee must be borne by project CF / fund equity.
   const _rawDevFee = f.devFeeTotal || 0;
   const hybridFundRatio = (isHybridMode && f.totalProjectCost > 0 && f.fundPortionCost > 0)
     ? f.fundPortionCost / f.totalProjectCost : 1;
-  const devFeeTotal = isHybridMode ? _rawDevFee * hybridFundRatio : _rawDevFee;
+  const devFeeTotal = _rawDevFee; // Full project — developer manages entire project
   // Structuring fee: % of fund portion cost, not total project cost for hybrid
   let structFee = isFund ? fundFeeBasis * (project.structuringFeePct || 0) / 100 : 0;
   const structFeeCap = project.structuringFeeCap || 0;

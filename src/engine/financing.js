@@ -379,17 +379,24 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // Gate equity calls and drawdowns to fund period [fundStart..exit]
   // Any CAPEX before fund start → accumulate into fund start year (like Excel: IF(yr>=fundStart,...))
+  // HYBRID exception: institutional debt drawdowns happen during construction regardless of fund start
   if (computedFundStartIdx > 0) {
     let preFundEquity = 0;
     let preFundDebt = 0;
     for (let y = 0; y < computedFundStartIdx; y++) {
       preFundEquity += equityCalls[y];
-      preFundDebt += drawdown[y];
       equityCalls[y] = 0;
-      drawdown[y] = 0;
+      if (!isHybrid) {
+        // Non-hybrid: gate both debt and equity to fund start
+        preFundDebt += drawdown[y];
+        drawdown[y] = 0;
+      }
+      // Hybrid: debt drawdowns stay in their original construction year
     }
     equityCalls[computedFundStartIdx] += preFundEquity;
-    drawdown[computedFundStartIdx] += preFundDebt;
+    if (!isHybrid) {
+      drawdown[computedFundStartIdx] += preFundDebt;
+    }
   }
 
   // Land capitalization value added as equity call at fund start (non-cash but counts as equity)

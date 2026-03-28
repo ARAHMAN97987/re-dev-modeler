@@ -204,6 +204,18 @@ export function aggregatePhaseFinancings(phaseFinancings, h) {
     incomeStabilizationYear: Math.max(...names.map(n => phaseFinancings[n]?.incomeStabilizationYear || 0)),
     optimalExitYear: Math.max(...names.map(n => phaseFinancings[n]?.optimalExitYear || 0)),
     optimalExitIRR: (() => { const irrs = names.map(n => phaseFinancings[n]?.optimalExitIRR).filter(v => v != null && isFinite(v)); return irrs.length > 0 ? Math.max(...irrs) : null; })(),
+    // Hybrid financing fields — inherit flags from first phase, sum amounts/arrays
+    isHybrid: phaseFinancings[names[0]]?.isHybrid || false,
+    govBeneficiary: phaseFinancings[names[0]]?.govBeneficiary || null,
+    govFinancingPct: phaseFinancings[names[0]]?.govFinancingPct ?? null,
+    govLoanAmount: sum('govLoanAmount'),
+    govLoanRate: phaseFinancings[names[0]]?.govLoanRate ?? null,
+    gpPersonalDebt: phaseFinancings[names[0]]?.gpPersonalDebt || null,
+    fundPortionCost: sum('fundPortionCost'),
+    buildCostOnly: sum('buildCostOnly'),
+    financingCF: sumArr('financingCF'),
+    fundCF: sumArr('fundCF'),
+    fullProjectExitVal: sum('fullProjectExitVal'),
   };
 }
 
@@ -309,6 +321,34 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     investorDPI: (() => { const c = sumArr('equityCalls').reduce((a,b)=>a+b,0) * (lpEquity / Math.max(1, totalEquity)); const nd = sum('lpNetDist') || sum('lpTotalDist'); return c > 0 ? nd / c : 0; })(),
     developerNPV10: calcNPV(gpNetCF, 0.10), investorNPV10: calcNPV(lpNetCF, 0.10),
     developerNPV12: calcNPV(gpNetCF, 0.12), investorNPV12: calcNPV(lpNetCF, 0.12),
+    // Hybrid: pass-through from waterfall (financingCF/fundCF/fullProjectExitVal)
+    financingCF: sumArr('financingCF'),
+    fundCF: sumArr('fundCF'),
+    fullProjectExitVal: sum('fullProjectExitVal'),
+    fundFeeBasis: sum('fundFeeBasis'),
+    // Cash IRR/MOIC (hybrid-gp + land cap): inherit from first phase or recompute
+    gpCashIRR: names.length === 1 ? (phaseWaterfalls[names[0]]?.gpCashIRR ?? null) : calcIRR(gpNetCF),
+    lpCashIRR: names.length === 1 ? (phaseWaterfalls[names[0]]?.lpCashIRR ?? null) : calcIRR(lpNetCF),
+    gpCashMOIC: names.length === 1 ? (phaseWaterfalls[names[0]]?.gpCashMOIC ?? null) : null,
+    lpCashMOIC: names.length === 1 ? (phaseWaterfalls[names[0]]?.lpCashMOIC ?? null) : null,
+    gpCashCalled: sum('gpCashCalled'),
+    lpCashCalled: sum('lpCashCalled'),
+    // Land rent obligations
+    lpLandRentTotal: sum('lpLandRentTotal'),
+    gpLandRentObligation: sumArr('gpLandRentObligation'),
+    lpLandRentObligation: sumArr('lpLandRentObligation'),
+    gpPaysLandRent: names.some(n => phaseWaterfalls[n]?.gpPaysLandRent),
+    lpPaysLandRent: names.some(n => phaseWaterfalls[n]?.lpPaysLandRent),
+    resolvedLandRentPayer: phaseWaterfalls[names[0]]?.resolvedLandRentPayer || "project",
+    // GP/LP call arrays
+    gpCalls: sumArr('gpCalls'),
+    lpCalls: sumArr('lpCalls'),
+    // Simple return metrics
+    lpSimpleROE: names.length === 1 ? (phaseWaterfalls[names[0]]?.lpSimpleROE ?? 0) : 0,
+    gpSimpleROE: names.length === 1 ? (phaseWaterfalls[names[0]]?.gpSimpleROE ?? 0) : 0,
+    lpSimpleAnnual: names.length === 1 ? (phaseWaterfalls[names[0]]?.lpSimpleAnnual ?? 0) : 0,
+    gpSimpleAnnual: names.length === 1 ? (phaseWaterfalls[names[0]]?.gpSimpleAnnual ?? 0) : 0,
+    investYears: Math.max(...names.map(n => phaseWaterfalls[n]?.investYears || 0)),
   };
 }
 
