@@ -826,7 +826,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"تكاليف %":"Cost %"} v={exitCostPct>0?fmtPct(exitCostPct)+"%":"—"} />
               <SecHd text={ar?"إعدادات":"CONFIG"} />
               <KR l={ar?"معاملة الرسوم":"Fee Treatment"} v={({capital:ar?"رأسمالية":"Capital",expense:ar?"مصروفات":"Expense"})[cfg.feeTreatment||"capital"]||cfg.feeTreatment||"Capital"} />
-              <KR l={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} v={({equity:ar?"ملكية":"Equity",nav:ar?"صافي الأصول":"NAV",commitment:ar?"الالتزام":"Commitment"})[cfg.mgmtFeeBase||"equity"]||cfg.mgmtFeeBase||"Equity"} />
+              <KR l={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} v={({nav:ar?"صافي قيمة الأصول":"NAV",devCost:ar?"إجمالي الأصول":"GAV",equity:ar?"حجم الصندوق":"Fund Size",deployed:ar?"CAPEX منفذ":"Deployed"})[cfg.mgmtFeeBase||"nav"]||cfg.mgmtFeeBase||"NAV"} />
             </div>
           )}
         </div>
@@ -2376,7 +2376,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const sy = results.startYear;
   const ir = incentivesResult;
   // Fee auto-default hints — shown under field as part of hint text
-  const _FD = { subscriptionFeePct:2, annualMgmtFeePct:1.5, mgmtFeeCapAnnual:2000000, custodyFeeAnnual:100000, developerFeePct:10, structuringFeePct:1, structuringFeeCap:300000, preEstablishmentFee:200000, spvFee:20000, auditorFeeAnnual:50000, operatorFeePct:0.15, operatorFeeCap:600000, miscExpensePct:0.5, upfrontFeePct:0.5, maxLtvPct:70, financeRate:6.5, loanTenor:7, debtGrace:3, exitMultiple:10, exitCapRate:9, exitCostPct:2, landCapRate:1000, prefReturnPct:15, carryPct:30, lpProfitSplitPct:70 };
+  const _FD = { subscriptionFeePct:2, annualMgmtFeePct:1.5, mgmtFeeCapAnnual:2000000, custodyFeeAnnual:100000, developerFeePct:12, structuringFeePct:1, structuringFeeCap:300000, preEstablishmentFee:200000, spvFee:20000, auditorFeeAnnual:40000, operatorFeePct:0.15, operatorFeeCap:600000, miscExpensePct:0.5, upfrontFeePct:0.5, maxLtvPct:70, financeRate:6.5, loanTenor:7, debtGrace:3, exitMultiple:10, exitCapRate:9, exitCostPct:2, landCapRate:1000, prefReturnPct:15, carryPct:30, lpProfitSplitPct:70 };
   const _FU = { loanTenor:ar?"سنوات":"yr", debtGrace:ar?"سنوات":"yr", exitMultiple:"x", landCapRate:ar?"ريال/م²":"SAR/sqm" }; // special units
   const autoHint = (field, baseHint) => { const d = _FD[field]; if (d === undefined) return baseHint; const u = _FU[field]; const fmt = u ? d.toLocaleString()+u : d >= 1000 ? (d/1000).toLocaleString()+'K' : d+'%'; const tag = ar ? `التلقائي: ${fmt}` : `default: ${fmt}`; return baseHint ? baseHint + ` · ${tag}` : tag; };
   const dh = (field) => autoHint(field, ""); // shortcut: default hint only
@@ -2804,7 +2804,7 @@ When to use:
         </AB>
         </SecWrap>
         <SecWrap visible={true} color="#f59e0b">
-        <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : `${ar?"رسوم المطور":"Developer Fee"} ${cfg.developerFeePct||10}%`} visible={true} />
+        <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : `${ar?"رسوم المطور":"Developer Fee"} ${cfg.developerFeePct||12}%`} visible={true} />
         <AB id="fees" visible={true}>{(() => {
           if (isFundMode && cfg.vehicleType==="fund") return <>
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم لمرة واحدة":"One-time"}</div>
@@ -2822,7 +2822,7 @@ When to use:
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم سنوية":"Annual"}</div>
             <div style={g2}>
               <FL label={ar?"إدارة %":"Management %"} tip="أتعاب إدارية سنوية من صافي أصول الصندوق (NAV). تُستحق وتسدد بشكل ربع سنوي\nAnnual management fee based on fund NAV. Paid quarterly" hint={autoHint("annualMgmtFeePct",ar?"سنوي · من صافي الأصول":"Annual · based on NAV")}><Inp type="number" value={cfg.annualMgmtFeePct} onChange={v=>upCfg({annualMgmtFeePct:v})} /></FL>
-              <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="أساس حساب رسوم الإدارة:\n- صافي الأصول (NAV): القيمة الصافية للصندوق\n- CAPEX تراكمي: المبالغ المنفذة فعلياً\n- تكلفة التطوير: إجمالي التكلفة\n- رأس المال: الملكية الإجمالية" hint={ar?"التلقائي: صافي الأصول":"default: NAV"}><Drp lang={lang} value={cfg.mgmtFeeBase||"nav"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"nav",en:"Fund NAV (default)",ar:"صافي أصول الصندوق (تلقائي)"},{value:"deployed",en:"Deployed CAPEX",ar:"CAPEX المنفذ"},{value:"devCost",en:"Dev Cost",ar:"تكلفة التطوير"},{value:"equity",en:"Equity",ar:"رأس المال"}]} /></FL>
+              <FL label={ar?"أساس رسوم الإدارة":"Mgmt Fee Base"} tip="أساس حساب رسوم الإدارة:\n- صافي الأصول (NAV): القيمة الصافية للصندوق\n- CAPEX تراكمي: المبالغ المنفذة فعلياً\n- تكلفة التطوير: إجمالي التكلفة\n- رأس المال: الملكية الإجمالية" hint={ar?"التلقائي: صافي الأصول":"default: NAV"}><Drp lang={lang} value={cfg.mgmtFeeBase||"nav"} onChange={v=>upCfg({mgmtFeeBase:v})} options={[{value:"nav",en:"NAV - Net Asset Value (default)",ar:"صافي قيمة الأصول NAV (تلقائي)"},{value:"devCost",en:"GAV - Total Fund Assets",ar:"إجمالي قيمة الأصول GAV"},{value:"equity",en:"Fund Size (Equity)",ar:"حجم الصندوق (رأس المال)"},{value:"deployed",en:"Deployed CAPEX (Cumulative)",ar:"CAPEX المنفذ (تراكمي)"}]} /></FL>
             </div>
             <div style={g3}>
               <FL label={ar?"سقف الإدارة/سنة":"Mgmt Cap/yr"} tip="الحد الأقصى لرسوم الإدارة سنوياً. 0 = بدون سقف\nMax annual management fee. 0 = no cap" hint={autoHint("mgmtFeeCapAnnual",ar?"حد أقصى سنوي · 0 = بدون سقف":"Max annual · 0 = no cap")}><Inp type="number" value={cfg.mgmtFeeCapAnnual} onChange={v=>upCfg({mgmtFeeCapAnnual:v})} /></FL>
@@ -2834,12 +2834,12 @@ When to use:
             </div>
             <div style={{borderTop:"1px solid #eef0f4",marginTop:8,paddingTop:8,gridColumn:"1/-1"}} />
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
-            <FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
+            <FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية. المدى السوقي: 7%-15% (الوسيط 12%)\nDeveloper fee as % of construction costs. Market range: 7%-15% (median 12%)" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء · السوق 7%-15%":"With construction draws · Market 7%-15%")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
             <FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL>
           </>;
-          if (isFundMode) return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
+          if (isFundMode) return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية. المدى السوقي: 7%-15% (الوسيط 12%)\nDeveloper fee as % of construction costs. Market range: 7%-15% (median 12%)" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء · السوق 7%-15%":"With construction draws · Market 7%-15%")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
           // Debt + Equity mode (not fund)
-          return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
+          return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من CAPEX. المدى السوقي: 7%-15%\nDeveloper fee as % of CAPEX. Market range: 7%-15%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
         })()}</AB>
 
         </SecWrap>
@@ -10549,7 +10549,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 ...((100-(project.lpProfitSplitPct||100)) > 0 ? [[ar?"تقسيم الأرباح (بعد اللحاق)":"Profit Split (after catch-up)","Investor "+(project.lpProfitSplitPct||70)+"% / Developer "+(100-(project.lpProfitSplitPct||70))+"%"]] : []),
                 [ar?"رسوم الاشتراك":"Subscription Fee",(project.subscriptionFeePct||2)+"%"],
                 [ar?"رسوم الإدارة السنوية":"Annual Management Fee",(project.annualMgmtFeePct||0.9)+"%"],
-                [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من التكاليف":"of CAPEX")],
+                [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||12)+"% "+(ar?"من التكاليف":"of CAPEX")],
               ].map(([k,v],i)=>(
                 <tr key={i} style={{background:i%2===0?"#fff":"#fafbfc"}}><td style={{...zanTd,color:"#6b7080",width:"40%"}}>{k}</td><td style={{...zanTd,fontWeight:600}}>{v}</td></tr>
               ))}
@@ -10668,7 +10668,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
                 {[
                   [ar?"رسوم الاشتراك":"Subscription",(project.subscriptionFeePct||2)+"%",fmt(fw.feeSubscription||0),ar?"مرة واحدة":"One-time"],
                   [ar?"رسوم الإدارة":"Management",(project.annualMgmtFeePct||0.9)+"%",fmt(fw.feeMgmtTotal||fw.fees||0),ar?"سنوي":"Annual"],
-                  [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||10)+"% "+(ar?"من CAPEX":"of CAPEX"),fmt(fw.feeDeveloper||0),ar?"خلال البناء":"During construction"],
+                  [ar?"رسوم المطور":"Developer Fee",(project.developerFeePct||12)+"% "+(ar?"من CAPEX":"of CAPEX"),fmt(fw.feeDeveloper||0),ar?"خلال البناء":"During construction"],
                   [ar?"رسوم الهيكلة":"Structuring",(project.structuringFeePct||1)+"%",fmt(fw.feeStructuring||0),ar?"مرة واحدة":"One-time"],
                   [ar?"رسوم الحفظ":"Custody",fmt(project.custodyFeeAnnual||50000)+"/"+(ar?"سنة":"yr"),fmt(fw.feeCustodyTotal||0),ar?"سنوي":"Annual"],
                 ].map(([ff,r,t,ti],i)=>(
