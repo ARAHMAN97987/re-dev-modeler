@@ -92,6 +92,36 @@ import { csvEscape, csvParse, generateTemplate, parseAssetFile, mapRowsToAssets,
 const STORAGE_KEY = "redev:projects-index";
 const PROJECT_PREFIX = "redev:project:";
 
+// ── URL Hash Navigation ──
+const VALID_TABS = new Set(["dashboard","assets","cashflow","financing","incentives","results","scenarios","market","checks","reports"]);
+function parseNavHash() {
+  const h = (typeof window !== "undefined" ? window.location.hash : "").replace(/^#\/?/, "");
+  if (!h) return { view: "dashboard", projectId: null, tab: "dashboard" };
+  const parts = h.split("/");
+  if (parts[0] === "academy") return { view: "academy", projectId: null, tab: "dashboard" };
+  if (parts[0] === "project" && parts[1]) {
+    const tab = VALID_TABS.has(parts[2]) ? parts[2] : "dashboard";
+    return { view: "editor", projectId: parts[1], tab };
+  }
+  return { view: "dashboard", projectId: null, tab: "dashboard" };
+}
+function setNavHash(view, projectId, tab) {
+  if (typeof window === "undefined") return;
+  let hash = "#/";
+  if (view === "editor" && projectId) hash = "#/project/" + projectId + (tab && tab !== "dashboard" ? "/" + tab : "");
+  else if (view === "academy") hash = "#/academy";
+  if (window.location.hash === hash || "#" + window.location.hash.slice(1) === hash) return;
+  window.history.replaceState(null, "", hash);
+}
+function pushNavHash(view, projectId, tab) {
+  if (typeof window === "undefined") return;
+  let hash = "#/";
+  if (view === "editor" && projectId) hash = "#/project/" + projectId + (tab && tab !== "dashboard" ? "/" + tab : "");
+  else if (view === "academy") hash = "#/academy";
+  if (window.location.hash === hash) return;
+  window.history.pushState(null, "", hash);
+}
+
 const L = {
   en: {
     title: "Haseef", subtitle: "Real Estate Development Financial Modeling Platform",
@@ -3364,19 +3394,52 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   if (publicAcademy) {
     return <LearningCenterView lang={publicLang} onBack={exitAcademy || (() => {})} onCreateDemo={null} publicMode={true} onLangToggle={() => setPublicLang(l => l === "ar" ? "en" : "ar")} />;
   }
-  const [view, setView] = useState("dashboard");
+  // ── Initialize navigation from URL hash (unless share link is pending) ──
+  const _initNav = useMemo(() => {
+    if (typeof window === "undefined") return { view: "dashboard", projectId: null, tab: "dashboard" };
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("s") && params.get("o")) return { view: "dashboard", projectId: null, tab: "dashboard" }; // share link takes priority
+    return parseNavHash();
+  }, []);
+  const _initProjectId = useRef(_initNav.view === "editor" ? _initNav.projectId : null);
+  const [view, setView] = useState(_initNav.view === "editor" ? "editor" : _initNav.view);
   const [projectIndex, setProjectIndex] = useState([]);
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // default closed (mobile-friendly)
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(_initNav.tab || "dashboard");
   const [globalExpand, setGlobalExpand] = useState(0); // increment to toggle; odd=expand, even=collapse
   const [kpiPhase, setKpiPhase] = useState("all"); // phase selection for sticky KPI bar
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
-  useEffect(() => { window.__zanOpenAcademy = () => { setView("academy"); window.scrollTo(0,0); }; return () => { delete window.__zanOpenAcademy; }; }, []);
+  useEffect(() => { window.__zanOpenAcademy = () => { setView("academy"); pushNavHash("academy",null,null); window.scrollTo(0,0); }; return () => { delete window.__zanOpenAcademy; }; }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
+  // ── Sync URL hash with navigation state ──
+  useEffect(() => { setNavHash(view, project?.id || null, activeTab); }, [view, project?.id, activeTab]);
+  // ── Browser back/forward button support ──
+  useEffect(() => {
+    const onPopState = () => {
+      const nav = parseNavHash();
+      if (nav.view === "dashboard") { setView("dashboard"); setProject(null); setActiveTab("dashboard"); }
+      else if (nav.view === "academy") { setView("academy"); }
+      else if (nav.view === "editor" && nav.projectId) {
+        if (project?.id !== nav.projectId) {
+          // Different project — need to load it
+          const meta = projectIndex.find(p => p.id === nav.projectId);
+          if (meta) {
+            loadProject(nav.projectId, meta._ownerId, meta._permission).then(p => {
+              if (p) { setProject(p); setView("editor"); setActiveTab(nav.tab || "dashboard"); }
+              else { setView("dashboard"); setProject(null); }
+            });
+          } else { setView("dashboard"); setProject(null); }
+        } else { setActiveTab(nav.tab || "dashboard"); }
+      }
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [project?.id, projectIndex]);
   const [aiOpen, setAiOpen] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -3433,6 +3496,17 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       } catch (e) { console.error("Share link error:", e); }
       setPendingShare(null);
     }
+    // ── Handle hash-based project restore (if no share link) ──
+    if (!pendingShare && _initProjectId.current) {
+      const targetId = _initProjectId.current;
+      _initProjectId.current = null;
+      const meta = merged.find(p => p.id === targetId);
+      if (meta) {
+        const p = await loadProject(targetId, meta._ownerId, meta._permission);
+        if (p) { setProject(p); setView("editor"); }
+        else { setView("dashboard"); setActiveTab("dashboard"); setNavHash("dashboard", null, null); }
+      } else { setView("dashboard"); setActiveTab("dashboard"); setNavHash("dashboard", null, null); }
+    }
   })(); }, [user]);
 
   useEffect(() => {
@@ -3481,11 +3555,11 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       p.phases = tmpl.phases.map(ph=>({...ph}));
       p.assets = tmpl.assets.map(a=>({...a, id:crypto.randomUUID(), hotelPL:null, marinaPL:null}));
     }
-    await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); window.scrollTo(0,0);
+    await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); pushNavHash("editor", p.id, "dashboard"); window.scrollTo(0,0);
   };
-  const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); window.scrollTo(0,0); } setLoading(false); };
+  const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); pushNavHash("editor", p.id, "dashboard"); window.scrollTo(0,0); } setLoading(false); };
   const duplicateProject = async (id) => { const p = await loadProject(id); if (p) { const d={...p,id:crypto.randomUUID(),name:p.name+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}; await saveProject(d); setProjectIndex(await loadProjectIndex()); addToast(ar?"تم نسخ المشروع":"Project duplicated","success"); }};
-  const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");} addToast(ar?"تم حذف المشروع":"Project deleted","info"); };
+  const deleteProject = async (id) => { await deleteProjectStorage(id); setProjectIndex(await loadProjectIndex()); if (project?.id===id){setProject(null);setView("dashboard");setNavHash("dashboard",null,null);} addToast(ar?"تم حذف المشروع":"Project deleted","info"); };
 
   // ── Undo History (last 30 states) ──
   const undoStack = useRef([]);
@@ -3537,10 +3611,10 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   }; return {...prev, assets:[...prev.assets, tmplDefaults ? {...base,...tmplDefaults} : base]}; }), [pushUndo]);
   const dupAsset = useCallback((i) => setProject(prev => { pushUndo(prev); const src = prev.assets[i]; if(!src) return prev; const copy = {...src, id:crypto.randomUUID(), name:(src.name||"")+" (Copy)"}; return {...prev, assets:[...prev.assets, copy]}; }), [pushUndo]);
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
-  const goBack = () => { setView("dashboard"); setProject(null); window.scrollTo(0,0); };
+  const goBack = () => { setView("dashboard"); setProject(null); pushNavHash("dashboard", null, null); window.scrollTo(0,0); };
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><style>{`@keyframes zanShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style><div style={{textAlign:"center",width:360,maxWidth:"90vw"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:24}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>Haseef</span><span style={{width:1,height:30,background:"rgba(46,196,182,0.4)"}} /><span style={{fontSize:12,color:"#2EC4B6",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div><div style={{display:"flex",flexDirection:"column",gap:12}}>{[200,160,240,180].map((w,i)=><div key={i} style={{height:14,width:w,maxWidth:"100%",borderRadius:6,background:"linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%)",backgroundSize:"200% 100%",animation:"zanShimmer 1.5s infinite",margin:"0 auto"}} />)}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:20}}>{lang==="ar"?"جاري التحميل...":"Loading..."}</div></div></div>;
-  if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); window.scrollTo(0,0); }} onCreateDemo={async (demo) => {
+  if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); pushNavHash("dashboard",null,null); window.scrollTo(0,0); }} onCreateDemo={async (demo) => {
     const p = defaultProject();
     const ar = lang === "ar";
     const demoName = ar ? demo.title.ar : demo.title.en;
