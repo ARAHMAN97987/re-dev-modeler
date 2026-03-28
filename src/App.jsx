@@ -433,6 +433,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [wSec, setWSec] = useState({});  // chart toggle state
   const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false,devTotal:false}); // expandable KPI cards
   const [eduModal, setEduModal] = useState(null);
+  const [showHybridCF, setShowHybridCF] = useState(false);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand,devTotal:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>
@@ -627,6 +628,104 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           : (ar ? "أي تعديل هنا سينتشر في جميع المراحل" : "Changes here apply to ALL phases")}
       </div>
     )}
+
+    {/* ═══ HYBRID MODE BANNER ═══ */}
+    {f?.isHybrid && (() => {
+      const govPct = f.govFinancingPct || 70;
+      const fundPct = 100 - govPct;
+      const isGP = f.govBeneficiary === "gp";
+      return <div style={{background:"linear-gradient(135deg,#ecfdf5,#f0fdf4)",borderRadius:10,border:"1px solid #86efac",padding:"12px 16px",marginBottom:14,fontSize:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{fontSize:16}}>🔀</span>
+          <span style={{fontWeight:700,color:"#166534"}}>{ar?"مختلط: صندوق + تمويل":"Hybrid: Fund + Financing"}</span>
+          <span style={{fontSize:10,color:"#059669",background:"#d1fae5",borderRadius:4,padding:"2px 6px"}}>{govPct}% {ar?"تمويل":"Fin."} + {fundPct}% {ar?"صندوق":"Fund"}</span>
+        </div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",color:"#374151"}}>
+          <span>{ar?"مبلغ التمويل":"Loan Amount"}: <b>{fmtM(f.govLoanAmount)}</b></span>
+          <span>{ar?"سعر الفائدة":"Rate"}: <b>{((f.govLoanRate||0)*100).toFixed(1)}%</b></span>
+          <span>{ar?"حصة الصندوق":"Fund Portion"}: <b>{fmtM(f.fundPortionCost)}</b></span>
+          {isGP && <span style={{color:"#d97706",fontWeight:600}}>⚠ {ar?"القرض على المطور شخصياً":"Personal loan to developer"}</span>}
+        </div>
+      </div>;
+    })()}
+
+    {/* ═══ HYBRID: TWO SEPARATE CASH FLOWS ═══ */}
+    {f?.isHybrid && w.financingCF && w.fundCF && (() => {
+      const finCF = w.financingCF;
+      const fundCFArr = w.fundCF;
+      const finPct = f.govFinancingPct || 70;
+      const fundPctVal = 100 - finPct;
+      const finTotal = finCF.reduce((a,b) => a+b, 0);
+      const fundTotal = fundCFArr.reduce((a,b) => a+b, 0);
+      const combinedTotal = finTotal + fundTotal;
+      return <div style={{marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:8}}>
+          {/* Financing Portion Card */}
+          <div style={{background:"linear-gradient(135deg,#eff6ff,#dbeafe)",borderRadius:10,border:"1px solid #93c5fd",padding:"12px 16px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <span style={{fontSize:14}}>🏦</span>
+              <span style={{fontWeight:700,fontSize:12,color:"#1e40af"}}>{ar?`جانب التمويل (${finPct}%)`:`Financing Side (${finPct}%)`}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
+              <span style={{color:"#6b7280"}}>{ar?"مبلغ التمويل":"Loan Amount"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(f.govLoanAmount)}</span>
+              <span style={{color:"#6b7280"}}>{ar?"سعر الفائدة":"Rate"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{((f.govLoanRate||0)*100).toFixed(1)}%</span>
+              <span style={{color:"#6b7280"}}>{ar?"إجمالي خدمة الدين":"Total Debt Service"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"#dc2626"}}>{fmtM(Math.abs(finTotal))}</span>
+              <span style={{color:"#6b7280"}}>{ar?"DSCR متوسط":"Avg DSCR"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{(() => { const ds = f.dscr||[]; const vals = ds.filter(v=>v!=null&&v>0); return vals.length > 0 ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x" : "—"; })()}</span>
+            </div>
+          </div>
+          {/* Fund Portion Card */}
+          <div style={{background:"linear-gradient(135deg,#faf5ff,#f3e8ff)",borderRadius:10,border:"1px solid #c4b5fd",padding:"12px 16px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <span style={{fontSize:14}}>📊</span>
+              <span style={{fontWeight:700,fontSize:12,color:"#6d28d9"}}>{ar?`جانب الصندوق (${fundPctVal}%)`:`Fund Side (${fundPctVal}%)`}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
+              <span style={{color:"#6b7280"}}>{ar?"رأس مال الصندوق":"Fund Equity"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(f.totalEquity)}</span>
+              <span style={{color:"#6b7280"}}>{ar?"LP IRR":"LP IRR"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"LP MOIC":"LP MOIC"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"صافي للصندوق":"Fund Net CF"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:fundTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(fundTotal)}</span>
+            </div>
+          </div>
+        </div>
+        {/* Combined summary */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",background:"var(--surface-sunken)",borderRadius:6,fontSize:11,flexWrap:"wrap",gap:6}}>
+          <span style={{color:"var(--text-secondary)"}}>{ar?"التدفق المجمّع":"Combined CF"}: <b style={{color:combinedTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(combinedTotal)}</b></span>
+          {w.fullProjectExitVal > 0 && <span style={{color:"var(--text-secondary)"}}>{ar?"قيمة التخارج الكاملة":"Full Exit Value"}: <b>{fmtM(w.fullProjectExitVal)}</b> → {ar?"صافي بعد الدين":"Net after debt"}: <b style={{color:"#16a34a"}}>{fmtM(w.fullProjectExitVal - (f.totalDebt||0))}</b></span>}
+          <button onClick={()=>setShowHybridCF(!showHybridCF)} style={{...btnS,fontSize:10,padding:"2px 8px"}}>{showHybridCF?(ar?"إخفاء":"Hide"):(ar?"تفصيل سنوي":"Yearly Detail")}</button>
+        </div>
+        {/* Yearly breakdown table */}
+        {showHybridCF && <div style={{maxHeight:300,overflowY:"auto",marginTop:8,borderRadius:8,border:"1px solid var(--border-default)"}}>
+          <table style={{...tblStyle,fontSize:10,width:"100%"}}>
+            <thead><tr style={{position:"sticky",top:0,background:"var(--surface-table-header)"}}>
+              <th style={{...thSt,padding:"4px 8px"}}>{ar?"السنة":"Year"}</th>
+              <th style={{...thSt,padding:"4px 8px",color:"#1e40af"}}>{ar?"تمويل":"Fin. CF"}</th>
+              <th style={{...thSt,padding:"4px 8px",color:"#6d28d9"}}>{ar?"صندوق":"Fund CF"}</th>
+              <th style={{...thSt,padding:"4px 8px"}}>{ar?"مُجمّع":"Combined"}</th>
+            </tr></thead>
+            <tbody>{finCF.map((v, i) => {
+              if (i > (w.exitYear ? w.exitYear - sy + 2 : 25)) return null;
+              const fv = fundCFArr[i] || 0;
+              const cv = v + fv;
+              const cellS = (val) => ({...tdN,padding:"3px 8px",color:val<0?"#dc2626":val>0?"#16a34a":"#9ca3af",fontWeight:Math.abs(val)>1e5?600:400});
+              return <tr key={i} style={{background:i%2===0?"var(--surface-table-even)":"transparent"}}>
+                <td style={{...tdSt,padding:"3px 8px",fontWeight:600}}>{sy+i}</td>
+                <td style={cellS(v)}>{fmt(v)}</td>
+                <td style={cellS(fv)}>{fmt(fv)}</td>
+                <td style={cellS(cv)}>{fmt(cv)}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>}
+      </div>;
+    })()}
 
     {/* ═══ QUICK EDIT: Fund & Waterfall Terms ═══ */}
     {upCfg && (cfg.finMode === "fund" || cfg.finMode === "hybrid") && (
@@ -3447,11 +3546,9 @@ function useIsMobile(breakpoint = 768) {
 
 function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy }) {
   const isMobile = useIsMobile();
-  // ── Public Academy Mode (no auth required) ──
+  // ── Public Academy Mode state (hook must run unconditionally) ──
   const [publicLang, setPublicLang] = useState("ar");
-  if (publicAcademy) {
-    return <LearningCenterView lang={publicLang} onBack={exitAcademy || (() => {})} onCreateDemo={null} publicMode={true} onLangToggle={() => setPublicLang(l => l === "ar" ? "en" : "ar")} />;
-  }
+  // NOTE: publicAcademy early return moved AFTER all hooks (line ~3674) to avoid React hooks violation
   // ── Initialize navigation from URL hash (unless share link is pending) ──
   const _initNav = useMemo(() => {
     if (typeof window === "undefined") return { view: "dashboard", projectId: null, tab: "dashboard" };
@@ -3528,8 +3625,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const autoSaveTimer = useRef(null);
   const sidebarRef = useRef(null);
 
-  // Show landing page if not logged in
-  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} pendingShare={pendingShare} />;
+  // NOTE: LandingPage early return moved AFTER all hooks (line ~3770) to avoid React hooks violation
 
   useEffect(() => { (async () => {
     const own = await loadProjectIndex();
@@ -3670,6 +3766,14 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const dupAsset = useCallback((i) => setProject(prev => { pushUndo(prev); const src = prev.assets[i]; if(!src) return prev; const copy = {...src, id:crypto.randomUUID(), name:(src.name||"")+" (Copy)"}; return {...prev, assets:[...prev.assets, copy]}; }), [pushUndo]);
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
   const goBack = () => { setView("dashboard"); setProject(null); pushNavHash("dashboard", null, null); window.scrollTo(0,0); };
+
+  // ── Landing page (no auth) — moved here to run AFTER all hooks ──
+  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} pendingShare={pendingShare} />;
+
+  // ── Public Academy Mode (no auth required) — moved here to run AFTER all hooks ──
+  if (publicAcademy) {
+    return <LearningCenterView lang={publicLang} onBack={exitAcademy || (() => {})} onCreateDemo={null} publicMode={true} onLangToggle={() => setPublicLang(l => l === "ar" ? "en" : "ar")} />;
+  }
 
   if (loading) return <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}><style>{`@keyframes zanShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}`}</style><div style={{textAlign:"center",width:360,maxWidth:"90vw"}}><div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:24}}><span style={{fontSize:36,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif"}}>Haseef</span><span style={{width:1,height:30,background:"rgba(46,196,182,0.4)"}} /><span style={{fontSize:12,color:"#2EC4B6",fontWeight:300,lineHeight:1.3,textAlign:"start"}}>النمذجة<br/>المالية</span></div><div style={{display:"flex",flexDirection:"column",gap:12}}>{[200,160,240,180].map((w,i)=><div key={i} style={{height:14,width:w,maxWidth:"100%",borderRadius:6,background:"linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%)",backgroundSize:"200% 100%",animation:"zanShimmer 1.5s infinite",margin:"0 auto"}} />)}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.2)",marginTop:20}}>{lang==="ar"?"جاري التحميل...":"Loading..."}</div></div></div>;
   if (view === "academy") return <LearningCenterView lang={lang} onBack={() => { setView("dashboard"); pushNavHash("dashboard",null,null); window.scrollTo(0,0); }} onCreateDemo={async (demo) => {

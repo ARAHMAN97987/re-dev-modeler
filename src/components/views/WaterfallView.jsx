@@ -176,6 +176,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [wSec, setWSec] = useState({});  // chart toggle state
   const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false,devTotal:false}); // expandable KPI cards
   const [eduModal, setEduModal] = useState(null);
+  const [showHybridCF, setShowHybridCF] = useState(false); // hybrid separate CF table
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand,devTotal:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
@@ -467,7 +468,6 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const fundTotal = fundCFArr.reduce((a,b) => a+b, 0);
       const combinedTotal = finTotal + fundTotal;
       const sy = cfg.startYear || 2026;
-      const [showHybridCF, setShowHybridCF] = useState(false);
       return <div style={{marginBottom:14}}>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:8}}>
           {/* Financing Portion Card */}

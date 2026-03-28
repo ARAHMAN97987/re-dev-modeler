@@ -30,7 +30,10 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const fundFeeBasis = f.fundPortionCost || f.devCostExclLand;
 
   // Fee calculations (only Fund type gets full fees)
-  const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
+  // Subscription fee: for hybrid, apply only to fund portion equity (LP raise), not government-borrowed GP equity
+  const isHybridMode = project.finMode === "hybrid";
+  const subFeeBase = isHybridMode ? (f.fundPortionCost || totalEquity) : totalEquity;
+  const subFee = isFund ? subFeeBase * (project.subscriptionFeePct || 0) / 100 : 0;
   // DevFee: read from financing (single source — computed in financing.js)
   const devFeeTotal = f.devFeeTotal || 0;
   // Structuring fee: % of fund portion cost, not total project cost for hybrid

@@ -668,18 +668,25 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     const gpDS = new Array(h).fill(0);
     const gpInt = new Array(h).fill(0);
     const gpRep = new Array(h).fill(0);
-    const gpBal = new Array(h).fill(0);
+    const gpBalOpen = new Array(h).fill(0);
+    const gpBalClose = new Array(h).fill(0);
+    // Grace starts from COD (constrEnd), matching project-level debt convention
+    const gpGraceStart = constrEnd; // COD index
+    const gpRepayStart = gpGraceStart + gpLoanGrace;
     let bal = gpLoanAmt;
     for (let y = 0; y < h && bal > 0; y++) {
-      const intY = bal * gpLoanRate;
-      const repY = y >= gpLoanGrace ? Math.min(gpAnnualRepay, bal) : 0;
+      gpBalOpen[y] = bal;
+      const repY = y >= gpRepayStart ? Math.min(gpAnnualRepay, bal) : 0;
+      const closeB = Math.max(0, bal - repY);
+      // Interest on average balance (matching project debt convention)
+      const intY = (bal + closeB) / 2 * gpLoanRate;
       gpInt[y] = intY;
       gpRep[y] = repY;
       gpDS[y] = intY + repY;
-      bal = Math.max(0, bal - repY);
-      gpBal[y] = bal;
+      bal = closeB;
+      gpBalClose[y] = bal;
     }
-    gpPersonalDebt = { ds: gpDS, interest: gpInt, repayment: gpRep, balance: gpBal, totalAmount: gpLoanAmt };
+    gpPersonalDebt = { ds: gpDS, interest: gpInt, repayment: gpRep, balanceOpen: gpBalOpen, balanceClose: gpBalClose, totalAmount: gpLoanAmt };
 
     // Apply interest subsidy to personal loan if finance support is enabled
     if (project.incentives?.financeSupport?.enabled) {
