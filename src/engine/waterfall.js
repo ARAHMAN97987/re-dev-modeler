@@ -239,38 +239,40 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // Therefore: "auto" always resolves to "project" (shared via CF, no separate obligation).
   // Only explicit "gp"/"lp" with cashAvail adjustment would avoid double-counting (future enhancement).
   const lrPaidByRaw = project.landRentPaidBy || "auto";
-  let resolvedLandRentPayer = "project"; // Default: land rent is project cost, shared via CF
+  // Resolve land rent payer:
+  // "auto"/"project" → land rent stays embedded in project CF (shared proportionally via waterfall)
+  // "gp"/"lp"/"split" → land rent is UN-embedded from CF and charged directly to the designated party
+  let resolvedLandRentPayer = "project";
   if (lrPaidByRaw === "gp" || lrPaidByRaw === "lp" || lrPaidByRaw === "split") {
-    // Explicit assignment - BUT land rent is still in cashAvail, so this would double-count.
-    // For now, treat as project to avoid the bug. TODO: add-back to cashAvail for explicit modes.
-    resolvedLandRentPayer = "project";
+    resolvedLandRentPayer = lrPaidByRaw;
   }
-  const gpPaysLandRent = false; // Disabled until cashAvail add-back is implemented
-  const lpPaysLandRent = false;
+  const gpPaysLandRent = resolvedLandRentPayer === "gp" || resolvedLandRentPayer === "split";
+  const lpPaysLandRent = resolvedLandRentPayer === "lp" || resolvedLandRentPayer === "split";
   const gpLandRentObligation = new Array(h).fill(0);
   const lpLandRentObligation = new Array(h).fill(0);
   const cashAvail = new Array(h).fill(0);
   for (let y = 0; y < h; y++) {
-    // Track GP/LP land rent obligations (platform feature)
-    if (gpPaysLandRent && resolvedLandRentPayer === "gp") {
+    // When a specific payer is assigned, populate their obligation array.
+    // The obligation is deducted from their net CF (lines ~480-481), NOT from cashAvail.
+    if (resolvedLandRentPayer === "gp") {
       gpLandRentObligation[y] = adjLandRent[y];
-    } else if (lpPaysLandRent && resolvedLandRentPayer === "lp") {
+    } else if (resolvedLandRentPayer === "lp") {
       lpLandRentObligation[y] = adjLandRent[y];
     } else if (resolvedLandRentPayer === "split") {
       gpLandRentObligation[y] = adjLandRent[y] * gpPct;
       lpLandRentObligation[y] = adjLandRent[y] * lpPct;
     }
     // ZAN Cash Available: MAX(0, NetCF + DS - TotalFees + UF + Exit)
-    // Excel formula (Row 75): MAX(0, IF(inPeriod, NetCF, 0) + DS - Fees + UF + Exit)
-    // where DS is negative (debtService), Fees = all fund fees (mgmt, custody, dev, etc.)
-    // UF = unfunded fees (fees that operating CF couldn't cover, equity-funded)
-    // Net effect: when operating CF covers fees, UF=0 and -Fees+UF = -Fees.
-    // When CF can't cover fees, UF = Fees-coverableCF, so -Fees+UF = -coverableCF.
-    // Either way, fees reduce cash available for distribution.
+    // IMPORTANT: unlevCF already has land rent deducted (Income - LandRent - CAPEX).
+    // When a specific payer is assigned, we ADD BACK the land rent to cashAvail so it's
+    // not double-counted (once in CF, once via obligation). The obligation arrays above
+    // ensure the designated party still bears the cost in their net CF.
     const unlevCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
     const inPeriod = y >= fundStartIdx && y <= exitYr;
+    const landRentAddBack = resolvedLandRentPayer !== "project" ? (adjLandRent[y] || 0) : 0;
     cashAvail[y] = Math.max(0,
       (inPeriod ? unlevCF : 0)
+      + landRentAddBack
       - (f.debtService[y] || 0)
       - fees[y]
       + unfundedFees[y]
@@ -508,6 +510,11 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const gpMOIC = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
   const lpCommittedMOIC = lpEquity > 0 ? lpNetDist / lpEquity : 0;
   const gpCommittedMOIC = gpEquity > 0 ? gpNetDist / gpEquity : 0;
+  // GP Cash MOIC: excludes non-cash land cap from denominator for truer cash-on-cash measure
+  // When GP contributes land (in-kind), their total called includes the land cap value,
+  // which dilutes the MOIC. Cash MOIC shows return on actual cash invested only.
+  const gpCashCalled = Math.max(0, gpTotalCalled - effectiveLandCap * gpPct);
+  const gpCashMOIC = gpCashCalled > 0 ? gpNetDist / gpCashCalled : gpMOIC;
   const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
 
@@ -558,7 +565,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
-    lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
+    lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, gpCashMOIC, gpCashCalled, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
     lpSimpleROE, gpSimpleROE, lpSimpleAnnual, gpSimpleAnnual, investYears,
     lpTotalInvested: lpTotalCalled, gpTotalInvested: gpTotalCalled, // aliases for UI backward compat
     lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,

@@ -758,6 +758,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={gpSimpleAnnual?fmtPct(gpSimpleAnnual*100):"—"} c="#3b82f6" />
               <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"} c={getMetricColor("IRR",w.gpIRR)} bold />
               <KR l="MOIC" v={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.gpMOIC)} bold />
+              {w.gpCashMOIC && w.gpCashMOIC !== w.gpMOIC ? <KR l={ar?"MOIC نقدي":"Cash MOIC"} v={w.gpCashMOIC.toFixed(2)+"x"} c={getMetricColor("MOIC",w.gpCashMOIC)} /> : null}
               <KR l={ar?"استرداد":"Payback"} v={gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—"} />
               <SecHd text="NPV" />
               <KR l="@10%" v={fmtM(w.lpNPV10)} />
@@ -5181,35 +5182,37 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   };
 
   const cols = [
-    { key:"#", en:"#", ar:"#", w:30 },
-    { key:"phase", en:"Phase", ar:"المرحلة", w:80 },
-    { key:"category", en:"Category", ar:"التصنيف", w:95 },
-    { key:"name", en:"Asset Name", ar:"اسم الأصل", w:130 },
-    { key:"code", en:"Code", ar:"الرمز", w:42 },
-    { key:"plotArea", en:"Plot", ar:"القطعة", w:60 },
-    { key:"footprint", en:"Fprint", ar:"المسطح", w:55 },
-    { key:"gfa", en:"GFA", ar:"م.ط", w:60 },
-    { key:"revType", en:"Type", ar:"النوع", w:65 },
-    { key:"eff", en:"Eff%", ar:"كفاءة", w:45 },
-    { key:"leasable", en:"Lease.", ar:"تأجير", w:55 },
-    { key:"rate", en:"Rate", ar:"إيجار", w:55 },
-    { key:"opEbitda", en:"EBITDA", ar:"تشغيلي", w:75 },
-    { key:"esc", en:"Esc%", ar:"زيادة", w:40 },
+    { key:"#", en:"#", ar:"#", w:28 },
+    { key:"phase", en:"Phase", ar:"المرحلة", w:70 },
+    { key:"name", en:"Asset Name", ar:"اسم الأصل", w:120 },
+    { key:"category", en:"Category", ar:"التصنيف", w:85 },
+    { key:"code", en:"Code", ar:"الرمز", w:40 },
+    { key:"gfa", en:"GFA", ar:"م.إجمالية", w:60 },
+    { key:"eff", en:"Eff%", ar:"كفاءة%", w:44 },
+    { key:"leasable", en:"Leasable", ar:"م.تأجير", w:58 },
+    { key:"plotArea", en:"Plot", ar:"القطعة", w:58 },
+    { key:"footprint", en:"Footprint", ar:"البصمة", w:58 },
+    { key:"revType", en:"Rev Type", ar:"نوع الدخل", w:68 },
+    { key:"rate", en:"Rate", ar:"إيجار/م²", w:58 },
+    { key:"opEbitda", en:"EBITDA", ar:"تشغيلي", w:72 },
+    { key:"occ", en:"Occ%", ar:"إشغال%", w:42 },
+    { key:"esc", en:"Esc%", ar:"زيادة%", w:40 },
     { key:"ramp", en:"Ramp", ar:"نمو", w:38 },
-    { key:"occ", en:"Occ%", ar:"إشغال", w:42 },
-    { key:"cost", en:"Cost/sqm", ar:"تكلفة/م²", w:65 },
-    { key:"dur", en:"Build (mo)", ar:"مدة البناء", w:70 },
-    { key:"totalCapex", en:"CAPEX", ar:"التكاليف", w:80 },
-    { key:"totalInc", en:"Revenue", ar:"الإيرادات", w:80 },
-    { key:"score", en:"Score", ar:"تقييم", w:90 },
-    { key:"ops", en:"", ar:"", w:30 },
+    { key:"cost", en:"Cost/m²", ar:"تكلفة/م²", w:62 },
+    { key:"dur", en:"Build", ar:"بناء(شهر)", w:52 },
+    { key:"hardCost", en:"Hard Cost", ar:"تكلفة صلبة", w:78 },
+    { key:"addons", en:"Soft+Cont", ar:"غير مباشرة", w:74 },
+    { key:"totalCapex", en:"Total CAPEX", ar:"إجمالي", w:82 },
+    { key:"totalInc", en:"Revenue", ar:"الإيرادات", w:78 },
+    { key:"score", en:"Score", ar:"تقييم", w:88 },
+    { key:"ops", en:"", ar:"", w:28 },
   ];
 
   const [editingPhase, setEditingPhase] = useState(null);
   const [filterPhase, setFilterPhase] = useState("all");
   const [filterCat, setFilterCat] = useState("all");
   const [filterRev, setFilterRev] = useState("all");
-  const [hiddenCols, setHiddenCols] = useState(() => new Set(["plotArea","footprint","esc","ramp","occ"]));
+  const [hiddenCols, setHiddenCols] = useState(() => new Set(["plotArea","footprint","esc","ramp","occ","code","hardCost"]));
   const [showColPicker, setShowColPicker] = useState(false);
   const [cfOpen, setCfOpen] = useState({}); // which asset CFs are expanded
   const [cfAllOpen, setCfAllOpen] = useState(false); // global toggle
@@ -5495,9 +5498,19 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             ))}
             <div style={{borderTop:"1px solid #e5e7ec",margin:"4px 0"}} />
             <button onClick={()=>setHiddenCols(new Set())} style={{width:"100%",padding:"5px 14px",fontSize:10,color:"#2563eb",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"إظهار الكل":"Show All"}</button>
-            <button onClick={()=>setHiddenCols(new Set(["plotArea","footprint","esc","ramp","occ"]))} style={{width:"100%",padding:"5px 14px",fontSize:10,color:"var(--text-secondary)",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"الافتراضي":"Default"}</button>
+            <button onClick={()=>setHiddenCols(new Set(["plotArea","footprint","esc","ramp","occ","code","hardCost"]))} style={{width:"100%",padding:"5px 14px",fontSize:10,color:"var(--text-secondary)",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"الافتراضي":"Default"}</button>
           </div>}
         </div>}
+        {/* Quick Soft Cost & Contingency inputs */}
+        <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",background:"#faf5ff",borderRadius:6,border:"1px solid #e9d5ff"}}>
+          <span style={{fontSize:9,color:"#7c3aed",fontWeight:600,whiteSpace:"nowrap"}}>{ar?"غ.مباشرة":"Soft"}</span>
+          <input type="number" value={project.softCostPct??10} onChange={e=>up({softCostPct:parseFloat(e.target.value)||0})} style={{width:38,padding:"2px 4px",fontSize:11,border:"1px solid #d8b4fe",borderRadius:4,textAlign:"center",background:"#fff",fontFamily:"inherit"}} title={ar?"تكاليف غير مباشرة % (تصميم، إشراف، تصاريح)":"Soft Cost % (design, supervision, permits)"} />
+          <span style={{fontSize:9,color:"#7c3aed"}}>%</span>
+          <span style={{color:"#d8b4fe",fontSize:10}}>|</span>
+          <span style={{fontSize:9,color:"#7c3aed",fontWeight:600,whiteSpace:"nowrap"}}>{ar?"احتياطي":"Cont"}</span>
+          <input type="number" value={project.contingencyPct??5} onChange={e=>up({contingencyPct:parseFloat(e.target.value)||0})} style={{width:38,padding:"2px 4px",fontSize:11,border:"1px solid #d8b4fe",borderRadius:4,textAlign:"center",background:"#fff",fontFamily:"inherit"}} title={ar?"احتياطي % (طوارئ وتغييرات)":"Contingency % (overruns & changes)"} />
+          <span style={{fontSize:9,color:"#7c3aed"}}>%</span>
+        </div>
         <button onClick={()=>{generateTemplate();addToast(ar?"تم تحميل النموذج":"Template downloaded","success");}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
           {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
@@ -5659,14 +5672,14 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
       {/* TABLE VIEW */}
       {viewMode === "table" && (<>
       <div style={{background:"var(--surface-card)",borderRadius:8,border:"0.5px solid var(--border-default)",overflow:"hidden"}}>
-        <div style={{overflowX:"auto"}}>
-          <table style={{...tblStyle,fontSize:11}}>
+        <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
+          <table style={{...tblStyle,fontSize:11,tableLayout:"auto"}}>
             <thead>
               <tr>
                 {visibleCols.map(c=>(
-                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
-                    <div>{c.en}</div>
-                    {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"var(--text-tertiary)"}}>{c.ar}</div>}
+                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w,maxWidth:c.w*2.5, ...(c.key==="hardCost"?{background:"#f8fafc"}:c.key==="addons"?{background:"#faf5ff"}:c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
+                    <div style={{fontSize:11}}>{ar?c.ar:c.en}</div>
+                    {c.ar!==c.en&&!ar&&<div style={{fontWeight:400,fontSize:8,color:"var(--text-tertiary)",lineHeight:1.1}}>{c.ar}</div>}
                   </th>
                 ))}
               </tr>
@@ -5689,17 +5702,17 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                   const hd = (key) => hiddenCols.has(key) ? {display:"none"} : {};
                   return (
                     <tr key={a.id||i} style={{background:bg}}>
-                      <td style={{...tdSt,color:"var(--text-tertiary)",fontWeight:500,width:30,...hd("#")}}>{i+1}</td>
+                      <td style={{...tdSt,color:"var(--text-tertiary)",fontWeight:500,width:28,...hd("#")}}>{i+1}</td>
                       <td style={{...tdSt,...hd("phase")}}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={{...tdSt,...hd("category")}}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
                       <td style={{...tdSt,...hd("name")}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /></td>
-                      <td style={{...tdSt,...hd("code")}}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:45}} /></td>
-                      <td style={{...tdSt,...hd("plotArea")}}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
-                      <td style={{...tdSt,...hd("footprint")}}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
+                      <td style={{...tdSt,...hd("category")}}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
+                      <td style={{...tdSt,...hd("code")}}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:40}} /></td>
                       <td style={{...tdSt,...hd("gfa")}}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
-                      <td style={{...tdSt,...hd("revType")}}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
                       <td style={{...tdSt,...hd("eff")}}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,color:"var(--text-secondary)",textAlign:"right",fontSize:11,...hd("leasable")}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
+                      <td style={{...tdSt,...hd("plotArea")}}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
+                      <td style={{...tdSt,...hd("footprint")}}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
+                      <td style={{...tdSt,...hd("revType")}}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
                       <td style={{...tdSt,background:isOp?"#f5f5f5":undefined,...hd("rate")}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("opEbitda")}}>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -5713,11 +5726,15 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                           )}
                         </div>
                       </td>
+                      <td style={{...tdSt,...hd("occ")}}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
                       <td style={{...tdSt,...hd("esc")}}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} /></td>
                       <td style={{...tdSt,...hd("ramp")}}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></td>
-                      <td style={{...tdSt,...hd("occ")}}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
                       <td style={{...tdSt,...hd("cost")}}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("dur")}}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
+                      {/* Hard Cost = GFA × Cost/m² (before soft cost & contingency) */}
+                      <td style={{...tdSt,textAlign:"right",fontSize:11,color:"var(--text-secondary)",...hd("hardCost")}}>{fmt((a.gfa||0)*(a.costPerSqm||0))}</td>
+                      {/* Soft Cost + Contingency addon amount */}
+                      <td style={{...tdSt,textAlign:"right",fontSize:10,color:"#7c3aed",background:"#faf5ff",...hd("addons")}} title={`${ar?"غير مباشرة":"Soft"}: ${project.softCostPct||0}% + ${ar?"احتياطي":"Cont"}: ${project.contingencyPct||0}%`}>{fmt((comp?.totalCapex||computeAssetCapex(a,project)) - (a.gfa||0)*(a.costPerSqm||0))}</td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11,...hd("totalInc")}}>{fmt(comp?.totalRevenue||0)}</td>
                       <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative",...hd("score")}}>{(()=>{
