@@ -150,6 +150,16 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   // Payback
   const payback = (() => { let cum=0, wasNeg=false; for(let y=0;y<h;y++){cum+=levCF[y]||0;if(cum<-1)wasNeg=true;if(wasNeg&&cum>=0)return y+1;} return null; })();
 
+  // Simple Return (market convention: ROE / years)
+  const totalInvested = Math.abs(levCF.filter(v => v < 0).reduce((a,b) => a+b, 0));
+  const simpleROE = totalInvested > 0 ? totalLevCF / totalInvested : 0;
+  const investYears = (() => {
+    let first = -1, last = 0;
+    for (let y = 0; y < h; y++) { if (levCF[y] < 0 && first < 0) first = y; if (levCF[y] > 0) last = y; }
+    return Math.max(1, first >= 0 ? last - first + 1 : h);
+  })();
+  const simpleAnnual = investYears > 0 ? simpleROE / investYears : 0;
+
   // NOI
   const noiArr = new Array(h).fill(0);
   for (let y=0;y<h;y++) noiArr[y] = (c.income[y]||0) - (c.landRent[y]||0);
@@ -291,14 +301,18 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
         </div>
         {!kpiOpen.ret ? (
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
+            {badge(ar?"عائد بسيط":"Simple", simpleROE?fmtPct(simpleROE*100):"—", "#f59e0b")}
             {badge("IRR", levIRR!==null?fmtPct(levIRR*100):"—", getMetricColor("IRR",levIRR))}
-            {badge(ar?"صافي":"Net", fmtM(totalLevCF), totalLevCF>0?"#16a34a":"#ef4444")}
-            {exitProc>0 && badge(ar?"تخارج":"Exit", fmtM(exitProc), "#f59e0b")}
+            {exitProc>0 && badge(ar?"تخارج":"Exit", fmtM(exitProc), "#16a34a")}
           </div>
         ) : (
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
-            <SecHd text={ar?"المؤشرات":"METRICS"} />
-            <KR l="IRR" v={levIRR!==null?fmtPct(levIRR*100):"N/A"} c={getMetricColor("IRR",levIRR)} bold />
+            <SecHd text={ar?"العائد البسيط (عرف السوق)":"SIMPLE RETURN (MARKET CONVENTION)"} />
+            <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={simpleROE?fmtPct(simpleROE*100):"N/A"} c="#f59e0b" bold />
+            <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={simpleAnnual?fmtPct(simpleAnnual*100):"N/A"} c="#f59e0b" />
+            <KR l={ar?"فترة الاستثمار":"Investment Period"} v={`${investYears} ${ar?"سنة":"yr"}`} />
+            <SecHd text={ar?"المؤشرات الدقيقة":"PRECISE METRICS"} />
+            <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={levIRR!==null?fmtPct(levIRR*100):"N/A"} c={getMetricColor("IRR",levIRR)} bold />
             <KR l={ar?"عائد على التكلفة":"Yield on Cost"} v={yieldOnCost>0?fmtPct(yieldOnCost*100):"—"} c={yieldOnCost>0.08?"#16a34a":"#6b7080"} />
             <KR l={ar?"استرداد":"Payback"} v={payback?`${payback} ${ar?"سنة":"yr"}`:"—"} c="#2563eb" />
             {exitProc>0 && <KR l={ar?"العائد / التكلفة":"Return / Cost"} v={(exitProc/devCost).toFixed(2)+"x"} c={exitProc/devCost>1?"#16a34a":"#ef4444"} bold />}
@@ -412,12 +426,11 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
       <tr><td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11,background:"#e0e7ff",borderTop:"2px solid #1e3a5f"}}>
         <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
           <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
+          <span>{ar?"عائد بسيط":"Simple"} <strong style={{color:"#f59e0b"}}>{simpleROE?fmtPct(simpleROE*100):"—"}</strong> <span style={{fontSize:9,color:"#6b7080"}}>({ar?"سنوي":"ann."} {simpleAnnual?fmtPct(simpleAnnual*100):"—"})</span></span>
           <span>IRR <strong style={{color:getMetricColor("IRR",levIRR)}}>{levIRR!==null?fmtPct(levIRR*100):"N/A"}</strong></span>
           <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
           <span>{ar?"عائد/تكلفة":"Yield"} <strong style={{color:yieldOnCost>0.08?"#16a34a":"#f59e0b"}}>{yieldOnCost>0?fmtPct(yieldOnCost*100):"—"}</strong></span>
-          <span>NPV@10% <strong>{fmtM(calcNPV(levCF,0.10))}</strong></span>
           <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(levCF,0.12))}</strong></span>
-          <span>NPV@14% <strong>{fmtM(calcNPV(levCF,0.14))}</strong></span>
         </div>
       </td></tr>
 
@@ -525,6 +538,17 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const cashOnCash = pf.totalEquity > 0 && stableIncome > 0 ? stableIncome / pf.totalEquity : 0;
   const totalFinCost = pf.totalInterest;
   const devNetCF = pf.leveredCF ? pf.leveredCF.reduce((a,b)=>a+b,0) : 0;
+
+  // Simple Return (market convention)
+  const levCFArr = pf.leveredCF || [];
+  const bankTotalInvested = Math.abs(levCFArr.filter(v => v < 0).reduce((a,b) => a+b, 0));
+  const bankSimpleROE = bankTotalInvested > 0 ? devNetCF / bankTotalInvested : 0;
+  const bankInvestYears = (() => {
+    let first = -1, last = 0;
+    for (let y = 0; y < h; y++) { if ((levCFArr[y]||0) < 0 && first < 0) first = y; if ((levCFArr[y]||0) > 0) last = y; }
+    return Math.max(1, first >= 0 ? last - first + 1 : h);
+  })();
+  const bankSimpleAnnual = bankInvestYears > 0 ? bankSimpleROE / bankInvestYears : 0;
 
   // Chart data
   const chartData = years.map(y => ({
@@ -709,8 +733,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         </div>
         {!kpiOpen.dev ? (
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
+            {badge(ar?"عائد بسيط":"Simple", bankSimpleROE?fmtPct(bankSimpleROE*100):"—", "#f59e0b")}
             {badge("IRR", pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—", getMetricColor("IRR",pf.leveredIRR))}
-            {badge(ar?"صافي":"Net CF", fmtM(devNetCF), devNetCF>0?"#16a34a":"#ef4444")}
             {badge(ar?"استرداد":"Payback", paybackLev?`Yr ${paybackLev}`:"—", "#6366f1")}
           </div>
         ) : (
@@ -720,8 +744,12 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             {pf.lpEquity>0 && <KR l={ar?"ملكية أخرى":"Other Equity"} v={fmtM(pf.lpEquity)} c="#8b5cf6" />}
             <KR l={ar?"تكلفة التطوير":"Dev Cost"} v={fmtM(pf.devCostInclLand)} bold />
             {pf.landCapValue>0 && <KR l={ar?"رسملة أرض":"Land Cap"} v={fmtM(pf.landCapValue)} />}
-            <SecHd text={ar?"العوائد":"RETURNS"} />
-            <KR l={ar?"IRR بعد التمويل":"Levered IRR"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"} c={getMetricColor("IRR",pf.leveredIRR)} bold />
+            <SecHd text={ar?"العائد البسيط (عرف السوق)":"SIMPLE RETURN (MARKET CONVENTION)"} />
+            <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={bankSimpleROE?fmtPct(bankSimpleROE*100):"N/A"} c="#f59e0b" bold />
+            <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={bankSimpleAnnual?fmtPct(bankSimpleAnnual*100):"N/A"} c="#f59e0b" />
+            <KR l={ar?"فترة الاستثمار":"Investment Period"} v={`${bankInvestYears} ${ar?"سنة":"yr"}`} />
+            <SecHd text={ar?"المؤشرات الدقيقة":"PRECISE METRICS"} />
+            <KR l={ar?"صافي IRR (مركب) بعد التمويل":"Levered IRR (Compounded)"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"} c={getMetricColor("IRR",pf.leveredIRR)} bold />
             <KR l={ar?"IRR قبل التمويل":"Unlevered IRR"} v={pc.irr!==null?fmtPct(pc.irr*100):"N/A"} />
             <KR l={ar?"فترة الاسترداد":"Payback"} v={paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"—"} c="#2563eb" />
             <KR l={ar?"عائد نقدي":"Cash-on-Cash"} v={cashOnCash>0?fmtPct(cashOnCash*100):"—"} c={cashOnCash>0.08?"#16a34a":"#6b7080"} />
@@ -991,11 +1019,10 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         <td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11}}>
           <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
+            <span>{ar?"عائد بسيط":"Simple"} <strong style={{color:"#f59e0b"}}>{bankSimpleROE?fmtPct(bankSimpleROE*100):"—"}</strong> <span style={{fontSize:9,color:"#6b7080"}}>({ar?"سنوي":"ann."} {bankSimpleAnnual?fmtPct(bankSimpleAnnual*100):"—"})</span></span>
             <span>IRR <strong style={{color:getMetricColor("IRR",pf.leveredIRR)}}>{pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"}</strong></span>
             <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
-            <span>NPV@10% <strong>{fmtM(calcNPV(pf.leveredCF,0.10))}</strong></span>
             <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(pf.leveredCF,0.12))}</strong></span>
-            <span>NPV@14% <strong>{fmtM(calcNPV(pf.leveredCF,0.14))}</strong></span>
           </div>
         </td>
       </tr>

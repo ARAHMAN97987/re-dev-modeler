@@ -260,6 +260,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       lpTotalDist, gpTotalDist, lpNetDist: sum('lpNetDist')||lpTotalDist, gpNetDist: sum('gpNetDist')||gpTotalDist,
       lpTotalCalled: lpCalled, gpTotalCalled: gpCalled, lpTotalInvested: lpCalled, gpTotalInvested: gpCalled,
       lpMOIC: lpCalled>0?(sum('lpNetDist')||lpTotalDist)/lpCalled:0, gpMOIC: gpCalled>0?(sum('gpNetDist')||gpTotalDist)/gpCalled:0,
+      lpSimpleROE: lpCalled>0?((sum('lpNetDist')||lpTotalDist)-lpCalled)/lpCalled:0, gpSimpleROE: gpCalled>0?((sum('gpNetDist')||gpTotalDist)-gpCalled)/gpCalled:0,
       lpNPV10: calcNPV(lpNetCF,0.10), lpNPV12: calcNPV(lpNetCF,0.12), lpNPV14: calcNPV(lpNetCF,0.14),
       gpNPV10: calcNPV(gpNetCF,0.10), gpNPV12: calcNPV(gpNetCF,0.12), gpNPV14: calcNPV(gpNetCF,0.14),
       isFund: pws.some(pw=>pw.isFund),
@@ -296,6 +297,15 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const exitYr = w.exitYear || 0;
   const exitMult = cfg.exitMultiple || project.exitMultiple || 0;
   const exitCostPct = cfg.exitCostPct || project.exitCostPct || 0;
+
+  // Simple annual return (market convention: total ROE / years)
+  const investYears = (() => {
+    let firstCall = -1, lastDist = 0;
+    for (let y = 0; y < h; y++) { if ((w.lpNetCF?.[y]||0) < 0 && firstCall < 0) firstCall = y; if ((w.lpNetCF?.[y]||0) > 0) lastDist = y; }
+    return Math.max(1, firstCall >= 0 ? lastDist - firstCall + 1 : (exitYr > sy ? exitYr - sy : h));
+  })();
+  const lpSimpleAnnual = investYears > 0 ? (w.lpSimpleROE || 0) / investYears : 0;
+  const gpSimpleAnnual = investYears > 0 ? (w.gpSimpleROE || 0) / investYears : 0;
 
   const lpCashYield = w.lpTotalInvested > 0 ? (w.lpDist || []).map(d => d / w.lpTotalInvested) : [];
   const gpCashYield = w.gpTotalInvested > 0 ? (w.gpDist || []).map(d => d / w.gpTotalInvested) : [];
@@ -477,8 +487,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </div>
           {!kpiOpen.lp ? (
             <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-              {badge(ar?"إجمالي مستثمر":"Total Inv.", fmtM(totalInvested), "#8b5cf6")}
-              {badge(ar?"إجمالي توزيعات":"Total Dist.", fmtM(totalDist), "#16a34a")}
+              {badge(ar?"عائد بسيط":"Simple", w.lpSimpleROE?fmtPct(w.lpSimpleROE*100):"—", "#8b5cf6")}
+              {badge("IRR", w.lpIRR!==null?fmtPct(w.lpIRR*100):"—", getMetricColor("IRR",w.lpIRR))}
+              {badge("MOIC", w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.lpMOIC))}
             </div>
           ) : (
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",marginTop:10,animation:"zanScale 0.15s ease"}}>
@@ -491,13 +502,18 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"توزيعات المطور (كمستثمر)":"Developer Dist. (as Inv.)"} v={fmt(devAsInvestor)} c="#3b82f6" />
               <KR l={ar?"إجمالي التوزيعات":"Total Distributions"} v={fmt(totalDist)} bold />
               <SecHd text={ar?"مؤشرات المستثمر":"INVESTOR METRICS"} />
-              <KR l="IRR" v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={getMetricColor("IRR",w.lpIRR)} bold />
+              <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={w.lpSimpleROE?fmtPct(w.lpSimpleROE*100):"—"} c="#8b5cf6" bold />
+              <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={lpSimpleAnnual?fmtPct(lpSimpleAnnual*100):"—"} c="#8b5cf6" />
+              <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={getMetricColor("IRR",w.lpIRR)} bold />
               <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.lpMOIC)} bold />
               <KR l="DPI" v={w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"} />
               <KR l={ar?"استرداد":"Payback"} v={lpPayback?`${lpPayback} ${ar?"سنة":"yr"}`:"—"} />
               <KR l={ar?"عائد نقدي":"Cash Yield"} v={lpStabYieldVal>0?fmtPct(lpStabYieldVal*100):"—"} />
+              <KR l={ar?"فترة الاستثمار":"Investment Period"} v={`${investYears} ${ar?"سنة":"yr"}`} />
               <SecHd text={ar?"مؤشرات المطور (كمستثمر)":"DEV. METRICS (AS INVESTOR)"} />
-              <KR l="IRR" v={w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"} c={getMetricColor("IRR",w.gpIRR)} bold />
+              <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={w.gpSimpleROE?fmtPct(w.gpSimpleROE*100):"—"} c="#3b82f6" />
+              <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={gpSimpleAnnual?fmtPct(gpSimpleAnnual*100):"—"} c="#3b82f6" />
+              <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"} c={getMetricColor("IRR",w.gpIRR)} bold />
               <KR l="MOIC" v={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.gpMOIC)} bold />
               <KR l={ar?"استرداد":"Payback"} v={gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—"} />
               <SecHd text="NPV" />
@@ -588,7 +604,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           {!kpiOpen.devTotal ? (
             <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
               {badge(ar?"إجمالي":"Total", fmtM(devTotalEconomics), "#16a34a")}
-              {badge(ar?"صافي الربح":"Net Profit", fmtM(devNetProfit), devNetProfit>=0?"#16a34a":"#ef4444")}
+              {badge(ar?"عائد بسيط":"Simple", w.gpSimpleROE?fmtPct(w.gpSimpleROE*100):"—", "#3b82f6")}
               {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
               {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
             </div>
@@ -604,8 +620,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"صافي الربح":"Net Profit"} v={fmtM(devNetProfit)} c={devNetProfit>=0?"#16a34a":"#ef4444"} bold />
               <SecHd text={ar?"المؤشرات":"METRICS"} />
               <div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap",paddingTop:4}}>
+                {badge(ar?"عائد بسيط (إجمالي)":"Simple (Total)", w.gpSimpleROE?fmtPct(w.gpSimpleROE*100):"—", "#3b82f6")}
+                {badge(ar?"عائد بسيط (سنوي)":"Simple (Annual)", gpSimpleAnnual?fmtPct(gpSimpleAnnual*100):"—", "#3b82f6")}
+                {badge(ar?"IRR مركب":"IRR (Net)", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
                 {badge("MOIC", w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.gpMOIC))}
-                {badge("IRR", w.gpIRR!==null?fmtPct(w.gpIRR*100):"—", getMetricColor("IRR",w.gpIRR))}
                 {badge(ar?"استرداد":"Payback", gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—", "#6366f1")}
               </div>
             </div>
