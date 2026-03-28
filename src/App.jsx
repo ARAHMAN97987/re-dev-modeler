@@ -9480,13 +9480,19 @@ function CashFlowView({ project, results, t, incentivesResult }) {
   const stabilizedNOI = noiArr[Math.min(constrEnd + 3, horizon - 1)] || 0;
   const yieldOnCost = c.totalCapex > 0 ? stabilizedNOI / c.totalCapex : 0;
 
-  const CFRow=({label,values,total,bold,color,negate,sub})=>{
+  const fmtFin=(v)=>{if(v==null||isNaN(v))return "—";if(v===0)return "—";return v<0?`(${fmt(Math.abs(v))})`:fmt(v);};
+  const CFRow=({label,values,total,bold,color,negate,sub,pct})=>{
     const st=bold?{fontWeight:700,background:"var(--surface-table-header)"}:{};
-    const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"#1a1d23":"#d0d4dc";};
+    const nc=v=>{if(color)return color;return v<0?"#ef4444":v>0?"var(--text-primary)":"#d0d4dc";};
+    if(pct){return <tr style={{background:"#fafbfc"}}>
+      <td style={{...tdSt,position:"sticky",left:0,background:"#fafbfc",zIndex:1,fontSize:10,color:"var(--text-tertiary)",paddingInlineStart:24,fontStyle:"italic",minWidth:150}}>{label}</td>
+      <td style={{...tdN,fontSize:10,color:"var(--text-tertiary)"}}>{total!=null?fmtPct(total):"—"}</td>
+      {years.map(y=>{const v=values?.[y];return <td key={y} style={{...tdN,fontSize:10,color:"var(--text-tertiary)"}}>{v!=null&&!isNaN(v)?fmtPct(v):"—"}</td>;})}
+    </tr>;}
     return <tr style={st} onMouseEnter={e=>{if(!bold)e.currentTarget.style.background="#fafbff";}} onMouseLeave={e=>{if(!bold)e.currentTarget.style.background="";}}>
       <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:sub?400:500,minWidth:150,paddingInlineStart:sub?24:10,fontSize:sub?10:11,color:sub?"#6b7080":undefined}}>{label}</td>
-      <td style={{...tdN,fontWeight:600,color:nc(negate?-total:total)}}>{fmt(total)}</td>
-      {years.map(y=>{const v=values[y]||0;return <td key={y} style={{...tdN,color:nc(negate?-v:v),background:v===0?"":"transparent"}}>{v===0?"—":fmt(v)}</td>;})}
+      <td style={{...tdN,fontWeight:600,color:nc(negate?-total:total)}}>{fmtFin(negate?-total:total)}</td>
+      {years.map(y=>{const v=values[y]||0;const dv=negate?-v:v;return <td key={y} style={{...tdN,color:nc(dv)}}>{v===0?"—":fmtFin(dv)}</td>;})}
     </tr>;
   };
 
@@ -9591,6 +9597,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
           <CFRow label={t.income} values={pr.income} total={pr.totalIncome} color="#16a34a" />
           <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate sub />
           <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={pr.noi} total={pr.totalNOI} bold />
+          <CFRow label={ar?"هامش NOI %":"NOI Margin %"} pct values={years.map(y=>pr.income[y]>0?(pr.noi[y]/pr.income[y])*100:null)} total={pr.totalIncome>0?(pr.totalNOI/pr.totalIncome)*100:null} />
           <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="#ef4444" bg="#fef2f2" />
           <CFRow label={ar?"(-) تكاليف التطوير":"(-) Development CAPEX"} values={pr.capex} total={pr.totalCapex} color="#ef4444" negate />
           <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
@@ -9613,6 +9620,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         <CFRow label={t.income} values={c.income} total={c.totalIncome} color="#16a34a" />
         <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate sub />
         <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noiArr} total={totalNOI} bold />
+        <CFRow label={ar?"هامش NOI %":"NOI Margin %"} pct values={years.map(y=>c.income[y]>0?(noiArr[y]/c.income[y])*100:null)} total={c.totalIncome>0?(totalNOI/c.totalIncome)*100:null} />
         <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="#ef4444" bg="#fef2f2" />
         <CFRow label={ar?"(-) تكاليف التطوير":"(-) Development CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
         <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
