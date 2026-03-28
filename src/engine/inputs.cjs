@@ -139,6 +139,20 @@ function validateInputs(project) {
     }
   }
 
+  // Hybrid financing validation
+  if (p.finMode === 'hybrid') {
+    const gfp = p.govFinancingPct ?? 70;
+    if (gfp < 0 || gfp > 100) {
+      issues.push({ field: 'govFinancingPct', message: 'Government financing % must be 0-100', severity: 'error' });
+    }
+    if ((p.govFinanceRate ?? 3) < 0) {
+      issues.push({ field: 'govFinanceRate', message: 'Government rate cannot be negative', severity: 'error' });
+    }
+    if ((p.govLoanTenor ?? 15) < 1) {
+      issues.push({ field: 'govLoanTenor', message: 'Government loan tenor must be at least 1 year', severity: 'error' });
+    }
+  }
+
   // CAPEX assumptions
   if ((p.softCostPct || 0) < 0 || (p.softCostPct || 0) > 100) {
     issues.push({ field: 'softCostPct', message: 'Soft cost % must be 0-100', severity: 'warning' });

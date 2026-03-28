@@ -700,7 +700,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // ── Hybrid metadata ──
   const govLoanAmount = isHybrid ? devCostInclLand * (project.govFinancingPct ?? 70) / 100 : 0;
-  const fundPortionCost = isHybrid ? devCostInclLand * (1 - (project.govFinancingPct ?? 70) / 100) : null;
+  const fundPortionCost = isHybrid ? (totalProjectCost - govLoanAmount) : null;
 
   return {
     mode: project.finMode, landCapValue, effectiveLandCap, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
