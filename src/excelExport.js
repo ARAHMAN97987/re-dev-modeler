@@ -1339,7 +1339,7 @@ function buildDocumentation(wb, project, cur, h, sy) {
   let row = 4;
   const doc = [
     ["Project  المشروع", project.name || "-"],
-    ["Model Type  نوع النموذج", project.finMode === "self" ? "Pure Development Model (Unlevered)" : "Development + Fund Model (Levered)"],
+    ["Model Type  نوع النموذج", project.finMode === "self" ? "Pure Development Model (Unlevered)" : project.finMode === "hybrid" ? "Hybrid Model (Government + Fund)" : "Development + Fund Model (Levered)"],
     ["Version  الإصدار", "Haseef v5"],
     ["Generated  تاريخ التصدير", new Date().toISOString().split("T")[0]],
     ["Currency  العملة", cur],

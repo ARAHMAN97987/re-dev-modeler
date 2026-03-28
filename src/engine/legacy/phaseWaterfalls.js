@@ -12,7 +12,7 @@ import { calcIRR } from '../math.js';
 
 export function computePhaseWaterfalls(project, projectResults, financing, waterfallConsolidated) {
   if (!project || !projectResults || !financing || !waterfallConsolidated) return {};
-  if (project.finMode === "self" || project.finMode === "bank100") return {};
+  if (project.finMode === "self" || project.finMode === "bank100" || project.finMode === "debt") return {};
 
   const phases = projectResults.phaseResults;
   const phaseNames = Object.keys(phases);
