@@ -180,7 +180,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
   if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
-    <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
+    <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' أو 'تمويل مختلط' من لوحة التحكم":"Select 'Bank Debt', 'Fund Structure', or 'Hybrid' from the control panel"}</div>
   </div>;
 
   // ── Phase filter (multi-select) ──
@@ -370,7 +370,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     )}
 
     {/* ═══ QUICK EDIT: Fund & Waterfall Terms ═══ */}
-    {upCfg && cfg.finMode === "fund" && (
+    {upCfg && (cfg.finMode === "fund" || cfg.finMode === "hybrid") && (
       <div style={{background:showTerms?"#fff":"#f8f9fb",borderRadius:10,border:showTerms?"2px solid #8b5cf6":"1px solid #e5e7ec",marginBottom:14,overflow:"hidden",transition:"all 0.2s"}}>
         <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
           <span style={{fontSize:13}}>⚡</span>
@@ -435,6 +435,27 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         </div>}
       </div>
     )}
+
+    {/* ═══ HYBRID MODE BANNER ═══ */}
+    {financing?.isHybrid && (() => {
+      const f = financing;
+      const govPct = f.govFinancingPct || 70;
+      const fundPct = 100 - govPct;
+      const isGP = f.govBeneficiary === "gp";
+      return <div style={{background:"linear-gradient(135deg,#ecfdf5,#f0fdf4)",borderRadius:10,border:"1px solid #86efac",padding:"12px 16px",marginBottom:14,fontSize:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{fontSize:16}}>🏛</span>
+          <span style={{fontWeight:700,color:"#166534"}}>{ar?"تمويل مختلط":"Hybrid Financing"}</span>
+          <span style={{fontSize:10,color:"#059669",background:"#d1fae5",borderRadius:4,padding:"2px 6px"}}>{govPct}% {ar?"حكومي":"Gov."} + {fundPct}% {ar?"صندوق":"Fund"}</span>
+        </div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",color:"#374151"}}>
+          <span>{ar?"القرض الحكومي":"Gov. Loan"}: <b>{typeof fmtM === 'function' ? fmtM(f.govLoanAmount) : Math.round(f.govLoanAmount/1e6)+'M'}</b></span>
+          <span>{ar?"سعر الفائدة":"Rate"}: <b>{(f.govLoanRate*100).toFixed(1)}%</b></span>
+          <span>{ar?"حصة الصندوق":"Fund Portion"}: <b>{typeof fmtM === 'function' ? fmtM(f.fundPortionCost) : Math.round(f.fundPortionCost/1e6)+'M'}</b></span>
+          {isGP && <span style={{color:"#d97706",fontWeight:600}}>⚠ {ar?"القرض على المطور شخصياً":"Personal loan to developer"}</span>}
+        </div>
+      </div>;
+    })()}
 
     {/* ═══ EXPANDABLE KPI CARDS: Investors | Developer | Fund | Total Dev Returns ═══ */}
     {(() => {

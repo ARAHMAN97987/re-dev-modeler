@@ -34,6 +34,14 @@ const defaultProject = () => ({
   upfrontFeePct: 0.5,
   repaymentType: "amortizing",
   capitalCallOrder: "prorata",
+  // Hybrid financing (government + fund)
+  govFinancingPct: 70,
+  govBeneficiary: "project",    // "project" (SPV-level debt) | "gp" (developer personal loan)
+  govFinanceRate: 3.0,
+  govLoanTenor: 15,
+  govGrace: 5,
+  govRepaymentType: "amortizing",
+  govUpfrontFeePct: 0,
   islamicMode: "conventional",
   gpEquityManual: 0,
   lpEquityManual: 0,

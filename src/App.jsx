@@ -629,7 +629,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     )}
 
     {/* ═══ QUICK EDIT: Fund & Waterfall Terms ═══ */}
-    {upCfg && cfg.finMode === "fund" && (
+    {upCfg && (cfg.finMode === "fund" || cfg.finMode === "hybrid") && (
       <div style={{background:showTerms?"#fff":"#f8f9fb",borderRadius:10,border:showTerms?"2px solid #8b5cf6":"1px solid #e5e7ec",marginBottom:14,overflow:"hidden",transition:"all 0.2s"}}>
         <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
           <span style={{fontSize:13}}>⚡</span>
@@ -1341,7 +1341,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const mode = project.finMode || financing?.mode || "self";
 
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
-  if (mode === "fund") {
+  if (mode === "fund" || mode === "hybrid") {
     return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
   }
 
@@ -2542,9 +2542,10 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
     {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
     {(() => {
-        const hasDbt = cfg.finMode !== "self";
+        const isHybridMode = cfg.finMode === "hybrid";
+        const hasDbt = cfg.finMode !== "self" && !isHybridMode;
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
-        const isFundMode = cfg.finMode === "fund";
+        const isFundMode = cfg.finMode === "fund" || isHybridMode;
         const notHold = (cfg.exitStrategy||"sale") !== "hold";
         // Accordion section header helper
         const AH = ({id, color, label, summary, visible}) => {
@@ -2571,11 +2572,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div className="z-card" style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--text-primary)",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:v==="hybrid"?{debtAllowed:true,govFinancingPct:cfg.govFinancingPct||70,govBeneficiary:cfg.govBeneficiary||"project"}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
             <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
+            <option value="hybrid">{ar?"مختلط (حكومي + صندوق)":"Hybrid (Gov. + Fund)"}</option>
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
@@ -2785,6 +2787,48 @@ When to use:
         {/* ── (old EXIT, LAND sections moved — see new order above) ── */}
         </SecWrap>
 
+        {/* ── SECTION 3b: HYBRID GOVERNMENT FINANCING ── */}
+        <SecWrap visible={isHybridMode} color="#059669">
+        <AH id="govFin" color="#059669" label={ar?"التمويل الحكومي":"Government Financing"} summary={isHybridMode ? `${cfg.govFinancingPct||70}% · ${cfg.govFinanceRate||3}% · ${cfg.govLoanTenor||15}yr` : ""} visible={isHybridMode} />
+        <AB id="govFin" visible={isHybridMode}>{(() => {
+          return <>
+            <div style={g3}>
+              <FL label={ar?"نسبة التمويل الحكومي (%)":"Gov. Financing %"} tip="نسبة تكلفة المشروع المموّلة من الحكومة أو المؤسسة. الباقي يموّله الصندوق (GP/LP)\nPercentage of project cost financed by government/institution. Remainder funded by fund (GP/LP)">
+                <Inp type="number" value={cfg.govFinancingPct??70} onChange={v=>upCfg({govFinancingPct:v})} min={0} max={100} step={5} />
+              </FL>
+              <FL label={ar?"القرض لصالح":"Loan Beneficiary"} tip="المشروع (SPV): الدين على مستوى الشركة، خدمة الدين تُخصم قبل التوزيعات\nالمطور: المطور يقترض شخصياً ويدخل الصندوق بالمبلغ المقترض\n\nProject (SPV): Debt at entity level, DS deducted before distributions\nDeveloper: Developer borrows personally and enters fund with borrowed amount">
+                <select className="z-input z-select" value={cfg.govBeneficiary||"project"} onChange={e=>upCfg({govBeneficiary:e.target.value})} style={{minWidth:140}}>
+                  <option value="project">{ar?"المشروع (SPV)":"Project (SPV)"}</option>
+                  <option value="gp">{ar?"المطور شخصياً":"Developer (Personal)"}</option>
+                </select>
+              </FL>
+              <FL label={ar?"سعر الفائدة الحكومي (%)":"Gov. Rate %"} tip="سعر الفائدة على القرض الحكومي — عادةً أقل من السوق (2-5%)\nGovernment loan interest rate — typically below market (2-5%)">
+                <Inp type="number" value={cfg.govFinanceRate??3} onChange={v=>upCfg({govFinanceRate:v})} step={0.5} />
+              </FL>
+            </div>
+            <div style={g3}>
+              <FL label={ar?"مدة القرض (سنوات)":"Gov. Tenor (years)"} tip="مدة القرض الحكومي الإجمالية بما فيها فترة السماح\nTotal government loan duration including grace period">
+                <Inp type="number" value={cfg.govLoanTenor??15} onChange={v=>upCfg({govLoanTenor:v})} min={1} max={50} />
+              </FL>
+              <FL label={ar?"فترة السماح (سنوات)":"Gov. Grace (years)"} tip="فترة السماح قبل بدء سداد الأصل. خلالها يُدفع الفائدة فقط\nGrace period before principal repayment begins. Interest-only during this period">
+                <Inp type="number" value={cfg.govGrace??5} onChange={v=>upCfg({govGrace:v})} min={0} max={30} />
+              </FL>
+              <FL label={ar?"رسوم مقدمة (%)":"Gov. Upfront Fee %"} tip="رسوم لمرة واحدة على القرض الحكومي\nOne-time fee on government loan">
+                <Inp type="number" value={cfg.govUpfrontFeePct??0} onChange={v=>upCfg({govUpfrontFeePct:v})} step={0.25} />
+              </FL>
+            </div>
+            {/* Hybrid summary */}
+            {financing && financing.isHybrid && <div style={{marginTop:8,padding:"8px 12px",background:"var(--surface-sunken)",borderRadius:8,fontSize:11,color:"var(--text-secondary)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
+                <span>{ar?"مبلغ القرض الحكومي":"Gov. Loan Amount"}: <b>{fmtM(financing.govLoanAmount)}</b></span>
+                <span>{ar?"حصة الصندوق":"Fund Portion"}: <b>{fmtM(financing.fundPortionCost)}</b></span>
+                {financing.govBeneficiary === "gp" && <span style={{color:"#d97706"}}>{ar?"⚠ القرض على المطور شخصياً":"⚠ Personal loan to developer"}</span>}
+              </div>
+            </div>}
+          </>;
+        })()}</AB>
+        </SecWrap>
+
         {/* ── SECTION 4: FEES ── */}
         <SecWrap visible={true} color="#f59e0b">
         <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : `${ar?"رسوم المطور":"Developer Fee"} ${cfg.developerFeePct||12}%`} visible={true} />
@@ -2911,7 +2955,7 @@ When to use:
 
       // Get waterfall for selected phase
       const w = (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) ? phaseWaterfalls[singlePhaseName] : waterfall;
-      const isFund = cfg.finMode === "fund";
+      const isFund = cfg.finMode === "fund" || cfg.finMode === "hybrid";
       const isBank = cfg.finMode === "debt" || cfg.finMode === "bank100";
       const isSelf = cfg.finMode === "self";
 
@@ -2941,7 +2985,7 @@ When to use:
 
       return <>
       {/* LP = 0 warning - only relevant for fund/jv where LP is expected */}
-      {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv") && (
+      {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid") && (
         <div style={{background:"#fef3c7",borderRadius:8,border:"1px solid #fde68a",padding:"12px 16px",marginBottom:14,fontSize:12,color:"#92400e"}}>
           <strong>⚠ {ar?"حصة المستثمر = صفر":"Investor Equity = 0"}</strong><br/>
           {ar ? "لا يوجد مستثمرين. لتفعيل حصة المستثمر: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}
@@ -3885,8 +3929,8 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             const fm = project?.finMode || "self";
             const inc = project?.incentives || {};
             const hasAnyIncentive = inc.capexGrant?.enabled || inc.landRentRebate?.enabled || inc.financeSupport?.enabled || inc.feeRebates?.enabled;
-            const hasFund = fm === "fund";
-            const hasDebt = fm === "debt" || fm === "bank100" || fm === "fund";
+            const hasFund = fm === "fund" || fm === "hybrid";
+            const hasDebt = fm === "debt" || fm === "bank100" || fm === "fund" || fm === "hybrid";
             const allTabs = [
               {key:"dashboard",label:t.dashboard,group:"project"},
               {key:"assets",label:t.assetProgram,group:"project"},
@@ -3934,7 +3978,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
 
             // ── Derived metrics ──
             const hasDebt   = fm !== "self" && f?.totalDebt > 0;
-            const hasFund   = fm === "fund" && w;
+            const hasFund   = (fm === "fund" || fm === "hybrid") && w;
             const hasInc    = !isPhase && incentivesResult?.totalIncentiveValue > 0;
             const notHold   = (project?.exitStrategy || "sale") !== "hold";
             const irr       = hasInc && incentivesResult.adjustedIRR != null ? incentivesResult.adjustedIRR : (hasDebt && f?.leveredIRR != null ? f.leveredIRR : pc.irr);
@@ -4073,6 +4117,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
         <Option icon="🏦" label={t?"تمويل بنكي 100% (ملك المطور)":"100% Bank Debt (Developer-Owned)"} desc={t?"البنك يموّل كامل التكلفة، المطور هو المالك":"Bank finances 100%, developer owns"} selected={project.finMode==="bank100"} onClick={()=>onUpdate({finMode:"bank100",debtAllowed:true,maxLtvPct:100})} />
         <Option icon="🏗" label={t?"دين بنكي + رأس مال المطور":"Bank Debt + Developer Equity"} desc={t?"جزء من البنك وجزء من المطور":"Part bank loan, part developer equity"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
         <Option icon="📊" label={t?"صندوق استثماري (مطور/مستثمر)":"Fund Structure (Developer/Investor)"} desc={t?"مطور + مستثمرين مع شلال توزيعات":"Developer + investors with waterfall"} selected={project.finMode==="fund"} onClick={()=>onUpdate({finMode:"fund",debtAllowed:true})} />
+        <Option icon="🏛" label={t?"تمويل مختلط (حكومي + صندوق)":"Hybrid (Government + Fund)"} desc={t?"تمويل حكومي ميسّر + صندوق استثماري على الباقي":"Government financing + fund structure on remainder"} selected={project.finMode==="hybrid"} onClick={()=>onUpdate({finMode:"hybrid",debtAllowed:true,govFinancingPct:70,govBeneficiary:"project"})} />
         <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} /></div>
       </div>
     )},

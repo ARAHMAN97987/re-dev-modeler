@@ -63,7 +63,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const mode = project.finMode || financing?.mode || "self";
 
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
-  if (mode === "fund") {
+  if (mode === "fund" || mode === "hybrid") {
     return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
   }
 

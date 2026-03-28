@@ -24,14 +24,17 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const totalEquity = f.totalEquity;
   const gpPct = f.gpPct;
   const lpPct = f.lpPct;
-  const isFund = project.finMode === "fund";
+  const isFund = project.finMode === "fund" || project.finMode === "hybrid";
+
+  // Fee basis: for hybrid mode, fees apply to fund portion only (not government-financed portion)
+  const fundFeeBasis = f.fundPortionCost || f.devCostExclLand;
 
   // Fee calculations (only Fund type gets full fees)
   const subFee = isFund ? totalEquity * (project.subscriptionFeePct || 0) / 100 : 0;
   // DevFee: read from financing (single source — computed in financing.js)
   const devFeeTotal = f.devFeeTotal || 0;
-  // Structuring fee: % of development cost (CAPEX), not equity — matches ZAN Fund Model
-  let structFee = isFund ? f.devCostExclLand * (project.structuringFeePct || 0) / 100 : 0;
+  // Structuring fee: % of fund portion cost, not total project cost for hybrid
+  let structFee = isFund ? fundFeeBasis * (project.structuringFeePct || 0) / 100 : 0;
   const structFeeCap = project.structuringFeeCap || 0;
   if (structFeeCap > 0 && structFee > structFeeCap) structFee = structFeeCap;
   const mgmtFeeBase = project.mgmtFeeBase || "nav";
@@ -47,9 +50,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const operatorFeePct = (project.operatorFeePct || 0) / 100;
   const operatorFeeBase = hasRentalAssets ? f.devCostExclLand : 0; // Completed asset value ≈ construction cost
 
-  // Miscellaneous expenses: 0.5% of total assets, one-time at fund start
+  // Miscellaneous expenses: 0.5% of fund portion, one-time at fund start
   const miscExpensePct = (project.miscExpensePct || 0) / 100;
-  const miscExpenseTotal = (isFund || project.finMode === "jv") ? f.devCostExclLand * miscExpensePct : 0;
+  const miscExpenseTotal = (isFund || project.finMode === "jv") ? fundFeeBasis * miscExpensePct : 0;
 
   // Fee schedule
   const fees = new Array(h).fill(0);
@@ -109,9 +112,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
       if (mgmtFeeBase === "equity") {
         mgmtBase = totalEquity;
       } else if (mgmtFeeBase === "devCost" || mgmtFeeBase === "fundAssets") {
-        // Total fund assets = devCostInclLand = GP equity + LP equity + debt
-        // This is the correct basis per fund documentation
-        mgmtBase = f.devCostInclLand;
+        // For hybrid: fund portion only. For standard fund: total project cost.
+        mgmtBase = fundFeeBasis;
       } else if (mgmtFeeBase === "nav") {
         // NAV proxy: equity + cumulative net income - cumulative capex (floor at equity)
         mgmtBase = Math.max(totalEquity, totalEquity + cumIncome - cumCapex);
@@ -505,7 +507,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // gpCashIRR removes the land cap portion from the call, showing return on actual cash invested.
   let gpCashIRR = gpIRR;
   let lpCashIRR = lpIRR;
-  if (effectiveLandCap > 0) {
+  const needsCashIRR = effectiveLandCap > 0 || (project.finMode === "hybrid" && project.govBeneficiary === "gp");
+  if (needsCashIRR) {
     const gpCashNetCF = new Array(h).fill(0);
     const lpCashNetCF = new Array(h).fill(0);
     for (let y = 0; y < h; y++) {
@@ -513,6 +516,13 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
       const lpLandCapInCall = (y === fundStartIdx) ? effectiveLandCap * lpPct : 0;
       gpCashNetCF[y] = gpNetCF[y] + gpLandCapInCall;
       lpCashNetCF[y] = lpNetCF[y] + lpLandCapInCall;
+    }
+    // Hybrid-GP: deduct developer's personal government loan debt service from GP cash flows
+    const gpPersonalDS = f.gpPersonalDebt?.ds;
+    if (gpPersonalDS && project.finMode === "hybrid" && project.govBeneficiary === "gp") {
+      for (let y = 0; y < h; y++) {
+        gpCashNetCF[y] -= (gpPersonalDS[y] || 0);
+      }
     }
     gpCashIRR = calcIRR(gpCashNetCF);
     lpCashIRR = calcIRR(lpCashNetCF);
@@ -534,7 +544,12 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // which dilutes the MOIC. Cash MOIC shows return on actual cash invested only.
   const gpCashCalled = Math.max(0, gpTotalCalled - effectiveLandCap * gpPct);
   const lpCashCalled = Math.max(0, lpTotalCalled - effectiveLandCap * lpPct);
-  const gpCashMOIC = gpCashCalled > 0 ? gpNetDist / gpCashCalled : gpMOIC;
+  // GP Cash MOIC: for hybrid-gp, also deduct personal loan debt service from numerator
+  const gpPersonalDSTotal = (f.gpPersonalDebt?.ds || []).reduce((a, b) => a + b, 0);
+  let gpCashMOIC = gpCashCalled > 0 ? gpNetDist / gpCashCalled : gpMOIC;
+  if (gpPersonalDSTotal > 0 && project.finMode === "hybrid" && project.govBeneficiary === "gp") {
+    gpCashMOIC = gpCashCalled > 0 ? (gpNetDist - gpPersonalDSTotal) / gpCashCalled : 0;
+  }
   const lpCashMOIC = lpCashCalled > 0 ? lpNetDist / lpCashCalled : lpMOIC;
   const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;

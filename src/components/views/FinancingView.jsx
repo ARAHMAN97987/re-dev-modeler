@@ -439,9 +439,10 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
     {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
     {(() => {
-        const hasDbt = cfg.finMode !== "self";
+        const isHybridMode = cfg.finMode === "hybrid";
+        const hasDbt = cfg.finMode !== "self" && !isHybridMode;
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
-        const isFundMode = cfg.finMode === "fund";
+        const isFundMode = cfg.finMode === "fund" || isHybridMode;
         const notHold = (cfg.exitStrategy||"sale") !== "hold";
         // Accordion section header helper
         const AH = ({id, color, label, summary, visible}) => {
@@ -812,7 +813,7 @@ When to use:
 
       // Get waterfall for selected phase
       const w = (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) ? phaseWaterfalls[singlePhaseName] : waterfall;
-      const isFund = cfg.finMode === "fund";
+      const isFund = cfg.finMode === "fund" || cfg.finMode === "hybrid";
       const isBank = cfg.finMode === "debt" || cfg.finMode === "bank100";
       const isSelf = cfg.finMode === "self";
 
@@ -842,7 +843,7 @@ When to use:
 
       return <>
       {/* LP = 0 warning - only relevant for fund/jv where LP is expected */}
-      {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv") && (
+      {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid") && (
         <div style={{background:"#fef3c7",borderRadius:8,border:"1px solid #fde68a",padding:"12px 16px",marginBottom:14,fontSize:12,color:"#92400e"}}>
           <strong>⚠ {ar?"حصة المستثمر = صفر":"Investor Equity = 0"}</strong><br/>
           {ar ? "لا يوجد مستثمرين. لتفعيل حصة المستثمر: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}

@@ -183,12 +183,30 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // ── Debt ──
   const isBank100 = project.finMode === "bank100";
-  const rate = (project.financeRate ?? 6.5) / 100;
-  const tenor = project.loanTenor ?? 7;
-  const grace = project.debtGrace ?? 3;
-  const repayYears = Math.max(0, tenor - grace);
-  const maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
-  const upfrontFeePct = (project.upfrontFeePct || 0) / 100;
+  const isHybrid = project.finMode === "hybrid";
+  const isHybridProject = isHybrid && (project.govBeneficiary || "project") === "project";
+  const isHybridGP = isHybrid && project.govBeneficiary === "gp";
+
+  let rate = (project.financeRate ?? 6.5) / 100;
+  let tenor = project.loanTenor ?? 7;
+  let grace = project.debtGrace ?? 3;
+  let repayYears = Math.max(0, tenor - grace);
+  let maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
+  let upfrontFeePct = (project.upfrontFeePct || 0) / 100;
+
+  // ── Hybrid financing overrides ──
+  if (isHybridProject) {
+    // Government debt on SPV — override loan terms with government terms
+    rate = (project.govFinanceRate ?? 3.0) / 100;
+    tenor = project.govLoanTenor ?? 15;
+    grace = project.govGrace ?? 5;
+    repayYears = Math.max(0, tenor - grace);
+    maxDebt = devCostInclLand * (project.govFinancingPct ?? 70) / 100;
+    upfrontFeePct = (project.govUpfrontFeePct || 0) / 100;
+  } else if (isHybridGP) {
+    // Developer personal loan — no project-level debt
+    maxDebt = 0;
+  }
 
   // ── Interest During Construction (IDC) estimation ──
   // When capitalizeIDC is true: estimate financing costs during construction
@@ -222,7 +240,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // Debt mode: developer owns 100% of equity. No LP exists.
   // Only fund and jv modes have LP investors.
-  const hasLP = project.finMode === "fund" || project.finMode === "jv";
+  const hasLP = project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid";
 
   // Dev fee already computed above (line ~115) — reuse devFeeTotal
   // GP investment from dev fee
@@ -269,8 +287,18 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     }
 
     // Safety: if fund mode and both GP and LP = 0, force LP = 100%
-    if (project.finMode === "fund" && lpEquity === 0 && gpEquity === 0 && totalEquity > 0) {
+    if ((project.finMode === "fund" || isHybrid) && lpEquity === 0 && gpEquity === 0 && totalEquity > 0) {
       lpEquity = totalEquity;
+    }
+
+    // ── Hybrid-GP override: developer borrows govLoanAmount, enters fund as equity ──
+    if (isHybridGP) {
+      const govPct = (project.govFinancingPct ?? 70) / 100;
+      const govLoanAmount = devCostInclLand * govPct;
+      // Fund sees full project cost as equity (GP contributes borrowed amount)
+      totalEquity = totalProjectCost;
+      gpEquity = Math.min(govLoanAmount + gpFromLandCap + gpFromDevFee + gpFromCash, totalProjectCost);
+      lpEquity = Math.max(0, totalProjectCost - gpEquity);
     }
 
     // Reconcile - GP + LP must equal totalEquity
@@ -550,7 +578,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // Balloon at exit: for perDraw + fund/jv, ZAN Excel does NOT balloon remaining debt into DS.
   // Exit proceeds (gross) implicitly cover remaining debt as part of the sale transaction.
   // For single tranche OR debt-only mode, balloon IS added (conventional modeling).
-  const isFundPerDraw = trancheMode === "perDraw" && (project.finMode === "fund" || project.finMode === "jv");
+  const isFundPerDraw = trancheMode === "perDraw" && (project.finMode === "fund" || project.finMode === "jv" || isHybrid);
   if (sold && !isFundPerDraw && debtBalClose[exitYr] > 0) {
     const remainingDebt = debtBalClose[exitYr];
     repay[exitYr] += remainingDebt;
@@ -603,6 +631,47 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     if (adjustedDebtService[y] > 0) { dscr[y] = (c.income[y] - adjustedLandRent[y]) / adjustedDebtService[y]; }
   }
 
+  // ── Hybrid-GP: Developer personal government loan schedule ──
+  let gpPersonalDebt = null;
+  if (isHybridGP) {
+    const govPct = (project.govFinancingPct ?? 70) / 100;
+    const gpLoanAmt = devCostInclLand * govPct;
+    const gpLoanRate = (project.govFinanceRate ?? 3.0) / 100;
+    const gpLoanTenor = project.govLoanTenor ?? 15;
+    const gpLoanGrace = project.govGrace ?? 5;
+    const gpRepYrs = Math.max(1, gpLoanTenor - gpLoanGrace);
+    const gpAnnualRepay = gpLoanAmt / gpRepYrs;
+
+    const gpDS = new Array(h).fill(0);
+    const gpInt = new Array(h).fill(0);
+    const gpRep = new Array(h).fill(0);
+    const gpBal = new Array(h).fill(0);
+    let bal = gpLoanAmt;
+    for (let y = 0; y < h && bal > 0; y++) {
+      const intY = bal * gpLoanRate;
+      const repY = y >= gpLoanGrace ? Math.min(gpAnnualRepay, bal) : 0;
+      gpInt[y] = intY;
+      gpRep[y] = repY;
+      gpDS[y] = intY + repY;
+      bal = Math.max(0, bal - repY);
+      gpBal[y] = bal;
+    }
+    gpPersonalDebt = { ds: gpDS, interest: gpInt, repayment: gpRep, balance: gpBal, totalAmount: gpLoanAmt };
+
+    // Apply interest subsidy to personal loan if finance support is enabled
+    if (project.incentives?.financeSupport?.enabled) {
+      const gpSub = applyInterestSubsidy(project, gpInt, constrEnd, gpLoanAmt, gpLoanRate);
+      for (let y = 0; y < h; y++) {
+        gpPersonalDebt.ds[y] = gpSub.adjusted[y] + gpRep[y];
+      }
+      gpPersonalDebt.interestSubsidySavings = gpSub.total;
+    }
+  }
+
+  // ── Hybrid metadata ──
+  const govLoanAmount = isHybrid ? devCostInclLand * (project.govFinancingPct ?? 70) / 100 : 0;
+  const fundPortionCost = isHybrid ? devCostInclLand * (1 - (project.govFinancingPct ?? 70) / 100) : null;
+
   return {
     mode: project.finMode, landCapValue, effectiveLandCap, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
     gpEquity, lpEquity, totalEquity, gpPct, lpPct, gpEquityBreakdown,
@@ -618,5 +687,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     incomeStabilizationYear: autoExitIdx + startYear, optimalExitYear: optimalExitIdx != null ? optimalExitIdx + startYear : null, optimalExitIRR,
     trancheMode, tranches,
     devFeeTotal, devFeeSchedule,
+    // Hybrid financing fields
+    isHybrid, govBeneficiary: isHybrid ? (project.govBeneficiary || "project") : null,
+    govFinancingPct: isHybrid ? (project.govFinancingPct ?? 70) : null,
+    govLoanAmount, govLoanRate: isHybrid ? (project.govFinanceRate ?? 3.0) / 100 : null,
+    gpPersonalDebt, fundPortionCost,
   };
 }
