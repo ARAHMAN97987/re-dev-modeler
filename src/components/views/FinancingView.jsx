@@ -563,6 +563,29 @@ When to use:
           </>;
         })()}</AB>
 
+        {/* ── SECTION: GOVERNMENT FINANCING (hybrid only) ── */}
+        </SecWrap>
+        <SecWrap visible={isHybridMode} color="#059669">
+        <AH id="gov" color="#059669" label={ar?"التمويل الحكومي":"Government Financing"} summary={isHybridMode ? `${cfg.govFinancingPct||70}% · ${cfg.govFinanceRate||3}% · ${cfg.govLoanTenor||15}yr` : ""} visible={isHybridMode} />
+        <AB id="gov" visible={isHybridMode}>{(() => {
+          return <>
+            <FL label={ar?"نسبة التمويل الحكومي %":"Government Financing %"} tip={ar?"نسبة تكلفة المشروع التي يمولها القرض الحكومي/المؤسسي. الباقي يتولاه صندوق الاستثمار (GP + LP)":"Percentage of project cost funded by government/institutional loan. Remainder managed by fund (GP + LP)"}><Inp type="number" value={cfg.govFinancingPct} onChange={v=>upCfg({govFinancingPct:v})} /></FL>
+            <FL label={ar?"القرض لصالح":"Loan Beneficiary"} tip={ar?"على المشروع (SPV): القرض على مستوى الشركة/المشروع - يؤثر على DSCR والتوزيعات. على المطور شخصياً: المطور يقترض ويدفع من توزيعاته - LP لا يتأثر":"Project (SPV): Loan at project level — affects DSCR and distributions. Developer (Personal): Developer borrows personally — pays from GP distributions — LP is shielded"}>
+              <Drp lang={lang} value={cfg.govBeneficiary||"project"} onChange={v=>upCfg({govBeneficiary:v})} options={[{value:"project",en:"Project (SPV)",ar:"المشروع (SPV)"},{value:"gp",en:"Developer (Personal)",ar:"المطور شخصياً"}]} />
+            </FL>
+            <div style={g2}>
+              <FL label={ar?"سعر الفائدة %":"Gov. Rate %"} tip={ar?"معدل الفائدة على القرض الحكومي. عادة أقل من القروض التجارية (2-5%)":"Government loan interest rate. Usually lower than commercial loans (2-5%)"}><Inp type="number" value={cfg.govFinanceRate} onChange={v=>upCfg({govFinanceRate:v})} /></FL>
+              <FL label={ar?"مدة القرض (سنوات)":"Gov. Tenor (years)"} tip={ar?"المدة الإجمالية للقرض الحكومي بما فيها فترة السماح":"Total government loan duration including grace period"}><Inp type="number" value={cfg.govLoanTenor} onChange={v=>upCfg({govLoanTenor:v})} /></FL>
+            </div>
+            <div style={g2}>
+              <FL label={ar?"فترة السماح (سنوات)":"Gov. Grace (years)"} tip={ar?"سنوات بدون سداد أصل القرض. عادة تغطي فترة البناء":"Years without principal repayment. Usually covers construction period"}><Inp type="number" value={cfg.govGrace} onChange={v=>upCfg({govGrace:v})} /></FL>
+              <FL label={ar?"أولوية الصرف":"Draw Order"} tip={ar?"تمويل أولاً: يُستخدم القرض الحكومي كاملاً قبل سحب الأموال من الصندوق. متناسب: يُسحب من كلا المصدرين بالتوازي":"Financing First: exhaust government loan before calling fund equity. Pro-rata: draw from both sources proportionally"}>
+                <Drp lang={lang} value={cfg.hybridDrawOrder||"finFirst"} onChange={v=>upCfg({hybridDrawOrder:v})} options={[{value:"finFirst",en:"Financing First (default)",ar:"التمويل أولاً (تلقائي)"},{value:"prorata",en:"Pro-rata",ar:"متناسب"}]} />
+              </FL>
+            </div>
+          </>;
+        })()}</AB>
+
         {/* ── SECTION: EXIT STRATEGY (visible for ALL modes including self) ── */}
         </SecWrap>
         <SecWrap visible={true} color="#8b5cf6">

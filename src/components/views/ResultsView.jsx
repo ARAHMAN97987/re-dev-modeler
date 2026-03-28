@@ -62,6 +62,53 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   const mode = project.finMode || financing?.mode || "self";
 
+  // Detect mixed financing modes across phases
+  const phaseFinModes = (project.phases || []).map(p => p.financing?.finMode || mode);
+  const hasFundPhase = phaseFinModes.some(m => m === "fund" || m === "hybrid");
+  const hasBankPhase = phaseFinModes.some(m => m === "debt" || m === "bank100");
+  const isMixedMode = hasFundPhase && hasBankPhase;
+
+  // Mixed mode: show BOTH views with labels
+  if (isMixedMode) {
+    const fundPhaseNames = (project.phases || []).filter((p, i) => {
+      const m = p.financing?.finMode || mode;
+      return m === "fund" || m === "hybrid";
+    }).map(p => p.name);
+    const bankPhaseNames = (project.phases || []).filter((p, i) => {
+      const m = p.financing?.finMode || mode;
+      return m === "debt" || m === "bank100";
+    }).map(p => p.name);
+
+    return (
+      <div>
+        {/* Banner explaining mixed mode */}
+        <div style={{margin:"0 0 16px",padding:"10px 14px",borderRadius:8,background:"#fef3c7",border:"1px solid #fbbf24",fontSize:12,color:"#92400e",display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:16}}>⚠️</span>
+          <span>{ar
+            ? `مشروع متعدد الأنماط: ${bankPhaseNames.join("، ")} (بنكي) + ${fundPhaseNames.join("، ")} (صندوق) — الرسوم والتوزيعات تخص المراحل الصندوقية فقط`
+            : `Mixed financing: ${bankPhaseNames.join(", ")} (Bank) + ${fundPhaseNames.join(", ")} (Fund) — fees & distributions apply only to fund phases`
+          }</span>
+        </div>
+        {/* Bank phases results */}
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span>🏦</span> {ar?`نتائج المالك — ${bankPhaseNames.join("، ")}`:`Developer Results — ${bankPhaseNames.join(", ")}`}
+          </div>
+          <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />
+        </div>
+        {/* Fund phases results */}
+        {waterfall && (
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:"#7c3aed",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+              <span>📊</span> {ar?`نتائج الصندوق — ${fundPhaseNames.join("، ")}`:`Fund Results — ${fundPhaseNames.join(", ")}`}
+            </div>
+            <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
   if (mode === "fund" || mode === "hybrid") {
     return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
@@ -550,6 +597,39 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   })();
   const bankSimpleAnnual = bankInvestYears > 0 ? bankSimpleROE / bankInvestYears : 0;
 
+  // ── Developer Feasibility Metrics ──
+  const cumLevCF = useMemo(() => {
+    if (!pf.leveredCF) return [];
+    let cum = 0;
+    return pf.leveredCF.map(v => { cum += v; return cum; });
+  }, [pf.leveredCF]);
+  // Break-even year: first year cumulative CF ≥ 0 after being negative
+  const breakEvenYr = (() => { let wasNeg = false; for (let y = 0; y < h; y++) { if (cumLevCF[y] < -1) wasNeg = true; if (wasNeg && cumLevCF[y] >= 0) return sy + y; } return null; })();
+  // Free cash years: years where levered CF > 0 after construction
+  const freeCashStartYr = (() => { for (let y = constrEnd; y < h; y++) { if ((pf.leveredCF?.[y] || 0) > 0) return sy + y; } return null; })();
+  // Cumulative profit at exit
+  const cumProfitAtExit = exitYr > 0 && exitYr < h ? cumLevCF[exitYr] : cumLevCF[h - 1];
+  // Years of negative cash flow
+  const negCFYears = pf.leveredCF ? pf.leveredCF.filter((v, i) => i < h && v < -1).length : 0;
+  // Annual free cash after debt service (average of operational years)
+  const opYears = pf.leveredCF ? pf.leveredCF.slice(constrEnd).filter(v => v > 0) : [];
+  const avgFreeCash = opYears.length > 0 ? opYears.reduce((a, b) => a + b, 0) / opYears.length : 0;
+  // Owner equity build-up: cumulative NOI - cumulative DS = owner's growing equity
+  const ownerEquityData = useMemo(() => {
+    const data = [];
+    let cumNOI = 0, cumDS = 0;
+    for (let y = 0; y < Math.min(showYrs, h); y++) {
+      const noi = (pc.income[y] || 0) - (pc.landRent[y] || 0);
+      cumNOI += noi;
+      cumDS += (pf.debtService?.[y] || 0);
+      const debtBal = pf.debtBalClose?.[y] || 0;
+      // Rough project value = stable NOI / cap rate (or dev cost if no income yet)
+      const projValue = noi > 0 ? noi / 0.08 : (pf.devCostInclLand || 0);
+      data.push({ year: sy + y, debt: debtBal, projValue, netEquity: projValue - debtBal, cumCF: cumLevCF[y] || 0 });
+    }
+    return data;
+  }, [pc, pf, showYrs, h, sy, cumLevCF]);
+
   // Chart data
   const chartData = years.map(y => ({
     year: sy+y, yr: `Yr ${y+1}`,
@@ -818,6 +898,60 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       </div>
     </div>
     <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و DSCR؟":"What do IRR, NPV, DSCR mean?"} /></div>
+
+    {/* ═══ DEVELOPER FEASIBILITY TIMELINE ═══ */}
+    {pf.leveredCF && (
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#1e3a5f",marginBottom:10}}>{ar?"جدوى المشروع للمالك":"Owner Feasibility Timeline"}</div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)",gap:10}}>
+          {/* Milestone 1: First positive CF */}
+          <div style={{background:"linear-gradient(135deg, #ecfdf5, #d1fae5)",borderRadius:10,padding:"12px 14px",border:"1px solid #86efac"}}>
+            <div style={{fontSize:9,fontWeight:700,color:"#059669",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"أول دخل صافي":"First Positive CF"}</div>
+            <div style={{fontSize:18,fontWeight:800,color:freeCashStartYr?"#059669":"#9ca3af"}}>{freeCashStartYr || "—"}</div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:2}}>{freeCashStartYr ? (ar?`بعد ${freeCashStartYr-sy} سنة`:`After ${freeCashStartYr-sy} years`) : (ar?"لا يوجد":"None")}</div>
+          </div>
+          {/* Milestone 2: Debt cleared */}
+          <div style={{background:"linear-gradient(135deg, #eff6ff, #dbeafe)",borderRadius:10,padding:"12px 14px",border:"1px solid #93c5fd"}}>
+            <div style={{fontSize:9,fontWeight:700,color:"#2563eb",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"تصفية الدين":"Debt Cleared"}</div>
+            <div style={{fontSize:18,fontWeight:800,color:debtClearYr?"#2563eb":"#ef4444"}}>{debtClearYr || (ar?"لم يُصفَّ":"Not cleared")}</div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:2}}>{debtClearYr ? (ar?`بعد ${debtClearYr-sy} سنة`:`After ${debtClearYr-sy} years`) : (ar?"خلال الأفق":"Within horizon")}</div>
+          </div>
+          {/* Milestone 3: Break-even */}
+          <div style={{background:"linear-gradient(135deg, #fefce8, #fef9c3)",borderRadius:10,padding:"12px 14px",border:"1px solid #fde68a"}}>
+            <div style={{fontSize:9,fontWeight:700,color:"#ca8a04",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"نقطة التعادل":"Break-even"}</div>
+            <div style={{fontSize:18,fontWeight:800,color:breakEvenYr?"#ca8a04":"#9ca3af"}}>{breakEvenYr || "—"}</div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:2}}>{breakEvenYr ? (ar?`استرداد في ${breakEvenYr-sy} سنة`:`Recovery in ${breakEvenYr-sy} years`) : (ar?"لم يتحقق":"Not reached")}</div>
+          </div>
+          {/* Milestone 4: Total profit */}
+          <div style={{background:"linear-gradient(135deg, #fdf2f8, #fce7f3)",borderRadius:10,padding:"12px 14px",border:"1px solid #f9a8d4"}}>
+            <div style={{fontSize:9,fontWeight:700,color:"#be185d",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"صافي الربح":"Net Profit"}</div>
+            <div style={{fontSize:18,fontWeight:800,color:cumProfitAtExit>0?"#059669":"#ef4444"}}>{fmtM(cumProfitAtExit||0)}</div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:2}}>{ar?`متوسط سنوي: ${fmtM(avgFreeCash)}`:`Avg annual: ${fmtM(avgFreeCash)}`}</div>
+          </div>
+        </div>
+        {/* J-Curve (cumulative CF) */}
+        {cumLevCF.length > 2 && (
+          <div style={{marginTop:12,background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:"14px 16px"}}>
+            <div style={{fontSize:11,fontWeight:600,color:"#1a1d23",marginBottom:8}}>{ar?"منحنى الاستثمار (التدفق التراكمي)":"Investment J-Curve (Cumulative Cash Flow)"}</div>
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={years.map(y => ({ year: sy+y, cum: cumLevCF[y]||0 }))} margin={{top:5,right:10,left:10,bottom:5}}>
+                <defs>
+                  <linearGradient id="jcPos" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#16a34a" stopOpacity={0.2}/><stop offset="95%" stopColor="#16a34a" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="jcNeg" x1="0" y1="1" x2="0" y2="0"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/><stop offset="95%" stopColor="#ef4444" stopOpacity={0}/></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f1f5" />
+                <XAxis dataKey="year" tick={{fontSize:10,fill:"#6b7080"}} />
+                <YAxis tick={{fontSize:10,fill:"#6b7080"}} tickFormatter={v => v>=1e6?`${(v/1e6).toFixed(0)}M`:v<=-1e6?`${(v/1e6).toFixed(0)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:Math.round(v)} />
+                <Tooltip formatter={(v) => fmt(v)} />
+                <ReferenceLine y={0} stroke="#1a1d23" strokeWidth={1.5} strokeDasharray="4 4" />
+                {breakEvenYr && <ReferenceLine x={breakEvenYr} stroke="#ca8a04" strokeDasharray="4 4" strokeWidth={1} label={{value:ar?"تعادل":"Break-even",position:"top",fontSize:9,fill:"#ca8a04"}} />}
+                <Area type="monotone" dataKey="cum" stroke="#1e3a5f" strokeWidth={2.5} fill="url(#jcPos)" name={ar?"تراكمي":"Cumulative"} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+    )}
 
     {/* ═══ EXIT ANALYSIS ═══ */}    {!isFiltered && <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} globalExpand={globalExpand} />}
 
