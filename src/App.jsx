@@ -909,7 +909,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </div>
       </>;
     })()}
-    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ما معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
     {!isFiltered && <ExitAnalysisPanel project={project} results={results} financing={f} waterfall={w} lang={lang} globalExpand={globalExpand} />}
@@ -921,7 +921,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     {cfChartData.length > 2 && (
       <div style={{marginBottom:14}}>
         <button onClick={()=>setWSec(p=>({...p,chart:!p.chart}))} style={{...btnS,fontSize:11,padding:"6px 14px",background:wSec.chart?"#f0f4ff":"#f8f9fb",color:wSec.chart?"#2563eb":"#6b7080",border:"1px solid "+(wSec.chart?"#93c5fd":"#e5e7ec"),borderRadius:6,fontWeight:600}}>
-          📈 {ar?"عرض الشارت":"Show Chart"} {wSec.chart?"▲":"▼"}
+          📈 {ar?"عرض الرسم البياني":"Show Chart"} {wSec.chart?"▲":"▼"}
         </button>
         {wSec.chart && <div style={{marginTop:10,background:"var(--surface-card)",borderRadius:10,border:"0.5px solid var(--border-default)",padding:"14px 18px",animation:"zanSlide 0.15s ease"}}>
           <ResponsiveContainer width="100%" height={180}>
@@ -970,13 +970,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       {/* ═══ § 8. FUND CF ═══ */}
       <tr onClick={()=>setWSec(p=>({...p,s8:!p.s8}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #3b82f6",userSelect:"none"}}>{wSec.s8?"▶":"▼"} {ar?"8. تدفقات الصندوق (ممول)":"8. FUND CASH FLOW (Levered)"}</td></tr>
       {!wSec.s8 && <>
-      <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={w.equityCalls} total={w.equityCalls.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
+      <CFRow label={ar?"طلبات رأس المال":"Equity Calls"} values={w.equityCalls} total={w.equityCalls.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
       {f && <>
-        <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.drawdown?.reduce((a,b)=>a+b,0)||0} />
+        <CFRow label={ar?"سحوبات الدين":"Debt Drawdown"} values={f.drawdown} total={f.drawdown?.reduce((a,b)=>a+b,0)||0} />
         <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={f.debtBalOpen} total={null} />
         <CFRow label={ar?"سداد أصل الدين":"Debt Repayment"} values={f.repayment} total={f.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
         <CFRow label={ar?"رصيد الدين (نهاية)":"Debt Balance (Close)"} values={f.debtBalClose} total={null} />
-        <CFRow label={ar?"تكلفة التمويل (فائدة)":"Interest/Profit"} values={f.interest} total={f.totalInterest||0} negate color="#ef4444" />
+        <CFRow label={ar?"تكلفة التمويل (Profit / Interest)":"Interest/Profit"} values={f.interest} total={f.totalInterest||0} negate color="#ef4444" />
         <CFRow label={ar?"إجمالي خدمة الدين":"Total Debt Service"} values={f.debtService} total={f.debtService?.reduce((a,b)=>a+b,0)||0} negate bold color="#ef4444" />
         {/* DSCR */}
         {f.dscr && <tr>
@@ -1607,7 +1607,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
         )}
       </div>
     </div>
-    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ما معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}
     {!isFiltered && <ExitAnalysisPanel project={project} results={results} financing={f} lang={lang} globalExpand={globalExpand} />}
@@ -2095,7 +2095,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         )}
       </div>
     </div>
-    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و DSCR؟":"What do IRR, NPV, DSCR mean?"} /></div>
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ما معنى IRR و NPV و DSCR؟":"What do IRR, NPV, DSCR mean?"} /></div>
 
     {/* ═══ EXIT ANALYSIS ═══ */}    {!isFiltered && <ExitAnalysisPanel project={project} results={results} financing={pf} lang={lang} globalExpand={globalExpand} />}
 
@@ -2227,18 +2227,18 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       {/* ═══ § 2. BANK FINANCING ═══ */}
       <tr onClick={()=>setSecOpen(p=>({...p,s2:!p.s2}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:10,fontWeight:700,color:"#2563eb",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase",borderTop:"2px solid #3b82f6",userSelect:"none"}}>{secOpen.s2?"▶":"▼"} {ar?"2. التمويل البنكي":"2. BANK FINANCING"}</td></tr>
       {!secOpen.s2 && <>
-      {!isBank100 && pf.equityCalls && <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={pf.equityCalls} total={pf.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" negate />}
+      {!isBank100 && pf.equityCalls && <CFRow label={ar?"طلبات رأس المال":"Equity Calls"} values={pf.equityCalls} total={pf.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" negate />}
       {/* Cumulative equity deployed */}
       {!isBank100 && pf.equityCalls && <tr style={{background:"#faf5ff"}}>
         <td style={{...tdSt,position:"sticky",left:0,background:"#faf5ff",zIndex:1,fontWeight:500,fontSize:10,color:"#7c3aed",paddingInlineStart:20,minWidth:isMobile?120:200}}>{ar?"↳ ملكية تراكمية":"↳ Cumulative Equity"}</td>
         <td style={tdN}></td>
         {(() => { let cum=0; return years.map(y => { cum+=pf.equityCalls[y]||0; return <td key={y} style={{...tdN,fontSize:10,fontWeight:500,color:cum>0?"#7c3aed":"#d0d4dc"}}>{cum>0?fmt(cum):"—"}</td>; }); })()}
       </tr>}
-      <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={pf.drawdown} total={pf.drawdown?.reduce((a,b)=>a+b,0)||0} />
+      <CFRow label={ar?"سحوبات الدين":"Debt Drawdown"} values={pf.drawdown} total={pf.drawdown?.reduce((a,b)=>a+b,0)||0} />
       <CFRow label={ar?"رصيد الدين (بداية)":"Debt Balance (Open)"} values={pf.debtBalOpen} total={null} />
       <CFRow label={ar?"(-) سداد أصل الدين":"(-) Principal Repayment"} values={pf.repayment} total={pf.repayment?.reduce((a,b)=>a+b,0)||0} negate color="#ef4444" />
       <CFRow label={ar?"رصيد الدين (نهاية)":"Debt Balance (Close)"} values={pf.debtBalClose} total={null} />
-      <CFRow label={ar?"(-) تكلفة التمويل (فائدة)":"(-) Interest / Profit Cost"} values={pf.interest} total={pf.totalInterest||0} negate color="#ef4444" />
+      <CFRow label={ar?"(-) تكلفة التمويل (Profit / Interest)":"(-) Interest / Profit Cost"} values={pf.interest} total={pf.totalInterest||0} negate color="#ef4444" />
       <CFRow label={ar?"= إجمالي خدمة الدين":"= Total Debt Service"} values={pf.debtService} total={totalDS} negate bold color="#ef4444" />
       {/* Exit */}
       {exitProc > 0 && <CFRow label={ar?"(+) حصيلة التخارج":"(+) Exit Proceeds"} values={pf.exitProceeds} total={exitProc} color="#16a34a" />}
@@ -2626,7 +2626,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           </FL>}
           {cfg.landCapitalize&&(project.landType==="lease"||project.landType==="bot")&&<>
             <div style={g2}>
-              <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur} · ${dh("landCapRate")}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
+              <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها ضمن حقوق الملكية (Equity). يُفضّل أن يكون التقييم محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur} · ${dh("landCapRate")}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
               <FL label={ar?"رسملة حق الانتفاع لصالح":"Leasehold Cap Credit To"} tip={ar?"من يُحسب له حق الانتفاع كحصة Equity: المطور أو المستثمر أو مقسمة":"Who gets the leasehold capitalization as equity credit: Developer, Investor, or split 50/50"}><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (default)",ar:"المطور (تلقائي)"},{value:"lp",en:"Investor",ar:"المستثمر"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
             </div>
             {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer",ar:"المطور"},{value:"lp",en:"Investor",ar:"المستثمر"}]} /></FL>}
@@ -2702,13 +2702,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           const showDebtFields = cfg.debtAllowed || cfg.finMode === "bank100";
           return <>
             {cfg.finMode !== "bank100" && (
-              <FL label={ar?"هل الدين مسموح؟":"Debt Allowed"} tip="هذا المفتاح يحدد هل النموذج يسمح بتمويل بنكي. عند إيقافه يصبح المشروع ممولاً بالكامل من Equity\nToggles whether bank debt is allowed. If off, the project becomes fully equity-funded">
+              <FL label={ar?"هل الدين مسموح؟":"Debt Allowed"} tip="يحدد هذا الخيار ما إذا كان النموذج يسمح بتمويل بنكي. عند إيقافه يصبح المشروع ممولاً بالكامل من حقوق الملكية (Equity)\nToggles whether bank debt is allowed. If off, the project becomes fully equity-funded">
                 <Drp lang={lang} value={cfg.debtAllowed?"Y":"N"} onChange={v=>upCfg({debtAllowed:v==="Y"})} options={["Y","N"]} />
               </FL>
             )}
             {showDebtFields && <>
               <div style={g2}>
-                {cfg.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى قيمة المشروع. في السعودية 50-70%\nLoan-to-Value ratio. Saudi: 50-70%" hint={dh("maxLtvPct")} error={cfg.maxLtvPct>100?(ar?"الحد الأقصى 100%":"Max 100%"):cfg.maxLtvPct<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><Inp type="number" value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} /></FL>}
+                {cfg.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى القيمة (LTV). في السعودية تكون غالباً 50%-70%\nLoan-to-Value ratio (LTV). Saudi market: 50%-70%" hint={dh("maxLtvPct")} error={cfg.maxLtvPct>100?(ar?"الحد الأقصى 100%":"Max 100%"):cfg.maxLtvPct<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><Inp type="number" value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} /></FL>}
                 <FL label={ar?"معدل %":"Rate %"} tip="معدل تكلفة التمويل السنوي. في السعودية 5-8%\nAnnual financing cost rate. Saudi: 5-8%" hint={dh("financeRate")} error={cfg.financeRate>30?(ar?"الحد الأقصى 30%":"Max 30%"):cfg.financeRate<0?(ar?"لا يمكن أن يكون سالباً":"Cannot be negative"):null}><Inp type="number" value={cfg.financeRate} onChange={v=>upCfg({financeRate:v})} /></FL>
               </div>
               <div style={g3}>
@@ -2879,7 +2879,7 @@ When to use:
                 </div>}
               </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<FL label={ar?"المضاعف":"Multiple (x)"} tip="قيمة البيع = الإيجار × المضاعف. عادة 8x-15x\nSale price = Rent × Multiple. Usually 8x-15x" hint={dh("exitMultiple")}><Inp type="number" value={cfg.exitMultiple} onChange={v=>upCfg({exitMultiple:v})} /></FL>}
-              {cfg.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="قيمة التخارج = NOI / Cap Rate. في السعودية 7-10% للأصول المستقرة\nExit = NOI / Cap Rate. Saudi stabilized: 7-10%" hint={dh("exitCapRate")}><Inp type="number" value={cfg.exitCapRate} onChange={v=>upCfg({exitCapRate:v})} /></FL>}
+              {cfg.exitStrategy==="caprate"&&<FL label={ar?"معدل الرسملة %":"Cap Rate %"} tip="قيمة التخارج = صافي الدخل التشغيلي (NOI) ÷ معدل الرسملة (Cap Rate). في السعودية 7%-10% للأصول المستقرة\nExit Value = NOI ÷ Cap Rate. Saudi stabilized assets: 7%-10%" hint={dh("exitCapRate")}><Inp type="number" value={cfg.exitCapRate} onChange={v=>upCfg({exitCapRate:v})} /></FL>}
             </div>
             <FL label={ar?"تكاليف التخارج %":"Exit Cost %"} tip="تكاليف البيع مثل السمسرة والاستشارات القانونية. عادة 1.5-3% من سعر البيع\nSale costs like brokerage and legal fees. Typically 1.5-3% of sale price" hint={dh("exitCostPct")}><Inp type="number" value={cfg.exitCostPct} onChange={v=>upCfg({exitCostPct:v})} /></FL>
           </>}
@@ -3098,8 +3098,8 @@ When to use:
 
             {/* ── Financing ── */}
             <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:10,fontWeight:700,color:"#3b82f6",background:"#eff6ff",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"التمويل":"FINANCING"}</td></tr>
-            <CFRow label={ar?"سحب الملكية":"Equity Calls"} values={f.equityCalls} total={f.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
-            <CFRow label={ar?"سحب القرض":"Debt Drawdown"} values={f.drawdown} total={f.totalDebt} color="#3b82f6" />
+            <CFRow label={ar?"طلبات رأس المال":"Equity Calls"} values={f.equityCalls} total={f.equityCalls.reduce((a,b)=>a+b,0)} color="#8b5cf6" />
+            <CFRow label={ar?"سحوبات الدين":"Debt Drawdown"} values={f.drawdown} total={f.totalDebt} color="#3b82f6" />
             <CFRow label={ar?"(-) سداد أصل الدين":"(-) Repayment"} values={f.repayment} total={f.repayment.reduce((a,b)=>a+b,0)} color="#ef4444" negate />
             <CFRow label={ar?"(-) تكلفة التمويل":"(-) Interest / Profit Cost"} values={f.interest} total={f.totalInterest} color="#ef4444" negate />
             <CFRow label={ar?"= إجمالي خدمة الدين":"= Total Debt Service"} values={f.debtService} total={f.debtService.reduce((a,b)=>a+b,0)} color="#dc2626" negate bold />
@@ -4241,7 +4241,7 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
           <div style={{background:"rgba(46,196,182,0.08)",border:"1px solid rgba(46,196,182,0.2)",borderRadius:10,padding:"14px 16px",marginBottom:18,textAlign:"center"}}>
             <div style={{fontSize:14,marginBottom:6}}>📬</div>
             <div style={{fontSize:13,fontWeight:600,color:"#2EC4B6",marginBottom:4}}>{ar?"تمت دعوتك لمشروع مشترك":"You've been invited to a shared project"}</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>{ar?"سجّل دخول أو أنشئ حساب جديد عشان تشوف المشروع":"Sign in or create an account to access the project"}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>{ar?"سجّل الدخول أو أنشئ حساباً جديداً للوصول إلى المشروع":"Sign in or create an account to access the project"}</div>
           </div>
         )}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -4259,9 +4259,9 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
           </button>
           <div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.4)"}}>
             {mode==="signin"?(
-              <span>{ar?"ما عندك حساب؟":"Don't have an account?"} <button onClick={()=>setMode("signup")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"سجّل الآن":"Sign up"}</button></span>
+              <span>{ar?"ليس لديك حساب؟":"Don't have an account?"} <button onClick={()=>setMode("signup")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"سجّل الآن":"Sign up"}</button></span>
             ):(
-              <span>{ar?"عندك حساب؟":"Already have an account?"} <button onClick={()=>setMode("signin")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"دخول":"Sign in"}</button></span>
+              <span>{ar?"لديك حساب؟":"Already have an account?"} <button onClick={()=>setMode("signin")} style={{color:"#2EC4B6",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>{ar?"دخول":"Sign in"}</button></span>
             )}
           </div>
         </div>
@@ -5589,7 +5589,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           <input type="number" value={project.contingencyPct??5} onChange={e=>up({contingencyPct:parseFloat(e.target.value)||0})} style={{width:38,padding:"2px 4px",fontSize:11,border:"1px solid #d8b4fe",borderRadius:4,textAlign:"center",background:"#fff",fontFamily:"inherit"}} title={ar?"احتياطي % (طوارئ وتغييرات)":"Contingency % (overruns & changes)"} />
           <span style={{fontSize:9,color:"#7c3aed"}}>%</span>
         </div>
-        <button onClick={()=>{generateTemplate();addToast(ar?"تم تحميل النموذج":"Template downloaded","success");}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل نموذج Excel":"Download Excel Template"}>
+        <button onClick={()=>{generateTemplate();addToast(ar?"تم تحميل القالب":"Template downloaded","success");}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل قالب Excel":"Download Excel Template"}>
           {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
         <button onClick={()=>{exportAssetsToExcel(project, results);addToast(ar?"تم تصدير الأصول":"Assets exported","success");}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
@@ -5634,7 +5634,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:48,background:"rgba(46,196,182,0.03)",borderRadius:12,border:"1px dashed rgba(46,196,182,0.2)",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏗</div>
             <div style={{fontSize:16,fontWeight:700,color:"var(--text-primary)",marginBottom:6}}>{lang==="ar"?"لا توجد أصول بعد":"No Assets Yet"}</div>
-            <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:20,maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أضف أصول مشروعك لتبدأ تشوف التدفقات والتحليلات. استخدم الزر أدناه أو استورد من ملف.":"Add your project assets to start seeing cash flows and analytics. Use the button below or import from file."}</div>
+            <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:20,maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أضف أصول مشروعك لبدء عرض التدفقات والتحليلات. استخدم الزر أدناه أو استورد من ملف.":"Add your project assets to start seeing cash flows and analytics. Use the button below or import from file."}</div>
             <button onClick={handleAddAsset} style={{background:"linear-gradient(135deg,#0f766e,#2EC4B6)",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
               ➕ {lang==="ar"?"أضف أول أصل":"Add First Asset"}
             </button>
@@ -6074,7 +6074,7 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
       <div style={{background:"linear-gradient(135deg, #0f766e08, #1e40af12)",borderRadius:16,border:"1px solid #2563eb20",padding:"32px 28px",textAlign:"center",marginBottom:20}}>
         <div style={{fontSize:36,marginBottom:12}}>🚀</div>
         <div style={{fontSize:20,fontWeight:700,color:"var(--text-primary)",marginBottom:8}}>{ar?"مشروعك جاهز. هذه هي الخطوة التالية":"Your Project is Ready! Next Step"}</div>
-        <div style={{fontSize:13,color:"var(--text-secondary)",marginBottom:24,maxWidth:480,margin:"0 auto 24px"}}>{ar?"أضف أصول مشروعك (محلات، فنادق، مكاتب، سكني...) عشان تبدأ تشوف الأرقام والتحليلات":"Add your project assets (retail, hotels, offices, residential...) to start seeing numbers and analytics"}</div>
+        <div style={{fontSize:13,color:"var(--text-secondary)",marginBottom:24,maxWidth:480,margin:"0 auto 24px"}}>{ar?"أضف أصول مشروعك (تجزئة، فنادق، مكاتب، سكني...) لبدء عرض الأرقام والتحليلات":"Add your project assets (retail, hotels, offices, residential...) to start seeing numbers and analytics"}</div>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={onGoToAssets} style={{...btnPrim,padding:"12px 28px",fontSize:14,borderRadius:10,display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:18}}>➕</span> {ar?"أضف أصل الآن":"Add Asset Now"}
@@ -6084,7 +6084,7 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(220px, 1fr))",gap:14}}>
         {[
           {icon:"1️⃣",title:ar?"أضف الأصول":"Add Assets",desc:ar?"عرّف كل أصل: نوعه، مساحته، تكلفته، إيراداته":"Define each asset: type, area, cost, revenue",done:false},
-          {icon:"2️⃣",title:ar?"راجع الأرقام":"Review Numbers",desc:ar?"شوف التدفقات النقدية، IRR، NPV في لوحة التحكم":"Check cash flows, IRR, NPV in the dashboard",done:false},
+          {icon:"2️⃣",title:ar?"راجع الأرقام":"Review Numbers",desc:ar?"راجع التدفقات النقدية والعائد الداخلي (IRR) وصافي القيمة الحالية (NPV)":"Check cash flows, IRR, NPV in the dashboard",done:false},
           {icon:"3️⃣",title:ar?"اضبط التمويل":"Configure Financing",desc:ar?"عدّل شروط الدين والتمويل من الشريط الجانبي":"Adjust debt terms and financing from sidebar",done:project.finMode!=="self"},
           {icon:"4️⃣",title:ar?"صدّر التقارير":"Export Reports",desc:ar?"حمّل تقارير البنك والمستثمرين بصيغة PDF أو Excel":"Download bank and investor reports as PDF or Excel",done:false},
         ].map((s,i)=>(
@@ -6212,7 +6212,7 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
     </div>
 
     {/* ═══ SECTION 1.5: Financial Metrics Help ═══ */}
-    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ايش معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
+    <div style={{marginBottom:12}}><HelpLink contentKey="financialMetrics" lang={lang} onOpen={setEduModal} label={ar?"ما معنى IRR و NPV و MOIC؟":"What do IRR, NPV, MOIC mean?"} /></div>
 
     {/* ═══ SECTION 2: Sources & Uses + Key Metrics ═══ */}
     <div style={{display:"grid",gridTemplateColumns:f&&f.mode!=="self"?(isMobile?"1fr":"1fr 1fr"):"1fr",gap:14,marginBottom:20}}>
@@ -8618,7 +8618,7 @@ const EDUCATIONAL_CONTENT = {
     ar: {
       title: "دليل البداية السريعة",
       intro: "خطوات عملية لإنشاء أول نموذج مالي لك في أقل من 10 دقائق.",
-      cta: "يلا نبدأ!",
+      cta: "لنبدأ!",
       tabs: [
         { id: "step1", label: "الخطوة 1: المشروع", icon: "1️⃣", content: [
           { type: "heading", text: "أنشئ مشروع جديد" },
