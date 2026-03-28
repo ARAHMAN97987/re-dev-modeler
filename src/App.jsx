@@ -653,18 +653,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     {f?.isHybrid && (() => {
       const finPct = f.govFinancingPct || 70;
       const fundPctVal = 100 - finPct;
-      const fundShare = fundPctVal / 100;
-      const finShare = finPct / 100;
       const maxYr = w.exitYear ? w.exitYear - sy + 2 : Math.min(showYrs || 15, h);
       const hybYears = Array.from({length: Math.min(maxYr + 1, h)}, (_, i) => i);
-      // Financing side arrays (scaled by finShare)
-      const finIncome = hybYears.map(y => (pc.income[y]||0) * finShare);
-      const finLandRent = hybYears.map(y => (pc.landRent[y]||0) * finShare);
-      const finCapex = hybYears.map(y => (pc.capex[y]||0) * finShare);
-      // Fund side arrays (scaled by fundShare)
-      const fundIncome = hybYears.map(y => (pc.income[y]||0) * fundShare);
-      const fundLandRent = hybYears.map(y => (pc.landRent[y]||0) * fundShare);
-      const fundCapex = hybYears.map(y => (pc.capex[y]||0) * fundShare);
       // Table builder helper
       const HybTable = ({id, title, titleColor, borderColor, bgColor, children}) => {
         const [open, setOpen] = useState(false);
@@ -677,12 +667,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           {open && <div className="table-wrap" style={{overflowX:"auto",maxHeight:400,overflowY:"auto"}}><table style={{...tblStyle,fontSize:10,width:"100%"}}>{children}</table></div>}
         </div>;
       };
-      const HRow = ({label, arr, color, bold, negate}) => {
+      const HRow = ({label, arr, color, bold, negate, sub}) => {
         const tot = arr.reduce((a,b)=>a+b,0);
         const st = bold ? {fontWeight:700,background:"var(--surface-table-header)"} : {};
         const nc = v => color || (v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af");
         return <tr style={st}>
-          <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:140,fontSize:10}}>{label}</td>
+          <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:sub?400:500,minWidth:140,fontSize:sub?9:10,paddingInlineStart:sub?24:undefined,color:sub?"var(--text-tertiary)":undefined}}>{label}</td>
           <td style={{...tdN,fontWeight:600,fontSize:10,color:nc(negate?-tot:tot)}}>{fmt(tot)}</td>
           {hybYears.map(y=>{const v=arr[y]||0;return <td key={y} style={{...tdN,fontSize:10,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
         </tr>;
@@ -694,17 +684,19 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </tr></thead>;
 
       return <div style={{marginBottom:14}}>
-        {/* ── TABLE 1: Financing Side ── */}
-        <HybTable id="hybFin" title={`🏦 ${ar?`جانب التمويل (${finPct}%)`:`Financing Side (${finPct}%)`} — ${fmtM(f.govLoanAmount)} @ ${((f.govLoanRate||0)*100).toFixed(1)}%`} titleColor="#1e40af" borderColor="#93c5fd" bgColor="#eff6ff">
+        {/* ── TABLE 1: Financing Side (Debt Instrument) ── */}
+        <HybTable id="hybFin" title={`🏦 ${ar?`التمويل المؤسسي (${finPct}%)`:`Institutional Financing (${finPct}%)`} — ${fmtM(f.govLoanAmount)} @ ${((f.govLoanRate||0)*100).toFixed(1)}%`} titleColor="#1e40af" borderColor="#93c5fd" bgColor="#eff6ff">
           <THead />
           <tbody>
-            <HRow label={ar?"الإيرادات (حصة التمويل)":"Revenue (Fin. Share)"} arr={finIncome} color="#16a34a" />
-            <HRow label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={finLandRent} color="#ef4444" negate />
-            <HRow label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={finCapex} color="#ef4444" negate />
             <HRow label={ar?"سحوبات الدين":"Debt Drawdown"} arr={f.drawdown} color="#3b82f6" />
-            <HRow label={ar?"(-) سداد الأصل":"(-) Repayment"} arr={f.repayment} color="#ef4444" negate />
-            <HRow label={ar?"(-) تكلفة التمويل":"(-) Interest"} arr={f.interest} color="#ef4444" negate />
-            <HRow label={ar?"= صافي تدفق التمويل":"= Net Financing CF"} arr={hybYears.map(y => (f.drawdown[y]||0) - (f.debtService[y]||0))} bold />
+            <HRow label={ar?"(-) تكلفة التمويل (فائدة)":"(-) Interest / Profit"} arr={f.interest} color="#ef4444" negate />
+            <HRow label={ar?"(-) سداد الأصل":"(-) Principal Repayment"} arr={f.repayment} color="#ef4444" negate />
+            <HRow label={ar?"= صافي تدفق التمويل":"= Net Financing CF"} arr={f.financingCF || hybYears.map(y => (f.drawdown[y]||0) - (f.debtService[y]||0))} bold />
+            <tr style={{background:"#eff6ff"}}>
+              <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:9,color:"#3b82f6",paddingInlineStart:16}}>{ar?"رصيد الدين":"Debt Balance"}</td>
+              <td style={tdN}></td>
+              {hybYears.map(y=><td key={y} style={{...tdN,fontSize:9,color:"#3b82f6"}}>{f.debtBalClose[y]===0?"—":fmt(f.debtBalClose[y])}</td>)}
+            </tr>
             <tr style={{background:"#eff6ff"}}>
               <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:9,color:"#3b82f6",paddingInlineStart:16}}>DSCR</td>
               <td style={tdN}></td>
@@ -713,22 +705,33 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </tbody>
         </HybTable>
 
-        {/* ── TABLE 2: Fund Side ── */}
-        <HybTable id="hybFund" title={`📊 ${ar?`جانب الصندوق (${fundPctVal}%)`:`Fund Side (${fundPctVal}%)`} — ${ar?"ملكية":"Equity"}: ${fmtM(f.totalEquity)} | LP IRR: ${w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"} | MOIC: ${w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}`} titleColor="#6d28d9" borderColor="#c4b5fd" bgColor="#faf5ff">
+        {/* ── TABLE 2: Fund Side (Equity Account) ── */}
+        {/* Fund sees: full project revenue/costs, debt flows in/out, then its fees + exit */}
+        <HybTable id="hybFund" title={`📊 ${ar?`الصندوق (${fundPctVal}% ملكية)`:`Fund (${fundPctVal}% Equity)`} — ${fmtM(f.totalEquity)} | LP IRR: ${w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"} | MOIC: ${w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}`} titleColor="#6d28d9" borderColor="#c4b5fd" bgColor="#faf5ff">
           <THead />
           <tbody>
-            <HRow label={ar?"الإيرادات (حصة الصندوق)":"Revenue (Fund Share)"} arr={fundIncome} color="#16a34a" />
-            <HRow label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={fundLandRent} color="#ef4444" negate />
-            <HRow label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={fundCapex} color="#ef4444" negate />
-            <HRow label={ar?"طلبات رأس المال":"Equity Calls"} arr={w.equityCalls||[]} color="#8b5cf6" />
+            {/* Project operations (fund operates full project) */}
+            <HRow label={ar?"الإيرادات":"Revenue"} arr={hybYears.map(y=>pc.income[y]||0)} color="#16a34a" />
+            <HRow label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={hybYears.map(y=>pc.landRent[y]||0)} color="#ef4444" negate />
+            <HRow label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={hybYears.map(y=>pc.capex[y]||0)} color="#ef4444" negate />
+            {/* Debt flows through the fund (received from lender, paid back) */}
+            <HRow label={ar?"(+) سحوبات التمويل":"(+) Financing Drawdown"} arr={f.drawdown} color="#3b82f6" sub />
+            <HRow label={ar?"(-) خدمة الدين":"(-) Debt Service"} arr={f.debtService} color="#dc2626" negate sub />
+            {/* Fund-specific costs */}
+            {f.devFeeSchedule && <HRow label={ar?"(-) أتعاب المطور":"(-) Developer Fee"} arr={f.devFeeSchedule} color="#f59e0b" negate />}
             {w.fees && <HRow label={ar?"(-) رسوم الصندوق":"(-) Fund Fees"} arr={w.fees} color="#f59e0b" negate />}
-            <HRow label={ar?"= صافي تدفق الصندوق":"= Net Fund CF"} arr={f.leveredCF} bold />
-            {w.lpDist && <HRow label={ar?"توزيعات المستثمر":"LP Distributions"} arr={w.lpDist} color="#6d28d9" />}
-            {w.gpDist && <HRow label={ar?"توزيعات المطور":"GP Distributions"} arr={w.gpDist} color="#8b5cf6" />}
+            {/* Exit */}
+            <HRow label={ar?"حصيلة التخارج":"Exit Proceeds"} arr={hybYears.map(y=>f.exitProceeds?.[y]||0)} color="#8b5cf6" />
+            {/* Net = leveredCF (correct: full project after all debt & fees) */}
+            <HRow label={ar?"= صافي تدفق الصندوق":"= Net Fund CF"} arr={f.fundCF || f.leveredCF} bold />
+            {/* Equity & distributions */}
+            <HRow label={ar?"طلبات رأس المال":"Equity Calls"} arr={w.equityCalls||f.equityCalls||[]} color="#8b5cf6" />
+            {w.lpDist && <HRow label={ar?"توزيعات المستثمر (LP)":"LP Distributions"} arr={w.lpDist} color="#6d28d9" />}
+            {w.gpDist && <HRow label={ar?"توزيعات المطور (GP)":"GP Distributions"} arr={w.gpDist} color="#8b5cf6" />}
           </tbody>
         </HybTable>
 
-        {/* ── TABLE 3: Combined (Full Project) ── */}
+        {/* ── TABLE 3: Combined (Full Project — Unlevered & Levered) ── */}
         <HybTable id="hybCombined" title={`📋 ${ar?"المشروع الكامل (مجمّع)":"Full Project (Combined)"} — ${fmtM(f.devCostInclLand)}`} titleColor="#1e3a5f" borderColor="#94a3b8" bgColor="#f1f5f9">
           <THead />
           <tbody>
@@ -738,6 +741,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             {(() => { const u=hybYears.map(y=>(pc.income[y]||0)-(pc.landRent[y]||0)-(pc.capex[y]||0)); return <HRow label={ar?"= صافي التدفق (قبل التمويل)":"= Unlevered CF"} arr={u} bold />; })()}
             <HRow label={ar?"سحوبات الدين":"Debt Drawdown"} arr={f.drawdown} color="#3b82f6" />
             <HRow label={ar?"(-) خدمة الدين":"(-) Debt Service"} arr={f.debtService} color="#dc2626" negate />
+            {f.devFeeSchedule && <HRow label={ar?"(-) أتعاب المطور":"(-) Developer Fee"} arr={f.devFeeSchedule} color="#f59e0b" negate />}
             {w.fees && <HRow label={ar?"(-) رسوم الصندوق":"(-) Fund Fees"} arr={w.fees} color="#f59e0b" negate />}
             <HRow label={ar?"حصيلة التخارج":"Exit Proceeds"} arr={hybYears.map(y=>f.exitProceeds?.[y]||0)} color="#8b5cf6" />
             <HRow label={ar?"= صافي التدفق الممول":"= Levered Net CF"} arr={f.leveredCF} bold />
@@ -3316,16 +3320,8 @@ When to use:
       {isHybrid && f && w && pc && (() => {
         const finPct = f.govFinancingPct || 70;
         const fundPctVal = 100 - finPct;
-        const fundShare = fundPctVal / 100;
-        const finShare = finPct / 100;
         const maxYr = f.exitYear ? f.exitYear - sy + 2 : Math.min(showYrs || 15, h);
         const hybYears = Array.from({length: Math.min(maxYr + 1, h)}, (_, i) => i);
-        const finIncome = hybYears.map(y => (pc.income[y]||0) * finShare);
-        const finLandRent = hybYears.map(y => (pc.landRent[y]||0) * finShare);
-        const finCapex = hybYears.map(y => (pc.capex[y]||0) * finShare);
-        const fundIncome = hybYears.map(y => (pc.income[y]||0) * fundShare);
-        const fundLandRent = hybYears.map(y => (pc.landRent[y]||0) * fundShare);
-        const fundCapex = hybYears.map(y => (pc.capex[y]||0) * fundShare);
         const HybTbl = ({id, title, titleColor, borderColor, bgColor, children}) => {
           const [open, setOpen] = useState(false);
           return <div style={{marginBottom:10,borderRadius:8,border:`1px solid ${borderColor}`,overflow:"hidden"}}>
@@ -3337,12 +3333,12 @@ When to use:
             {open && <div className="table-wrap" style={{overflowX:"auto",maxHeight:400,overflowY:"auto"}}><table style={{...tblStyle,fontSize:10,width:"100%"}}>{children}</table></div>}
           </div>;
         };
-        const HRw = ({label, arr, color, bold, negate}) => {
+        const HRw = ({label, arr, color, bold, negate, sub}) => {
           const tot = arr.reduce((a,b)=>a+b,0);
           const st = bold ? {fontWeight:700,background:"var(--surface-table-header)"} : {};
           const nc = v => color || (v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af");
           return <tr style={st}>
-            <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:140,fontSize:10}}>{label}</td>
+            <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:sub?400:500,minWidth:140,fontSize:sub?9:10,paddingInlineStart:sub?24:undefined,color:sub?"var(--text-tertiary)":undefined}}>{label}</td>
             <td style={{...tdN,fontWeight:600,fontSize:10,color:nc(negate?-tot:tot)}}>{fmt(tot)}</td>
             {hybYears.map(y=>{const v=arr[y]||0;return <td key={y} style={{...tdN,fontSize:10,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
           </tr>;
@@ -3354,16 +3350,19 @@ When to use:
         </tr></thead>;
 
         return <Sec id="hybridCF" icon="🔀" title="Hybrid Cash Flows (3 Views)" titleAr="التدفقات النقدية المختلطة (3 عروض)" color="#059669">
-          <HybTbl id="hfFin" title={`🏦 ${ar?`جانب التمويل (${finPct}%)`:`Financing Side (${finPct}%)`} — ${fmtM(f.govLoanAmount)} @ ${((f.govLoanRate||0)*100).toFixed(1)}%`} titleColor="#1e40af" borderColor="#93c5fd" bgColor="#eff6ff">
+          {/* Table 1: Financing (Debt Instrument) */}
+          <HybTbl id="hfFin" title={`🏦 ${ar?`التمويل المؤسسي (${finPct}%)`:`Institutional Financing (${finPct}%)`} — ${fmtM(f.govLoanAmount)} @ ${((f.govLoanRate||0)*100).toFixed(1)}%`} titleColor="#1e40af" borderColor="#93c5fd" bgColor="#eff6ff">
             <THd />
             <tbody>
-              <HRw label={ar?"الإيرادات (حصة التمويل)":"Revenue (Fin. Share)"} arr={finIncome} color="#16a34a" />
-              <HRw label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={finLandRent} color="#ef4444" negate />
-              <HRw label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={finCapex} color="#ef4444" negate />
               <HRw label={ar?"سحوبات الدين":"Debt Drawdown"} arr={f.drawdown} color="#3b82f6" />
-              <HRw label={ar?"(-) سداد الأصل":"(-) Repayment"} arr={f.repayment} color="#ef4444" negate />
-              <HRw label={ar?"(-) تكلفة التمويل":"(-) Interest"} arr={f.interest} color="#ef4444" negate />
-              <HRw label={ar?"= صافي تدفق التمويل":"= Net Financing CF"} arr={hybYears.map(y => (f.drawdown[y]||0) - (f.debtService[y]||0))} bold />
+              <HRw label={ar?"(-) تكلفة التمويل (فائدة)":"(-) Interest / Profit"} arr={f.interest} color="#ef4444" negate />
+              <HRw label={ar?"(-) سداد الأصل":"(-) Principal Repayment"} arr={f.repayment} color="#ef4444" negate />
+              <HRw label={ar?"= صافي تدفق التمويل":"= Net Financing CF"} arr={f.financingCF || hybYears.map(y => (f.drawdown[y]||0) - (f.debtService[y]||0))} bold />
+              <tr style={{background:"#eff6ff"}}>
+                <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:9,color:"#3b82f6",paddingInlineStart:16}}>{ar?"رصيد الدين":"Debt Balance"}</td>
+                <td style={tdN}></td>
+                {hybYears.map(y=><td key={y} style={{...tdN,fontSize:9,color:"#3b82f6"}}>{f.debtBalClose[y]===0?"—":fmt(f.debtBalClose[y])}</td>)}
+              </tr>
               <tr style={{background:"#eff6ff"}}>
                 <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:9,color:"#3b82f6",paddingInlineStart:16}}>DSCR</td>
                 <td style={tdN}></td>
@@ -3372,20 +3371,26 @@ When to use:
             </tbody>
           </HybTbl>
 
-          <HybTbl id="hfFund" title={`📊 ${ar?`جانب الصندوق (${fundPctVal}%)`:`Fund Side (${fundPctVal}%)`} — ${ar?"ملكية":"Equity"}: ${fmtM(f.totalEquity)} | LP IRR: ${w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"} | MOIC: ${w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}`} titleColor="#6d28d9" borderColor="#c4b5fd" bgColor="#faf5ff">
+          {/* Table 2: Fund (Equity Account) */}
+          <HybTbl id="hfFund" title={`📊 ${ar?`الصندوق (${fundPctVal}% ملكية)`:`Fund (${fundPctVal}% Equity)`} — ${fmtM(f.totalEquity)} | LP IRR: ${w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"} | MOIC: ${w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}`} titleColor="#6d28d9" borderColor="#c4b5fd" bgColor="#faf5ff">
             <THd />
             <tbody>
-              <HRw label={ar?"الإيرادات (حصة الصندوق)":"Revenue (Fund Share)"} arr={fundIncome} color="#16a34a" />
-              <HRw label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={fundLandRent} color="#ef4444" negate />
-              <HRw label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={fundCapex} color="#ef4444" negate />
-              <HRw label={ar?"طلبات رأس المال":"Equity Calls"} arr={w.equityCalls||[]} color="#8b5cf6" />
+              <HRw label={ar?"الإيرادات":"Revenue"} arr={hybYears.map(y=>pc.income[y]||0)} color="#16a34a" />
+              <HRw label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={hybYears.map(y=>pc.landRent[y]||0)} color="#ef4444" negate />
+              <HRw label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={hybYears.map(y=>pc.capex[y]||0)} color="#ef4444" negate />
+              <HRw label={ar?"(+) سحوبات التمويل":"(+) Financing Drawdown"} arr={f.drawdown} color="#3b82f6" sub />
+              <HRw label={ar?"(-) خدمة الدين":"(-) Debt Service"} arr={f.debtService} color="#dc2626" negate sub />
+              {f.devFeeSchedule && <HRw label={ar?"(-) أتعاب المطور":"(-) Developer Fee"} arr={f.devFeeSchedule} color="#f59e0b" negate />}
               {w.fees && <HRw label={ar?"(-) رسوم الصندوق":"(-) Fund Fees"} arr={w.fees} color="#f59e0b" negate />}
-              <HRw label={ar?"= صافي تدفق الصندوق":"= Net Fund CF"} arr={f.leveredCF} bold />
-              {w.lpDist && <HRw label={ar?"توزيعات المستثمر":"LP Distributions"} arr={w.lpDist} color="#6d28d9" />}
-              {w.gpDist && <HRw label={ar?"توزيعات المطور":"GP Distributions"} arr={w.gpDist} color="#8b5cf6" />}
+              <HRw label={ar?"حصيلة التخارج":"Exit Proceeds"} arr={hybYears.map(y=>f.exitProceeds?.[y]||0)} color="#8b5cf6" />
+              <HRw label={ar?"= صافي تدفق الصندوق":"= Net Fund CF"} arr={f.fundCF || f.leveredCF} bold />
+              <HRw label={ar?"طلبات رأس المال":"Equity Calls"} arr={w.equityCalls||f.equityCalls||[]} color="#8b5cf6" />
+              {w.lpDist && <HRw label={ar?"توزيعات المستثمر (LP)":"LP Distributions"} arr={w.lpDist} color="#6d28d9" />}
+              {w.gpDist && <HRw label={ar?"توزيعات المطور (GP)":"GP Distributions"} arr={w.gpDist} color="#8b5cf6" />}
             </tbody>
           </HybTbl>
 
+          {/* Table 3: Combined */}
           <HybTbl id="hfCombined" title={`📋 ${ar?"المشروع الكامل (مجمّع)":"Full Project (Combined)"} — ${fmtM(f.devCostInclLand)}`} titleColor="#1e3a5f" borderColor="#94a3b8" bgColor="#f1f5f9">
             <THd />
             <tbody>
@@ -3395,6 +3400,7 @@ When to use:
               {(() => { const u=hybYears.map(y=>(pc.income[y]||0)-(pc.landRent[y]||0)-(pc.capex[y]||0)); return <HRw label={ar?"= صافي التدفق (قبل التمويل)":"= Unlevered CF"} arr={u} bold />; })()}
               <HRw label={ar?"سحوبات الدين":"Debt Drawdown"} arr={f.drawdown} color="#3b82f6" />
               <HRw label={ar?"(-) خدمة الدين":"(-) Debt Service"} arr={f.debtService} color="#dc2626" negate />
+              {f.devFeeSchedule && <HRw label={ar?"(-) أتعاب المطور":"(-) Developer Fee"} arr={f.devFeeSchedule} color="#f59e0b" negate />}
               {w.fees && <HRw label={ar?"(-) رسوم الصندوق":"(-) Fund Fees"} arr={w.fees} color="#f59e0b" negate />}
               <HRw label={ar?"حصيلة التخارج":"Exit Proceeds"} arr={hybYears.map(y=>f.exitProceeds?.[y]||0)} color="#8b5cf6" />
               <HRw label={ar?"= صافي التدفق الممول":"= Levered Net CF"} arr={f.leveredCF} bold />
