@@ -433,7 +433,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // ── Tranche mode: 'single' (default/ZAN) vs 'perDraw' (each drawdown = independent loan) ──
   const trancheMode = project.debtTrancheMode || "single";
-  const repayType = project.repaymentType || "amortizing";
+  const repayType = isHybridProject ? (project.govRepaymentType || "amortizing") : (project.repaymentType || "amortizing");
   let tranches = null; // Only populated for perDraw mode (for reporting)
 
   if (trancheMode === "perDraw" && repayYears > 0) {
@@ -566,15 +566,6 @@ export function computeFinancing(project, projectResults, incentivesResult) {
         exitVal = stabIncome * (project.exitMultiple ?? 10);
       }
     }
-    // ── Hybrid mode: fund exits only their share ──
-    // When hybrid, the fund owns (1-govFinancingPct)% of the project.
-    // Exit value = total project exit value × fund share percentage.
-    // The financing portion is repaid via debt schedule, not through exit.
-    const fullExitVal = exitVal;
-    if (isHybrid) {
-      const fundSharePct = 1 - (project.govFinancingPct ?? 70) / 100;
-      exitVal = fullExitVal * fundSharePct;
-    }
     const exitCost = exitVal * (project.exitCostPct ?? 2) / 100;
     // ZAN: Exit proceeds are GROSS (not net of debt)
     // Debt is repaid through normal schedule. If exit before maturity,
@@ -641,42 +632,26 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   // ── Hybrid: Separate cash flows (financing portion + fund portion) ──
-  // Treats hybrid as two virtual projects:
-  //   financingCF: debt side — income share goes to service debt, remainder to equity
-  //   fundCF: fund side — income share after fees, for GP/LP distribution
+  // Treats hybrid as two virtual perspectives for display:
+  //   financingCF: debt flows only (drawdowns in, debt service out)
+  //   fundCF: what equity holders receive (levered CF = project CF after debt)
+  //   These are additive: unlevered CF = financingCF + fundCF
+  //   NOTE: The waterfall uses leveredCF (= fundCF) which is CORRECT —
+  //   full income → pay debt → residual goes to fund equity holders (GP/LP)
   let financingCF = null;
   let fundCF = null;
   let fullProjectExitVal = 0;
   if (isHybrid) {
-    const finPct = (project.govFinancingPct ?? 70) / 100;
-    const fundPct = 1 - finPct;
     financingCF = new Array(h).fill(0);
     fundCF = new Array(h).fill(0);
     for (let y = 0; y < h; y++) {
-      if (sold && y > exitYr) continue;
-      const grossIncome = c.income[y] || 0;
-      const landRent = adjustedLandRent[y] || 0;
-      const capex = c.capex[y] || 0;
-      const grants = (ir?.capexGrantSchedule?.[y] || 0) + (ir?.feeRebateSchedule?.[y] || 0);
-      // Financing portion: its share of income, capex, grants minus debt service
-      financingCF[y] = (grossIncome * finPct) - (landRent * finPct) - (capex * finPct)
-        + (grants * finPct) - adjustedDebtService[y] + drawdown[y];
-      // Fund portion: its share of income, capex, grants + exit proceeds (fund exits their share only)
-      fundCF[y] = (grossIncome * fundPct) - (landRent * fundPct) - (capex * fundPct)
-        + (grants * fundPct) + exitProceeds[y] - devFeeSchedule[y];
+      // Financing side: debt flows only (net lending activity)
+      financingCF[y] = drawdown[y] - adjustedDebtService[y];
+      // Fund side: everything after debt = levered CF (what equity holders get)
+      fundCF[y] = leveredCF[y];
     }
-    // Store full project exit value for UI display
-    if (exitStrategy !== "hold" && exitYr >= 0 && exitYr < h) {
-      const exitIdx = Math.min(exitYr, h - 1);
-      const fallbackIdx = Math.min(constrEnd + 2, h - 1);
-      const totalIncome = c.income[exitIdx] || c.income[fallbackIdx] || 0;
-      if (exitStrategy === "caprate") {
-        const capRate = (project.exitCapRate ?? 9) / 100;
-        fullProjectExitVal = capRate > 0 ? totalIncome / capRate : 0;
-      } else {
-        fullProjectExitVal = totalIncome * (project.exitMultiple ?? 10);
-      }
-    }
+    // Full project exit value for display (before debt payoff)
+    fullProjectExitVal = exitProceeds[exitYr] || 0;
   }
 
   // ── Hybrid-GP: Developer personal loan schedule ──

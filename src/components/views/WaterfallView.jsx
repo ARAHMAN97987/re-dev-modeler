@@ -481,8 +481,10 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <span style={{textAlign:"right",fontWeight:600}}>{fmtM(financing.govLoanAmount)}</span>
               <span style={{color:"#6b7280"}}>{ar?"سعر الفائدة":"Rate"}</span>
               <span style={{textAlign:"right",fontWeight:600}}>{((financing.govLoanRate||0)*100).toFixed(1)}%</span>
-              <span style={{color:"#6b7280"}}>{ar?"إجمالي التدفق":"Total CF"}</span>
-              <span style={{textAlign:"right",fontWeight:600,color:finTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(finTotal)}</span>
+              <span style={{color:"#6b7280"}}>{ar?"إجمالي خدمة الدين":"Total Debt Service"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"#dc2626"}}>{fmtM(Math.abs(finTotal))}</span>
+              <span style={{color:"#6b7280"}}>{ar?"DSCR متوسط":"Avg DSCR"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{(() => { const ds = financing.dscr||[]; const vals = ds.filter(v=>v!=null&&v>0); return vals.length > 0 ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x" : "—"; })()}</span>
             </div>
           </div>
           {/* Fund Portion Card */}
@@ -492,19 +494,21 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <span style={{fontWeight:700,fontSize:12,color:"#6d28d9"}}>{ar?`جانب الصندوق (${fundPctVal}%)`:`Fund Side (${fundPctVal}%)`}</span>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
-              <span style={{color:"#6b7280"}}>{ar?"حصة الصندوق":"Fund Equity"}</span>
-              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(financing.fundPortionCost)}</span>
-              <span style={{color:"#6b7280"}}>{ar?"قيمة التخارج":"Exit Value"}</span>
-              <span style={{textAlign:"right",fontWeight:600}}>{fmtM((w.exitProceeds||[]).reduce((a,b)=>a+b,0))}</span>
-              <span style={{color:"#6b7280"}}>{ar?"إجمالي التدفق":"Total CF"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"رأس مال الصندوق":"Fund Equity"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(financing.totalEquity)}</span>
+              <span style={{color:"#6b7280"}}>{ar?"LP IRR":"LP IRR"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"LP MOIC":"LP MOIC"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"صافي للصندوق":"Fund Net CF"}</span>
               <span style={{textAlign:"right",fontWeight:600,color:fundTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(fundTotal)}</span>
             </div>
           </div>
         </div>
         {/* Combined summary */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",background:"var(--surface-sunken)",borderRadius:6,fontSize:11}}>
-          <span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي مُجمّع (تمويل + صندوق)":"Combined Total (Financing + Fund)"}: <b style={{color:combinedTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(combinedTotal)}</b></span>
-          {w.fullProjectExitVal > 0 && <span style={{color:"var(--text-secondary)"}}>{ar?"قيمة المشروع الكاملة":"Full Project Value"}: <b>{fmtM(w.fullProjectExitVal)}</b></span>}
+          <span style={{color:"var(--text-secondary)"}}>{ar?"التدفق المجمّع":"Combined CF"}: <b style={{color:combinedTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(combinedTotal)}</b></span>
+          {w.fullProjectExitVal > 0 && <span style={{color:"var(--text-secondary)"}}>{ar?"قيمة التخارج الكاملة":"Full Exit Value"}: <b>{fmtM(w.fullProjectExitVal)}</b> → {ar?"صافي بعد الدين":"Net after debt"}: <b style={{color:"#16a34a"}}>{fmtM(w.fullProjectExitVal - (financing.totalDebt||0))}</b></span>}
           <button onClick={()=>setShowHybridCF(!showHybridCF)} style={{...btnS,fontSize:10,padding:"2px 8px"}}>{showHybridCF?(ar?"إخفاء":"Hide"):(ar?"تفصيل سنوي":"Yearly Detail")}</button>
         </div>
         {/* Yearly breakdown table */}

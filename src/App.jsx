@@ -2817,6 +2817,17 @@ When to use:
                 <Inp type="number" value={cfg.govUpfrontFeePct??0} onChange={v=>upCfg({govUpfrontFeePct:v})} step={0.25} />
               </FL>
             </div>
+            <div style={g3}>
+              <FL label={ar?"نوع السداد":"Repayment Type"} tip="أقساط متساوية: سداد الأصل بالتساوي على مدة السداد\nدفعة واحدة: الأصل كامل في نهاية المدة\n\nAmortizing: equal principal payments over repayment period\nBullet: full principal at maturity">
+                <Drp lang={lang} value={cfg.govRepaymentType||"amortizing"} onChange={v=>upCfg({govRepaymentType:v})} options={[{value:"amortizing",en:"Amortizing (default)",ar:"أقساط متساوية (تلقائي)"},{value:"bullet",en:"Bullet (lump sum)",ar:"دفعة واحدة"}]} />
+              </FL>
+              <FL label={ar?"أساس فترة السماح":"Grace Basis"} tip="متى تبدأ فترة السماح؟\nإتمام البناء: من نهاية آخر مرحلة بناء\nأول سحب: من أول سحب فعلي\nبداية الصندوق: من سنة تأسيس الصندوق\n\nWhen does grace period start?\nCOD: from end of last construction phase\nFirst Draw: from first actual drawdown\nFund Start: from fund establishment year">
+                <Drp lang={lang} value={cfg.graceBasis||"cod"} onChange={v=>upCfg({graceBasis:v})} options={[{value:"cod",en:"COD - Completion (default)",ar:"إتمام البناء (تلقائي)"},{value:"firstDraw",en:"First Draw",ar:"أول سحب"},{value:"fundStart",en:"Fund Start",ar:"بداية الصندوق"}]} />
+              </FL>
+              <FL label={ar?"رسملة فوائد البناء؟":"Capitalize IDC?"} tip="إضافة فوائد فترة البناء إلى تكلفة المشروع. يزيد الـ Equity المطلوب لكن يعكس التكلفة الحقيقية\nAdd construction-period interest to project cost. Increases equity needed but reflects true cost">
+                <Drp lang={lang} value={cfg.capitalizeIDC?"Y":"N"} onChange={v=>upCfg({capitalizeIDC:v==="Y"})} options={["Y","N"]} />
+              </FL>
+            </div>
             {/* Hybrid summary */}
             {financing && financing.isHybrid && <div style={{marginTop:8,padding:"8px 12px",background:"var(--surface-sunken)",borderRadius:8,fontSize:11,color:"var(--text-secondary)"}}>
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
