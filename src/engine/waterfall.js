@@ -499,6 +499,20 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     gpIRR_preIncentive = calcIRR(_gpPreCF);
   }
 
+  // GP Cash IRR: excludes non-cash land cap from GP equity calls for truer cash-on-cash IRR.
+  // When GP contributes land (in-kind), gpCalls includes the land value as a lump-sum at fund start.
+  // This depresses IRR because a large "outflow" appears in year 1 that wasn't actually cash.
+  // gpCashIRR removes the land cap portion from the call, showing return on actual cash invested.
+  let gpCashIRR = gpIRR;
+  if (effectiveLandCap > 0) {
+    const gpCashNetCF = new Array(h).fill(0);
+    for (let y = 0; y < h; y++) {
+      const landCapInCall = (y === fundStartIdx) ? effectiveLandCap * gpPct : 0;
+      gpCashNetCF[y] = gpNetCF[y] + landCapInCall;
+    }
+    gpCashIRR = calcIRR(gpCashNetCF);
+  }
+
   // MOIC: Total Distributions / Paid-In Capital (industry standard default)
   const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
   const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
@@ -565,7 +579,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     tier1, tier2, tier3, tier4LP, tier4GP,
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
-    lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, gpCashMOIC, gpCashCalled, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
+    lpIRR, gpIRR, gpCashIRR, projIRR, lpMOIC, gpMOIC, gpCashMOIC, gpCashCalled, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
     lpSimpleROE, gpSimpleROE, lpSimpleAnnual, gpSimpleAnnual, investYears,
     lpTotalInvested: lpTotalCalled, gpTotalInvested: gpTotalCalled, // aliases for UI backward compat
     lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,

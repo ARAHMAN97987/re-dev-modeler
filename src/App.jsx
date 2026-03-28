@@ -787,6 +787,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={gpSimpleROE?fmtPct(gpSimpleROE*100):"—"} c="#3b82f6" />
               <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={gpSimpleAnnual?fmtPct(gpSimpleAnnual*100):"—"} c="#3b82f6" />
               <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={w.gpIRR!==null?fmtPct(w.gpIRR*100):"—"} c={getMetricColor("IRR",w.gpIRR)} bold />
+              {w.gpCashIRR != null && w.gpCashIRR !== w.gpIRR ? <KR l={ar?"IRR نقدي":"Cash IRR"} v={fmtPct(w.gpCashIRR*100)} c={getMetricColor("IRR",w.gpCashIRR)} /> : null}
               <KR l="MOIC" v={w.gpMOIC?w.gpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.gpMOIC)} bold />
               {w.gpCashMOIC && w.gpCashMOIC !== w.gpMOIC ? <KR l={ar?"MOIC نقدي":"Cash MOIC"} v={w.gpCashMOIC.toFixed(2)+"x"} c={getMetricColor("MOIC",w.gpCashMOIC)} /> : null}
               <KR l={ar?"استرداد":"Payback"} v={gpPayback?`${gpPayback} ${ar?"سنة":"yr"}`:"—"} />
@@ -3997,7 +3998,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />],
             ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],
             ["incentives", <IncentivesView key="incentives" project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />],
-            ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} />],
+            ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} financing={financing} />],
             ["checks", <ChecksView key="checks" checks={checks} t={t} lang={lang} onFix={(tab)=>{setActiveTab(tab);window.scrollTo(0,0);}} />],
           ].map(([tabKey, tabContent]) => (
             <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",overflow:"auto",height:"100%",padding:isMobile?10:18,paddingBottom:isMobile?70:80}} className={activeTab===tabKey?"zan-tab-content":undefined}>
@@ -9491,7 +9492,7 @@ function KPI({label,value,sub,color,tip}) {
 // ═══════════════════════════════════════════════════════════════
 // CASH FLOW VIEW
 // ═══════════════════════════════════════════════════════════════
-function CashFlowView({ project, results, t, incentivesResult }) {
+function CashFlowView({ project, results, t, incentivesResult, financing }) {
   if (!project||!results) return <div style={{color:"var(--text-tertiary)"}}>Add assets to see projections.</div>;
   const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
@@ -9635,6 +9636,7 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         {label:ar?"عائد على التكلفة":"Yield on Cost",value:yieldOnCost>0?fmtPct(yieldOnCost*100):"—",color:yieldOnCost>0.08?"#16a34a":"#f59e0b",tip:ar?"NOI المستقر / CAPEX":"Stabilized NOI / Total CAPEX"},
         {label:ar?"فترة الاسترداد":"Payback Period",value:c.paybackYear!=null?(c.paybackYear+(ar?" سنة":" yr")):"—",color:c.paybackYear&&c.paybackYear<=10?"#16a34a":c.paybackYear?"#f59e0b":"#9ca3af"},
         {label:ar?"أقصى سحب سلبي":"Peak Negative CF",value:fmtM(c.peakNegative||0),color:"#ef4444",tip:c.peakNegativeYear!=null?(ar?`السنة ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`:`Year ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`):""},
+        ...(financing?.effectiveLandCap > 0 ? [{label:ar?"رسملة حق الانتفاع":"Land Cap (In-Kind)",value:fmtM(financing.effectiveLandCap),color:"#7c3aed",tip:`${project.landArea||0} m² × ${project.landCapRate||1000} SAR/m²`}] : []),
       ].map((k,i) => <div key={i} style={{background:"var(--surface-card)",borderRadius:8,border:"0.5px solid var(--border-default)",padding:"8px 12px"}}>
         <div style={{fontSize:10,color:"var(--text-secondary)",marginBottom:2}}>{k.label}</div>
         <div style={{fontSize:16,fontWeight:700,color:k.color}}>{k.value}</div>
@@ -9697,6 +9699,12 @@ function CashFlowView({ project, results, t, incentivesResult }) {
         <CFRow label={ar?"هامش NOI %":"NOI Margin %"} pct values={years.map(y=>c.income[y]>0?(noiArr[y]/c.income[y])*100:null)} total={c.totalIncome>0?(totalNOI/c.totalIncome)*100:null} />
         <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="#ef4444" bg="#fef2f2" />
         <CFRow label={ar?"(-) تكاليف التطوير":"(-) Development CAPEX"} values={c.capex} total={c.totalCapex} color="#ef4444" negate />
+        {financing?.effectiveLandCap > 0 && (() => {
+          const elc = financing.effectiveLandCap;
+          const fsi = Math.max(0, (project.fundStartYear || project.startYear || 2026) - startYear);
+          const lcArr = new Array(horizon).fill(0); lcArr[Math.min(fsi, horizon-1)] = elc;
+          return <CFRow label={ar?"رسملة حق الانتفاع":"Land Capitalization (In-Kind)"} values={lcArr} total={elc} color="#7c3aed" sub />;
+        })()}
         <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
         <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={c.netCF} total={c.totalNetCF} bold />
         <CumRow label={ar?"↳ تراكمي":"↳ Cumulative"} values={c.netCF} />
