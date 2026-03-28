@@ -101,6 +101,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // devCostExclLand = totalCapex (which includes land purchase when landType=purchase).
   const cashLandCost = 0;
   const devCostInclLand = devCostExclLand + effectiveLandCap;
+  // True construction cost excluding land (for fee basis)
+  const _landInCapexAll = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
+  const buildCostOnly = Math.max(0, devCostExclLand - _landInCapexAll);
 
   // ── Dev fee (computed early — needed by ALL modes including self) ──
   const _landInCapex = project.landType === "purchase" ? (project.landPurchasePrice || 0) : 0;
@@ -335,9 +338,14 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // Debt ratio based on financeable uses (scheduled uses only, upfront fee is per-draw interest)
   const financeableUses = totalScheduledUses;
   const actualMaxDebt = Math.min(maxDebt, financeableUses);
-  const callOrder = project.capitalCallOrder || "prorata";
+  // For hybrid mode, hybridDrawOrder controls financing-vs-fund priority
+  // (capitalCallOrder still controls fund-internal debt-vs-equity if fund has its own debt)
+  const callOrder = isHybrid
+    ? (project.hybridDrawOrder || "finFirst")  // hybrid default: financing first (cheaper)
+    : (project.capitalCallOrder || "prorata");
+  const useDebtFirst = callOrder === "debtFirst" || callOrder === "finFirst";
 
-  if (callOrder === "debtFirst") {
+  if (useDebtFirst) {
     // ── Debt-First Mode: draw all available debt before any equity ──
     // Each year: use debt first up to actualMaxDebt, equity covers the rest
     for (let y = 0; y < h; y++) {
@@ -721,7 +729,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     isHybrid, govBeneficiary: isHybrid ? (project.govBeneficiary || "project") : null,
     govFinancingPct: isHybrid ? (project.govFinancingPct ?? 70) : null,
     govLoanAmount, govLoanRate: isHybrid ? (project.govFinanceRate ?? 3.0) / 100 : null,
-    gpPersonalDebt, fundPortionCost,
+    gpPersonalDebt, fundPortionCost, buildCostOnly,
     // Separate cash flows for hybrid mode (two virtual projects)
     financingCF, fundCF, fullProjectExitVal,
   };

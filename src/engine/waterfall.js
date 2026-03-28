@@ -28,7 +28,10 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   // Fee basis: for hybrid mode, fees apply to fund portion only (not government-financed portion)
   const isHybridMode = project.finMode === "hybrid";
-  const fundFeeBasis = isHybridMode ? (f.fundPortionCost || f.devCostExclLand) : f.devCostExclLand;
+  // buildCostOnly = true construction cost (excludes land purchase from capex).
+  // For non-hybrid: use buildCostOnly if available, else devCostExclLand (which may include land purchase).
+  const effectiveDevCost = f.buildCostOnly != null ? f.buildCostOnly : f.devCostExclLand;
+  const fundFeeBasis = isHybridMode ? (f.fundPortionCost || effectiveDevCost) : effectiveDevCost;
   // Fund equity basis: for hybrid, the fund's equity is only the fund portion (not gov-borrowed GP equity)
   const fundEquityBasis = isHybridMode ? (f.fundPortionCost || totalEquity) : totalEquity;
 

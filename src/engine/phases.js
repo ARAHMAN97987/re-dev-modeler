@@ -14,6 +14,7 @@ export const FINANCING_FIELDS = [
   'finMode','vehicleType','debtAllowed','maxLtvPct','financeRate',
   'loanTenor','debtGrace','graceBasis','upfrontFeePct','repaymentType','debtTrancheMode',
   'govFinancingPct','govBeneficiary','govFinanceRate','govLoanTenor','govGrace','govRepaymentType','govUpfrontFeePct',
+  'hybridDrawOrder',
   'islamicMode','gpEquityManual','lpEquityManual','capitalizeIDC',
   'gpInvestDevFee','gpDevFeeInvestPct','gpCashInvest','gpCashInvestAmount',
   'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',

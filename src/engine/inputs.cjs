@@ -34,6 +34,7 @@ const defaultProject = () => ({
   upfrontFeePct: 0.5,
   repaymentType: "amortizing",
   capitalCallOrder: "prorata",
+  hybridDrawOrder: "finFirst",   // "finFirst" (financing before fund) | "prorata" (proportional)
   // Hybrid financing (government + fund)
   govFinancingPct: 70,
   govBeneficiary: "project",    // "project" (SPV-level debt) | "gp" (developer personal loan)
