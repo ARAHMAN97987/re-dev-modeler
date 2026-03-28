@@ -30,6 +30,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   // Fee basis: for hybrid mode, fees apply to fund portion only (not government-financed portion)
   const isHybridMode = project.finMode === "hybrid";
+  const isHybridGP = isHybridMode && project.govBeneficiary === "gp";
   // buildCostOnly = true construction cost (excludes land purchase from capex).
   // For non-hybrid: use buildCostOnly if available, else devCostExclLand (which may include land purchase).
   const effectiveDevCost = f.buildCostOnly != null ? f.buildCostOnly : f.devCostExclLand;
@@ -290,10 +291,14 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     const unlevCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
     const inPeriod = y >= fundStartIdx && y <= exitYr;
     const landRentAddBack = resolvedLandRentPayer !== "project" ? (adjLandRent[y] || 0) : 0;
+    // Hybrid-GP: debt service is developer's personal obligation, NOT deducted from fund cashAvail.
+    // The developer pays from their GP distributions (deducted in GP net CF below).
+    // Hybrid-Project & standard: debt service deducted normally from project CF.
+    const dsDeduction = isHybridGP ? 0 : (f.debtService[y] || 0);
     cashAvail[y] = Math.max(0,
       (inPeriod ? unlevCF : 0)
       + landRentAddBack
-      - (f.debtService[y] || 0)
+      - dsDeduction
       - fees[y]
       + unfundedFees[y]
       + exitProceeds[y]
@@ -500,7 +505,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const lpLandRentTotal = lpLandRentObligation.reduce((a,b) => a+b, 0);
   for (let y = 0; y < h; y++) {
     lpNetCF[y] = -lpCalls[y] + lpDist[y] - lpLandRentObligation[y];
-    gpNetCF[y] = -gpCalls[y] + gpDist[y] - gpLandRentObligation[y];
+    // Hybrid-GP: developer pays debt service from their distributions
+    const gpDebtObligation = isHybridGP ? (f.debtService[y] || 0) : 0;
+    gpNetCF[y] = -gpCalls[y] + gpDist[y] - gpLandRentObligation[y] - gpDebtObligation;
   }
 
   const lpIRR = calcIRR(lpNetCF);
@@ -525,7 +532,10 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // gpCashIRR removes the land cap portion from the call, showing return on actual cash invested.
   let gpCashIRR = gpIRR;
   let lpCashIRR = lpIRR;
-  const needsCashIRR = effectiveLandCap > 0 || (project.finMode === "hybrid" && project.govBeneficiary === "gp");
+  // Cash IRR: excludes non-cash land cap from equity calls for truer cash-on-cash return.
+  // NOTE: For hybrid-GP, debt service is ALREADY deducted from gpNetCF (line ~510),
+  // so no additional deduction needed here.
+  const needsCashIRR = effectiveLandCap > 0;
   if (needsCashIRR) {
     const gpCashNetCF = new Array(h).fill(0);
     const lpCashNetCF = new Array(h).fill(0);
@@ -534,13 +544,6 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
       const lpLandCapInCall = (y === fundStartIdx) ? effectiveLandCap * lpPct : 0;
       gpCashNetCF[y] = gpNetCF[y] + gpLandCapInCall;
       lpCashNetCF[y] = lpNetCF[y] + lpLandCapInCall;
-    }
-    // Hybrid-GP: deduct developer's personal government loan debt service from GP cash flows
-    const gpPersonalDS = f.gpPersonalDebt?.ds;
-    if (gpPersonalDS && project.finMode === "hybrid" && project.govBeneficiary === "gp") {
-      for (let y = 0; y < h; y++) {
-        gpCashNetCF[y] -= (gpPersonalDS[y] || 0);
-      }
     }
     gpCashIRR = calcIRR(gpCashNetCF);
     lpCashIRR = calcIRR(lpCashNetCF);
@@ -553,21 +556,20 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const gpNetDist = gpTotalDist - gpLandRentTotal;
   const lpTotalCalled = lpCalls.reduce((a, b) => a + b, 0);
   const gpTotalCalled = gpCalls.reduce((a, b) => a + b, 0);
+  // Hybrid-GP: debt service is developer's obligation — deduct from GP distributions for true MOIC
+  const gpDebtServiceTotal = isHybridGP ? (f.debtService || []).reduce((a, b) => a + b, 0) : 0;
+  const gpAdjNetDist = gpNetDist - gpDebtServiceTotal;
   const lpMOIC = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
-  const gpMOIC = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
+  const gpMOIC = gpTotalCalled > 0 ? gpAdjNetDist / gpTotalCalled : 0;
   const lpCommittedMOIC = lpEquity > 0 ? lpNetDist / lpEquity : 0;
-  const gpCommittedMOIC = gpEquity > 0 ? gpNetDist / gpEquity : 0;
+  const gpCommittedMOIC = gpEquity > 0 ? gpAdjNetDist / gpEquity : 0;
   // GP Cash MOIC: excludes non-cash land cap from denominator for truer cash-on-cash measure
   // When GP contributes land (in-kind), their total called includes the land cap value,
   // which dilutes the MOIC. Cash MOIC shows return on actual cash invested only.
   const gpCashCalled = Math.max(0, gpTotalCalled - effectiveLandCap * gpPct);
   const lpCashCalled = Math.max(0, lpTotalCalled - effectiveLandCap * lpPct);
-  // GP Cash MOIC: for hybrid-gp, also deduct personal loan debt service from numerator
-  const gpPersonalDSTotal = (f.gpPersonalDebt?.ds || []).reduce((a, b) => a + b, 0);
-  let gpCashMOIC = gpCashCalled > 0 ? gpNetDist / gpCashCalled : gpMOIC;
-  if (gpPersonalDSTotal > 0 && project.finMode === "hybrid" && project.govBeneficiary === "gp") {
-    gpCashMOIC = gpCashCalled > 0 ? (gpNetDist - gpPersonalDSTotal) / gpCashCalled : 0;
-  }
+  // GP Cash MOIC: excludes non-cash land cap + deducts debt obligation for hybrid-GP
+  let gpCashMOIC = gpCashCalled > 0 ? gpAdjNetDist / gpCashCalled : gpMOIC;
   const lpCashMOIC = lpCashCalled > 0 ? lpNetDist / lpCashCalled : lpMOIC;
   const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
   const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;

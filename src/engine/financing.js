@@ -192,23 +192,17 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   let rate, tenor, grace, repayYears, maxDebt, upfrontFeePct;
 
-  if (isHybridProject) {
-    // ── Hybrid-Project: institutional financing (70%) is ALWAYS active ──
-    // debtAllowed only controls optional FUND-LEVEL bank debt, NOT the institutional financing
+  if (isHybrid) {
+    // ── Hybrid (both project & gp): institutional financing is ALWAYS active ──
+    // Both modes: financing draws during construction, visible in cash flow.
+    // Difference: "project" = SPV debt (DSCR applies, affects LP).
+    //             "gp" = developer's personal obligation (deducted from GP distributions only).
     rate = (project.govFinanceRate ?? 3.0) / 100;
     tenor = project.govLoanTenor ?? 15;
     grace = project.govGrace ?? 5;
     repayYears = Math.max(0, tenor - grace);
     maxDebt = devCostInclLand * (project.govFinancingPct ?? 70) / 100;
     upfrontFeePct = (project.govUpfrontFeePct || 0) / 100;
-  } else if (isHybridGP) {
-    // Hybrid-GP: developer borrows personally — no project-level debt
-    rate = (project.financeRate ?? 6.5) / 100;
-    tenor = project.loanTenor ?? 7;
-    grace = project.debtGrace ?? 3;
-    repayYears = Math.max(0, tenor - grace);
-    maxDebt = 0;
-    upfrontFeePct = (project.upfrontFeePct || 0) / 100;
   } else {
     // Standard modes: self, debt, fund, jv, bank100
     rate = (project.financeRate ?? 6.5) / 100;
@@ -240,10 +234,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       cumDraw += yearDraw;
     }
   }
-  const capitalizedFinCosts = (project.capitalizeIDC && !isBank100 && !isHybridGP) ? (estimatedIDC + estimatedUpfrontFees) : 0;
+  const capitalizedFinCosts = (project.capitalizeIDC && !isBank100) ? (estimatedIDC + estimatedUpfrontFees) : 0;
   // NOTE: bank100 ignores capitalizeIDC because 100% debt financing inherently
   // includes construction interest in the loan — no separate capitalization needed.
-  // Hybrid-GP: no project-level debt → no IDC to capitalize (developer's personal loan is off-balance-sheet).
 
   // ── Equity Structure ──
   const totalProjectCost = devCostInclLand + capitalizedFinCosts;
@@ -303,15 +296,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       lpEquity = totalEquity;
     }
 
-    // ── Hybrid-GP override: developer borrows govLoanAmount, enters fund as equity ──
-    if (isHybridGP) {
-      const govPct = (project.govFinancingPct ?? 70) / 100;
-      const govLoanAmount = devCostInclLand * govPct;
-      // Fund sees full project cost as equity (GP contributes borrowed amount)
-      totalEquity = totalProjectCost;
-      gpEquity = Math.min(govLoanAmount + gpFromLandCap + gpFromDevFee + gpFromCash, totalProjectCost);
-      lpEquity = Math.max(0, totalProjectCost - gpEquity);
-    }
+    // ── Hybrid-GP: fund manages only the equity portion (30%) ──
+    // Developer borrows 70% personally, but the fund only sees the remaining 30%.
+    // totalEquity is already correct: totalProjectCost - maxDebt = 30%.
+    // GP equity within the fund comes from normal sources (land cap + dev fee + cash).
+    // The 70% government loan is NOT fund equity — it's separate financing.
 
     // Reconcile - GP + LP must equal totalEquity
     if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
@@ -678,53 +667,28 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     fullProjectExitVal = exitProceeds[exitYr] || 0;
   }
 
-  // ── Hybrid-GP: Developer personal loan schedule ──
+  // ── Hybrid-GP: Developer personal loan reference ──
+  // In GP mode, the main debt schedule IS the developer's loan (same drawdown/interest/repayment).
+  // We just reference it so waterfall can deduct DS from GP distributions instead of project CF.
   let gpPersonalDebt = null;
   if (isHybridGP) {
-    const govPct = (project.govFinancingPct ?? 70) / 100;
-    const gpLoanAmt = devCostInclLand * govPct;
-    const gpLoanRate = (project.govFinanceRate ?? 3.0) / 100;
-    const gpLoanTenor = project.govLoanTenor ?? 15;
-    const gpLoanGrace = project.govGrace ?? 5;
-    const gpRepYrs = Math.max(1, gpLoanTenor - gpLoanGrace);
-    const gpAnnualRepay = gpLoanAmt / gpRepYrs;
-
-    const gpDS = new Array(h).fill(0);
-    const gpInt = new Array(h).fill(0);
-    const gpRep = new Array(h).fill(0);
-    const gpBalOpen = new Array(h).fill(0);
-    const gpBalClose = new Array(h).fill(0);
-    // Grace starts from COD (constrEnd), matching project-level debt convention
-    const gpGraceStart = constrEnd; // COD index
-    const gpRepayStart = gpGraceStart + gpLoanGrace;
-    let bal = gpLoanAmt;
-    for (let y = 0; y < h && bal > 0; y++) {
-      gpBalOpen[y] = bal;
-      const repY = y >= gpRepayStart ? Math.min(gpAnnualRepay, bal) : 0;
-      const closeB = Math.max(0, bal - repY);
-      // Interest on average balance (matching project debt convention)
-      const intY = (bal + closeB) / 2 * gpLoanRate;
-      gpInt[y] = intY;
-      gpRep[y] = repY;
-      gpDS[y] = intY + repY;
-      bal = closeB;
-      gpBalClose[y] = bal;
-    }
-    gpPersonalDebt = { ds: gpDS, interest: gpInt, repayment: gpRep, balanceOpen: gpBalOpen, balanceClose: gpBalClose, totalAmount: gpLoanAmt };
-
-    // Apply interest subsidy to personal loan if finance support is enabled
-    if (project.incentives?.financeSupport?.enabled) {
-      const gpSub = applyInterestSubsidy(project, gpInt, constrEnd, gpLoanAmt, gpLoanRate);
-      for (let y = 0; y < h; y++) {
-        gpPersonalDebt.ds[y] = gpSub.adjusted[y] + gpRep[y];
-      }
-      gpPersonalDebt.interestSubsidySavings = gpSub.total;
+    gpPersonalDebt = {
+      ds: [...adjustedDebtService],
+      interest: [...adjustedInterest],
+      repayment: [...repay],
+      balanceOpen: [...debtBalOpen],
+      balanceClose: [...debtBalClose],
+      totalAmount: totalDrawn,
+    };
+    // Note: interest subsidy already applied to adjustedInterest/adjustedDebtService above
+    if (intSub.total > 0) {
+      gpPersonalDebt.interestSubsidySavings = intSub.total;
     }
   }
 
   // ── Hybrid metadata ──
   // Use actual drawn amount (may differ from theoretical maxDebt due to reconciliation)
-  const govLoanAmount = isHybrid ? (isHybridProject ? totalDrawn : devCostInclLand * (project.govFinancingPct ?? 70) / 100) : 0;
+  const govLoanAmount = isHybrid ? totalDrawn : 0;
   const fundPortionCost = isHybrid ? Math.max(0, totalProjectCost - govLoanAmount) : null;
 
   return {
