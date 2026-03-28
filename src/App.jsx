@@ -2668,6 +2668,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           return <div style={{borderRadius:"var(--radius-lg)",border:`0.5px solid ${color||"var(--border-default)"}40`,borderTop:`3px solid ${color||"var(--border-default)"}`,overflow:"hidden",background:"var(--surface-hover)",transition:"border-color 0.2s"}}>{children}</div>;
         };
         return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:18}}>
+        {/* ── HYBRID MODE: Visual separator header ── */}
+        {isHybridMode && <div style={{gridColumn:"1/-1",background:"linear-gradient(135deg,#ecfdf5,#f0fdf4)",borderRadius:10,border:"1px solid #86efac",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:16}}>🔀</span>
+          <span style={{fontWeight:700,fontSize:13,color:"#166534"}}>{ar?"وضع مختلط: تمويل مؤسسي + صندوق استثماري":"Hybrid: Institutional Financing + Investment Fund"}</span>
+          <span style={{fontSize:10,color:"#059669",background:"#d1fae5",borderRadius:4,padding:"2px 8px",fontWeight:600}}>{cfg.govFinancingPct||70}% {ar?"تمويل":"Financing"} + {100-(cfg.govFinancingPct||70)}% {ar?"صندوق":"Fund"}</span>
+        </div>}
+
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div className="z-card" style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--text-primary)",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
@@ -2680,6 +2687,75 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
+
+        {/* ── HYBRID: GROUP HEADER — Financing Side ── */}
+        {isHybridMode && <div style={{gridColumn:"1/-1",display:"flex",alignItems:"center",gap:8,padding:"8px 0 2px"}}>
+          <div style={{width:4,height:20,borderRadius:2,background:"#059669"}} />
+          <span style={{fontSize:12,fontWeight:800,color:"#059669",letterSpacing:0.3}}>{ar?"① إعدادات التمويل":"① FINANCING SETTINGS"}</span>
+          <span style={{fontSize:10,color:"#6b7280",fontWeight:500}}>({cfg.govFinancingPct||70}% {ar?"من تكلفة المشروع — شروط القرض":"of project cost — loan terms"})</span>
+          <div style={{flex:1,height:1,background:"#d1fae5"}} />
+        </div>}
+
+        {/* ── HYBRID FINANCING TERMS (appears first in hybrid mode) ── */}
+        <SecWrap visible={isHybridMode} color="#059669">
+        <AH id="govFin" color="#059669" label={ar?"شروط التمويل":"Financing Terms"} summary={isHybridMode ? `${cfg.govFinancingPct||70}% · ${cfg.govFinanceRate||3}% · ${cfg.govLoanTenor||15}yr` : ""} visible={isHybridMode} />
+        <AB id="govFin" visible={isHybridMode}>{(() => {
+          return <>
+            <div style={g3}>
+              <FL label={ar?"نسبة التمويل (%)":"Financing %"} tip="نسبة تكلفة المشروع المموّلة من جهة التمويل (بنك، حكومة، مؤسسة). الباقي يموّله الصندوق (GP/LP)\nPercentage of project cost covered by financing (bank, government, institution). Remainder funded by fund (GP/LP)">
+                <Inp type="number" value={cfg.govFinancingPct??70} onChange={v=>upCfg({govFinancingPct:v})} min={0} max={100} step={5} />
+              </FL>
+              <FL label={ar?"القرض لصالح":"Loan Beneficiary"} tip="المشروع (SPV): الدين على مستوى الشركة، خدمة الدين تُخصم قبل التوزيعات\nالمطور: المطور يقترض شخصياً ويدخل الصندوق بالمبلغ المقترض\n\nProject (SPV): Debt at entity level, DS deducted before distributions\nDeveloper: Developer borrows personally and enters fund with borrowed amount">
+                <select className="z-input z-select" value={cfg.govBeneficiary||"project"} onChange={e=>upCfg({govBeneficiary:e.target.value})} style={{minWidth:140}}>
+                  <option value="project">{ar?"المشروع (SPV)":"Project (SPV)"}</option>
+                  <option value="gp">{ar?"المطور شخصياً":"Developer (Personal)"}</option>
+                </select>
+              </FL>
+              <FL label={ar?"سعر الفائدة (%)":"Rate %"} tip="سعر الفائدة على التمويل — يختلف حسب الجهة المموّلة\nFinancing interest rate — varies by lender">
+                <Inp type="number" value={cfg.govFinanceRate??3} onChange={v=>upCfg({govFinanceRate:v})} step={0.5} />
+              </FL>
+            </div>
+            <div style={g3}>
+              <FL label={ar?"مدة القرض (سنوات)":"Tenor (years)"} tip="مدة القرض الإجمالية بما فيها فترة السماح\nTotal loan duration including grace period">
+                <Inp type="number" value={cfg.govLoanTenor??15} onChange={v=>upCfg({govLoanTenor:v})} min={1} max={50} />
+              </FL>
+              <FL label={ar?"فترة السماح (سنوات)":"Grace (years)"} tip="فترة السماح قبل بدء سداد الأصل. خلالها يُدفع الفائدة فقط\nGrace period before principal repayment begins. Interest-only during this period">
+                <Inp type="number" value={cfg.govGrace??5} onChange={v=>upCfg({govGrace:v})} min={0} max={30} />
+              </FL>
+              <FL label={ar?"رسوم مقدمة (%)":"Upfront Fee %"} tip="رسوم لمرة واحدة على التمويل\nOne-time fee on financing">
+                <Inp type="number" value={cfg.govUpfrontFeePct??0} onChange={v=>upCfg({govUpfrontFeePct:v})} step={0.25} />
+              </FL>
+            </div>
+            <div style={g3}>
+              <FL label={ar?"نوع السداد":"Repayment Type"} tip="أقساط متساوية: سداد الأصل بالتساوي على مدة السداد\nدفعة واحدة: الأصل كامل في نهاية المدة\n\nAmortizing: equal principal payments over repayment period\nBullet: full principal at maturity">
+                <Drp lang={lang} value={cfg.govRepaymentType||"amortizing"} onChange={v=>upCfg({govRepaymentType:v})} options={[{value:"amortizing",en:"Amortizing (default)",ar:"أقساط متساوية (تلقائي)"},{value:"bullet",en:"Bullet (lump sum)",ar:"دفعة واحدة"}]} />
+              </FL>
+              <FL label={ar?"أساس فترة السماح":"Grace Basis"} tip="متى تبدأ فترة السماح؟\nإتمام البناء: من نهاية آخر مرحلة بناء\nأول سحب: من أول سحب فعلي\nبداية الصندوق: من سنة تأسيس الصندوق\n\nWhen does grace period start?\nCOD: from end of last construction phase\nFirst Draw: from first actual drawdown\nFund Start: from fund establishment year">
+                <Drp lang={lang} value={cfg.graceBasis||"cod"} onChange={v=>upCfg({graceBasis:v})} options={[{value:"cod",en:"COD - Completion (default)",ar:"إتمام البناء (تلقائي)"},{value:"firstDraw",en:"First Draw",ar:"أول سحب"},{value:"fundStart",en:"Fund Start",ar:"بداية الصندوق"}]} />
+              </FL>
+              <FL label={ar?"رسملة فوائد البناء؟":"Capitalize IDC?"} tip="إضافة فوائد فترة البناء إلى تكلفة المشروع. يزيد الـ Equity المطلوب لكن يعكس التكلفة الحقيقية\nAdd construction-period interest to project cost. Increases equity needed but reflects true cost">
+                <Drp lang={lang} value={cfg.capitalizeIDC?"Y":"N"} onChange={v=>upCfg({capitalizeIDC:v==="Y"})} options={["Y","N"]} />
+              </FL>
+            </div>
+            {/* Hybrid summary */}
+            {financing && financing.isHybrid && <div style={{marginTop:8,padding:"8px 12px",background:"var(--surface-sunken)",borderRadius:8,fontSize:11,color:"var(--text-secondary)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
+                <span>{ar?"مبلغ التمويل":"Financing Amount"}: <b>{fmtM(financing.govLoanAmount)}</b></span>
+                <span>{ar?"حصة الصندوق":"Fund Portion"}: <b>{fmtM(financing.fundPortionCost)}</b></span>
+                {financing.govBeneficiary === "gp" && <span style={{color:"#d97706"}}>{ar?"⚠ القرض على المطور شخصياً":"⚠ Personal loan to developer"}</span>}
+              </div>
+            </div>}
+          </>;
+        })()}</AB>
+        </SecWrap>
+
+        {/* ── HYBRID: GROUP HEADER — Fund Side ── */}
+        {isHybridMode && <div style={{gridColumn:"1/-1",display:"flex",alignItems:"center",gap:8,padding:"8px 0 2px"}}>
+          <div style={{width:4,height:20,borderRadius:2,background:"#7c3aed"}} />
+          <span style={{fontSize:12,fontWeight:800,color:"#7c3aed",letterSpacing:0.3}}>{ar?"② إعدادات الصندوق":"② FUND SETTINGS"}</span>
+          <span style={{fontSize:10,color:"#6b7280",fontWeight:500}}>({100-(cfg.govFinancingPct||70)}% {ar?"من تكلفة المشروع — هيكل وملكية ورسوم وتوزيعات":"of project cost — structure, equity, fees, distributions"})</span>
+          <div style={{flex:1,height:1,background:"#ede9fe"}} />
+        </div>}
 
         {/* ── SECTION 1: FUND STRUCTURE (Fund mode only) ── */}
         <SecWrap visible={isFundMode} color="#16a34a">
@@ -2884,59 +2960,6 @@ When to use:
         })()}</AB>
 
         {/* ── (old EXIT, LAND sections moved — see new order above) ── */}
-        </SecWrap>
-
-        {/* ── SECTION 3b: HYBRID GOVERNMENT FINANCING ── */}
-        <SecWrap visible={isHybridMode} color="#059669">
-        <AH id="govFin" color="#059669" label={ar?"شروط التمويل":"Financing Terms"} summary={isHybridMode ? `${cfg.govFinancingPct||70}% · ${cfg.govFinanceRate||3}% · ${cfg.govLoanTenor||15}yr` : ""} visible={isHybridMode} />
-        <AB id="govFin" visible={isHybridMode}>{(() => {
-          return <>
-            <div style={g3}>
-              <FL label={ar?"نسبة التمويل (%)":"Financing %"} tip="نسبة تكلفة المشروع المموّلة من جهة التمويل (بنك، حكومة، مؤسسة). الباقي يموّله الصندوق (GP/LP)\nPercentage of project cost covered by financing (bank, government, institution). Remainder funded by fund (GP/LP)">
-                <Inp type="number" value={cfg.govFinancingPct??70} onChange={v=>upCfg({govFinancingPct:v})} min={0} max={100} step={5} />
-              </FL>
-              <FL label={ar?"القرض لصالح":"Loan Beneficiary"} tip="المشروع (SPV): الدين على مستوى الشركة، خدمة الدين تُخصم قبل التوزيعات\nالمطور: المطور يقترض شخصياً ويدخل الصندوق بالمبلغ المقترض\n\nProject (SPV): Debt at entity level, DS deducted before distributions\nDeveloper: Developer borrows personally and enters fund with borrowed amount">
-                <select className="z-input z-select" value={cfg.govBeneficiary||"project"} onChange={e=>upCfg({govBeneficiary:e.target.value})} style={{minWidth:140}}>
-                  <option value="project">{ar?"المشروع (SPV)":"Project (SPV)"}</option>
-                  <option value="gp">{ar?"المطور شخصياً":"Developer (Personal)"}</option>
-                </select>
-              </FL>
-              <FL label={ar?"سعر الفائدة (%)":"Rate %"} tip="سعر الفائدة على التمويل — يختلف حسب الجهة المموّلة\nFinancing interest rate — varies by lender">
-                <Inp type="number" value={cfg.govFinanceRate??3} onChange={v=>upCfg({govFinanceRate:v})} step={0.5} />
-              </FL>
-            </div>
-            <div style={g3}>
-              <FL label={ar?"مدة القرض (سنوات)":"Tenor (years)"} tip="مدة القرض الإجمالية بما فيها فترة السماح\nTotal loan duration including grace period">
-                <Inp type="number" value={cfg.govLoanTenor??15} onChange={v=>upCfg({govLoanTenor:v})} min={1} max={50} />
-              </FL>
-              <FL label={ar?"فترة السماح (سنوات)":"Grace (years)"} tip="فترة السماح قبل بدء سداد الأصل. خلالها يُدفع الفائدة فقط\nGrace period before principal repayment begins. Interest-only during this period">
-                <Inp type="number" value={cfg.govGrace??5} onChange={v=>upCfg({govGrace:v})} min={0} max={30} />
-              </FL>
-              <FL label={ar?"رسوم مقدمة (%)":"Upfront Fee %"} tip="رسوم لمرة واحدة على التمويل\nOne-time fee on financing">
-                <Inp type="number" value={cfg.govUpfrontFeePct??0} onChange={v=>upCfg({govUpfrontFeePct:v})} step={0.25} />
-              </FL>
-            </div>
-            <div style={g3}>
-              <FL label={ar?"نوع السداد":"Repayment Type"} tip="أقساط متساوية: سداد الأصل بالتساوي على مدة السداد\nدفعة واحدة: الأصل كامل في نهاية المدة\n\nAmortizing: equal principal payments over repayment period\nBullet: full principal at maturity">
-                <Drp lang={lang} value={cfg.govRepaymentType||"amortizing"} onChange={v=>upCfg({govRepaymentType:v})} options={[{value:"amortizing",en:"Amortizing (default)",ar:"أقساط متساوية (تلقائي)"},{value:"bullet",en:"Bullet (lump sum)",ar:"دفعة واحدة"}]} />
-              </FL>
-              <FL label={ar?"أساس فترة السماح":"Grace Basis"} tip="متى تبدأ فترة السماح؟\nإتمام البناء: من نهاية آخر مرحلة بناء\nأول سحب: من أول سحب فعلي\nبداية الصندوق: من سنة تأسيس الصندوق\n\nWhen does grace period start?\nCOD: from end of last construction phase\nFirst Draw: from first actual drawdown\nFund Start: from fund establishment year">
-                <Drp lang={lang} value={cfg.graceBasis||"cod"} onChange={v=>upCfg({graceBasis:v})} options={[{value:"cod",en:"COD - Completion (default)",ar:"إتمام البناء (تلقائي)"},{value:"firstDraw",en:"First Draw",ar:"أول سحب"},{value:"fundStart",en:"Fund Start",ar:"بداية الصندوق"}]} />
-              </FL>
-              <FL label={ar?"رسملة فوائد البناء؟":"Capitalize IDC?"} tip="إضافة فوائد فترة البناء إلى تكلفة المشروع. يزيد الـ Equity المطلوب لكن يعكس التكلفة الحقيقية\nAdd construction-period interest to project cost. Increases equity needed but reflects true cost">
-                <Drp lang={lang} value={cfg.capitalizeIDC?"Y":"N"} onChange={v=>upCfg({capitalizeIDC:v==="Y"})} options={["Y","N"]} />
-              </FL>
-            </div>
-            {/* Hybrid summary */}
-            {financing && financing.isHybrid && <div style={{marginTop:8,padding:"8px 12px",background:"var(--surface-sunken)",borderRadius:8,fontSize:11,color:"var(--text-secondary)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
-                <span>{ar?"مبلغ التمويل":"Financing Amount"}: <b>{fmtM(financing.govLoanAmount)}</b></span>
-                <span>{ar?"حصة الصندوق":"Fund Portion"}: <b>{fmtM(financing.fundPortionCost)}</b></span>
-                {financing.govBeneficiary === "gp" && <span style={{color:"#d97706"}}>{ar?"⚠ القرض على المطور شخصياً":"⚠ Personal loan to developer"}</span>}
-              </div>
-            </div>}
-          </>;
-        })()}</AB>
         </SecWrap>
 
         {/* ── SECTION 4: FEES ── */}
