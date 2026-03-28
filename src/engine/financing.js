@@ -240,9 +240,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       cumDraw += yearDraw;
     }
   }
-  const capitalizedFinCosts = (project.capitalizeIDC && !isBank100) ? (estimatedIDC + estimatedUpfrontFees) : 0;
+  const capitalizedFinCosts = (project.capitalizeIDC && !isBank100 && !isHybridGP) ? (estimatedIDC + estimatedUpfrontFees) : 0;
   // NOTE: bank100 ignores capitalizeIDC because 100% debt financing inherently
   // includes construction interest in the loan — no separate capitalization needed.
+  // Hybrid-GP: no project-level debt → no IDC to capitalize (developer's personal loan is off-balance-sheet).
 
   // ── Equity Structure ──
   const totalProjectCost = devCostInclLand + capitalizedFinCosts;

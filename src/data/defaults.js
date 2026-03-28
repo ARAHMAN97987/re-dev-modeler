@@ -34,6 +34,15 @@ export const defaultProject = () => ({
   landRentStartRule: "auto", // auto = MIN(grace, income) | grace = grace end only | income = first income only
   landLeaseStartYear: 0, // 0 = same as project startYear. Otherwise absolute year (e.g. 2025)
   landRentManualAlloc: null, // null = auto (by footprint). Object like {"Phase 1":60,"Phase 2":40} = manual %
+  // Hybrid Financing (Government + Fund)
+  govFinancingPct: 70, // % of project cost from institutional financing
+  govBeneficiary: "project", // "project" (SPV debt) | "gp" (developer personal loan)
+  govFinanceRate: 3.0, // Government/institutional rate %
+  govLoanTenor: 15, // Government loan duration (years)
+  govGrace: 5, // Government grace period (years)
+  govRepaymentType: "amortizing", // amortizing | bullet
+  govUpfrontFeePct: 0, // Government upfront fee %
+  hybridDrawOrder: "finFirst", // "finFirst" (debt first) | "prorata" (simultaneous)
   // Debt
   debtAllowed: true,
   maxLtvPct: 70,

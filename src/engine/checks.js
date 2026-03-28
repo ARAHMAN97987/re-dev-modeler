@@ -50,9 +50,18 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T0","Land Esc Interval = 0", false, "Step escalation interval must be > 0");
   if ((project.carryPct ?? 30) >= 100 && project.gpCatchup)
     add("T0","Carry ≥ 100%", false, "Carry percentage must be < 100% when catch-up enabled");
-  if (project.finMode === "hybrid" && (project.govFinancingPct ?? 70) >= 100)
+  if (project.finMode === "hybrid" && (project.govFinancingPct ?? 70) >= 100 && (project.govBeneficiary || "project") === "project")
     add("T0","Gov Financing = 100%", false, "100% government financing leaves no equity for fund investors");
-  else if ((project.maxLtvPct ?? 70) >= 100 && project.finMode === "fund")
+  // Hybrid-specific: tenor must exceed grace for gov loan (even without debtAllowed flag)
+  if (project.finMode === "hybrid") {
+    const _hTnr = project.govLoanTenor ?? 15;
+    const _hGrc = project.govGrace ?? 5;
+    if (_hTnr <= _hGrc && (project.govBeneficiary || "project") === "project")
+      add("T0","Gov Tenor ≤ Grace", false, "Government loan tenor must exceed grace period", `Tenor: ${_hTnr}, Grace: ${_hGrc}`);
+    if ((project.govFinanceRate ?? 3) < 0)
+      add("T0","Gov Rate < 0", false, "Government financing rate cannot be negative");
+  }
+  if ((project.maxLtvPct ?? 70) >= 100 && project.finMode === "fund")
     add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
   const maxConstrEnd = Math.max(0, ...as.map(a => a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0)));
   if (maxConstrEnd > (project.horizon||50))
