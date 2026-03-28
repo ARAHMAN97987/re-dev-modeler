@@ -23,7 +23,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
   // ═══════════════════════════════════════════════
   // T0: BUSINESS VALIDATION (H16)
   // ═══════════════════════════════════════════════
-  if (w && project.finMode === "fund") {
+  if (w && (project.finMode === "fund" || project.finMode === "hybrid")) {
     const gpP = w.gpPct || 0, lpP = w.lpPct || 0;
     add("T0","GP+LP = 100%", Math.abs((gpP+lpP)-1) < 0.001, "Equity split must total 100%", `GP: ${fp(gpP)} + LP: ${fp(lpP)} = ${fp(gpP+lpP)}`);
   }
@@ -46,7 +46,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T0","Land Esc Interval = 0", false, "Step escalation interval must be > 0");
   if ((project.carryPct ?? 30) >= 100 && project.gpCatchup)
     add("T0","Carry ≥ 100%", false, "Carry percentage must be < 100% when catch-up enabled");
-  if ((project.maxLtvPct ?? 70) >= 100 && project.finMode === "fund")
+  if ((project.maxLtvPct ?? 70) >= 100 && (project.finMode === "fund" || project.finMode === "hybrid"))
     add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
   const maxConstrEnd = Math.max(0, ...as.map(a => a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0)));
   if (maxConstrEnd > (project.horizon||50))

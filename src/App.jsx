@@ -4535,7 +4535,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             {[
               {label:ar?"المشاريع":"Projects",value:index.length,icon:"📁",color:"#2563eb"},
               {label:ar?"الأصول":"Assets",value:totalAssets,icon:"🏗",color:"#0f766e"},
-              ...(finModes.fund?[{label:ar?"صناديق":"Funds",value:finModes.fund,icon:"🏦",color:"#8b5cf6"}]:[]),
+              ...((finModes.fund||finModes.hybrid)?[{label:ar?"صناديق":"Funds",value:(finModes.fund||0)+(finModes.hybrid||0),icon:"🏦",color:"#8b5cf6"}]:[]),
               ...(finModes.debt?[{label:ar?"تمويل بنكي":"Bank",value:finModes.debt+(finModes.bank100||0),icon:"💳",color:"#f59e0b"}]:[]),
             ].map((kpi,i)=>(
               <div key={i} className="z-kpi" style={{flex:1}}>
@@ -4615,7 +4615,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                   <div style={{fontSize:isMobile?10:11,color:"var(--text-secondary)",marginTop:2,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <span>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",...(!isMobile?{year:"numeric",hour:"2-digit",minute:"2-digit"}:{})})}</span>
                     {!isMobile && p.assetCount > 0 && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>{p.assetCount} {ar?"أصل":"assets"}</span>}
-                    {!isMobile && p.finMode && p.finMode !== "self" && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:p.finMode==="fund"?"#f3e8ff":"#dbeafe",color:p.finMode==="fund"?"#7c3aed":"#2563eb"}}>{p.finMode==="fund"?(ar?"صندوق":"Fund"):p.finMode==="bank100"?(ar?"بنك 100%":"Bank 100%"):(ar?"بنكي":"Bank")}</span>}
+                    {!isMobile && p.finMode && p.finMode !== "self" && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:p.finMode==="fund"||p.finMode==="hybrid"?"#f3e8ff":"#dbeafe",color:p.finMode==="fund"||p.finMode==="hybrid"?"#7c3aed":"#2563eb"}}>{p.finMode==="fund"?(ar?"صندوق":"Fund"):p.finMode==="hybrid"?(ar?"مختلط":"Hybrid"):p.finMode==="bank100"?(ar?"بنك 100%":"Bank 100%"):(ar?"بنكي":"Bank")}</span>}
                   </div>
                 </div>
                 <span style={{fontSize:isMobile?9:10,padding:"3px 8px",borderRadius:4,fontWeight:500,background:p._shared?"#dbeafe":p.status==="Complete"?"#dcfce7":p.status==="In Progress"?"#dbeafe":"#f0f1f5",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af",flexShrink:0}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة":"View"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
@@ -11220,9 +11220,11 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
     }
     // Break-even finance rate: what rate makes NPV=0?
     if (project.finMode !== "self") {
-      const baseRate = project.financeRate ?? 6.5;
+      const isHybridBE = project.finMode === "hybrid";
+      const baseRate = isHybridBE ? (project.govFinanceRate ?? 3) : (project.financeRate ?? 6.5);
       for (let rate = baseRate; rate <= 25; rate += 0.5) {
-        const p2 = { ...project, financeRate: rate };
+        const rateOverride = isHybridBE ? { govFinanceRate: rate } : { financeRate: rate };
+        const p2 = { ...project, ...rateOverride };
         const r = computeProjectCashFlows(p2);
         const ir2 = computeIncentives(p2, r);
         const f2 = computeFinancing(p2, r, ir2);
@@ -11497,7 +11499,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
               {breakeven.financeRate ? breakeven.financeRate.toFixed(1) + "%" : "> 25%"}
             </div>
             <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:6}}>
-              {lang==="ar"?`الحالي: ${project.financeRate??6.5}% · هامش: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "واسع"}`:`Current: ${project.financeRate??6.5}% · Margin: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "wide"}`}
+              {(()=>{const curRate = project.finMode==="hybrid" ? (project.govFinanceRate??3) : (project.financeRate??6.5); return lang==="ar"?`الحالي: ${curRate}% · هامش: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "واسع"}`:`Current: ${curRate}% · Margin: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "wide"}`;})()}
             </div>
             <div style={{marginTop:12,height:8,background:"var(--surface-sidebar)",borderRadius:4,overflow:"hidden"}}>
               <div style={{height:"100%",width:Math.min(100,(breakeven.financeRateMargin||20)*5)+"%",background:(breakeven.financeRateMargin||20)<3?"#ef4444":(breakeven.financeRateMargin||20)<6?"#f59e0b":"#16a34a",borderRadius:4}} />
@@ -11556,7 +11558,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
                 ...(project.finMode !== "self" ? [{
                   label: lang==="ar"?"معدل الربح":"Finance Rate",
                   be: breakeven.financeRate ? breakeven.financeRate.toFixed(1)+"%" : "> 25%",
-                  current: (project.financeRate??6.5)+"%",
+                  current: (project.finMode==="hybrid"?(project.govFinanceRate??3):(project.financeRate??6.5))+"%",
                   margin: breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "> 18%",
                   risk: !breakeven.financeRateMargin || breakeven.financeRateMargin > 6 ? "low" : breakeven.financeRateMargin > 3 ? "med" : "high",
                 }] : []),

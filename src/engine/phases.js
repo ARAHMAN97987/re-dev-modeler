@@ -340,7 +340,7 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
         phaseFinancings[pName] = pFinancing;
         // Run waterfall (only if fund mode for this phase)
         const pFinMode = vProject.finMode || project.finMode;
-        if (pFinMode === "fund" || pFinMode === "jv") {
+        if (pFinMode === "fund" || pFinMode === "jv" || pFinMode === "hybrid") {
           try {
             const pWaterfall = computeWaterfall(vProject, vResults, pFinancing, pIr);
             if (pWaterfall) phaseWaterfalls[pName] = pWaterfall;
