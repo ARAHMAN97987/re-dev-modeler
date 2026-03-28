@@ -444,16 +444,92 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const isGP = f.govBeneficiary === "gp";
       return <div style={{background:"linear-gradient(135deg,#ecfdf5,#f0fdf4)",borderRadius:10,border:"1px solid #86efac",padding:"12px 16px",marginBottom:14,fontSize:12}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-          <span style={{fontSize:16}}>🏛</span>
-          <span style={{fontWeight:700,color:"#166534"}}>{ar?"تمويل مختلط":"Hybrid Financing"}</span>
-          <span style={{fontSize:10,color:"#059669",background:"#d1fae5",borderRadius:4,padding:"2px 6px"}}>{govPct}% {ar?"حكومي":"Gov."} + {fundPct}% {ar?"صندوق":"Fund"}</span>
+          <span style={{fontSize:16}}>🔀</span>
+          <span style={{fontWeight:700,color:"#166534"}}>{ar?"مختلط: صندوق + تمويل":"Hybrid: Fund + Financing"}</span>
+          <span style={{fontSize:10,color:"#059669",background:"#d1fae5",borderRadius:4,padding:"2px 6px"}}>{govPct}% {ar?"تمويل":"Fin."} + {fundPct}% {ar?"صندوق":"Fund"}</span>
         </div>
         <div style={{display:"flex",gap:16,flexWrap:"wrap",color:"#374151"}}>
-          <span>{ar?"القرض الحكومي":"Gov. Loan"}: <b>{typeof fmtM === 'function' ? fmtM(f.govLoanAmount) : Math.round(f.govLoanAmount/1e6)+'M'}</b></span>
+          <span>{ar?"مبلغ التمويل":"Loan Amount"}: <b>{typeof fmtM === 'function' ? fmtM(f.govLoanAmount) : Math.round(f.govLoanAmount/1e6)+'M'}</b></span>
           <span>{ar?"سعر الفائدة":"Rate"}: <b>{(f.govLoanRate*100).toFixed(1)}%</b></span>
           <span>{ar?"حصة الصندوق":"Fund Portion"}: <b>{typeof fmtM === 'function' ? fmtM(f.fundPortionCost) : Math.round(f.fundPortionCost/1e6)+'M'}</b></span>
           {isGP && <span style={{color:"#d97706",fontWeight:600}}>⚠ {ar?"القرض على المطور شخصياً":"Personal loan to developer"}</span>}
         </div>
+      </div>;
+    })()}
+
+    {/* ═══ HYBRID: TWO SEPARATE CASH FLOWS ═══ */}
+    {financing?.isHybrid && w.financingCF && w.fundCF && (() => {
+      const finCF = w.financingCF;
+      const fundCFArr = w.fundCF;
+      const finPct = financing.govFinancingPct || 70;
+      const fundPctVal = 100 - finPct;
+      const finTotal = finCF.reduce((a,b) => a+b, 0);
+      const fundTotal = fundCFArr.reduce((a,b) => a+b, 0);
+      const combinedTotal = finTotal + fundTotal;
+      const sy = cfg.startYear || 2026;
+      const [showHybridCF, setShowHybridCF] = useState(false);
+      return <div style={{marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:8}}>
+          {/* Financing Portion Card */}
+          <div style={{background:"linear-gradient(135deg,#eff6ff,#dbeafe)",borderRadius:10,border:"1px solid #93c5fd",padding:"12px 16px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <span style={{fontSize:14}}>🏦</span>
+              <span style={{fontWeight:700,fontSize:12,color:"#1e40af"}}>{ar?`جانب التمويل (${finPct}%)`:`Financing Side (${finPct}%)`}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
+              <span style={{color:"#6b7280"}}>{ar?"مبلغ التمويل":"Loan Amount"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(financing.govLoanAmount)}</span>
+              <span style={{color:"#6b7280"}}>{ar?"سعر الفائدة":"Rate"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{((financing.govLoanRate||0)*100).toFixed(1)}%</span>
+              <span style={{color:"#6b7280"}}>{ar?"إجمالي التدفق":"Total CF"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:finTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(finTotal)}</span>
+            </div>
+          </div>
+          {/* Fund Portion Card */}
+          <div style={{background:"linear-gradient(135deg,#faf5ff,#f3e8ff)",borderRadius:10,border:"1px solid #c4b5fd",padding:"12px 16px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+              <span style={{fontSize:14}}>📊</span>
+              <span style={{fontWeight:700,fontSize:12,color:"#6d28d9"}}>{ar?`جانب الصندوق (${fundPctVal}%)`:`Fund Side (${fundPctVal}%)`}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
+              <span style={{color:"#6b7280"}}>{ar?"حصة الصندوق":"Fund Equity"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(financing.fundPortionCost)}</span>
+              <span style={{color:"#6b7280"}}>{ar?"قيمة التخارج":"Exit Value"}</span>
+              <span style={{textAlign:"right",fontWeight:600}}>{fmtM((w.exitProceeds||[]).reduce((a,b)=>a+b,0))}</span>
+              <span style={{color:"#6b7280"}}>{ar?"إجمالي التدفق":"Total CF"}</span>
+              <span style={{textAlign:"right",fontWeight:600,color:fundTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(fundTotal)}</span>
+            </div>
+          </div>
+        </div>
+        {/* Combined summary */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",background:"var(--surface-sunken)",borderRadius:6,fontSize:11}}>
+          <span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي مُجمّع (تمويل + صندوق)":"Combined Total (Financing + Fund)"}: <b style={{color:combinedTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(combinedTotal)}</b></span>
+          {w.fullProjectExitVal > 0 && <span style={{color:"var(--text-secondary)"}}>{ar?"قيمة المشروع الكاملة":"Full Project Value"}: <b>{fmtM(w.fullProjectExitVal)}</b></span>}
+          <button onClick={()=>setShowHybridCF(!showHybridCF)} style={{...btnS,fontSize:10,padding:"2px 8px"}}>{showHybridCF?(ar?"إخفاء":"Hide"):(ar?"تفصيل سنوي":"Yearly Detail")}</button>
+        </div>
+        {/* Yearly breakdown table */}
+        {showHybridCF && <div style={{maxHeight:300,overflowY:"auto",marginTop:8,borderRadius:8,border:"1px solid var(--border-default)"}}>
+          <table style={{...tblStyle,fontSize:10,width:"100%"}}>
+            <thead><tr style={{position:"sticky",top:0,background:"var(--surface-table-header)"}}>
+              <th style={{...thSt,padding:"4px 8px"}}>{ar?"السنة":"Year"}</th>
+              <th style={{...thSt,padding:"4px 8px",color:"#1e40af"}}>{ar?"تمويل":"Fin. CF"}</th>
+              <th style={{...thSt,padding:"4px 8px",color:"#6d28d9"}}>{ar?"صندوق":"Fund CF"}</th>
+              <th style={{...thSt,padding:"4px 8px"}}>{ar?"مُجمّع":"Combined"}</th>
+            </tr></thead>
+            <tbody>{finCF.map((v, i) => {
+              if (i > (financing.exitYear ? financing.exitYear - sy + 2 : 25)) return null;
+              const fv = fundCFArr[i] || 0;
+              const cv = v + fv;
+              const cellS = (val) => ({...tdN,padding:"3px 8px",color:val<0?"#dc2626":val>0?"#16a34a":"#9ca3af",fontWeight:Math.abs(val)>1e5?600:400});
+              return <tr key={i} style={{background:i%2===0?"var(--surface-table-even)":"transparent"}}>
+                <td style={{...tdSt,padding:"3px 8px",fontWeight:600}}>{sy+i}</td>
+                <td style={cellS(v)}>{fmt(v)}</td>
+                <td style={cellS(fv)}>{fmt(fv)}</td>
+                <td style={cellS(cv)}>{fmt(cv)}</td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>}
       </div>;
     })()}
 

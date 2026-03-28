@@ -636,6 +636,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     developerDPI: gpDPI, investorDPI: lpDPI,
     developerNPV10: gpNPV10, investorNPV10: lpNPV10,
     developerNPV12: gpNPV12, investorNPV12: lpNPV12,
+    // Hybrid separate cash flows (pass-through from financing engine)
+    financingCF: f.financingCF, fundCF: f.fundCF, fullProjectExitVal: f.fullProjectExitVal,
+    fundFeeBasis,
   };
 }
 
