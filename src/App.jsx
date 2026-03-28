@@ -649,81 +649,105 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       </div>;
     })()}
 
-    {/* ═══ HYBRID: TWO SEPARATE CASH FLOWS ═══ */}
-    {f?.isHybrid && w.financingCF && w.fundCF && (() => {
-      const finCF = w.financingCF;
-      const fundCFArr = w.fundCF;
+    {/* ═══ HYBRID: THREE DETAILED CASH FLOW TABLES ═══ */}
+    {f?.isHybrid && (() => {
       const finPct = f.govFinancingPct || 70;
       const fundPctVal = 100 - finPct;
-      const finTotal = finCF.reduce((a,b) => a+b, 0);
-      const fundTotal = fundCFArr.reduce((a,b) => a+b, 0);
-      const combinedTotal = finTotal + fundTotal;
+      const fundShare = fundPctVal / 100;
+      const finShare = finPct / 100;
+      const maxYr = w.exitYear ? w.exitYear - sy + 2 : Math.min(showYrs || 15, h);
+      const hybYears = Array.from({length: Math.min(maxYr + 1, h)}, (_, i) => i);
+      // Financing side arrays (scaled by finShare)
+      const finIncome = hybYears.map(y => (pc.income[y]||0) * finShare);
+      const finLandRent = hybYears.map(y => (pc.landRent[y]||0) * finShare);
+      const finCapex = hybYears.map(y => (pc.capex[y]||0) * finShare);
+      // Fund side arrays (scaled by fundShare)
+      const fundIncome = hybYears.map(y => (pc.income[y]||0) * fundShare);
+      const fundLandRent = hybYears.map(y => (pc.landRent[y]||0) * fundShare);
+      const fundCapex = hybYears.map(y => (pc.capex[y]||0) * fundShare);
+      // Table builder helper
+      const HybTable = ({id, title, titleColor, borderColor, bgColor, children}) => {
+        const [open, setOpen] = useState(false);
+        return <div style={{marginBottom:10,borderRadius:8,border:`1px solid ${borderColor}`,overflow:"hidden"}}>
+          <div onClick={()=>setOpen(!open)} style={{padding:"8px 14px",background:bgColor,cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"}}>
+            <span style={{fontSize:10,color:titleColor,transform:open?"rotate(90deg)":"rotate(0deg)",transition:"transform 0.15s"}}>▶</span>
+            <span style={{fontSize:11,fontWeight:700,color:titleColor,flex:1}}>{title}</span>
+            <span style={{fontSize:10,color:"var(--text-tertiary)"}}>{open?(ar?"طي":"Collapse"):(ar?"فتح":"Expand")}</span>
+          </div>
+          {open && <div className="table-wrap" style={{overflowX:"auto",maxHeight:400,overflowY:"auto"}}><table style={{...tblStyle,fontSize:10,width:"100%"}}>{children}</table></div>}
+        </div>;
+      };
+      const HRow = ({label, arr, color, bold, negate}) => {
+        const tot = arr.reduce((a,b)=>a+b,0);
+        const st = bold ? {fontWeight:700,background:"var(--surface-table-header)"} : {};
+        const nc = v => color || (v<0?"#ef4444":v>0?"#1a1d23":"#9ca3af");
+        return <tr style={st}>
+          <td style={{...tdSt,position:"sticky",left:0,background:bold?"#f8f9fb":"#fff",zIndex:1,fontWeight:bold?700:500,minWidth:140,fontSize:10}}>{label}</td>
+          <td style={{...tdN,fontWeight:600,fontSize:10,color:nc(negate?-tot:tot)}}>{fmt(tot)}</td>
+          {hybYears.map(y=>{const v=arr[y]||0;return <td key={y} style={{...tdN,fontSize:10,color:nc(negate?-v:v)}}>{v===0?"—":fmt(v)}</td>;})}
+        </tr>;
+      };
+      const THead = () => <thead><tr style={{position:"sticky",top:0,background:"var(--surface-table-header)",zIndex:3}}>
+        <th style={{...thSt,position:"sticky",left:0,background:"var(--surface-table-header)",zIndex:4,minWidth:140,fontSize:10}}>{ar?"البند":"Item"}</th>
+        <th style={{...thSt,textAlign:"right",fontSize:10}}>{ar?"الإجمالي":"Total"}</th>
+        {hybYears.map(y=><th key={y} style={{...thSt,textAlign:"right",minWidth:70,fontSize:9}}>{sy+y}</th>)}
+      </tr></thead>;
+
       return <div style={{marginBottom:14}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:8}}>
-          {/* Financing Portion Card */}
-          <div style={{background:"linear-gradient(135deg,#eff6ff,#dbeafe)",borderRadius:10,border:"1px solid #93c5fd",padding:"12px 16px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-              <span style={{fontSize:14}}>🏦</span>
-              <span style={{fontWeight:700,fontSize:12,color:"#1e40af"}}>{ar?`جانب التمويل (${finPct}%)`:`Financing Side (${finPct}%)`}</span>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
-              <span style={{color:"#6b7280"}}>{ar?"مبلغ التمويل":"Loan Amount"}</span>
-              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(f.govLoanAmount)}</span>
-              <span style={{color:"#6b7280"}}>{ar?"سعر الفائدة":"Rate"}</span>
-              <span style={{textAlign:"right",fontWeight:600}}>{((f.govLoanRate||0)*100).toFixed(1)}%</span>
-              <span style={{color:"#6b7280"}}>{ar?"صافي تكلفة التمويل":"Net Financing Cost"}</span>
-              <span style={{textAlign:"right",fontWeight:600,color:"#dc2626"}}>{fmtM(Math.abs(finTotal))}</span>
-              <span style={{color:"#6b7280"}}>{ar?"DSCR متوسط":"Avg DSCR"}</span>
-              <span style={{textAlign:"right",fontWeight:600}}>{(() => { const ds = f.dscr||[]; const vals = ds.filter(v=>v!=null&&v>0); return vals.length > 0 ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x" : "—"; })()}</span>
-            </div>
-          </div>
-          {/* Fund Portion Card */}
-          <div style={{background:"linear-gradient(135deg,#faf5ff,#f3e8ff)",borderRadius:10,border:"1px solid #c4b5fd",padding:"12px 16px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-              <span style={{fontSize:14}}>📊</span>
-              <span style={{fontWeight:700,fontSize:12,color:"#6d28d9"}}>{ar?`جانب الصندوق (${fundPctVal}%)`:`Fund Side (${fundPctVal}%)`}</span>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
-              <span style={{color:"#6b7280"}}>{ar?"رأس مال الصندوق":"Fund Equity"}</span>
-              <span style={{textAlign:"right",fontWeight:600}}>{fmtM(f.totalEquity)}</span>
-              <span style={{color:"#6b7280"}}>{ar?"LP IRR":"LP IRR"}</span>
-              <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"}</span>
-              <span style={{color:"#6b7280"}}>{ar?"LP MOIC":"LP MOIC"}</span>
-              <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}</span>
-              <span style={{color:"#6b7280"}}>{ar?"صافي للصندوق":"Fund Net CF"}</span>
-              <span style={{textAlign:"right",fontWeight:600,color:fundTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(fundTotal)}</span>
-            </div>
-          </div>
-        </div>
-        {/* Combined summary */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",background:"var(--surface-sunken)",borderRadius:6,fontSize:11,flexWrap:"wrap",gap:6}}>
-          <span style={{color:"var(--text-secondary)"}}>{ar?"التدفق المجمّع":"Combined CF"}: <b style={{color:combinedTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(combinedTotal)}</b></span>
-          {w.fullProjectExitVal > 0 && <span style={{color:"var(--text-secondary)"}}>{ar?"قيمة التخارج الكاملة":"Full Exit Value"}: <b>{fmtM(w.fullProjectExitVal)}</b> → {ar?"صافي بعد الدين":"Net after debt"}: <b style={{color:"#16a34a"}}>{fmtM(w.fullProjectExitVal - (f.totalDebt||0))}</b></span>}
-          <button onClick={()=>setShowHybridCF(!showHybridCF)} style={{...btnS,fontSize:10,padding:"2px 8px"}}>{showHybridCF?(ar?"إخفاء":"Hide"):(ar?"تفصيل سنوي":"Yearly Detail")}</button>
-        </div>
-        {/* Yearly breakdown table */}
-        {showHybridCF && <div style={{maxHeight:300,overflowY:"auto",marginTop:8,borderRadius:8,border:"1px solid var(--border-default)"}}>
-          <table style={{...tblStyle,fontSize:10,width:"100%"}}>
-            <thead><tr style={{position:"sticky",top:0,background:"var(--surface-table-header)"}}>
-              <th style={{...thSt,padding:"4px 8px"}}>{ar?"السنة":"Year"}</th>
-              <th style={{...thSt,padding:"4px 8px",color:"#1e40af"}}>{ar?"تمويل":"Fin. CF"}</th>
-              <th style={{...thSt,padding:"4px 8px",color:"#6d28d9"}}>{ar?"صندوق":"Fund CF"}</th>
-              <th style={{...thSt,padding:"4px 8px"}}>{ar?"مُجمّع":"Combined"}</th>
-            </tr></thead>
-            <tbody>{finCF.map((v, i) => {
-              if (i > (w.exitYear ? w.exitYear - sy + 2 : 25)) return null;
-              const fv = fundCFArr[i] || 0;
-              const cv = v + fv;
-              const cellS = (val) => ({...tdN,padding:"3px 8px",color:val<0?"#dc2626":val>0?"#16a34a":"#9ca3af",fontWeight:Math.abs(val)>1e5?600:400});
-              return <tr key={i} style={{background:i%2===0?"var(--surface-table-even)":"transparent"}}>
-                <td style={{...tdSt,padding:"3px 8px",fontWeight:600}}>{sy+i}</td>
-                <td style={cellS(v)}>{fmt(v)}</td>
-                <td style={cellS(fv)}>{fmt(fv)}</td>
-                <td style={cellS(cv)}>{fmt(cv)}</td>
-              </tr>;
-            })}</tbody>
-          </table>
-        </div>}
+        {/* ── TABLE 1: Financing Side ── */}
+        <HybTable id="hybFin" title={`🏦 ${ar?`جانب التمويل (${finPct}%)`:`Financing Side (${finPct}%)`} — ${fmtM(f.govLoanAmount)} @ ${((f.govLoanRate||0)*100).toFixed(1)}%`} titleColor="#1e40af" borderColor="#93c5fd" bgColor="#eff6ff">
+          <THead />
+          <tbody>
+            <HRow label={ar?"الإيرادات (حصة التمويل)":"Revenue (Fin. Share)"} arr={finIncome} color="#16a34a" />
+            <HRow label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={finLandRent} color="#ef4444" negate />
+            <HRow label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={finCapex} color="#ef4444" negate />
+            <HRow label={ar?"سحوبات الدين":"Debt Drawdown"} arr={f.drawdown} color="#3b82f6" />
+            <HRow label={ar?"(-) سداد الأصل":"(-) Repayment"} arr={f.repayment} color="#ef4444" negate />
+            <HRow label={ar?"(-) تكلفة التمويل":"(-) Interest"} arr={f.interest} color="#ef4444" negate />
+            <HRow label={ar?"= صافي تدفق التمويل":"= Net Financing CF"} arr={hybYears.map(y => (f.drawdown[y]||0) - (f.debtService[y]||0))} bold />
+            <tr style={{background:"#eff6ff"}}>
+              <td style={{...tdSt,position:"sticky",left:0,background:"#eff6ff",zIndex:1,fontWeight:500,fontSize:9,color:"#3b82f6",paddingInlineStart:16}}>DSCR</td>
+              <td style={tdN}></td>
+              {hybYears.map(y=><td key={y} style={{...tdN,color:f.dscr[y]===null?"#9ca3af":f.dscr[y]>=1.5?"#16a34a":f.dscr[y]>=1.2?"#a16207":"#ef4444",fontWeight:600,fontSize:9}}>{f.dscr[y]===null?"—":f.dscr[y]?.toFixed(2)+"x"}</td>)}
+            </tr>
+          </tbody>
+        </HybTable>
+
+        {/* ── TABLE 2: Fund Side ── */}
+        <HybTable id="hybFund" title={`📊 ${ar?`جانب الصندوق (${fundPctVal}%)`:`Fund Side (${fundPctVal}%)`} — ${ar?"ملكية":"Equity"}: ${fmtM(f.totalEquity)} | LP IRR: ${w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"} | MOIC: ${w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}`} titleColor="#6d28d9" borderColor="#c4b5fd" bgColor="#faf5ff">
+          <THead />
+          <tbody>
+            <HRow label={ar?"الإيرادات (حصة الصندوق)":"Revenue (Fund Share)"} arr={fundIncome} color="#16a34a" />
+            <HRow label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={fundLandRent} color="#ef4444" negate />
+            <HRow label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={fundCapex} color="#ef4444" negate />
+            <HRow label={ar?"طلبات رأس المال":"Equity Calls"} arr={w.equityCalls||[]} color="#8b5cf6" />
+            {w.fees && <HRow label={ar?"(-) رسوم الصندوق":"(-) Fund Fees"} arr={w.fees} color="#f59e0b" negate />}
+            <HRow label={ar?"= صافي تدفق الصندوق":"= Net Fund CF"} arr={f.leveredCF} bold />
+            {w.lpDist && <HRow label={ar?"توزيعات المستثمر":"LP Distributions"} arr={w.lpDist} color="#6d28d9" />}
+            {w.gpDist && <HRow label={ar?"توزيعات المطور":"GP Distributions"} arr={w.gpDist} color="#8b5cf6" />}
+          </tbody>
+        </HybTable>
+
+        {/* ── TABLE 3: Combined (Full Project) ── */}
+        <HybTable id="hybCombined" title={`📋 ${ar?"المشروع الكامل (مجمّع)":"Full Project (Combined)"} — ${fmtM(f.devCostInclLand)}`} titleColor="#1e3a5f" borderColor="#94a3b8" bgColor="#f1f5f9">
+          <THead />
+          <tbody>
+            <HRow label={ar?"الإيرادات":"Revenue"} arr={hybYears.map(y=>pc.income[y]||0)} color="#16a34a" />
+            <HRow label={ar?"(-) إيجار أرض":"(-) Land Rent"} arr={hybYears.map(y=>pc.landRent[y]||0)} color="#ef4444" negate />
+            <HRow label={ar?"(-) تكاليف تطوير":"(-) CAPEX"} arr={hybYears.map(y=>pc.capex[y]||0)} color="#ef4444" negate />
+            {(() => { const u=hybYears.map(y=>(pc.income[y]||0)-(pc.landRent[y]||0)-(pc.capex[y]||0)); return <HRow label={ar?"= صافي التدفق (قبل التمويل)":"= Unlevered CF"} arr={u} bold />; })()}
+            <HRow label={ar?"سحوبات الدين":"Debt Drawdown"} arr={f.drawdown} color="#3b82f6" />
+            <HRow label={ar?"(-) خدمة الدين":"(-) Debt Service"} arr={f.debtService} color="#dc2626" negate />
+            {w.fees && <HRow label={ar?"(-) رسوم الصندوق":"(-) Fund Fees"} arr={w.fees} color="#f59e0b" negate />}
+            <HRow label={ar?"حصيلة التخارج":"Exit Proceeds"} arr={hybYears.map(y=>f.exitProceeds?.[y]||0)} color="#8b5cf6" />
+            <HRow label={ar?"= صافي التدفق الممول":"= Levered Net CF"} arr={f.leveredCF} bold />
+            {(() => { let cum=0; return <tr style={{background:"#f1f5f9"}}>
+              <td style={{...tdSt,position:"sticky",left:0,background:"#f1f5f9",zIndex:1,fontWeight:600,fontSize:9,color:"#475569",paddingInlineStart:16}}>{ar?"↳ تراكمي":"↳ Cumulative"}</td>
+              <td style={tdN}></td>
+              {hybYears.map(y=>{cum+=f.leveredCF[y]||0;return <td key={y} style={{...tdN,fontWeight:600,fontSize:9,color:cum<0?"#ef4444":"#16a34a"}}>{fmt(cum)}</td>;})}
+            </tr>; })()}
+          </tbody>
+        </HybTable>
       </div>;
     })()}
 
