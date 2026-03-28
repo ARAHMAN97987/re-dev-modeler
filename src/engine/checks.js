@@ -39,14 +39,20 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
   if ((project.exitStrategy||"sale") === "sale" && (project.exitMultiple??10) === 0)
     add("T0","Exit Multiple = 0", false, "Sale exit with 0x multiple produces zero exit value");
-  if (f && project.debtAllowed && (project.loanTenor??7) <= (project.debtGrace??3))
-    add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${project.loanTenor??7}, Grace: ${project.debtGrace??3}`);
+  if (f && project.debtAllowed) {
+    const _isHyb = project.finMode === "hybrid";
+    const _tnr = _isHyb ? (project.govLoanTenor ?? 15) : (project.loanTenor ?? 7);
+    const _grc = _isHyb ? (project.govGrace ?? 5) : (project.debtGrace ?? 3);
+    if (_tnr <= _grc) add("T0","Tenor ≤ Grace", false, "Loan tenor must exceed grace period", `Tenor: ${_tnr}, Grace: ${_grc}`);
+  }
   // K1-K7: Additional validation checks from code audit
   if ((project.landRentEscalationEveryN ?? 5) <= 0 && project.landType === "lease")
     add("T0","Land Esc Interval = 0", false, "Step escalation interval must be > 0");
   if ((project.carryPct ?? 30) >= 100 && project.gpCatchup)
     add("T0","Carry ≥ 100%", false, "Carry percentage must be < 100% when catch-up enabled");
-  if ((project.maxLtvPct ?? 70) >= 100 && (project.finMode === "fund" || project.finMode === "hybrid"))
+  if (project.finMode === "hybrid" && (project.govFinancingPct ?? 70) >= 100)
+    add("T0","Gov Financing = 100%", false, "100% government financing leaves no equity for fund investors");
+  else if ((project.maxLtvPct ?? 70) >= 100 && project.finMode === "fund")
     add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
   const maxConstrEnd = Math.max(0, ...as.map(a => a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0)));
   if (maxConstrEnd > (project.horizon||50))

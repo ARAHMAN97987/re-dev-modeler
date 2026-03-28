@@ -707,8 +707,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   // ── Hybrid metadata ──
-  const govLoanAmount = isHybrid ? devCostInclLand * (project.govFinancingPct ?? 70) / 100 : 0;
-  const fundPortionCost = isHybrid ? (totalProjectCost - govLoanAmount) : null;
+  // Use actual drawn amount (may differ from theoretical maxDebt due to reconciliation)
+  const govLoanAmount = isHybrid ? (isHybridProject ? totalDrawn : devCostInclLand * (project.govFinancingPct ?? 70) / 100) : 0;
+  const fundPortionCost = isHybrid ? Math.max(0, totalProjectCost - govLoanAmount) : null;
 
   return {
     mode: project.finMode, landCapValue, effectiveLandCap, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,

@@ -671,7 +671,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <span style={{textAlign:"right",fontWeight:600}}>{fmtM(f.govLoanAmount)}</span>
               <span style={{color:"#6b7280"}}>{ar?"سعر الفائدة":"Rate"}</span>
               <span style={{textAlign:"right",fontWeight:600}}>{((f.govLoanRate||0)*100).toFixed(1)}%</span>
-              <span style={{color:"#6b7280"}}>{ar?"إجمالي خدمة الدين":"Total Debt Service"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"صافي تكلفة التمويل":"Net Financing Cost"}</span>
               <span style={{textAlign:"right",fontWeight:600,color:"#dc2626"}}>{fmtM(Math.abs(finTotal))}</span>
               <span style={{color:"#6b7280"}}>{ar?"DSCR متوسط":"Avg DSCR"}</span>
               <span style={{textAlign:"right",fontWeight:600}}>{(() => { const ds = f.dscr||[]; const vals = ds.filter(v=>v!=null&&v>0); return vals.length > 0 ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)+"x" : "—"; })()}</span>
@@ -3161,8 +3161,8 @@ When to use:
       <Sec id="kpi" icon="📊" title="Key Metrics" titleAr="المؤشرات الرئيسية" color="#2563eb" alwaysOpen>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(145px, 1fr))",gap:10}}>
           <KPI label={ar?"تكلفة التطوير (شامل الأرض)":"Dev Cost (Incl Land)"} value={fmtM(f.devCostInclLand)} sub={cur} color="#1a1d23" />
-          <KPI label={ar?"سقف الدين":"Max Debt (LTV)"} value={fmtM(f.maxDebt)} sub={`${cfg.maxLtvPct||70}% LTV`} color="#ef4444" />
-          <KPI label={ar?"إجمالي الملكية":"Total Equity"} value={fmtM(f.totalEquity)} sub={fmtPct((1-(f.totalDebt/(f.devCostInclLand||1)))*100)} color="#3b82f6" />
+          <KPI label={isHybrid?(ar?"التمويل المؤسسي":"Inst. Financing"):(ar?"سقف الدين":"Max Debt (LTV)")} value={fmtM(f.maxDebt)} sub={isHybrid?`${cfg.govFinancingPct||70}%`:`${cfg.maxLtvPct||70}% LTV`} color="#ef4444" />
+          <KPI label={ar?"إجمالي الملكية":"Total Equity"} value={fmtM(f.totalEquity)} sub={fmtPct((1-(f.totalDebt/((f.totalProjectCost||f.devCostInclLand)||1)))*100)} color="#3b82f6" />
           <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color={getMetricColor("IRR",f.leveredIRR)} />
           <KPI label={ar?"إجمالي تكلفة التمويل":"Total Financing Cost"} value={fmtM(totalFinCost)} sub={finCostPct>0?fmtPct(finCostPct*100)+" "+ar?"من التكلفة":"of cost":""} color="#ef4444" tip={ar?"فوائد (شامل رسوم القرض) + رسوم صندوق\nInterest (incl. upfront fee) + Fund Fees":""} />
           <KPI label={ar?"عائد نقدي سنوي":"Cash-on-Cash Yield"} value={cashOnCash>0?fmtPct(cashOnCash*100):"—"} color={cashOnCash>0.08?"#16a34a":"#f59e0b"} />
@@ -3199,9 +3199,9 @@ When to use:
         <div style={{background:"#f0f4ff",borderRadius:6,padding:"8px 14px",fontSize:12}}>
           <strong>{ar?"المعادلة":"Equation"}:</strong>{" "}
           {ar?"دين":"Debt"} ({fmtM(f.totalDebt)}) + {ar?"المطور":"Developer"} ({fmtM(f.gpEquity)}){f.lpEquity > 0 ? ` + ${ar?"المستثمر":"Investor"} (${fmtM(f.lpEquity)})` : ""} = {fmtM(f.totalDebt + f.gpEquity + f.lpEquity)}{" "}
-          {Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - f.devCostInclLand) < 1000
+          {Math.abs((f.totalDebt + f.gpEquity + f.lpEquity) - (f.totalProjectCost || f.devCostInclLand)) < 1000
             ? <span style={{color:"#16a34a",fontWeight:600}}>✓</span>
-            : <span style={{color:"#ef4444",fontWeight:600}}>✗ ≠ {fmtM(f.devCostInclLand)}</span>}
+            : <span style={{color:"#ef4444",fontWeight:600}}>✗ ≠ {fmtM(f.totalProjectCost || f.devCostInclLand)}</span>}
         </div>
       </Sec>
 
@@ -3213,11 +3213,11 @@ When to use:
             <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{isHybrid?(ar?"تكلفة التمويل المؤسسي":"INSTITUTIONAL FINANCING COSTS"):(ar?"تكلفة الدين":"DEBT COSTS")}</div>
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               <span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي الفوائد":"Total Interest"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>{fmt(f.totalInterest)}</span>
-              {(f.upfrontFee||0) > 0 && <><span style={{color:"var(--text-tertiary)",fontSize:10,fontStyle:"italic"}}>{ar?"* تشمل رسوم قرض":"* incl. upfront fee"}: {fmt(f.upfrontFee)} ({cfg.upfrontFeePct||0}%)</span><span></span></>}
-              <span style={{color:"var(--text-secondary)"}}>{ar?"معدل التمويل":"Finance Rate"}</span><span style={{textAlign:"right",fontWeight:600}}>{cfg.financeRate||0}%</span>
-              <span style={{color:"var(--text-secondary)"}}>{ar?"المدة":"Tenor"}</span><span style={{textAlign:"right",fontWeight:500}}>{cfg.loanTenor} {ar?"سنة":"yrs"} ({cfg.debtGrace} {ar?"سماح":"grace"})</span>
+              {(f.upfrontFee||0) > 0 && <><span style={{color:"var(--text-tertiary)",fontSize:10,fontStyle:"italic"}}>{ar?"* تشمل رسوم قرض":"* incl. upfront fee"}: {fmt(f.upfrontFee)} ({isHybrid?(cfg.govUpfrontFeePct||0):(cfg.upfrontFeePct||0)}%)</span><span></span></>}
+              <span style={{color:"var(--text-secondary)"}}>{ar?"معدل التمويل":"Finance Rate"}</span><span style={{textAlign:"right",fontWeight:600}}>{isHybrid?(cfg.govFinanceRate||3):(cfg.financeRate||0)}%</span>
+              <span style={{color:"var(--text-secondary)"}}>{ar?"المدة":"Tenor"}</span><span style={{textAlign:"right",fontWeight:500}}>{isHybrid?(cfg.govLoanTenor||15):(cfg.loanTenor)} {ar?"سنة":"yrs"} ({isHybrid?(cfg.govGrace||5):(cfg.debtGrace)} {ar?"سماح":"grace"})</span>
               <span style={{color:"var(--text-secondary)"}}>{ar?"السداد يبدأ":"Repay Starts"}</span><span style={{textAlign:"right",fontWeight:500}}>{sy + f.repayStart}</span>
-              <span style={{color:"var(--text-secondary)"}}>{ar?"نوع السداد":"Repay Type"}</span><span style={{textAlign:"right",fontWeight:500}}>{cfg.repaymentType==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")}</span>
+              <span style={{color:"var(--text-secondary)"}}>{ar?"نوع السداد":"Repay Type"}</span><span style={{textAlign:"right",fontWeight:500}}>{(isHybrid?(cfg.govRepaymentType||"amortizing"):(cfg.repaymentType))==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")}</span>
               <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,fontWeight:700,color:"#ef4444"}}>{ar?"إجمالي تكلفة الدين":"Total Debt Cost"}</span>
               <span style={{borderTop:"1px solid #e5e7ec",paddingTop:4,textAlign:"right",fontWeight:700,color:"#ef4444"}}>{fmt(f.totalInterest)}</span>
             </div>
@@ -3262,8 +3262,8 @@ When to use:
       {f.totalDebt > 0 && <Sec id="dscr" icon="🏦" title="Debt Service & DSCR" titleAr="خدمة الدين و DSCR" color="#3b82f6">
         {/* Debt Structure Summary */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:10,fontSize:12,marginBottom:14}}>
-          <div style={{background:"var(--surface-table-header)",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"var(--text-secondary)",display:"block"}}>{ar?"الهيكل":"Structure"}</span><strong>{cfg.repaymentType==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")}</strong></div>
-          <div style={{background:"var(--surface-table-header)",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"var(--text-secondary)",display:"block"}}>{ar?"المدة":"Tenor"}</span><strong>{cfg.loanTenor} {ar?"سنة":"yrs"}</strong> <span style={{fontSize:10,color:"var(--text-tertiary)"}}>({cfg.debtGrace} {ar?"سماح":"grace"} + {f.repayYears} {ar?"سداد":"repay"})</span></div>
+          <div style={{background:"var(--surface-table-header)",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"var(--text-secondary)",display:"block"}}>{ar?"الهيكل":"Structure"}</span><strong>{(isHybrid?(cfg.govRepaymentType||"amortizing"):(cfg.repaymentType))==="amortizing"?(ar?"أقساط":"Amortizing"):(ar?"دفعة واحدة":"Bullet")}</strong></div>
+          <div style={{background:"var(--surface-table-header)",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"var(--text-secondary)",display:"block"}}>{ar?"المدة":"Tenor"}</span><strong>{isHybrid?(cfg.govLoanTenor||15):(cfg.loanTenor)} {ar?"سنة":"yrs"}</strong> <span style={{fontSize:10,color:"var(--text-tertiary)"}}>({isHybrid?(cfg.govGrace||5):(cfg.debtGrace)} {ar?"سماح":"grace"} + {f.repayYears} {ar?"سداد":"repay"})</span></div>
           <div style={{background:"var(--surface-table-header)",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"var(--text-secondary)",display:"block"}}>{ar?"بداية السداد":"Repay Starts"}</span><strong>{sy + f.repayStart}</strong></div>
           <div style={{background:"var(--surface-table-header)",borderRadius:6,padding:"8px 12px"}}><span style={{fontSize:10,color:"var(--text-secondary)",display:"block"}}>{ar?"التخارج":"Exit"}</span><strong>{f.exitYear}</strong> ({cfg.exitMultiple}x)</div>
         </div>
