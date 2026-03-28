@@ -6,7 +6,7 @@ function LoadingScreen() {
     <div style={{position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#0f1117',zIndex:1000}}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div style={{width:36,height:36,border:'3px solid rgba(95,191,191,0.2)',borderTop:'3px solid #5fbfbf',borderRadius:'50%',animation:'spin 0.8s linear infinite',marginBottom:14}} />
-      <div style={{fontSize:28,fontWeight:700,color:'#5fbfbf',letterSpacing:2}}>ZAN</div>
+      <div style={{fontSize:28,fontWeight:700,color:'#5fbfbf',letterSpacing:2,fontFamily:"'Tajawal',sans-serif"}}>Haseef</div>
       <p style={{color:'#6b7080',fontSize:12,marginTop:6}}>Financial Modeler</p>
     </div>
   )
@@ -58,7 +58,7 @@ export function FeaturesPanel({ lang = "ar", compact = false }) {
     <div style={{display:"flex",flexDirection:"column",gap:compact?12:16}}>
       {!compact && <>
         <div style={{marginBottom:8}}>
-          <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>ZAN Financial Modeler</div>
+          <div style={{fontSize:11,color:"#5fbfbf",letterSpacing:2,textTransform:"uppercase",fontWeight:600,marginBottom:8}}>Haseef Financial Modeler</div>
           <div style={{fontSize:compact?20:28,fontWeight:800,color:"#fff",lineHeight:1.2,letterSpacing:-0.5}}>
             {ar?"منصة النمذجة المالية\nللتطوير العقاري":"Real Estate Development\nFinancial Modeling Platform"}
           </div>
@@ -154,7 +154,7 @@ export function AuthGate({ children }) {
       <div style={{flex:1,padding:'48px 40px',display:'flex',flexDirection:'column',justifyContent:'center',overflow:'auto'}}>
         <FeaturesPanel lang={lang} />
         <div style={{marginTop:32,display:'flex',gap:16,fontSize:11,color:'#4b5060'}}>
-          <span>© 2026 ZAN</span>
+          <span>© 2026 Haseef</span>
           <span>·</span>
           <span>{ar?"جميع الحقوق محفوظة":"All rights reserved"}</span>
         </div>
@@ -164,7 +164,7 @@ export function AuthGate({ children }) {
       <div style={{width:420,minWidth:420,background:'#161a24',borderInlineStart:'1px solid #1e2230',display:'flex',flexDirection:'column',justifyContent:'center',padding:'48px 36px'}}>
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:32}}>
-          <div style={{fontSize:28,fontWeight:800,color:'#5fbfbf',letterSpacing:3}}>ZAN</div>
+          <div style={{fontSize:28,fontWeight:800,color:'#5fbfbf',letterSpacing:2,fontFamily:"'Tajawal',sans-serif"}}>Haseef</div>
           <div style={{fontSize:11,color:'#6b7080',marginTop:4}}>{ar?"النمذجة المالية":"Financial Modeler"}</div>
         </div>
 
