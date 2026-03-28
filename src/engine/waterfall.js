@@ -59,10 +59,11 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const auditorAnnual = isFund ? (project.auditorFeeAnnual || 0) : 0;
 
   // Operator fee: 0.15% of completed asset value, annual, only for rental/hold projects (not pure sale)
-  // For hybrid: operator manages entire asset, but fee charged to fund portion only
+  // Operator manages the ENTIRE physical asset regardless of financing structure
+  // → use full project cost (effectiveDevCost), NOT fund portion
   const hasRentalAssets = (project.assets || []).some(a => a.revType !== "Sale");
   const operatorFeePct = (project.operatorFeePct || 0) / 100;
-  const operatorFeeBase = hasRentalAssets ? fundFeeBasis : 0;
+  const operatorFeeBase = hasRentalAssets ? effectiveDevCost : 0;
 
   // Miscellaneous expenses: 0.5% of fund portion, one-time at fund start
   const miscExpensePct = (project.miscExpensePct || 0) / 100;
