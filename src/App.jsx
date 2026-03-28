@@ -716,7 +716,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       const cardHd = {cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"};
       const badge = (label, value, color) => <span style={{display:"inline-flex",alignItems:"center",gap:4,background:color+"18",color,borderRadius:"var(--radius-sm)",padding:"3px 8px",fontSize:10,fontWeight:700}}>{label} <strong>{value}</strong></span>;
       const KR = ({l,v,c,bold}) => <><span style={{color:"var(--text-secondary)",fontSize:11}}>{l}</span><span style={{textAlign:"right",fontWeight:bold?700:500,fontSize:11,color:c||"var(--text-primary)"}}>{v}</span></>;
-      const SecHd = ({text}) => <div style={{gridColumn:"1/-1",fontSize:9,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:"var(--text-tertiary)",paddingTop:6,borderTop:"0.5px solid var(--surface-separator)",marginTop:2}}>{text}</div>;
+      const SecHd = ({text}) => <div style={{gridColumn:"1/-1",fontSize:10,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:"var(--text-tertiary)",paddingTop:6,borderTop:"0.5px solid var(--surface-separator)",marginTop:2}}>{text}</div>;
       return <>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:12}}>
 
@@ -3695,7 +3695,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div style={{height:isMobile?44:48,minHeight:isMobile?44:48,background:"var(--surface-nav)",borderBottom:"1px solid var(--nav-tab-border)",display:"flex",alignItems:"center",padding:isMobile?"0 8px":"0 12px",gap:isMobile?4:8}}>
           {/* Back to projects */}
-          <button onClick={goBack} className="z-nav-btn" style={{padding:isMobile?"4px 8px":"5px 10px",fontSize:isMobile?10:11,flexShrink:0}}>{isMobile?"→":t.back}</button>
+          <button onClick={goBack} className="z-nav-btn" style={{padding:isMobile?"8px 10px":"5px 10px",fontSize:isMobile?11:11,minHeight:isMobile?36:undefined,flexShrink:0}}>{isMobile?"→":t.back}</button>
           {(() => {
             // Compute sidebar warning badge
             let _advWarn = 0;
@@ -3926,7 +3926,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} />],
             ["checks", <ChecksView key="checks" checks={checks} t={t} lang={lang} onFix={(tab)=>{setActiveTab(tab);window.scrollTo(0,0);}} />],
           ].map(([tabKey, tabContent]) => (
-            <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",overflow:"auto",height:"100%",padding:isMobile?10:18}} className={activeTab===tabKey?"zan-tab-content":undefined}>
+            <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",overflow:"auto",height:"100%",padding:isMobile?10:18,paddingBottom:isMobile?70:80}} className={activeTab===tabKey?"zan-tab-content":undefined}>
               {tabContent}
             </div>
           ))}
@@ -4062,7 +4062,7 @@ function FeaturesGrid({ lang }) {
     { icon: "🌐", color: "#06b6d4", title: ar?"ثنائي اللغة + حوافز حكومية":"Bilingual + Gov Incentives", desc: ar?"واجهة عربي/إنجليزي كاملة مع دعم منح CAPEX، إعفاء إيجار الأرض، دعم التمويل، واسترداد الرسوم":"Full Arabic/English interface with CAPEX grants, land rent rebates, finance subsidies, and fee waivers" },
   ];
   return (
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))",gap:16}}>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(260px, 1fr))",gap:16}}>
       {features.map((f, i) => (
         <div key={i} style={{background:"#f8f7f5",borderRadius:12,border:"1px solid #e5e0d8",padding:"20px 18px",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=f.color+"60";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.transform="translateY(0)";}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
@@ -6003,7 +6003,7 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
           </button>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(220px, 1fr))",gap:14}}>
         {[
           {icon:"1️⃣",title:ar?"أضف الأصول":"Add Assets",desc:ar?"عرّف كل أصل: نوعه، مساحته، تكلفته، إيراداته":"Define each asset: type, area, cost, revenue",done:false},
           {icon:"2️⃣",title:ar?"راجع الأرقام":"Review Numbers",desc:ar?"شوف التدفقات النقدية، IRR، NPV في لوحة التحكم":"Check cash flows, IRR, NPV in the dashboard",done:false},
@@ -10076,7 +10076,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   return (<div>
     {/* ── Report selector cards ── */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18}}>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18}}>
       {Object.entries(reportLabels).map(([key,r]) => (
         <button key={key} onClick={() => setActiveReport(key)}
           style={{background:activeReport===key?"linear-gradient(135deg,#0f766e,#2EC4B6)":"#fff",color:activeReport===key?"#fff":"#1a1d23",
@@ -11127,7 +11127,7 @@ function ScenariosView({ project, results, financing, waterfall, lang }) {
     {/* ── Break-Even Analysis ── */}
     {activeSection === "breakeven" && (
       <div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:14}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(220px, 1fr))",gap:14}}>
           {/* Occupancy break-even */}
           <div style={{background:"var(--surface-card)",borderRadius:8,border:"0.5px solid var(--border-default)",padding:20}}>
             <div style={{fontSize:11,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
@@ -11940,7 +11940,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
       {/* ── Phase Summary Cards (when consolidated) ── */}
       {!isPhase && phaseNames.length > 1 && (
         <Section title={ar?"ملخص المراحل":"Phase Summary"} color="#0f766e">
-          <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(phaseNames.length, 4)}, 1fr)`,gap:12}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":`repeat(${Math.min(phaseNames.length, 4)}, 1fr)`,gap:12}}>
             {phaseNames.map(pn => {
               const pd = phaseResults[pn];
               return (
@@ -11965,7 +11965,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
       {audienceView === "bank" && !isPhase && (<>
         <Section title={ar?"ملخص التمويل":"Financing Summary"} color="#1e40af">
           {f ? (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:12}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(200px, 1fr))",gap:12}}>
               <div style={{background:"var(--surface-card)",borderRadius:10,border:"0.5px solid var(--border-default)",padding:"16px 18px"}}>
                 <div style={{fontSize:10,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>{ar?"إجمالي الدين":"Total Debt"}</div>
                 <div style={{fontSize:20,fontWeight:700,color:"#1e40af"}}>{fmtM(f.totalDebt)}</div>
@@ -12053,7 +12053,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
       {audienceView === "investor" && !isPhase && (<>
         <Section title={ar?"عوائد المستثمرين":"Investor Returns"} color="#7c3aed">
           {w ? (
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(180px, 1fr))",gap:12}}>
               {[
                 { label: ar?"عائد المستثمر":"Investor IRR", value: w.lpIRR !== null ? (w.lpIRR*100).toFixed(1)+"%" : "—", color: "#7c3aed" },
                 { label: ar?"عائد المطور":"Developer IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—", color: "#16a34a" },
@@ -12163,22 +12163,22 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
       </Section>
 
       {/* ── Live Scenario Sliders ── */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(15,17,23,0.95)",backdropFilter:"blur(8px)",borderTop:"1px solid #282d3a",padding:"12px 24px",display:"flex",alignItems:"center",gap:24,justifyContent:"center",zIndex:9000,flexWrap:"wrap"}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(15,17,23,0.95)",backdropFilter:"blur(8px)",borderTop:"1px solid #282d3a",padding:isMobile?"8px 12px":"12px 24px",display:"flex",alignItems:"center",gap:isMobile?12:24,justifyContent:"center",zIndex:9000,flexWrap:"wrap"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>CAPEX</span>
-          <input type="range" min={80} max={120} value={liveSliders.capex} onChange={e=>setLiveSliders(s=>({...s,capex:+e.target.value}))} style={{width:120,accentColor:"#2563eb"}} />
+          <input type="range" min={80} max={120} value={liveSliders.capex} onChange={e=>setLiveSliders(s=>({...s,capex:+e.target.value}))} style={{width:isMobile?80:120,accentColor:"#2563eb"}} />
           <span style={{fontSize:11,color:liveSliders.capex!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.capex}%</span>
         </div>
         <div style={{width:1,height:24,background:"#282d3a"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>{ar?"الإيجار":"Rent"}</span>
-          <input type="range" min={80} max={120} value={liveSliders.rent} onChange={e=>setLiveSliders(s=>({...s,rent:+e.target.value}))} style={{width:120,accentColor:"#16a34a"}} />
+          <input type="range" min={80} max={120} value={liveSliders.rent} onChange={e=>setLiveSliders(s=>({...s,rent:+e.target.value}))} style={{width:isMobile?80:120,accentColor:"#16a34a"}} />
           <span style={{fontSize:11,color:liveSliders.rent!==100?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.rent}%</span>
         </div>
         <div style={{width:1,height:24,background:"#282d3a"}} />
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"#2EC4B6",fontWeight:600,minWidth:50}}>{ar?"المضاعف":"Exit ×"}</span>
-          <input type="range" min={6} max={15} step={0.5} value={liveSliders.exitMult} onChange={e=>setLiveSliders(s=>({...s,exitMult:+e.target.value}))} style={{width:120,accentColor:"#f59e0b"}} />
+          <input type="range" min={6} max={15} step={0.5} value={liveSliders.exitMult} onChange={e=>setLiveSliders(s=>({...s,exitMult:+e.target.value}))} style={{width:isMobile?80:120,accentColor:"#f59e0b"}} />
           <span style={{fontSize:11,color:liveSliders.exitMult!==(project.exitMultiple||10)?"#fbbf24":"#d0d4dc",fontWeight:600,minWidth:36,fontVariantNumeric:"tabular-nums"}}>{liveSliders.exitMult}x</span>
         </div>
         <div style={{width:1,height:24,background:"#282d3a"}} />
@@ -12197,7 +12197,7 @@ const btnSm={...btnS,padding:"4px 8px",fontSize:11,fontWeight:500,borderRadius:"
 const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:"var(--radius-sm)",border:"0.5px solid var(--nav-btn-border)",background:"var(--nav-btn-bg)",color:"var(--nav-btn-text)",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
 const cellInputStyle={padding:"4px 6px",borderRadius:3,border:"1px solid transparent",background:"transparent",color:"var(--text-primary)",fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",width:"100%"};
 const tblStyle={width:"100%",borderCollapse:"collapse"};
-const thSt={padding:"7px 8px",textAlign:"start",fontSize:10,fontWeight:600,color:"var(--text-secondary)",background:"var(--surface-table-header)",borderBottom:"0.5px solid var(--border-default)",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
+const thSt={padding:"7px 8px",textAlign:"start",fontSize:11,fontWeight:600,color:"var(--text-secondary)",background:"var(--surface-table-header)",borderBottom:"0.5px solid var(--border-default)",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
 const tdSt={padding:"5px 8px",borderBottom:"0.5px solid var(--surface-separator)",fontSize:12,whiteSpace:"nowrap"};
 const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
 
