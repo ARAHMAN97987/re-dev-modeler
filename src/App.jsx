@@ -2086,7 +2086,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"المدة":"Tenor"} v={`${cfg.loanTenor||7} ${ar?"سنة":"yrs"}`} />
             <KR l={ar?"فترة السماح":"Grace"} v={`${cfg.debtGrace||3} ${ar?"سنة":"yrs"}`} />
             <KR l={ar?"نوع السداد":"Repay Type"} v={cfg.repaymentType==="bullet"?(ar?"دفعة واحدة":"Bullet"):(ar?"أقساط":"Amortizing")} />
-            <KR l={ar?"أولوية السحب":"Draw Order"} v={(cfg.capitalCallOrder||"prorata")==="debtFirst"?(ar?"الدين أولاً":"Debt First"):(ar?"متزامن":"Pro-Rata")} />
+            <KR l={ar?"أولوية السحب":"Draw Order"} v={cfg.finMode==="hybrid"?((cfg.hybridDrawOrder||"finFirst")==="finFirst"?(ar?"التمويل أولاً":"Financing First"):(ar?"متزامن":"Pro-Rata")):((cfg.capitalCallOrder||"prorata")==="debtFirst"?(ar?"الدين أولاً":"Debt First"):(ar?"متزامن":"Pro-Rata"))} />
             <SecHd text={ar?"تكلفة الدين":"DEBT COST"} />
             <KR l={ar?"إجمالي الفوائد":"Total Interest"} v={fmtM(pf.totalInterest)} c="#ef4444" bold />
             {(pf.upfrontFee||0) > 0 && <KR l={ar?"* تشمل رسوم قرض":"* incl. upfront fee"} v={fmtM(pf.upfrontFee)} />}
@@ -3119,6 +3119,10 @@ When to use:
       const isBank = cfg.finMode === "debt" || cfg.finMode === "bank100";
       const isSelf = cfg.finMode === "self";
 
+      // For hybrid mode: fees are on fund portion only, so use fundPortionCost as denominator for %
+      const isHybrid = cfg.finMode === "hybrid";
+      const fundBasis = isHybrid ? (f.fundPortionCost || f.devCostInclLand) : f.devCostInclLand;
+
       // Fee totals from waterfall (if available)
       const feeData = w ? {
         sub: (w.feeSub||[]).reduce((a,b)=>a+b,0),
@@ -3137,7 +3141,8 @@ When to use:
 
       // Total financing cost = interest (includes upfront fee) + fund fees
       const totalFinCost = f.totalInterest + (feeData ? feeData.total : 0);
-      const finCostPct = f.devCostInclLand > 0 ? totalFinCost / f.devCostInclLand : 0;
+      // For hybrid: fund fees measured against fund portion, gov interest against full project
+      const finCostPct = fundBasis > 0 ? totalFinCost / fundBasis : 0;
 
       // Stable income for yield
       const stableIncome = pc.income.find((v,i) => i > (f.constrEnd||0) && v > 0) || 0;
@@ -3161,7 +3166,7 @@ When to use:
           <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color={getMetricColor("IRR",f.leveredIRR)} />
           <KPI label={ar?"إجمالي تكلفة التمويل":"Total Financing Cost"} value={fmtM(totalFinCost)} sub={finCostPct>0?fmtPct(finCostPct*100)+" "+ar?"من التكلفة":"of cost":""} color="#ef4444" tip={ar?"فوائد (شامل رسوم القرض) + رسوم صندوق\nInterest (incl. upfront fee) + Fund Fees":""} />
           <KPI label={ar?"عائد نقدي سنوي":"Cash-on-Cash Yield"} value={cashOnCash>0?fmtPct(cashOnCash*100):"—"} color={cashOnCash>0.08?"#16a34a":"#f59e0b"} />
-          {isFund && feeData && <KPI label={ar?"إجمالي الرسوم":"Total Fund Fees"} value={fmtM(feeData.total)} sub={f.devCostInclLand>0?fmtPct(feeData.total/f.devCostInclLand*100)+" "+ar?"من التكلفة":"of cost":""} color="#f59e0b" />}
+          {isFund && feeData && <KPI label={ar?"إجمالي الرسوم":"Total Fund Fees"} value={fmtM(feeData.total)} sub={fundBasis>0?fmtPct(feeData.total/fundBasis*100)+" "+(ar?"من حصة الصندوق":"of fund portion"):""} color="#f59e0b" />}
           <KPI label={ar?"إجمالي الفوائد":"Total Interest"} value={fmtM(f.totalInterest)} sub={cur} color="#ef4444" />
         </div>
       </Sec>
@@ -3173,7 +3178,7 @@ When to use:
           <div>
             <div style={{fontSize:11,fontWeight:700,color:"#16a34a",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #dcfce7"}}>{ar?"المصادر":"SOURCES"}</div>
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
-              {f.totalDebt > 0 && <><span style={{color:"var(--text-secondary)"}}>{ar?"الدين البنكي":"Bank Debt"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.totalDebt)} <span style={{fontSize:10,color:"var(--text-tertiary)"}}>{fmtPct((f.totalDebt/(f.devCostInclLand||1))*100)}</span></span></>}
+              {f.totalDebt > 0 && <><span style={{color:"var(--text-secondary)"}}>{isHybrid?(ar?"تمويل مؤسسي":"Institutional Financing"):(ar?"الدين البنكي":"Bank Debt")}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.totalDebt)} <span style={{fontSize:10,color:"var(--text-tertiary)"}}>{fmtPct((f.totalDebt/(f.devCostInclLand||1))*100)}</span></span></>}
               {f.gpEquity > 0 && <><span style={{color:"#3b82f6"}}>{ar?"مساهمة المطور":"Developer Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.gpEquity)} <span style={{fontSize:10,color:"var(--text-tertiary)"}}>{fmtPct(f.gpPct*100)}</span></span></>}
               {f.lpEquity > 0 && <><span style={{color:"#8b5cf6"}}>{ar?"مساهمة المستثمر":"Investor Equity"}</span><span style={{textAlign:"right",fontWeight:500}}>{fmt(f.lpEquity)} <span style={{fontSize:10,color:"var(--text-tertiary)"}}>{fmtPct(f.lpPct*100)}</span></span></>}
               <span style={{borderTop:"2px solid #16a34a",paddingTop:4,fontWeight:700}}>{ar?"الإجمالي":"Total"}</span>
@@ -3205,7 +3210,7 @@ When to use:
         <div style={{display:"grid",gridTemplateColumns:isFund&&!isMobile?"1fr 1fr":"1fr",gap:14}}>
           {/* Bank/Debt Costs */}
           {f.totalDebt > 0 && <div>
-            <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{ar?"تكلفة الدين":"DEBT COSTS"}</div>
+            <div style={{fontSize:11,fontWeight:700,color:"#ef4444",letterSpacing:0.5,textTransform:"uppercase",marginBottom:8,paddingBottom:4,borderBottom:"2px solid #fecaca"}}>{isHybrid?(ar?"تكلفة التمويل المؤسسي":"INSTITUTIONAL FINANCING COSTS"):(ar?"تكلفة الدين":"DEBT COSTS")}</div>
             <div style={{fontSize:12,display:"grid",gridTemplateColumns:"1fr auto",gap:"4px 20px",rowGap:6,maxWidth:420}}>
               <span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي الفوائد":"Total Interest"}</span><span style={{textAlign:"right",fontWeight:500,color:"#ef4444"}}>{fmt(f.totalInterest)}</span>
               {(f.upfrontFee||0) > 0 && <><span style={{color:"var(--text-tertiary)",fontSize:10,fontStyle:"italic"}}>{ar?"* تشمل رسوم قرض":"* incl. upfront fee"}: {fmt(f.upfrontFee)} ({cfg.upfrontFeePct||0}%)</span><span></span></>}
@@ -3248,7 +3253,7 @@ When to use:
         <div style={{marginTop:12,background:"#fefce8",borderRadius:6,padding:"10px 14px",display:"grid",gridTemplateColumns:"1fr auto",gap:"6px 20px",fontSize:12,maxWidth:520}}>
           <span style={{fontWeight:700}}>{ar?"إجمالي تكلفة التمويل الكلية":"TOTAL FINANCING COST"}</span>
           <span style={{textAlign:"right",fontWeight:800,fontSize:14,color:"#ef4444"}}>{fmt(totalFinCost)} {cur}</span>
-          <span style={{fontSize:11,color:"var(--text-secondary)"}}>{ar?"كنسبة من تكلفة التطوير":"As % of Dev Cost"}</span>
+          <span style={{fontSize:11,color:"var(--text-secondary)"}}>{isHybrid?(ar?"كنسبة من حصة الصندوق":"As % of Fund Portion"):(ar?"كنسبة من تكلفة التطوير":"As % of Dev Cost")}</span>
           <span style={{textAlign:"right",fontWeight:600,color:"#a16207"}}>{fmtPct(finCostPct*100)}</span>
         </div>
       </Sec>}
