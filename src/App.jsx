@@ -525,16 +525,16 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const exitMult = cfg.exitMultiple || project.exitMultiple || 0;
   const exitCostPct = cfg.exitCostPct || project.exitCostPct || 0;
 
-  // Simple Return (market convention)
+  // Simple Return (market convention) — from engine, fallback to local computation
   const lpSimpleROE = w.lpSimpleROE ?? (w.lpTotalInvested > 0 ? ((w.lpNetDist||w.lpTotalDist||0) - w.lpTotalInvested) / w.lpTotalInvested : 0);
   const gpSimpleROE = w.gpSimpleROE ?? (w.gpTotalInvested > 0 ? ((w.gpNetDist||w.gpTotalDist||0) - w.gpTotalInvested) / w.gpTotalInvested : 0);
-  const investYears = (() => {
+  const investYears = w.investYears ?? (() => {
     let firstCall = -1, lastDist = 0;
     for (let y = 0; y < h; y++) { if ((w.lpNetCF?.[y]||0) < 0 && firstCall < 0) firstCall = y; if ((w.lpNetCF?.[y]||0) > 0) lastDist = y; }
     return Math.max(1, firstCall >= 0 ? lastDist - firstCall + 1 : (exitYr > sy ? exitYr - sy : h));
   })();
-  const lpSimpleAnnual = investYears > 0 ? lpSimpleROE / investYears : 0;
-  const gpSimpleAnnual = investYears > 0 ? gpSimpleROE / investYears : 0;
+  const lpSimpleAnnual = w.lpSimpleAnnual ?? (investYears > 0 ? lpSimpleROE / investYears : 0);
+  const gpSimpleAnnual = w.gpSimpleAnnual ?? (investYears > 0 ? gpSimpleROE / investYears : 0);
 
   const lpCashYield = w.lpTotalInvested > 0 ? (w.lpDist || []).map(d => d / w.lpTotalInvested) : [];
   const gpCashYield = w.gpTotalInvested > 0 ? (w.gpDist || []).map(d => d / w.gpTotalInvested) : [];
@@ -729,7 +729,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           </div>
           {!kpiOpen.lp ? (
             <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-              {badge(ar?"عائد بسيط":"Simple", lpSimpleROE?fmtPct(lpSimpleROE*100):"—", "#8b5cf6")}
+              {badge(ar?"عائد بسيط (سنوي)":"Simple (Ann.)", lpSimpleAnnual?fmtPct(lpSimpleAnnual*100):"—", "#8b5cf6")}
               {badge("IRR", w.lpIRR!==null?fmtPct(w.lpIRR*100):"—", getMetricColor("IRR",w.lpIRR))}
               {badge("MOIC", w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—", getMetricColor("MOIC",w.lpMOIC))}
             </div>
@@ -746,6 +746,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"مؤشرات المستثمر":"INVESTOR METRICS"} />
               <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={lpSimpleROE?fmtPct(lpSimpleROE*100):"—"} c="#8b5cf6" bold />
               <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={lpSimpleAnnual?fmtPct(lpSimpleAnnual*100):"—"} c="#8b5cf6" />
+              {(w.lpIRR && lpSimpleAnnual && w.lpIRR > lpSimpleAnnual * 1.05) && <div style={{gridColumn:"1/-1",fontSize:9,color:"#6b7280",fontStyle:"italic",margin:"-2px 0 2px",lineHeight:1.3}}>{ar?"⚡ IRR أعلى من العائد البسيط لأن طلبات رأس المال موزعة على سنوات — IRR يحسب توقيت كل دفعة":"⚡ IRR > Simple because capital calls are staggered — IRR accounts for timing of each call"}</div>}
               <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={getMetricColor("IRR",w.lpIRR)} bold />
               <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.lpMOIC)} bold />
               <KR l="DPI" v={w.lpDPI?w.lpDPI.toFixed(2)+"x":"—"} />
@@ -1952,6 +1953,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"المدة":"Tenor"} v={`${cfg.loanTenor||7} ${ar?"سنة":"yrs"}`} />
             <KR l={ar?"فترة السماح":"Grace"} v={`${cfg.debtGrace||3} ${ar?"سنة":"yrs"}`} />
             <KR l={ar?"نوع السداد":"Repay Type"} v={cfg.repaymentType==="bullet"?(ar?"دفعة واحدة":"Bullet"):(ar?"أقساط":"Amortizing")} />
+            <KR l={ar?"أولوية السحب":"Draw Order"} v={(cfg.capitalCallOrder||"prorata")==="debtFirst"?(ar?"الدين أولاً":"Debt First"):(ar?"متزامن":"Pro-Rata")} />
             <SecHd text={ar?"تكلفة الدين":"DEBT COST"} />
             <KR l={ar?"إجمالي الفوائد":"Total Interest"} v={fmtM(pf.totalInterest)} c="#ef4444" bold />
             {(pf.upfrontFee||0) > 0 && <KR l={ar?"* تشمل رسوم قرض":"* incl. upfront fee"} v={fmtM(pf.upfrontFee)} />}
@@ -2569,6 +2571,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
                 <FL label={ar?"رسوم %":"Upfront Fee %"} tip="رسوم القرض المقدمة كنسبة من مبلغ التمويل. تُدفع مرة واحدة عند السحب\nUpfront loan fee as percentage of debt amount. Paid once at drawdown" hint={autoHint("upfrontFeePct",ar?"مرة واحدة · عند السحب":"One-time · at drawdown")}><Inp type="number" value={cfg.upfrontFeePct} onChange={v=>upCfg({upfrontFeePct:v})} /></FL>
                 <FL label={ar?"سداد":"Repayment"} tip="Amortizing = أقساط دورية تقلل الرصيد. Bullet = سداد الأصل دفعة واحدة بالنهاية\nAmortizing = regular installments. Bullet = principal at end">
                   <Drp lang={lang} value={cfg.repaymentType} onChange={v=>upCfg({repaymentType:v})} options={[{value:"amortizing",en:"Amortizing (default)",ar:"أقساط (تلقائي)"},{value:"bullet",en:"Bullet",ar:"دفعة واحدة"}]} />
+                </FL>
+                <FL label={ar?"أولوية السحب":"Draw Order"} tip={ar?"تحدد كيف يتم سحب الدين والملكية:\n\nمتزامن: كل سنة يُسحب دين + ملكية بنفس النسبة (تلقائي)\n\nالدين أولاً: استنفاد كامل الدين قبل طلب أموال المستثمرين — يُؤخر طلبات رأس المال ويرفع IRR":"Controls how debt and equity are drawn:\n\nPro-Rata: debt + equity drawn proportionally each year (default)\n\nDebt First: exhaust all debt before calling investor equity — delays capital calls and boosts IRR"}>
+                  <Drp lang={lang} value={cfg.capitalCallOrder||"prorata"} onChange={v=>upCfg({capitalCallOrder:v})} options={[{value:"prorata",en:"Pro-Rata (default)",ar:"متزامن (تلقائي)"},{value:"debtFirst",en:"Debt First",ar:"الدين أولاً"}]} />
                 </FL>
               </div>
               <FL label={ar?"طريقة السحب":"Tranche Mode"} tip="Single: all debt as one block. Per Draw: each drawdown as separate tranche"><Drp lang={lang} value={cfg.debtTrancheMode||"single"} onChange={v=>upCfg({debtTrancheMode:v})} options={[{value:"single",en:"Single Block (default)",ar:"كتلة واحدة (تلقائي)"},{value:"perDraw",en:"Per Drawdown",ar:"لكل سحبة"}]} /></FL>

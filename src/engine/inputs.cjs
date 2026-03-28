@@ -33,6 +33,7 @@ const defaultProject = () => ({
   debtGraceStartYear: 0,
   upfrontFeePct: 0.5,
   repaymentType: "amortizing",
+  capitalCallOrder: "prorata",
   islamicMode: "conventional",
   gpEquityManual: 0,
   lpEquityManual: 0,

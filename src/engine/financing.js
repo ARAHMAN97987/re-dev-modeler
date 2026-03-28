@@ -307,15 +307,30 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // Debt ratio based on financeable uses (scheduled uses only, upfront fee is per-draw interest)
   const financeableUses = totalScheduledUses;
   const actualMaxDebt = Math.min(maxDebt, financeableUses);
-  const debtRatio = totalScheduledUses > 0 ? Math.min(actualMaxDebt / totalScheduledUses, 1) : 0;
+  const callOrder = project.capitalCallOrder || "prorata";
 
-  for (let y = 0; y < h; y++) {
-    if (scheduledUses[y] > 0 && totalDrawn < actualMaxDebt) {
-      const draw = Math.min(scheduledUses[y] * debtRatio, actualMaxDebt - totalDrawn);
-      drawdown[y] = draw;
-      totalDrawn += draw;
+  if (callOrder === "debtFirst") {
+    // ── Debt-First Mode: draw all available debt before any equity ──
+    // Each year: use debt first up to actualMaxDebt, equity covers the rest
+    for (let y = 0; y < h; y++) {
+      if (scheduledUses[y] > 0 && totalDrawn < actualMaxDebt) {
+        const draw = Math.min(scheduledUses[y], actualMaxDebt - totalDrawn);
+        drawdown[y] = draw;
+        totalDrawn += draw;
+      }
+      equityCalls[y] = Math.max(0, scheduledUses[y] - drawdown[y]);
     }
-    equityCalls[y] = Math.max(0, scheduledUses[y] - drawdown[y]);
+  } else {
+    // ── Pro-Rata Mode (default): debt and equity drawn proportionally each year ──
+    const debtRatio = totalScheduledUses > 0 ? Math.min(actualMaxDebt / totalScheduledUses, 1) : 0;
+    for (let y = 0; y < h; y++) {
+      if (scheduledUses[y] > 0 && totalDrawn < actualMaxDebt) {
+        const draw = Math.min(scheduledUses[y] * debtRatio, actualMaxDebt - totalDrawn);
+        drawdown[y] = draw;
+        totalDrawn += draw;
+      }
+      equityCalls[y] = Math.max(0, scheduledUses[y] - drawdown[y]);
+    }
   }
 
   // Gate equity calls and drawdowns to fund period [fundStart..exit]

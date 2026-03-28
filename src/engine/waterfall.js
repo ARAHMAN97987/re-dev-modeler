@@ -170,17 +170,29 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // "capital" = fees count as invested capital (earn ROC + Pref) - default, current behavior
   // "expense" = fees are expenses (outside capital base - don't earn Pref, smaller unreturned capital)
   const feeTreatment = project.feeTreatment || "capital";
-  // ── Equity Calls: ZAN formula (pro-rata to CAPEX × totalEquity + unfundedFees) ──
-  // NOTE: This matches ZAN Excel behavior where:
-  //   equityCalls = (CAPEX_yr / Total_CAPEX) × TotalEquity + UnfundedFees
-  //   LP pays lpPct of each call → sum(LP calls) = lpEquity + lpPct×UF
-  //   GP pays gpPct of each call → sum(GP calls) = gpEquity + gpPct×UF
-  // LandCap is embedded in totalEquity and distributed pro-rata across construction,
-  // not as a lump-sum at Y0. This is the ZAN convention.
+  // ── Equity Calls ──
+  // capitalCallOrder: "prorata" (default) = equity pro-rata to CAPEX each year
+  //                   "debtFirst" = exhaust debt before calling equity (back-loaded calls, boosts IRR)
+  const callOrder = project.capitalCallOrder || "prorata";
   const equityCalls = new Array(h).fill(0);
-  for (let y = 0; y < h; y++) {
-    const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
-    equityCalls[y] = capexPortion + unfundedFees[y];
+  if (callOrder === "debtFirst" && f.drawdown && c.totalCapex > 0) {
+    // Debt-First: equity = residual after debt drawdown each year, scaled to totalEquity
+    const finEquityCalls = new Array(h).fill(0);
+    let finTotalEquity = 0;
+    for (let y = 0; y < h; y++) {
+      finEquityCalls[y] = Math.max(0, (c.capex[y] || 0) - (f.drawdown[y] || 0));
+      finTotalEquity += finEquityCalls[y];
+    }
+    const scale = finTotalEquity > 0 ? totalEquity / finTotalEquity : 0;
+    for (let y = 0; y < h; y++) {
+      equityCalls[y] = finEquityCalls[y] * scale + unfundedFees[y];
+    }
+  } else {
+    // Pro-Rata (default): equity distributed proportionally to CAPEX each year
+    for (let y = 0; y < h; y++) {
+      const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
+      equityCalls[y] = capexPortion + unfundedFees[y];
+    }
   }
   // Gate equity calls to fund period: accumulate pre-fundStart into fundStartIdx
   // This matches Excel: IF(year >= fundStart, call, 0)
@@ -518,6 +530,16 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const projNPV12 = calcNPV(c.netCF, 0.12);
   const projNPV14 = calcNPV(c.netCF, 0.14);
 
+  // Simple Return (Saudi market convention: linear, non-compounded)
+  const lpSimpleROE = lpTotalCalled > 0 ? (lpNetDist - lpTotalCalled) / lpTotalCalled : 0;
+  const gpSimpleROE = gpTotalCalled > 0 ? (gpNetDist - gpTotalCalled) / gpTotalCalled : 0;
+  // Investment period: first negative CF → last positive CF
+  let _firstCall = -1, _lastDist = 0;
+  for (let y = 0; y < h; y++) { if (lpNetCF[y] < 0 && _firstCall < 0) _firstCall = y; if (lpNetCF[y] > 0) _lastDist = y; }
+  const investYears = Math.max(1, _firstCall >= 0 ? _lastDist - _firstCall + 1 : (exitYr > 0 ? exitYr : h));
+  const lpSimpleAnnual = investYears > 0 ? lpSimpleROE / investYears : 0;
+  const gpSimpleAnnual = investYears > 0 ? gpSimpleROE / investYears : 0;
+
   return {
     gpEquity, lpEquity, totalEquity, gpPct, lpPct,
     fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, feePreEst, feeSpv, feeAuditor, feeOperator, feeMisc, totalFees, unfundedFees,
@@ -526,6 +548,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     lpDist, gpDist, lpNetCF, gpNetCF,
     unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
     lpIRR, gpIRR, projIRR, lpMOIC, gpMOIC, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
+    lpSimpleROE, gpSimpleROE, lpSimpleAnnual, gpSimpleAnnual, investYears,
     lpTotalInvested: lpTotalCalled, gpTotalInvested: gpTotalCalled, // aliases for UI backward compat
     lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,
     gpLandRentObligation, gpLandRentTotal, lpLandRentObligation, lpLandRentTotal,
