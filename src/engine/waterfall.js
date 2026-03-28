@@ -27,12 +27,14 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const isFund = project.finMode === "fund" || project.finMode === "hybrid";
 
   // Fee basis: for hybrid mode, fees apply to fund portion only (not government-financed portion)
-  const fundFeeBasis = f.fundPortionCost || f.devCostExclLand;
+  const isHybridMode = project.finMode === "hybrid";
+  const fundFeeBasis = isHybridMode ? (f.fundPortionCost || f.devCostExclLand) : f.devCostExclLand;
+  // Fund equity basis: for hybrid, the fund's equity is only the fund portion (not gov-borrowed GP equity)
+  const fundEquityBasis = isHybridMode ? (f.fundPortionCost || totalEquity) : totalEquity;
 
   // Fee calculations (only Fund type gets full fees)
   // Subscription fee: for hybrid, apply only to fund portion equity (LP raise), not government-borrowed GP equity
-  const isHybridMode = project.finMode === "hybrid";
-  const subFeeBase = isHybridMode ? (f.fundPortionCost || totalEquity) : totalEquity;
+  const subFeeBase = fundEquityBasis;
   const subFee = isFund ? subFeeBase * (project.subscriptionFeePct || 0) / 100 : 0;
   // DevFee: read from financing (single source — computed in financing.js)
   const devFeeTotal = f.devFeeTotal || 0;
@@ -49,9 +51,10 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const auditorAnnual = isFund ? (project.auditorFeeAnnual || 0) : 0;
 
   // Operator fee: 0.15% of completed asset value, annual, only for rental/hold projects (not pure sale)
+  // For hybrid: operator manages entire asset, but fee charged to fund portion only
   const hasRentalAssets = (project.assets || []).some(a => a.revType !== "Sale");
   const operatorFeePct = (project.operatorFeePct || 0) / 100;
-  const operatorFeeBase = hasRentalAssets ? f.devCostExclLand : 0; // Completed asset value ≈ construction cost
+  const operatorFeeBase = hasRentalAssets ? fundFeeBasis : 0;
 
   // Miscellaneous expenses: 0.5% of fund portion, one-time at fund start
   const miscExpensePct = (project.miscExpensePct || 0) / 100;
@@ -113,13 +116,13 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     if (isFund) {
       let mgmtBase = 0;
       if (mgmtFeeBase === "equity") {
-        mgmtBase = totalEquity;
+        mgmtBase = fundEquityBasis;
       } else if (mgmtFeeBase === "devCost" || mgmtFeeBase === "fundAssets") {
         // For hybrid: fund portion only. For standard fund: total project cost.
         mgmtBase = fundFeeBasis;
       } else if (mgmtFeeBase === "nav") {
         // NAV proxy: equity + cumulative net income - cumulative capex (floor at equity)
-        mgmtBase = Math.max(totalEquity, totalEquity + cumIncome - cumCapex);
+        mgmtBase = Math.max(fundEquityBasis, fundEquityBasis + cumIncome - cumCapex);
       } else {
         // "deployed": cumulative CAPEX deployed (legacy)
         mgmtBase = cumCapex;

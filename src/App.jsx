@@ -2513,8 +2513,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const sy = results.startYear;
   const ir = incentivesResult;
   // Fee auto-default hints — shown under field as part of hint text
-  const _FD = { subscriptionFeePct:2, annualMgmtFeePct:1.5, mgmtFeeCapAnnual:2000000, custodyFeeAnnual:100000, developerFeePct:12, structuringFeePct:1, structuringFeeCap:300000, preEstablishmentFee:200000, spvFee:20000, auditorFeeAnnual:40000, operatorFeePct:0.15, operatorFeeCap:600000, miscExpensePct:0.5, upfrontFeePct:0.5, maxLtvPct:70, financeRate:6.5, loanTenor:7, debtGrace:3, exitMultiple:10, exitCapRate:9, exitCostPct:2, landCapRate:1000, prefReturnPct:15, carryPct:30, lpProfitSplitPct:70 };
-  const _FU = { loanTenor:ar?"سنوات":"yr", debtGrace:ar?"سنوات":"yr", exitMultiple:"x", landCapRate:ar?"ريال/م²":"SAR/sqm" }; // special units
+  const _FD = { subscriptionFeePct:2, annualMgmtFeePct:0.9, mgmtFeeCapAnnual:0, custodyFeeAnnual:130000, developerFeePct:12, structuringFeePct:0.1, structuringFeeCap:0, preEstablishmentFee:0, spvFee:0, auditorFeeAnnual:40000, operatorFeePct:0, operatorFeeCap:0, miscExpensePct:0, upfrontFeePct:0.5, maxLtvPct:70, financeRate:6.5, loanTenor:7, debtGrace:3, exitMultiple:10, exitCapRate:9, exitCostPct:2, landCapRate:1000, prefReturnPct:15, carryPct:30, lpProfitSplitPct:70, hurdleIRR:15, incentivePct:20, govFinancingPct:70, govFinanceRate:3, govLoanTenor:15, govGrace:5, govUpfrontFeePct:0 };
+  const _FU = { loanTenor:ar?"سنوات":"yr", debtGrace:ar?"سنوات":"yr", govLoanTenor:ar?"سنوات":"yr", govGrace:ar?"سنوات":"yr", exitMultiple:"x", landCapRate:ar?"ريال/م²":"SAR/sqm", custodyFeeAnnual:ar?" ريال":" SAR", auditorFeeAnnual:ar?" ريال":" SAR" }; // special units
   const autoHint = (field, baseHint) => { const d = _FD[field]; if (d === undefined) return baseHint; const u = _FU[field]; const fmt = u ? d.toLocaleString()+u : d >= 1000 ? (d/1000).toLocaleString()+'K' : d+'%'; const tag = ar ? `التلقائي: ${fmt}` : `default: ${fmt}`; return baseHint ? baseHint + ` · ${tag}` : tag; };
   const dh = (field) => autoHint(field, ""); // shortcut: default hint only
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
@@ -2642,7 +2642,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
     {(() => {
         const isHybridMode = cfg.finMode === "hybrid";
-        const hasDbt = cfg.finMode !== "self" && !isHybridMode;
+        const hasDbt = cfg.finMode !== "self" && cfg.finMode !== "hybrid";
+        const hasFundDebt = isHybridMode && cfg.debtAllowed;
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
         const isFundMode = cfg.finMode === "fund" || isHybridMode;
         const notHold = (cfg.exitStrategy||"sale") !== "hold";
@@ -2702,7 +2703,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         <AB id="govFin" visible={isHybridMode}>{(() => {
           return <>
             <div style={g3}>
-              <FL label={ar?"نسبة التمويل (%)":"Financing %"} tip="نسبة تكلفة المشروع المموّلة من جهة التمويل (بنك، حكومة، مؤسسة). الباقي يموّله الصندوق (GP/LP)\nPercentage of project cost covered by financing (bank, government, institution). Remainder funded by fund (GP/LP)">
+              <FL label={ar?"نسبة التمويل (%)":"Financing %"} tip="نسبة تكلفة المشروع المموّلة من جهة التمويل (بنك، حكومة، مؤسسة). الباقي يموّله الصندوق (GP/LP)\nPercentage of project cost covered by financing (bank, government, institution). Remainder funded by fund (GP/LP)" hint={dh("govFinancingPct")}>
                 <Inp type="number" value={cfg.govFinancingPct??70} onChange={v=>upCfg({govFinancingPct:v})} min={0} max={100} step={5} />
               </FL>
               <FL label={ar?"القرض لصالح":"Loan Beneficiary"} tip="المشروع (SPV): الدين على مستوى الشركة، خدمة الدين تُخصم قبل التوزيعات\nالمطور: المطور يقترض شخصياً ويدخل الصندوق بالمبلغ المقترض\n\nProject (SPV): Debt at entity level, DS deducted before distributions\nDeveloper: Developer borrows personally and enters fund with borrowed amount">
@@ -2711,18 +2712,18 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
                   <option value="gp">{ar?"المطور شخصياً":"Developer (Personal)"}</option>
                 </select>
               </FL>
-              <FL label={ar?"سعر الفائدة (%)":"Rate %"} tip="سعر الفائدة على التمويل — يختلف حسب الجهة المموّلة\nFinancing interest rate — varies by lender">
+              <FL label={ar?"سعر الفائدة (%)":"Rate %"} tip="سعر الفائدة على التمويل — يختلف حسب الجهة المموّلة\nFinancing interest rate — varies by lender" hint={dh("govFinanceRate")}>
                 <Inp type="number" value={cfg.govFinanceRate??3} onChange={v=>upCfg({govFinanceRate:v})} step={0.5} />
               </FL>
             </div>
             <div style={g3}>
-              <FL label={ar?"مدة القرض (سنوات)":"Tenor (years)"} tip="مدة القرض الإجمالية بما فيها فترة السماح\nTotal loan duration including grace period">
+              <FL label={ar?"مدة القرض (سنوات)":"Tenor (years)"} tip="مدة القرض الإجمالية بما فيها فترة السماح\nTotal loan duration including grace period" hint={dh("govLoanTenor")}>
                 <Inp type="number" value={cfg.govLoanTenor??15} onChange={v=>upCfg({govLoanTenor:v})} min={1} max={50} />
               </FL>
-              <FL label={ar?"فترة السماح (سنوات)":"Grace (years)"} tip="فترة السماح قبل بدء سداد الأصل. خلالها يُدفع الفائدة فقط\nGrace period before principal repayment begins. Interest-only during this period">
+              <FL label={ar?"فترة السماح (سنوات)":"Grace (years)"} tip="فترة السماح قبل بدء سداد الأصل. خلالها يُدفع الفائدة فقط\nGrace period before principal repayment begins. Interest-only during this period" hint={dh("govGrace")}>
                 <Inp type="number" value={cfg.govGrace??5} onChange={v=>upCfg({govGrace:v})} min={0} max={30} />
               </FL>
-              <FL label={ar?"رسوم مقدمة (%)":"Upfront Fee %"} tip="رسوم لمرة واحدة على التمويل\nOne-time fee on financing">
+              <FL label={ar?"رسوم مقدمة (%)":"Upfront Fee %"} tip="رسوم لمرة واحدة على التمويل\nOne-time fee on financing" hint={dh("govUpfrontFeePct")}>
                 <Inp type="number" value={cfg.govUpfrontFeePct??0} onChange={v=>upCfg({govUpfrontFeePct:v})} step={0.25} />
               </FL>
             </div>
@@ -2733,10 +2734,33 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
               <FL label={ar?"أساس فترة السماح":"Grace Basis"} tip="متى تبدأ فترة السماح؟\nإتمام البناء: من نهاية آخر مرحلة بناء\nأول سحب: من أول سحب فعلي\nبداية الصندوق: من سنة تأسيس الصندوق\n\nWhen does grace period start?\nCOD: from end of last construction phase\nFirst Draw: from first actual drawdown\nFund Start: from fund establishment year">
                 <Drp lang={lang} value={cfg.graceBasis||"cod"} onChange={v=>upCfg({graceBasis:v})} options={[{value:"cod",en:"COD - Completion (default)",ar:"إتمام البناء (تلقائي)"},{value:"firstDraw",en:"First Draw",ar:"أول سحب"},{value:"fundStart",en:"Fund Start",ar:"بداية الصندوق"}]} />
               </FL>
-              <FL label={ar?"رسملة فوائد البناء؟":"Capitalize IDC?"} tip="إضافة فوائد فترة البناء إلى تكلفة المشروع. يزيد الـ Equity المطلوب لكن يعكس التكلفة الحقيقية\nAdd construction-period interest to project cost. Increases equity needed but reflects true cost">
-                <Drp lang={lang} value={cfg.capitalizeIDC?"Y":"N"} onChange={v=>upCfg({capitalizeIDC:v==="Y"})} options={["Y","N"]} />
+              <FL label={ar?"أولوية السحب":"Draw Order"} tip={ar?"تحدد كيف يتم سحب التمويل والملكية:\n\nمتزامن: كل سنة يُسحب تمويل + ملكية بنفس النسبة (تلقائي)\n\nالتمويل أولاً: استنفاد كامل التمويل قبل طلب أموال الصندوق":"Controls how financing and equity are drawn:\n\nPro-Rata: financing + equity drawn proportionally each year (default)\n\nFinancing First: exhaust all financing before calling fund equity — delays capital calls and boosts IRR"}>
+                <Drp lang={lang} value={cfg.capitalCallOrder||"prorata"} onChange={v=>upCfg({capitalCallOrder:v})} options={[{value:"prorata",en:"Pro-Rata (default)",ar:"متزامن (تلقائي)"},{value:"debtFirst",en:"Financing First",ar:"التمويل أولاً"}]} />
               </FL>
             </div>
+            <div style={g3}>
+              <FL label={ar?"طريقة السحب":"Tranche Mode"} tip={ar?"كتلة واحدة: كل التمويل ككتلة واحدة\nلكل سحبة: كل سحبة شريحة منفصلة بجدول خاص":"Single: all financing as one block\nPer Draw: each drawdown as separate tranche"}>
+                <Drp lang={lang} value={cfg.debtTrancheMode||"single"} onChange={v=>upCfg({debtTrancheMode:v})} options={[{value:"single",en:"Single Block (default)",ar:"كتلة واحدة (تلقائي)"},{value:"perDraw",en:"Per Drawdown",ar:"لكل سحبة"}]} />
+              </FL>
+              <FL label={ar?"رسملة فوائد البناء؟":"Capitalize IDC?"} tip={ar?"إضافة فوائد فترة البناء إلى تكلفة المشروع. يزيد الـ Equity المطلوب لكن يعكس التكلفة الحقيقية\nمتى تستخدمها؟ لما تبي تعرف التكلفة الحقيقية الكاملة":"Add construction-period interest to project cost. Increases equity needed but reflects true cost\nUse when you want to see the all-in project cost"}>
+                <Drp lang={lang} value={cfg.capitalizeIDC?"Y":"N"} onChange={v=>upCfg({capitalizeIDC:v==="Y"})} options={["Y","N"]} />
+              </FL>
+              <div />
+            </div>
+            {cfg.capitalizeIDC && financing?.capitalizedFinCosts > 0 && <div style={{padding:"6px 10px",background:"#ecfdf5",borderRadius:6,border:"1px solid #a7f3d0",fontSize:10,color:"#065f46",marginTop:-4,gridColumn:"1/-1"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                <span>{ar?"فوائد أثناء البناء (IDC)":"Interest During Construction"}</span>
+                <span style={{fontWeight:600}}>{fmt(financing.estimatedIDC)} {cur}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                <span>{ar?"رسوم مقدمة":"Upfront Fees"}</span>
+                <span style={{fontWeight:600}}>{fmt(financing.estimatedUpfrontFees)} {cur}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid #a7f3d0",paddingTop:2,marginTop:2}}>
+                <span style={{fontWeight:700}}>{ar?"إجمالي مُرسمل":"Total Capitalized"}</span>
+                <span style={{fontWeight:700}}>{fmt(financing.capitalizedFinCosts)} {cur}</span>
+              </div>
+            </div>}
             {/* Hybrid summary */}
             {financing && financing.isHybrid && <div style={{marginTop:8,padding:"8px 12px",background:"var(--surface-sunken)",borderRadius:8,fontSize:11,color:"var(--text-secondary)"}}>
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6}}>
@@ -2872,14 +2896,17 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         </AB>
         </SecWrap>
 
-        {/* ── SECTION 3: DEBT TERMS ── */}
-        <SecWrap visible={hasDbt} color="#2563eb">
-        <AH id="debt" color="#2563eb" label={ar?"شروط القرض":"Debt Terms"} summary={hasDbt && (cfg.debtAllowed || cfg.finMode==="bank100") ? `${cfg.finMode!=="bank100"?(cfg.maxLtvPct||70)+"% LTV · ":""}${cfg.financeRate||6.5}% · ${cfg.loanTenor||7}yr` : ""} visible={hasDbt} />
-        <AB id="debt" visible={hasDbt}>{(() => {
+        {/* ── SECTION 3: DEBT TERMS (fund-level debt for hybrid, or standard debt) ── */}
+        <SecWrap visible={hasDbt || isHybridMode} color="#2563eb">
+        <AH id="debt" color="#2563eb" label={isHybridMode?(ar?"قرض الصندوق (اختياري)":"Fund Debt (optional)"):(ar?"شروط القرض":"Debt Terms")} summary={(hasDbt || hasFundDebt) && (cfg.debtAllowed || cfg.finMode==="bank100") ? `${cfg.finMode!=="bank100"?(cfg.maxLtvPct||70)+"% LTV · ":""}${cfg.financeRate||6.5}% · ${cfg.loanTenor||7}yr` : isHybridMode && !cfg.debtAllowed ? (ar?"معطل":"Disabled") : ""} visible={hasDbt || isHybridMode} />
+        <AB id="debt" visible={hasDbt || isHybridMode}>{(() => {
           const showDebtFields = cfg.debtAllowed || cfg.finMode === "bank100";
           return <>
+            {isHybridMode && <div style={{gridColumn:"1/-1",padding:"6px 10px",background:"#eff6ff",borderRadius:6,border:"1px solid #bfdbfe",fontSize:10,color:"#1e40af",marginBottom:4}}>
+              {ar?`قرض بنكي إضافي على حصة الصندوق (${100-(cfg.govFinancingPct||70)}%). مستقل عن التمويل الرئيسي.`:`Optional bank debt on the fund portion (${100-(cfg.govFinancingPct||70)}%). Independent of the primary financing.`}
+            </div>}
             {cfg.finMode !== "bank100" && (
-              <FL label={ar?"هل الدين مسموح؟":"Debt Allowed"} tip="يحدد هذا الخيار ما إذا كان النموذج يسمح بتمويل بنكي. عند إيقافه يصبح المشروع ممولاً بالكامل من حقوق الملكية (Equity)\nToggles whether bank debt is allowed. If off, the project becomes fully equity-funded">
+              <FL label={isHybridMode?(ar?"قرض بنكي إضافي؟":"Additional Bank Debt?"):(ar?"هل الدين مسموح؟":"Debt Allowed")} tip={isHybridMode?(ar?"تفعيل قرض بنكي إضافي على حصة الصندوق فقط. يُضاف فوق التمويل الرئيسي":"Enable additional bank debt on the fund portion only. Added on top of primary financing"):"يحدد هذا الخيار ما إذا كان النموذج يسمح بتمويل بنكي. عند إيقافه يصبح المشروع ممولاً بالكامل من حقوق الملكية (Equity)\nToggles whether bank debt is allowed. If off, the project becomes fully equity-funded"}>
                 <Drp lang={lang} value={cfg.debtAllowed?"Y":"N"} onChange={v=>upCfg({debtAllowed:v==="Y"})} options={["Y","N"]} />
               </FL>
             )}
@@ -3032,8 +3059,8 @@ When to use:
           <div style={g3}>
             <FL label={ar?"تفعيل حافز حسن الأداء للمطور":"Enable Developer Performance Incentive"} tip={ar?"تفعيل حافز الأداء: إذا تجاوز عائد المستثمر (IRR) الحد الأدنى، يحصل المطور على نسبة من الفائض\nمختلف تماماً عن الـ Catch-up":"Enable IRR-based incentive: if investor IRR exceeds hurdle, developer gets a share of excess distributions\nCompletely separate from T3 catch-up"}><Drp lang={lang} value={cfg.performanceIncentive?"Y":"N"} onChange={v=>upCfg({performanceIncentive:v==="Y"})} options={[{value:"N",en:"Off",ar:"معطل"},{value:"Y",en:"On",ar:"مفعل"}]} /></FL>
             <FL label={ar?"نوع العتبة":"Hurdle Type"} tip={ar?"عائد سنوي بسيط (عرف السوق السعودي) = رأس المال × النسبة × السنوات\nIRR مركب = معدل العائد الداخلي المركب على التدفقات النقدية":"Simple Annual Return (Saudi market convention) = Capital × Rate × Years\nCompounded IRR = Internal rate of return on actual cash flows"}><Drp lang={lang} value={cfg.hurdleMode||"simple"} onChange={v=>upCfg({hurdleMode:v})} options={[{value:"simple",en:"Simple Annual (Market Convention)",ar:"عائد سنوي بسيط (عرف السوق)"},{value:"irr",en:"Compounded IRR",ar:"IRR مركب"}]} /></FL>
-            <FL label={ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر الذي يجب تجاوزه قبل احتساب حافز الأداء. عادة 10-15%":"Minimum investor return threshold before incentive applies. Usually 10-15%"}><Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} /></FL>
-            <FL label={ar?"نسبة حافز المطور من الفائض %":"Developer Share of Excess %"} tip={ar?"نسبة الفائض فوق الحد الأدنى التي يحصل عليها المطور. مثال: 20% يعني المطور يأخذ 20% من التوزيعات الزائدة عن الحد":"Developer's share of distributions exceeding the hurdle threshold. Example: 20% means developer gets 20% of excess"}><Inp type="number" value={cfg.incentivePct} onChange={v=>upCfg({incentivePct:Math.max(0,Math.min(100,v))})} /></FL>
+            <FL label={ar?"العائد المتوقع السنوي للمستثمر %":"Investor Expected Annual Return %"} tip={ar?"الحد الأدنى لعائد المستثمر الذي يجب تجاوزه قبل احتساب حافز الأداء. عادة 10-15%":"Minimum investor return threshold before incentive applies. Usually 10-15%"} hint={dh("hurdleIRR")}><Inp type="number" value={cfg.hurdleIRR} onChange={v=>upCfg({hurdleIRR:Math.max(0,Math.min(50,v))})} /></FL>
+            <FL label={ar?"نسبة حافز المطور من الفائض %":"Developer Share of Excess %"} tip={ar?"نسبة الفائض فوق الحد الأدنى التي يحصل عليها المطور. مثال: 20% يعني المطور يأخذ 20% من التوزيعات الزائدة عن الحد":"Developer's share of distributions exceeding the hurdle threshold. Example: 20% means developer gets 20% of excess"} hint={dh("incentivePct")}><Inp type="number" value={cfg.incentivePct} onChange={v=>upCfg({incentivePct:Math.max(0,Math.min(100,v))})} /></FL>
           </div>
         </AB>
         </SecWrap>
