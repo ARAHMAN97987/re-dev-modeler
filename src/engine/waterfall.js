@@ -39,8 +39,11 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // Subscription fee: for hybrid, apply only to fund portion equity (LP raise), not government-borrowed GP equity
   const subFeeBase = fundEquityBasis;
   const subFee = isFund ? subFeeBase * (project.subscriptionFeePct || 0) / 100 : 0;
-  // DevFee: read from financing (single source — computed in financing.js)
-  const devFeeTotal = f.devFeeTotal || 0;
+  // DevFee: for hybrid, scale to fund portion only (fund pays fee on its share, not full project)
+  const _rawDevFee = f.devFeeTotal || 0;
+  const hybridFundRatio = (isHybridMode && f.totalProjectCost > 0 && f.fundPortionCost > 0)
+    ? f.fundPortionCost / f.totalProjectCost : 1;
+  const devFeeTotal = isHybridMode ? _rawDevFee * hybridFundRatio : _rawDevFee;
   // Structuring fee: % of fund portion cost, not total project cost for hybrid
   let structFee = isFund ? fundFeeBasis * (project.structuringFeePct || 0) / 100 : 0;
   const structFeeCap = project.structuringFeeCap || 0;
@@ -114,8 +117,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   //   "deployed"   = cumulative CAPEX deployed (legacy, incorrect for mgmt fee)
   let cumCapex = 0, cumIncome = 0;
   for (let y = fundStartIdx; y <= feeEndYr && y < h; y++) {
-    cumCapex += Math.abs(c.capex[y] || 0);
-    cumIncome += (c.income[y] || 0);
+    // For hybrid: fund's share of income/capex for accurate NAV tracking
+    cumCapex += Math.abs(c.capex[y] || 0) * hybridFundRatio;
+    cumIncome += (c.income[y] || 0) * hybridFundRatio;
     if (isFund) {
       let mgmtBase = 0;
       if (mgmtFeeBase === "equity") {
