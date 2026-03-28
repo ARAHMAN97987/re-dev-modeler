@@ -952,8 +952,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
                 <KR l={ar?"إجمالي الرسوم":"Total Fees"} v={fmtM(w.totalFees)} c="#f59e0b" bold />
               </div>
               <SecHd text={ar?"رأس المال":"CAPITAL"} />
-              <KR l={ar?"إجمالي الملكية":"Total Equity"} v={fmtM(w.totalEquity)} bold />
+              <KR l={f?.isHybrid?(ar?"ملكية الصندوق":"Fund Equity"):(ar?"إجمالي الملكية":"Total Equity")} v={fmtM(w.totalEquity)} bold />
               <KR l={ar?"المستثمر / المطور":"Investor / Developer"} v={`${fmtPct(lpPctVal*100)} / ${fmtPct(gpPctVal*100)}`} />
+              {f?.isHybrid && <KR l={ar?"تمويل مؤسسي":"Inst. Financing"} v={fmtM(f.govLoanAmount)} c="#059669" />}
               <KR l={ar?"دين":"Debt"} v={f?.totalDebt ? fmtM(f.totalDebt) : "—"} c="#ef4444" />
               <SecHd text={ar?"التخارج":"EXIT"} />
               <KR l={ar?"السنة":"Year"} v={exitYr>0?`${exitYr} (${sy+exitYr-1})`:"—"} />
@@ -2859,9 +2860,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             {/* Live Summary */}
             {f && <div style={{gridColumn:"1/-1",marginTop:4,padding:"8px 12px",background:"var(--surface-table-header)",borderRadius:6,border:"0.5px solid var(--border-default)",fontSize:11}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                <span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي Equity":"Total Equity"}</span>
+                <span style={{color:"var(--text-secondary)"}}>{isHybridMode?(ar?"إجمالي Equity الصندوق":"Fund Equity"):(ar?"إجمالي Equity":"Total Equity")}</span>
                 <span style={{fontWeight:700}}>{fmt(f.totalEquity)} {cur}</span>
               </div>
+              {isHybridMode && f.fundPortionCost && <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                <span style={{color:"#059669",fontSize:10}}>{ar?`حصة الصندوق (${100-(cfg.govFinancingPct||70)}% من المشروع)`:`Fund portion (${100-(cfg.govFinancingPct||70)}% of project)`}</span>
+                <span style={{color:"#059669",fontSize:10,fontWeight:600}}>{fmtM(f.fundPortionCost)} {cur}</span>
+              </div>}
               {f.gpEquityBreakdown?.landCap > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
                 <span style={{color:"var(--text-secondary)",paddingInlineStart:8}}>↳ {ar?"رسملة حق الانتفاع":"Leasehold Cap (Developer)"}</span>
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.landCap)} {cur}</span>
@@ -3162,7 +3167,7 @@ When to use:
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(145px, 1fr))",gap:10}}>
           <KPI label={ar?"تكلفة التطوير (شامل الأرض)":"Dev Cost (Incl Land)"} value={fmtM(f.devCostInclLand)} sub={cur} color="#1a1d23" />
           <KPI label={isHybrid?(ar?"التمويل المؤسسي":"Inst. Financing"):(ar?"سقف الدين":"Max Debt (LTV)")} value={fmtM(f.maxDebt)} sub={isHybrid?`${cfg.govFinancingPct||70}%`:`${cfg.maxLtvPct||70}% LTV`} color="#ef4444" />
-          <KPI label={ar?"إجمالي الملكية":"Total Equity"} value={fmtM(f.totalEquity)} sub={fmtPct((1-(f.totalDebt/((f.totalProjectCost||f.devCostInclLand)||1)))*100)} color="#3b82f6" />
+          <KPI label={isHybrid?(ar?"ملكية الصندوق":"Fund Equity"):(ar?"إجمالي الملكية":"Total Equity")} value={fmtM(f.totalEquity)} sub={isHybrid?`${100-(cfg.govFinancingPct||70)}%`:fmtPct((1-(f.totalDebt/((f.totalProjectCost||f.devCostInclLand)||1)))*100)} color="#3b82f6" />
           <KPI label={ar?"IRR بعد التمويل":"Levered IRR"} value={f.leveredIRR!==null?fmtPct(f.leveredIRR*100):"N/A"} color={getMetricColor("IRR",f.leveredIRR)} />
           <KPI label={ar?"إجمالي تكلفة التمويل":"Total Financing Cost"} value={fmtM(totalFinCost)} sub={finCostPct>0?fmtPct(finCostPct*100)+" "+ar?"من التكلفة":"of cost":""} color="#ef4444" tip={ar?"فوائد (شامل رسوم القرض) + رسوم صندوق\nInterest (incl. upfront fee) + Fund Fees":""} />
           <KPI label={ar?"عائد نقدي سنوي":"Cash-on-Cash Yield"} value={cashOnCash>0?fmtPct(cashOnCash*100):"—"} color={cashOnCash>0.08?"#16a34a":"#f59e0b"} />

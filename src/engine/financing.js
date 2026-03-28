@@ -190,16 +190,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const isHybridProject = isHybrid && (project.govBeneficiary || "project") === "project";
   const isHybridGP = isHybrid && project.govBeneficiary === "gp";
 
-  let rate = (project.financeRate ?? 6.5) / 100;
-  let tenor = project.loanTenor ?? 7;
-  let grace = project.debtGrace ?? 3;
-  let repayYears = Math.max(0, tenor - grace);
-  let maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
-  let upfrontFeePct = (project.upfrontFeePct || 0) / 100;
+  let rate, tenor, grace, repayYears, maxDebt, upfrontFeePct;
 
-  // ── Hybrid financing overrides ──
   if (isHybridProject) {
-    // Government debt on SPV — override loan terms with government terms
+    // ── Hybrid-Project: institutional financing (70%) is ALWAYS active ──
+    // debtAllowed only controls optional FUND-LEVEL bank debt, NOT the institutional financing
     rate = (project.govFinanceRate ?? 3.0) / 100;
     tenor = project.govLoanTenor ?? 15;
     grace = project.govGrace ?? 5;
@@ -207,8 +202,21 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     maxDebt = devCostInclLand * (project.govFinancingPct ?? 70) / 100;
     upfrontFeePct = (project.govUpfrontFeePct || 0) / 100;
   } else if (isHybridGP) {
-    // Developer personal loan — no project-level debt
+    // Hybrid-GP: developer borrows personally — no project-level debt
+    rate = (project.financeRate ?? 6.5) / 100;
+    tenor = project.loanTenor ?? 7;
+    grace = project.debtGrace ?? 3;
+    repayYears = Math.max(0, tenor - grace);
     maxDebt = 0;
+    upfrontFeePct = (project.upfrontFeePct || 0) / 100;
+  } else {
+    // Standard modes: self, debt, fund, jv, bank100
+    rate = (project.financeRate ?? 6.5) / 100;
+    tenor = project.loanTenor ?? 7;
+    grace = project.debtGrace ?? 3;
+    repayYears = Math.max(0, tenor - grace);
+    maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
+    upfrontFeePct = (project.upfrontFeePct || 0) / 100;
   }
 
   // ── Interest During Construction (IDC) estimation ──
