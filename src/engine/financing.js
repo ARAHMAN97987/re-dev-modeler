@@ -22,6 +22,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   let _constrStartEarly = h, _constrEndEarly = 0;
   for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { _constrStartEarly = Math.min(_constrStartEarly, y); _constrEndEarly = Math.max(_constrEndEarly, y); } }
 
+  // ── Exit year resolution ──
+  // Smart: if user enters small number (< 100), treat as relative offset from startYear.
+  // If calendar year (≥ startYear), convert to index. 0 = auto (optimal).
+  const rawExitYear = project.exitYear || 0;
+
   // ── Optimal Exit Year Scanner ──
   // يجرب كل سنة تخارج ممكنة ويحسب levered IRR لكل واحدة ويختار الأعلى
   // Uses a lightweight simulation: exit proceeds + balloon repay at each candidate year
@@ -132,7 +137,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     const exitProceedsSelf = new Array(h).fill(0);
     const exitStrategySelf = project.exitStrategy || "sale";
     // Auto exit: optimal year for highest IRR (scanned above)
-    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : autoExitIdx);
+    const resolvedExitSelf = rawExitYear > 0 && rawExitYear < 100 ? rawExitYear : rawExitYear > 0 ? rawExitYear - startYear : 0;
+    const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : (resolvedExitSelf > 0 ? resolvedExitSelf : autoExitIdx);
     const selfSold = exitStrategySelf !== "hold" && exitYrSelf >= 0 && exitYrSelf < h;
     if (selfSold) {
       // FIX#1: Per-asset exit valuation - skip Sale assets (already realized)
@@ -545,7 +551,13 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // ── Exit ──
   const exitProceeds = new Array(h).fill(0);
-  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - startYear : autoExitIdx);
+  // Resolve exit year: rawExitYear defined at top of function
+  const resolvedExitYear = rawExitYear > 0 && rawExitYear < 100
+    ? rawExitYear  // Relative offset (e.g., 10 = year index 10)
+    : rawExitYear > 0
+      ? rawExitYear - startYear  // Calendar year (e.g., 2036 → index 10)
+      : 0;
+  const exitYr = exitStrategy === "hold" ? h - 1 : (resolvedExitYear > 0 ? resolvedExitYear : autoExitIdx);
 
   if (exitStrategy !== "hold" && exitYr >= 0 && exitYr < h) {
     // H8: Per-component exit valuation
