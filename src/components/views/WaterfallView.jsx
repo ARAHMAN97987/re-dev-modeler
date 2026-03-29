@@ -508,7 +508,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         {/* Combined summary */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",background:"var(--surface-sunken)",borderRadius:6,fontSize:11}}>
           <span style={{color:"var(--text-secondary)"}}>{ar?"التدفق المجمّع":"Combined CF"}: <b style={{color:combinedTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(combinedTotal)}</b></span>
-          {w.fullProjectExitVal > 0 && <span style={{color:"var(--text-secondary)"}}>{ar?"قيمة التخارج الكاملة":"Full Exit Value"}: <b>{fmtM(w.fullProjectExitVal)}</b> → {ar?"صافي بعد الدين":"Net after debt"}: <b style={{color:"#16a34a"}}>{fmtM(w.fullProjectExitVal - (financing.totalDebt||0))}</b></span>}
+          {w.fullProjectExitVal > 0 && (() => {
+            // Use remaining debt at exit year, not total drawn
+            const exitIdx = (financing.exitYear || 0) - sy;
+            const debtAtExit = exitIdx >= 0 && exitIdx < (financing.debtBalClose||[]).length ? (financing.debtBalClose[exitIdx] || 0) : 0;
+            const netAfterDebt = w.fullProjectExitVal - debtAtExit;
+            return <span style={{color:"var(--text-secondary)"}}>{ar?"قيمة التخارج الكاملة":"Full Exit Value"}: <b>{fmtM(w.fullProjectExitVal)}</b>{debtAtExit > 0 ? <> → {ar?"صافي بعد الدين":"Net after debt"}: <b style={{color:"#16a34a"}}>{fmtM(netAfterDebt)}</b></> : null}</span>;
+          })()}
           <button onClick={()=>setShowHybridCF(!showHybridCF)} style={{...btnS,fontSize:10,padding:"2px 8px"}}>{showHybridCF?(ar?"إخفاء":"Hide"):(ar?"تفصيل سنوي":"Yearly Detail")}</button>
         </div>
         {/* Yearly breakdown table */}
@@ -1000,7 +1006,8 @@ function ExitAnalysisPanel({ project, results, financing, waterfall, lang, globa
   const impliedMultiple = stabIncome > 0 ? grossExit / stabIncome : 0;
 
   // Debt remaining at exit
-  const debtAtExit = f.debtBalClose ? (exitYrIdx > 0 && exitYrIdx < h ? (f.debtBalClose[Math.max(0,exitYrIdx-1)] || 0) : 0) : 0;
+  // Debt remaining AFTER exit year processing (includes balloon repayment in DS)
+  const debtAtExit = f.debtBalClose ? (exitYrIdx >= 0 && exitYrIdx < h ? (f.debtBalClose[exitYrIdx] || 0) : 0) : 0;
   const netToEquity = exitProc - debtAtExit;
 
   // Years from construction end to exit
@@ -1074,7 +1081,7 @@ function ExitAnalysisPanel({ project, results, financing, waterfall, lang, globa
                 <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#ef4444"}}>{ar?"دين متبقي عند التخارج":"Debt at Exit"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#ef4444"}}>{fmtM(debtAtExit)}</span>
                 <span style={{color:"#16a34a",fontWeight:600}}>{ar?"صافي للملكية":"Net to Equity"}</span><span style={{textAlign:"right",fontWeight:700,color:netToEquity>0?"#16a34a":"#ef4444"}}>{fmtM(netToEquity)}</span>
               </>}
-              {f.totalEquity > 0 && <><span style={{color:"#6b7080"}}>{ar?"العائد / الملكية":"Proceeds / Equity"}</span><span style={{textAlign:"right",fontWeight:600,color:"#16a34a"}}>{(exitProc/f.totalEquity).toFixed(2)}x</span></>}
+              {f.totalEquity > 0 && <><span style={{color:"#6b7080"}}>{ar?"العائد / الملكية":"Proceeds / Equity"}</span><span style={{textAlign:"right",fontWeight:600,color:"#16a34a"}}>{(netToEquity/f.totalEquity).toFixed(2)}x</span></>}
               {hasWaterfall && <>
                 <span style={{borderTop:"1px solid #dcfce7",paddingTop:4,color:"#8b5cf6"}}>{ar?"حصة المستثمر من التخارج":"Investor Exit Share"}</span><span style={{borderTop:"1px solid #dcfce7",paddingTop:4,textAlign:"right",fontWeight:500,color:"#8b5cf6"}}>{fmtM((w.lpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
                 <span style={{color:"#3b82f6"}}>{ar?"حصة المطور من التخارج":"Developer Exit Share"}</span><span style={{textAlign:"right",fontWeight:500,color:"#3b82f6"}}>{fmtM((w.gpDist||[]).slice(exitYrIdx).reduce((a,b)=>a+b,0))}</span>
