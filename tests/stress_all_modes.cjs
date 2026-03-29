@@ -155,7 +155,7 @@ function badScalar(val, label) {
 }
 
 // ═══ MODE COMBINATIONS ═══
-const FIN_MODES = ["self", "bank100", "debt", "fund", "hybrid"];
+const FIN_MODES = ["self", "bank100", "debt", "fund", "hybrid", "incomeFund"];
 const EXIT_STRATEGIES = ["sale", "hold", "caprate"];
 const LAND_TYPES = ["lease", "purchase", "partner"];
 
@@ -294,9 +294,26 @@ for (const fm of FIN_MODES) {
           }
         }
       }
+      if (fm === "incomeFund") {
+        t(`[${combo}] incomeFund: waterfall exists`, !!wf, wf ? '' : 'null — waterfall should exist for income fund');
+        // Exit proceeds should be 0 (hold mode forced)
+        const ep = fin.exitProceeds ? fin.exitProceeds.reduce((a, b) => a + b, 0) : 0;
+        t(`[${combo}] incomeFund: no exit proceeds`, ep < 1, `exitProceeds = ${ep}`);
+        if (wf) {
+          // Income fund metrics should exist
+          t(`[${combo}] incomeFund: isIncomeFund flag`, !!wf.isIncomeFund, `isIncomeFund = ${wf.isIncomeFund}`);
+          t(`[${combo}] incomeFund: distributionYield array`, !!wf.distributionYield && wf.distributionYield.length > 0);
+          for (const key of ['lpNetCF', 'gpNetCF', 'lpDist', 'gpDist', 'distributionYield', 'cumDistributions']) {
+            if (wf[key]) {
+              const bad = hasNaN(wf[key], `waterfall.${key}`);
+              t(`[${combo}] No NaN: wf.${key}`, !bad, bad || '');
+            }
+          }
+        }
+      }
 
-      // 11. Exit proceeds checks
-      if (es === "sale" || es === "caprate") {
+      // 11. Exit proceeds checks (skip for incomeFund — always hold, no exit)
+      if ((es === "sale" || es === "caprate") && fm !== "incomeFund") {
         const ep = fin.exitProceeds ? fin.exitProceeds.reduce((a, b) => a + b, 0) : 0;
         // Exit proceeds should exist if there's income (project generates revenue)
         if (c.totalIncome > 0) {

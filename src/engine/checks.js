@@ -65,6 +65,16 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
   if (project.finMode === "hybrid" && (project.govFinancingPct ?? 70) >= 100)
     add("T0","Gov 100%", true, "100% government financing leaves no fund equity — consider using debt mode instead");
+
+  // ── Income Fund checks ──
+  if (project.finMode === "incomeFund") {
+    const hasIncomeAssets = (project.assets || []).some(a => a.revType === "Lease" || a.revType === "Operating");
+    if (!hasIncomeAssets) add("T0","No Income Assets", false, "Income fund requires at least one rental/operating asset");
+    if ((project.targetYield || 8) > 15) add("T0","High Target Yield", true, `Target yield ${project.targetYield}% exceeds typical range (5-12%)`);
+    if ((project.fundLife || 5) < 3) add("T0","Short Fund Life", true, `Fund life ${project.fundLife} years — consider at least 3-5 years`);
+    if ((project.maxLtvPct || 0) > 70 && project.debtAllowed) add("T0","High LTV Income Fund", true, `LTV ${project.maxLtvPct}% is aggressive for income fund — consider 50-60%`);
+  }
+
   const maxConstrEnd = Math.max(0, ...as.map(a => a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0)));
   if (maxConstrEnd > (project.horizon||50))
     add("T0","Horizon < Construction", false, "Horizon doesn't cover full construction period", `Constr ends Y${maxConstrEnd}, Horizon Y${project.horizon||50}`);

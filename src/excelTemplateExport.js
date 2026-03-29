@@ -106,7 +106,7 @@ export async function generateTemplateExcel(project, results, financing, waterfa
   setInput(INP, "C95", p.botOperationYears || 0);
 
   // Section 10: Financing Mode
-  const finModeMap = { self: "Self", debt: "Bank", fund: "Fund", jv: "JV", hybrid: "Hybrid" };
+  const finModeMap = { self: "Self", debt: "Bank", fund: "Fund", jv: "JV", hybrid: "Hybrid", incomeFund: "Income" };
   setInput(INP, "C101", finModeMap[p.finMode] || "Fund");
 
   // Section 11: Exit Strategy

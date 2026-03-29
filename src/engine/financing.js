@@ -30,7 +30,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // ── Optimal Exit Year Scanner ──
   // يجرب كل سنة تخارج ممكنة ويحسب levered IRR لكل واحدة ويختار الأعلى
   // Uses a lightweight simulation: exit proceeds + balloon repay at each candidate year
-  const exitStrategy = project.exitStrategy || "sale";
+  // Income fund always holds — optional exit at end of fundLife
+  const exitStrategy = project.finMode === "incomeFund" ? "hold" : (project.exitStrategy || "sale");
   const assetScheds = projectResults.assetSchedules || [];
   let optimalExitIdx = null;
   let optimalExitIRR = null;
@@ -195,6 +196,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const isHybrid = project.finMode === "hybrid";
   const isHybridProject = isHybrid && (project.govBeneficiary || "project") === "project";
   const isHybridGP = isHybrid && project.govBeneficiary === "gp";
+  const isIncomeFund = project.finMode === "incomeFund";
 
   let rate, tenor, grace, repayYears, maxDebt, upfrontFeePct;
 
@@ -251,7 +253,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   // Debt mode: developer owns 100% of equity. No LP exists.
   // Only fund and jv modes have LP investors.
-  const hasLP = project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid";
+  const hasLP = project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid" || isIncomeFund;
 
   // Dev fee already computed above (line ~115) — reuse devFeeTotal
   // GP investment from dev fee
@@ -603,7 +605,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // Balloon at exit: for perDraw + fund/jv, ZAN Excel does NOT balloon remaining debt into DS.
   // Exit proceeds (gross) implicitly cover remaining debt as part of the sale transaction.
   // For single tranche OR debt-only mode, balloon IS added (conventional modeling).
-  const isFundPerDraw = trancheMode === "perDraw" && (project.finMode === "fund" || project.finMode === "jv" || isHybrid);
+  const isFundPerDraw = trancheMode === "perDraw" && (project.finMode === "fund" || project.finMode === "jv" || isHybrid || isIncomeFund);
   if (sold && !isFundPerDraw && debtBalClose[exitYr] > 0) {
     const remainingDebt = debtBalClose[exitYr];
     repay[exitYr] += remainingDebt;
@@ -725,5 +727,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     gpPersonalDebt, fundPortionCost, buildCostOnly,
     // Separate cash flows for hybrid mode (two virtual projects)
     financingCF, fundCF, fullProjectExitVal,
+    // Income fund fields
+    isIncomeFund, fundLife: isIncomeFund ? (project.fundLife || 5) : null,
+    targetYield: isIncomeFund ? (project.targetYield || 8) : null,
   };
 }

@@ -26,7 +26,8 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const totalEquity = f.totalEquity;
   const gpPct = f.gpPct;
   const lpPct = f.lpPct;
-  const isFund = project.finMode === "fund" || project.finMode === "hybrid";
+  const isFund = project.finMode === "fund" || project.finMode === "hybrid" || project.finMode === "incomeFund";
+  const isIncomeFund = project.finMode === "incomeFund";
 
   // Fee basis: for hybrid mode, fees apply to fund portion only (not government-financed portion)
   const isHybridMode = project.finMode === "hybrid";
@@ -93,7 +94,7 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const fundStartIdx = Math.max(0, (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : constrStart);
 
   // Exit year — use optimal exit from financing engine (highest IRR)
-  const exitStrategy = project.exitStrategy || "sale";
+  const exitStrategy = isIncomeFund ? "hold" : (project.exitStrategy || "sale");
   const optIdx = financing.optimalExitYear ? financing.optimalExitYear - sy : constrEnd + 3;
   const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : optIdx);
   const operYears = exitYr - constrStart + 1;
@@ -305,8 +306,13 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     );
   }
 
-  // 4-tier waterfall
-  const prefRate = Math.max(0, Math.min(0.5, (project.prefReturnPct ?? 15) / 100));
+  // ── INCOME FUND: Simplified distribution (no tiers, direct pro-rata) ──
+  // Income funds distribute all available cash directly by ownership percentage.
+  // No catch-up, no carry, no complex waterfall. Optional performance incentive.
+  const isIncomeFundDist = isIncomeFund;
+
+  // 4-tier waterfall (skipped for income fund — uses simplified path)
+  const prefRate = isIncomeFundDist ? 0 : Math.max(0, Math.min(0.5, (project.prefReturnPct ?? 15) / 100));
   const carryPct = Math.min(0.9999, Math.max(0, (project.carryPct ?? 30) / 100));
   const lpSplitPct = Math.max(0, Math.min(1, (project.lpProfitSplitPct ?? 70) / 100));
   const gpSplitPct = 1 - lpSplitPct;
@@ -365,64 +371,74 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
       continue;
     }
 
-    // Tier 1: Return of Capital
-    if (unreturned > 0 && remaining > 0) {
-      const t1 = Math.min(remaining, unreturned);
-      tier1[y] = t1;
-      remaining -= t1;
-      cumReturned += t1;
-    }
-
-    // Tier 2: Preferred Return (pay accrued pref)
-    const prefOwed = cumPrefAccrued - cumPrefPaid;
-    if (prefOwed > 0 && remaining > 0) {
-      const t2 = Math.min(remaining, prefOwed);
-      tier2[y] = t2;
-      remaining -= t2;
-      cumPrefPaid += t2;
-    }
-
-    // C5: Tier 3: GP Catch-up
-    // Convention: waterfallConvention controls T3 + distribution allocation
-    // - prefAllocation: "proRata" (GP gets GP% of T2 as investor) / "lpOnly" (T2 all to LP)
-    // - catchupMethod: "perYear" (ZAN: based on this year's T2) / "cumulative" (tracked across years)
-
-    if (project.gpCatchup && remaining > 0 && carryPct > 0) {
-      if (catchMethod === "perYear") {
-        // ZAN method: T3 = MIN(remaining, T2_thisYear × carry/(1-carry))
-        // Simple per-year formula. No cumulative tracking. No GP offset.
-        const catchup = Math.min(remaining, tier2[y] * carryPct / (1 - carryPct));
-        tier3[y] = catchup;
-        remaining -= catchup;
-      } else {
-        // Cumulative method: track GP's pref participation and offset
-        const gpProfitFromPref = prefAlloc === "proRata" ? cumPrefPaid * gpPct : 0;
-        const targetCatchupOnly = Math.max(0, (carryPct * cumPrefPaid - gpProfitFromPref) / (1 - carryPct));
-        const catchupNeeded = Math.max(0, targetCatchupOnly - cumGPCatchup);
-        const catchup = Math.min(remaining, catchupNeeded);
-        tier3[y] = catchup;
-        remaining -= catchup;
-        cumGPCatchup += catchup;
+    if (isIncomeFundDist) {
+      // ── INCOME FUND: Simple pro-rata distribution ──
+      // 1. Return of capital first (same as tier 1)
+      if (unreturned > 0 && remaining > 0) {
+        const t1 = Math.min(remaining, unreturned);
+        tier1[y] = t1;
+        remaining -= t1;
+        cumReturned += t1;
       }
-    }
-
-    // Tier 4: Profit Split
-    if (remaining > 0) {
-      tier4LP[y] = remaining * lpSplitPct;
-      tier4GP[y] = remaining * gpSplitPct;
-      remaining = 0;
-    }
-
-    // Allocate distributions based on prefAllocation convention
-    // proRata: T1 + T2 split by GP%/LP%. GP wears two hats (investor + manager).
-    // lpOnly: T1 pro-rata, T2 100% to LP. GP compensated only via T3 + T4.
-    if (prefAlloc === "lpOnly") {
-      lpDist[y] = tier1[y] * lpPct + tier2[y] + tier4LP[y];
-      gpDist[y] = tier1[y] * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+      // 2. Remaining cash distributed by ownership percentage (no pref, no catch-up, no carry)
+      if (remaining > 0) {
+        tier4LP[y] = remaining * lpPct;
+        tier4GP[y] = remaining * gpPct;
+        remaining = 0;
+      }
+      lpDist[y] = tier1[y] * lpPct + tier4LP[y];
+      gpDist[y] = tier1[y] * gpPct + tier4GP[y];
     } else {
-      // proRata (ZAN default): GP gets investor share of T1 + T2
-      lpDist[y] = (tier1[y] + tier2[y]) * lpPct + tier4LP[y];
-      gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+      // ── STANDARD FUND: 4-tier waterfall ──
+      // Tier 1: Return of Capital
+      if (unreturned > 0 && remaining > 0) {
+        const t1 = Math.min(remaining, unreturned);
+        tier1[y] = t1;
+        remaining -= t1;
+        cumReturned += t1;
+      }
+
+      // Tier 2: Preferred Return (pay accrued pref)
+      const prefOwed = cumPrefAccrued - cumPrefPaid;
+      if (prefOwed > 0 && remaining > 0) {
+        const t2 = Math.min(remaining, prefOwed);
+        tier2[y] = t2;
+        remaining -= t2;
+        cumPrefPaid += t2;
+      }
+
+      // C5: Tier 3: GP Catch-up
+      if (project.gpCatchup && remaining > 0 && carryPct > 0) {
+        if (catchMethod === "perYear") {
+          const catchup = Math.min(remaining, tier2[y] * carryPct / (1 - carryPct));
+          tier3[y] = catchup;
+          remaining -= catchup;
+        } else {
+          const gpProfitFromPref = prefAlloc === "proRata" ? cumPrefPaid * gpPct : 0;
+          const targetCatchupOnly = Math.max(0, (carryPct * cumPrefPaid - gpProfitFromPref) / (1 - carryPct));
+          const catchupNeeded = Math.max(0, targetCatchupOnly - cumGPCatchup);
+          const catchup = Math.min(remaining, catchupNeeded);
+          tier3[y] = catchup;
+          remaining -= catchup;
+          cumGPCatchup += catchup;
+        }
+      }
+
+      // Tier 4: Profit Split
+      if (remaining > 0) {
+        tier4LP[y] = remaining * lpSplitPct;
+        tier4GP[y] = remaining * gpSplitPct;
+        remaining = 0;
+      }
+
+      // Allocate distributions based on prefAllocation convention
+      if (prefAlloc === "lpOnly") {
+        lpDist[y] = tier1[y] * lpPct + tier2[y] + tier4LP[y];
+        gpDist[y] = tier1[y] * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+      } else {
+        lpDist[y] = (tier1[y] + tier2[y]) * lpPct + tier4LP[y];
+        gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
+      }
     }
 
     unreturnedClose[y] = rocBase - cumReturned;
@@ -614,7 +630,34 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const lpSimpleAnnual = investYears > 0 ? lpSimpleROE / investYears : 0;
   const gpSimpleAnnual = investYears > 0 ? gpSimpleROE / investYears : 0;
 
+  // ── Income Fund Metrics ──
+  const distributionYield = new Array(h).fill(0);
+  const payoutRatio = new Array(h).fill(0);
+  const navEstimate = new Array(h).fill(0);
+  const cumDistributions = new Array(h).fill(0);
+  const ffoProxy = new Array(h).fill(0);
+  let avgDistYield = 0;
+  const adjLR2 = ir?.adjustedLandRent || c.landRent;
+
+  if (isIncomeFund && lpEquity > 0) {
+    let cumDist = 0;
+    let stableYields = [];
+    const constrEnd = f.constrEnd || 0;
+    for (let y = 0; y < h; y++) {
+      const noi = (c.income[y] || 0) - (adjLR2[y] || 0);
+      cumDist += lpDist[y];
+      cumDistributions[y] = cumDist;
+      distributionYield[y] = lpEquity > 0 ? lpDist[y] / lpEquity : 0;
+      payoutRatio[y] = cashAvail[y] > 0 ? (lpDist[y] + gpDist[y]) / cashAvail[y] : 0;
+      navEstimate[y] = noi > 0 ? noi / 0.08 : (f.devCostInclLand || 0); // 8% cap rate proxy
+      ffoProxy[y] = Math.max(0, noi - (fees[y] || 0) - (f.debtService?.[y] || 0));
+      if (y > constrEnd && distributionYield[y] > 0) stableYields.push(distributionYield[y]);
+    }
+    avgDistYield = stableYields.length > 0 ? stableYields.reduce((a, b) => a + b, 0) / stableYields.length : 0;
+  }
+
   return {
+    isIncomeFund, distributionYield, avgDistYield, payoutRatio, navEstimate, cumDistributions, ffoProxy,
     gpEquity, lpEquity, totalEquity, gpPct, lpPct,
     fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, feePreEst, feeSpv, feeAuditor, feeOperator, feeMisc, totalFees, unfundedFees,
     equityCalls, gpCalls, lpCalls, exitProceeds, cashAvail,

@@ -440,10 +440,11 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
     {(() => {
         const isHybridMode = cfg.finMode === "hybrid";
-        const hasDbt = cfg.finMode !== "self" && !isHybridMode;
+        const isIncomeFund = cfg.finMode === "incomeFund";
+        const hasDbt = cfg.finMode !== "self" && !isHybridMode && !isIncomeFund;
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
-        const isFundMode = cfg.finMode === "fund" || isHybridMode;
-        const notHold = (cfg.exitStrategy||"sale") !== "hold";
+        const isFundMode = cfg.finMode === "fund" || isHybridMode || isIncomeFund;
+        const notHold = !isIncomeFund && (cfg.exitStrategy||"sale") !== "hold";
         // Accordion section header helper
         const AH = ({id, color, label, summary, visible}) => {
           if (visible === false) return null;
@@ -469,11 +470,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff"}}>
           <span style={{fontSize:12,fontWeight:600,color:"#1a1d23",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:v==="incomeFund"?{exitStrategy:"hold",maxLtvPct:50,debtAllowed:true}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&v!=="incomeFund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} style={{padding:"8px 12px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",fontSize:12,fontFamily:"inherit",minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
             <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
+            <option value="incomeFund">{ar?"صندوق مدر للدخل":"Income Fund"}</option>
             <option value="hybrid">{ar?"مختلط (حكومي + صندوق)":"Hybrid (Government + Fund)"}</option>
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
@@ -586,9 +588,28 @@ When to use:
           </>;
         })()}</AB>
 
-        {/* ── SECTION: EXIT STRATEGY (visible for ALL modes including self) ── */}
+        {/* ── SECTION: INCOME FUND POLICY (incomeFund only) ── */}
         </SecWrap>
-        <SecWrap visible={true} color="#8b5cf6">
+        <SecWrap visible={isIncomeFund} color="#059669">
+        <AH id="incPolicy" color="#059669" label={ar?"سياسة التوزيعات":"Distribution Policy"} summary={isIncomeFund ? `${cfg.targetYield||8}% ${ar?"مستهدف":"target"} · ${({annual:ar?"سنوي":"Annual",semi:ar?"نصف سنوي":"Semi-annual",quarterly:ar?"ربع سنوي":"Quarterly"})[cfg.distributionFrequency||"semi"]||""}` : ""} visible={isIncomeFund} />
+        <AB id="incPolicy" visible={isIncomeFund}>{(() => {
+          return <>
+            <div style={g2}>
+              <FL label={ar?"العائد المستهدف %":"Target Yield %"} tip={ar?"عائد التوزيعات السنوي المستهدف للمستثمرين. عادة 7-10% لصناديق الدخل في السعودية":"Target annual distribution yield for investors. Typically 7-10% for Saudi income funds"}><Inp type="number" value={cfg.targetYield} onChange={v=>upCfg({targetYield:v})} /></FL>
+              <FL label={ar?"عمر الصندوق (سنوات)":"Fund Life (years)"} tip={ar?"مدة الصندوق الأساسية قبل التصفية. عادة 4-7 سنوات، قابلة للتمديد":"Fund duration before liquidation. Typically 4-7 years, extendable"}><Inp type="number" value={cfg.fundLife} onChange={v=>upCfg({fundLife:v})} /></FL>
+            </div>
+            <div style={g2}>
+              <FL label={ar?"دورية التوزيعات":"Distribution Frequency"} tip={ar?"عدد مرات التوزيع سنوياً. نصف سنوي هو الأكثر شيوعاً في السعودية":"How often distributions are made. Semi-annual is most common in Saudi Arabia"}>
+                <Drp lang={lang} value={cfg.distributionFrequency||"semi"} onChange={v=>upCfg({distributionFrequency:v})} options={[{value:"annual",en:"Annual",ar:"سنوي"},{value:"semi",en:"Semi-annual",ar:"نصف سنوي"},{value:"quarterly",en:"Quarterly",ar:"ربع سنوي"}]} />
+              </FL>
+              <FL label={ar?"رسوم إدارة العقار %":"Property Mgmt Fee %"} tip={ar?"نسبة من الإيجارات السنوية تُدفع لمدير العقار والتأجير. عادة 3-5%":"Percentage of annual rental income paid to property manager. Typically 3-5%"}><Inp type="number" value={cfg.propertyMgmtFeePct} onChange={v=>upCfg({propertyMgmtFeePct:v})} /></FL>
+            </div>
+          </>;
+        })()}</AB>
+
+        {/* ── SECTION: EXIT STRATEGY (hidden for income fund, visible for all others) ── */}
+        </SecWrap>
+        <SecWrap visible={!isIncomeFund} color="#8b5cf6">
         <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={`${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ":"Hold"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`} visible={true} />
         <AB id="exit" visible={true}>
           <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع\nAsset Sale = exit at a set year. Hold for Income = no sale event">

@@ -26,6 +26,8 @@ export const FINANCING_FIELDS = [
   'operatorFeePct','operatorFeeCap','miscExpensePct',
   'fundStartYear','fundName','gpIsFundManager','landCapitalize','landCapRate','landCapTo','landRentPaidBy',
   'performanceIncentive','hurdleMode','hurdleIRR','incentivePct',
+  // Income fund fields
+  'fundLife','targetYield','distributionFrequency','propertyMgmtFeePct','propertyMgmtFeeCap',
 ];
 
 /** Get financing settings for a specific phase. Falls back to project-level. */

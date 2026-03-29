@@ -422,7 +422,7 @@ function buildInputs(wb, project, cur) {
 
   if (project.finMode && project.finMode !== "self") {
     section("FINANCING PARAMETERS  بيانات التمويل");
-    inp("Financing Mode", project.finMode === "fund" ? "Fund (Developer/Investor)" : project.finMode === "hybrid" ? "Hybrid (Government + Fund)" : project.finMode === "bank" ? "Bank Debt" : project.finMode, "نوع التمويل");
+    inp("Financing Mode", project.finMode === "fund" ? "Fund (Developer/Investor)" : project.finMode === "hybrid" ? "Hybrid (Government + Fund)" : project.finMode === "incomeFund" ? "Income Fund (صندوق مدر للدخل)" : project.finMode === "bank" ? "Bank Debt" : project.finMode, "نوع التمويل");
     inp("Debt Allowed", project.debtAllowed ? "Yes" : "No", "الدين مسموح");
     inp("Max LTV %", (project.maxLtvPct || 70) / 100, "نسبة القرض للقيمة", "0%");
     inp("Finance Rate (annual)", (project.financeRate ?? 6.5) / 100, "معدل الربح السنوي", "0.0%");
@@ -754,7 +754,7 @@ function buildFundSheet(wb, project, results, financing, waterfall, cur, h, sy, 
   row++;
   const info = [
     ["Fund Name  اسم الصندوق", project.name || "Development Fund"],
-    ["Vehicle Type  نوع الأداة", project.finMode === "fund" ? "Fund" : project.finMode === "hybrid" ? "Hybrid Fund" : "SPV"],
+    ["Vehicle Type  نوع الأداة", project.finMode === "fund" ? "Fund" : project.finMode === "hybrid" ? "Hybrid Fund" : project.finMode === "incomeFund" ? "Income Fund" : "SPV"],
     ["Strategy  الاستراتيجية", "Develop & Hold"],
     ["Currency  العملة", cur],
     ["Fund Start Year  سنة بداية الصندوق", sy],
@@ -1339,7 +1339,7 @@ function buildDocumentation(wb, project, cur, h, sy) {
   let row = 4;
   const doc = [
     ["Project  المشروع", project.name || "-"],
-    ["Model Type  نوع النموذج", project.finMode === "self" ? "Pure Development Model (Unlevered)" : project.finMode === "hybrid" ? "Hybrid Model (Government + Fund)" : "Development + Fund Model (Levered)"],
+    ["Model Type  نوع النموذج", project.finMode === "self" ? "Pure Development Model (Unlevered)" : project.finMode === "hybrid" ? "Hybrid Model (Government + Fund)" : project.finMode === "incomeFund" ? "Income Fund Model (صندوق مدر للدخل)" : "Development + Fund Model (Levered)"],
     ["Version  الإصدار", "Haseef v5"],
     ["Generated  تاريخ التصدير", new Date().toISOString().split("T")[0]],
     ["Currency  العملة", cur],

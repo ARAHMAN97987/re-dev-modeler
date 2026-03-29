@@ -87,6 +87,12 @@ export const defaultProject = () => ({
   exitCapRate: 9, // NOI / Cap Rate %
   exitCostPct: 2,
   exitStabilizationYears: 3, // Years after construction to stabilize before auto-exit (self mode). Debt/fund use debtGrace instead.
+  // Income Fund (finMode = "incomeFund")
+  fundLife: 5, // Fund duration in years (separate from project horizon)
+  targetYield: 8, // Target annual distribution yield %
+  distributionFrequency: "semi", // annual | semi | quarterly (display only — engine is annual resolution)
+  propertyMgmtFeePct: 5, // Property management fee as % of rental income
+  propertyMgmtFeeCap: 0, // Annual cap on property mgmt fee (0 = no cap)
   // Waterfall (Phase 3) — Simplified: all profits to investor, then Performance Incentive shares excess
   prefReturnPct: 0, // HIDDEN: no separate pref tier (Performance Incentive replaces it)
   gpCatchup: false, // HIDDEN: disabled
