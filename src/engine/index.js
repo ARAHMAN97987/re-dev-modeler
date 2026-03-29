@@ -24,6 +24,12 @@ export {
   computeIndependentPhaseResults
 } from './phases.js';
 export { runChecks } from './checks.js';
+export {
+  runMarketDataUpdate, loadLatestSnapshot, loadHistory,
+  checkFreshness, getMarketDefaults, getMarketHotelDefaults,
+  getMarketExitCapRate, routeSnapshot, applyToBenchmarks,
+  formToEntries, snapshotToForm, structureSnapshot, saveSnapshot,
+} from './marketData.js';
 
 // ── Local imports for runFullModel composition ──
 import { computeProjectCashFlows } from './cashflow.js';

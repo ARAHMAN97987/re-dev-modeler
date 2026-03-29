@@ -20,6 +20,7 @@ function loadESM(filePath) {
   return code
     .replace(/^import\s+\{[^}]*\}\s+from\s+['"][^'"]*['"];?\s*$/gm, '') // import { x } from 'y'
     .replace(/^import\s+\*\s+as\s+\w+\s+from\s+['"][^'"]*['"];?\s*$/gm, '') // import * as x from 'y'
+    .replace(/^export\s+async\s+function\s+/gm, 'async function ')
     .replace(/^export\s+function\s+/gm, 'function ')
     .replace(/^export\s+const\s+/gm, 'var ')
     .replace(/^export\s+\{[^}]*\}\s*;?\s*$/gm, '') // export { x, y }
@@ -56,6 +57,11 @@ eval(loadESM(path.join(engineDir, 'legacy', 'phaseWaterfalls.js')));
 
 // Data
 eval(loadESM(path.join(dataDir, 'defaults.js')));
+eval(loadESM(path.join(dataDir, 'benchmarks.js')));
+eval(loadESM(path.join(dataDir, 'marketDataSources.js')));
+
+// Market Data Engine
+eval(loadESM(path.join(engineDir, 'marketData.js')));
 
 // runFullModel: thin orchestrator (mirrors engine/index.js runFullModel)
 // Defined here because index.js uses ESM re-exports that can't be eval'd
@@ -104,4 +110,13 @@ module.exports = {
   defaultProject, defaultHotelPL, defaultMarinaPL,
   // engine/index.js orchestrator
   runFullModel,
+  // data/benchmarks.js
+  BENCHMARKS, getBenchmark, benchmarkColor, getAutoFillDefaults,
+  // data/marketDataSources.js
+  DATA_SOURCES, FIELD_ROUTING, CATEGORY_LABELS,
+  // engine/marketData.js
+  structureSnapshot, routeSnapshot, applyToBenchmarks, getMarketDefaults,
+  getMarketHotelDefaults, getMarketExitCapRate, checkFreshness,
+  formToEntries, snapshotToForm, runMarketDataUpdate, saveSnapshot,
+  loadLatestSnapshot, loadHistory,
 };
