@@ -300,7 +300,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     }
 
     // Safety: if fund mode and both GP and LP = 0, force LP = 100%
-    if ((project.finMode === "fund" || isHybrid) && lpEquity === 0 && gpEquity === 0 && totalEquity > 0) {
+    if ((project.finMode === "fund" || isHybrid || isIncomeFund) && lpEquity === 0 && gpEquity === 0 && totalEquity > 0) {
       lpEquity = totalEquity;
     }
 

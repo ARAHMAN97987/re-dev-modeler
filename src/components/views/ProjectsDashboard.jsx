@@ -123,8 +123,8 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             {[
               {label:ar?"المشاريع":"Projects",value:index.length,icon:"📁",color:"#2563eb"},
               {label:ar?"الأصول":"Assets",value:totalAssets,icon:"🏗",color:"#0f766e"},
-              ...(finModes.fund?[{label:ar?"صناديق":"Funds",value:finModes.fund,icon:"🏦",color:"#8b5cf6"}]:[]),
-              ...(finModes.debt?[{label:ar?"تمويل بنكي":"Bank",value:finModes.debt+(finModes.bank100||0),icon:"💳",color:"#f59e0b"}]:[]),
+              ...((finModes.fund||finModes.hybrid||finModes.incomeFund)?[{label:ar?"صناديق":"Funds",value:(finModes.fund||0)+(finModes.hybrid||0)+(finModes.incomeFund||0),icon:"🏦",color:"#8b5cf6"}]:[]),
+              ...((finModes.debt||finModes.bank100)?[{label:ar?"تمويل بنكي":"Bank",value:(finModes.debt||0)+(finModes.bank100||0),icon:"💳",color:"#f59e0b"}]:[]),
             ].map((kpi,i)=>(
               <div key={i} style={{flex:1,background:"#fff",borderRadius:10,border:"1px solid #e5e0d8",padding:"14px 16px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>

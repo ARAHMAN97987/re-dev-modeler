@@ -23,7 +23,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
   // ═══════════════════════════════════════════════
   // T0: BUSINESS VALIDATION (H16)
   // ═══════════════════════════════════════════════
-  if (w && (project.finMode === "fund" || project.finMode === "hybrid")) {
+  if (w && (project.finMode === "fund" || project.finMode === "hybrid" || project.finMode === "incomeFund" || project.finMode === "jv")) {
     const gpP = w.gpPct || 0, lpP = w.lpPct || 0;
     add("T0","GP+LP = 100%", Math.abs((gpP+lpP)-1) < 0.001, "Equity split must total 100%", `GP: ${fp(gpP)} + LP: ${fp(lpP)} = ${fp(gpP+lpP)}`);
   }

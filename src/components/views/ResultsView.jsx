@@ -64,7 +64,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   // Detect mixed financing modes across phases
   const phaseFinModes = (project.phases || []).map(p => p.financing?.finMode || mode);
-  const hasFundPhase = phaseFinModes.some(m => m === "fund" || m === "hybrid" || m === "incomeFund");
+  const hasFundPhase = phaseFinModes.some(m => m === "fund" || m === "hybrid" || m === "incomeFund" || m === "jv");
   const hasBankPhase = phaseFinModes.some(m => m === "debt" || m === "bank100");
   const isMixedMode = hasFundPhase && hasBankPhase;
 
@@ -115,7 +115,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
   }
 
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
-  if (mode === "fund" || mode === "hybrid") {
+  if (mode === "fund" || mode === "hybrid" || mode === "jv") {
     return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
   }
 

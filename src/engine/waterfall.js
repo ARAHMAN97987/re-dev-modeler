@@ -637,14 +637,13 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const cumDistributions = new Array(h).fill(0);
   const ffoProxy = new Array(h).fill(0);
   let avgDistYield = 0;
-  const adjLR2 = ir?.adjustedLandRent || c.landRent;
 
   if (isIncomeFund && lpEquity > 0) {
     let cumDist = 0;
     let stableYields = [];
     const constrEnd = f.constrEnd || 0;
     for (let y = 0; y < h; y++) {
-      const noi = (c.income[y] || 0) - (adjLR2[y] || 0);
+      const noi = (c.income[y] || 0) - (adjLandRent[y] || 0);
       cumDist += lpDist[y];
       cumDistributions[y] = cumDist;
       distributionYield[y] = lpEquity > 0 ? lpDist[y] / lpEquity : 0;

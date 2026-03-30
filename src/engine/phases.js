@@ -351,6 +351,14 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     lpSimpleAnnual: names.length === 1 ? (phaseWaterfalls[names[0]]?.lpSimpleAnnual ?? 0) : 0,
     gpSimpleAnnual: names.length === 1 ? (phaseWaterfalls[names[0]]?.gpSimpleAnnual ?? 0) : 0,
     investYears: Math.max(...names.map(n => phaseWaterfalls[n]?.investYears || 0)),
+    // Income fund metrics (aggregated from phases)
+    isIncomeFund: names.some(n => phaseWaterfalls[n]?.isIncomeFund),
+    distributionYield: sumArr('distributionYield'),
+    avgDistYield: (() => { const vals = names.map(n => phaseWaterfalls[n]?.avgDistYield).filter(v => v > 0); return vals.length > 0 ? vals.reduce((a,b)=>a+b,0)/vals.length : 0; })(),
+    payoutRatio: sumArr('payoutRatio'),
+    navEstimate: sumArr('navEstimate'),
+    cumDistributions: sumArr('cumDistributions'),
+    ffoProxy: sumArr('ffoProxy'),
   };
 }
 
@@ -383,7 +391,7 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
         phaseFinancings[pName] = pFinancing;
         // Run waterfall (only if fund mode for this phase)
         const pFinMode = vProject.finMode || project.finMode;
-        if (pFinMode === "fund" || pFinMode === "jv" || pFinMode === "hybrid") {
+        if (pFinMode === "fund" || pFinMode === "jv" || pFinMode === "hybrid" || pFinMode === "incomeFund") {
           try {
             const pWaterfall = computeWaterfall(vProject, vResults, pFinancing, pIr);
             if (pWaterfall) phaseWaterfalls[pName] = pWaterfall;
