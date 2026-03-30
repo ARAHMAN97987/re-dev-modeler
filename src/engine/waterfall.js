@@ -96,7 +96,10 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // Exit year — use optimal exit from financing engine (highest IRR)
   const exitStrategy = isIncomeFund ? "hold" : (project.exitStrategy || "sale");
   const optIdx = financing.optimalExitYear ? financing.optimalExitYear - sy : constrEnd + 3;
-  const exitYr = exitStrategy === "hold" ? h - 1 : ((project.exitYear || 0) > 0 ? project.exitYear - sy : optIdx);
+  // Smart exit year: values < 100 treated as relative offset, ≥ startYear as absolute
+  const rawExit = project.exitYear || 0;
+  const resolvedExit = rawExit > 0 && rawExit < 100 ? rawExit : rawExit > 0 ? rawExit - sy : 0;
+  const exitYr = exitStrategy === "hold" ? h - 1 : (resolvedExit > 0 ? resolvedExit : optIdx);
   const operYears = exitYr - constrStart + 1;
 
   // Fee period end: hold = full horizon, sale/caprate = exit year
