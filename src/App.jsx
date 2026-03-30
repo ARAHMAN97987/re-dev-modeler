@@ -756,7 +756,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     })()}
 
     {/* ═══ QUICK EDIT: Fund & Waterfall Terms ═══ */}
-    {upCfg && (cfg.finMode === "fund" || cfg.finMode === "hybrid") && (
+    {upCfg && (cfg.finMode === "fund" || cfg.finMode === "hybrid" || cfg.finMode === "incomeFund") && (
       <div style={{background:showTerms?"#fff":"#f8f9fb",borderRadius:10,border:showTerms?"2px solid #8b5cf6":"1px solid #e5e7ec",marginBottom:14,overflow:"hidden",transition:"all 0.2s"}}>
         <div onClick={()=>setShowTerms(!showTerms)} style={{padding:"10px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:showTerms?"#faf5ff":"#f8f9fb",userSelect:"none"}}>
           <span style={{fontSize:13}}>⚡</span>
@@ -2671,11 +2671,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     {/* ═══ FINANCIAL STRUCTURE SETTINGS ═══ */}
     {(() => {
         const isHybridMode = cfg.finMode === "hybrid";
-        const hasDbt = cfg.finMode !== "self" && cfg.finMode !== "hybrid";
+        const isIncomeFund = cfg.finMode === "incomeFund";
+        const hasDbt = cfg.finMode !== "self" && cfg.finMode !== "hybrid" && !isIncomeFund;
         const hasFundDebt = isHybridMode && cfg.debtAllowed;
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
-        const isFundMode = cfg.finMode === "fund" || isHybridMode;
-        const notHold = (cfg.exitStrategy||"sale") !== "hold";
+        const isFundMode = cfg.finMode === "fund" || isHybridMode || isIncomeFund;
+        const notHold = !isIncomeFund && (cfg.exitStrategy||"sale") !== "hold";
         // Accordion section header helper
         const AH = ({id, color, label, summary, visible}) => {
           if (visible === false) return null;
@@ -2708,11 +2709,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div className="z-card" style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--text-primary)",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:v==="hybrid"?{debtAllowed:true,govFinancingPct:cfg.govFinancingPct||70,govBeneficiary:cfg.govBeneficiary||"project"}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:v==="hybrid"?{debtAllowed:true,govFinancingPct:cfg.govFinancingPct||70,govBeneficiary:cfg.govBeneficiary||"project"}:v==="incomeFund"?{exitStrategy:"hold",maxLtvPct:50,debtAllowed:true}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&v!=="incomeFund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
             <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
             <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
+            <option value="incomeFund">{ar?"صندوق مدر للدخل":"Income Fund"}</option>
             <option value="hybrid">{ar?"مختلط (صندوق + تمويل)":"Hybrid (Fund + Financing)"}</option>
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
@@ -3148,7 +3150,7 @@ When to use:
 
       // Get waterfall for selected phase
       const w = (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) ? phaseWaterfalls[singlePhaseName] : waterfall;
-      const isFund = cfg.finMode === "fund" || cfg.finMode === "hybrid";
+      const isFund = cfg.finMode === "fund" || cfg.finMode === "hybrid" || cfg.finMode === "incomeFund";
       const isBank = cfg.finMode === "debt" || cfg.finMode === "bank100";
       const isSelf = cfg.finMode === "self";
 
@@ -4418,6 +4420,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
         <Option icon="🏦" label={t?"تمويل بنكي 100% (ملك المطور)":"100% Bank Debt (Developer-Owned)"} desc={t?"البنك يموّل كامل التكلفة، المطور هو المالك":"Bank finances 100%, developer owns"} selected={project.finMode==="bank100"} onClick={()=>onUpdate({finMode:"bank100",debtAllowed:true,maxLtvPct:100})} />
         <Option icon="🏗" label={t?"دين بنكي + رأس مال المطور":"Bank Debt + Developer Equity"} desc={t?"جزء من البنك وجزء من المطور":"Part bank loan, part developer equity"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
         <Option icon="📊" label={t?"صندوق استثماري (مطور/مستثمر)":"Fund Structure (Developer/Investor)"} desc={t?"مطور + مستثمرين مع شلال توزيعات":"Developer + investors with waterfall"} selected={project.finMode==="fund"} onClick={()=>onUpdate({finMode:"fund",debtAllowed:true})} />
+        <Option icon="💰" label={t?"صندوق مدر للدخل":"Income Fund"} desc={t?"شراء/تطوير وتشغيل للدخل الدوري":"Buy/develop & hold for periodic income"} selected={project.finMode==="incomeFund"} onClick={()=>onUpdate({finMode:"incomeFund",debtAllowed:true,maxLtvPct:50,exitStrategy:"hold"})} />
         <Option icon="🔀" label={t?"مختلط (صندوق + تمويل)":"Hybrid (Fund + Financing)"} desc={t?"تمويل مؤسسي (بنك/حكومة) + صندوق استثماري على الباقي":"Institutional financing + fund structure on remainder"} selected={project.finMode==="hybrid"} onClick={()=>onUpdate({finMode:"hybrid",debtAllowed:true,govFinancingPct:70,govBeneficiary:"project"})} />
         <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} /></div>
       </div>
