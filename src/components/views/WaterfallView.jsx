@@ -496,9 +496,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
               <span style={{color:"#6b7280"}}>{ar?"رأس مال الصندوق":"Fund Equity"}</span>
               <span style={{textAlign:"right",fontWeight:600}}>{fmtM(financing.totalEquity)}</span>
-              <span style={{color:"#6b7280"}}>{ar?"LP IRR":"LP IRR"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"عائد المستثمر IRR":"Investor IRR"}</span>
               <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpIRR!=null?fmtPct(w.lpIRR*100):"—"}</span>
-              <span style={{color:"#6b7280"}}>{ar?"LP MOIC":"LP MOIC"}</span>
+              <span style={{color:"#6b7280"}}>{ar?"مضاعف المستثمر MOIC":"Investor MOIC"}</span>
               <span style={{textAlign:"right",fontWeight:600,color:"#6d28d9"}}>{w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"}</span>
               <span style={{color:"#6b7280"}}>{ar?"صافي للصندوق":"Fund Net CF"}</span>
               <span style={{textAlign:"right",fontWeight:600,color:fundTotal>=0?"#16a34a":"#dc2626"}}>{fmtM(fundTotal)}</span>
