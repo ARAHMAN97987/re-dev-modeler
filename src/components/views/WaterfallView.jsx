@@ -603,6 +603,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"المساهمات":"CONTRIBUTIONS"} />
               <KR l={ar?"مساهمة المستثمر":"Investor Contribution"} v={fmt(w.lpTotalInvested)} c="#8b5cf6" />
               <KR l={ar?"مساهمة المطور (كمستثمر)":"Developer Contribution"} v={fmt(w.gpTotalInvested)} c="#3b82f6" />
+              {w.gpTotalInvested > 0 && financing.gpEquity > 0 && Math.abs(w.gpTotalInvested - financing.gpEquity) > 1000 && (
+                <><span style={{color:"#9ca3af",fontSize:9,paddingInlineStart:8}}>{ar?"↳ ملكية أساسية":"↳ Base equity"}: {fmt(financing.gpEquity)} + {ar?"حصة من الرسوم":"fee share"}: {fmt(w.gpTotalInvested - financing.gpEquity)}</span><span></span></>
+              )}
               <KR l={ar?"إجمالي المستثمر":"Total Invested"} v={fmt(totalInvested)} bold />
               <SecHd text={ar?"التوزيعات":"DISTRIBUTIONS"} />
               <KR l={ar?"توزيعات المستثمر":"Investor Distributions"} v={fmt(w.lpTotalDist)} c="#8b5cf6" />
