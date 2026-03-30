@@ -116,10 +116,13 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const _buildCapex = Math.max(0, c.totalCapex - _landInCapex);
   // Developer fee basis: exclLand (construction only, default) or inclLand (construction + land)
   const devFeeBasis = project.developerFeeBasis === "inclLand" ? devCostInclLand : _buildCapex;
-  const devFeeTotal = devFeeBasis * (project.developerFeePct ?? 10) / 100;
+  // Developer fee only applies to fund modes (GP/LP structure) — not self/debt/bank100
+  // In non-fund modes, the developer IS the owner and doesn't pay a fee to themselves
+  const hasFundStructure = project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid" || project.finMode === "incomeFund";
+  const devFeeTotal = hasFundStructure ? devFeeBasis * (project.developerFeePct ?? 10) / 100 : 0;
   // DevFee schedule: spread over construction proportional to CAPEX
   const devFeeSchedule = new Array(h).fill(0);
-  {
+  if (devFeeTotal > 0) {
     let _cS = h, _cE = 0;
     for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { _cS = Math.min(_cS, y); _cE = Math.max(_cE, y); } }
     for (let y = _cS; y <= _cE && y < h; y++) {
