@@ -157,6 +157,325 @@ function AcademyCard({lang,isRTL,isMobile,onEnter}) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// SUBSCRIPTION PAGE — صفحة الاشتراك
+// ═══════════════════════════════════════════════════════════
+function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOut }) {
+  const ar = lang === 'ar';
+  const dir = ar ? 'rtl' : 'ltr';
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+  const [step, setStep] = useState('plan'); // plan | payment | success
+
+  const formatCard = (v) => {
+    const d = v.replace(/\D/g, '').slice(0, 16);
+    return d.replace(/(.{4})/g, '$1 ').trim();
+  };
+  const formatExpiry = (v) => {
+    const d = v.replace(/\D/g, '').slice(0, 4);
+    if (d.length >= 3) return d.slice(0, 2) + '/' + d.slice(2);
+    return d;
+  };
+
+  const handlePay = async () => {
+    setError('');
+    if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) { setError(ar ? 'أدخل رقم البطاقة كاملاً' : 'Enter full card number'); return; }
+    if (!cardName.trim()) { setError(ar ? 'أدخل اسم حامل البطاقة' : 'Enter cardholder name'); return; }
+    if (!expiry || expiry.length < 5) { setError(ar ? 'أدخل تاريخ الانتهاء' : 'Enter expiry date'); return; }
+    if (!cvv || cvv.length < 3) { setError(ar ? 'أدخل رمز CVV' : 'Enter CVV'); return; }
+    setProcessing(true);
+    // Simulate payment processing
+    await new Promise(r => setTimeout(r, 2500));
+    setProcessing(false);
+    setStep('success');
+    setTimeout(() => onSubscribe(), 2000);
+  };
+
+  const PLAN = {
+    price: 2988,
+    monthly: 249,
+    currency: 'SAR',
+    period: ar ? 'سنوياً' : '/year',
+    trial: ar ? '3 أيام مجاناً' : '3 days free',
+    name: ar ? 'الباقة الاحترافية' : 'Professional Plan',
+  };
+
+  const FEATURES = [
+    { t: ar ? 'محرك المشاريع - أصول غير محدودة' : 'Project Engine - Unlimited assets', icon: '📐' },
+    { t: ar ? 'محرك التمويل والدين' : 'Financing & Debt Engine', icon: '🏦' },
+    { t: ar ? 'محرك التوزيعات (Waterfall)' : 'Waterfall Distribution Engine', icon: '💧' },
+    { t: ar ? 'ملف البنك والتقارير PDF/Excel' : 'Bank Pack & Reports PDF/Excel', icon: '📄' },
+    { t: ar ? 'تحليل 8 سيناريوهات' : '8 Scenario Analysis', icon: '📊' },
+    { t: ar ? 'الحوافز الحكومية' : 'Government Incentives', icon: '🏛️' },
+    { t: ar ? 'مساعد AI مدمج' : 'Built-in AI Assistant', icon: '🤖' },
+    { t: ar ? 'أكاديمية حصيف التعليمية' : 'Haseef Academy', icon: '📚' },
+    { t: ar ? 'تحديثات مستمرة ودعم فني' : 'Continuous updates & support', icon: '🔄' },
+  ];
+
+  const cardInputStyle = {
+    width: '100%', padding: '14px 16px', background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff',
+    fontSize: 15, outline: 'none', fontFamily: "'DM Sans','Tajawal',sans-serif",
+    direction: 'ltr', textAlign: 'left', boxSizing: 'border-box',
+    transition: 'border-color 0.3s, box-shadow 0.3s', letterSpacing: '0.5px'
+  };
+  const labelStyle = { display: 'block', color: C.w50, fontSize: 12, marginBottom: 6, fontFamily: "'Tajawal',sans-serif", textAlign: ar ? 'right' : 'left' };
+  const focusCard = (e) => { e.target.style.borderColor = C.teal; e.target.style.boxShadow = `0 0 0 3px ${C.tealDim}`; };
+  const blurCard = (e) => { e.target.style.borderColor = 'rgba(255,255,255,0.15)'; e.target.style.boxShadow = 'none'; };
+
+  return (
+    <div dir={dir} style={{ minHeight: '100vh', background: `linear-gradient(145deg,${C.deep} 0%,${C.navy} 40%,#0e3050 100%)`, fontFamily: "'Tajawal','IBM Plex Sans Arabic',sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '24px 16px' : '40px 24px', overflowY: 'auto' }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.35)!important}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}*{box-sizing:border-box}`}</style>
+      <Orbs />
+
+      {/* Header */}
+      <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 520, marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: 2 }}>{ar ? 'حصيف' : 'Haseef'}</span>
+          <span style={{ width: 1, height: 22, background: `${C.teal}50` }} />
+          <span style={{ color: C.teal, fontSize: 11, fontWeight: 600 }}>{ar ? 'النمذجة المالية' : 'Financial Modeler'}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setLang(l => l === 'en' ? 'ar' : 'en')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.w15}`, background: C.w05, color: C.w70, fontSize: 12, cursor: 'pointer', fontFamily: "'Tajawal',sans-serif" }}>{lang === 'en' ? 'عربي' : 'EN'}</button>
+          <button onClick={onSignOut} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid rgba(239,68,68,0.3)`, background: 'rgba(239,68,68,0.08)', color: '#f87171', fontSize: 12, cursor: 'pointer', fontFamily: "'Tajawal',sans-serif" }}>{ar ? 'خروج' : 'Sign Out'}</button>
+        </div>
+      </div>
+
+      {/* Success State */}
+      {step === 'success' && (
+        <div style={{ position: 'relative', zIndex: 10, textAlign: 'center', maxWidth: 400 }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: `linear-gradient(135deg,${C.teal},#25a89c)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', animation: 'checkPop 0.5s ease-out' }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+          </div>
+          <h2 style={{ color: '#fff', fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{ar ? 'تم الاشتراك بنجاح!' : 'Subscription Activated!'}</h2>
+          <p style={{ color: C.w50, fontSize: 14 }}>{ar ? 'جاري تحويلك للمنصة...' : 'Redirecting to platform...'}</p>
+        </div>
+      )}
+
+      {/* Plan Selection */}
+      {step === 'plan' && (
+        <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 520 }}>
+          {/* Trial Badge */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 20px', background: `linear-gradient(135deg,${C.tealDim},rgba(46,196,182,0.05))`, border: `1px solid ${C.tealBorder}`, borderRadius: 24 }}>
+              <span style={{ fontSize: 16 }}>🎉</span>
+              <span style={{ color: C.teal, fontSize: 13, fontWeight: 700 }}>{ar ? 'انتهت الفترة التجريبية المجانية' : 'Your free trial has ended'}</span>
+            </div>
+          </div>
+
+          <h1 style={{ textAlign: 'center', color: '#fff', fontSize: isMobile ? 22 : 28, fontWeight: 900, marginBottom: 6, lineHeight: 1.3 }}>
+            {ar ? 'اشترك في حصيف' : 'Subscribe to Haseef'}
+          </h1>
+          <p style={{ textAlign: 'center', color: C.w40, fontSize: 13, marginBottom: 28 }}>
+            {ar ? 'منصة النمذجة المالية المتكاملة للتطوير العقاري' : 'The all-in-one financial modeling platform for real estate development'}
+          </p>
+
+          {/* Pricing Card */}
+          <div style={{ background: 'rgba(11,35,65,0.6)', backdropFilter: 'blur(20px)', border: `1px solid ${C.tealBorder}`, borderRadius: 20, padding: isMobile ? '28px 22px' : '36px 32px', marginBottom: 20, position: 'relative', overflow: 'hidden' }}>
+            {/* Shimmer accent */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,transparent,${C.teal},${C.gold},${C.teal},transparent)`, backgroundSize: '200% 100%', animation: 'shimmer 3s linear infinite' }} />
+
+            {/* Plan name + badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <div style={{ color: '#fff', fontSize: 18, fontWeight: 800 }}>{PLAN.name}</div>
+                <div style={{ color: C.w40, fontSize: 12, marginTop: 2 }}>{ar ? 'وصول كامل لجميع الأدوات' : 'Full access to all tools'}</div>
+              </div>
+              <div style={{ padding: '4px 14px', borderRadius: 20, background: `${C.gold}25`, border: `1px solid ${C.goldBorder}`, color: C.gold, fontSize: 11, fontWeight: 700 }}>{ar ? 'الأكثر قيمة' : 'Best Value'}</div>
+            </div>
+
+            {/* Price */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+              <span style={{ color: '#fff', fontSize: 42, fontWeight: 900, fontFamily: "'DM Sans',sans-serif", letterSpacing: '-1px' }}>{PLAN.price.toLocaleString()}</span>
+              <span style={{ color: C.w50, fontSize: 14 }}>{PLAN.currency}</span>
+              <span style={{ color: C.w30, fontSize: 13 }}>{PLAN.period}</span>
+            </div>
+            <div style={{ color: C.w40, fontSize: 12, marginBottom: 24 }}>
+              {ar ? `ما يعادل ${PLAN.monthly} ر.س / شهرياً` : `Equivalent to ${PLAN.monthly} SAR / month`}
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: C.w10, marginBottom: 20 }} />
+
+            {/* Features */}
+            <div style={{ display: 'grid', gap: 12 }}>
+              {FEATURES.map((f, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 15, width: 24, textAlign: 'center' }}>{f.icon}</span>
+                  <span style={{ color: C.w70, fontSize: 13, fontWeight: 500 }}>{f.t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <button onClick={() => setStep('payment')} style={{
+            width: '100%', padding: '16px 0', borderRadius: 14, border: 'none',
+            background: `linear-gradient(135deg,${C.teal} 0%,#25a89c 100%)`,
+            color: C.deep, fontSize: 16, fontWeight: 800, cursor: 'pointer',
+            fontFamily: "'Tajawal',sans-serif", transition: 'all 0.35s',
+            boxShadow: `0 6px 24px ${C.tealDim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}>
+            💳 {ar ? 'اشترك الآن' : 'Subscribe Now'}
+          </button>
+
+          {/* Guarantee */}
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <div style={{ color: C.w30, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              {ar ? 'دفع آمن ومشفر. ضمان استرداد خلال 14 يوم.' : 'Secure encrypted payment. 14-day money-back guarantee.'}
+            </div>
+          </div>
+
+          {/* User info */}
+          <div style={{ textAlign: 'center', color: C.w25, fontSize: 11, marginTop: 20 }}>
+            {ar ? 'مسجل كـ' : 'Signed in as'}: {user?.email}
+          </div>
+        </div>
+      )}
+
+      {/* Payment Form */}
+      {step === 'payment' && (
+        <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 480 }}>
+          <button onClick={() => setStep('plan')} style={{ background: 'none', border: 'none', color: C.w40, fontSize: 13, cursor: 'pointer', fontFamily: "'Tajawal',sans-serif", marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ transform: ar ? 'rotate(180deg)' : 'none', display: 'inline-block' }}>←</span> {ar ? 'رجوع' : 'Back'}
+          </button>
+
+          <div style={{ background: 'rgba(11,35,65,0.6)', backdropFilter: 'blur(20px)', border: `1px solid ${C.w10}`, borderRadius: 20, padding: isMobile ? '28px 22px' : '36px 32px' }}>
+            {/* Order summary */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, padding: '14px 18px', background: C.w05, borderRadius: 12 }}>
+              <div>
+                <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{PLAN.name}</div>
+                <div style={{ color: C.w40, fontSize: 11, marginTop: 2 }}>{ar ? 'اشتراك سنوي' : 'Annual subscription'}</div>
+              </div>
+              <div style={{ textAlign: ar ? 'left' : 'right' }}>
+                <div style={{ color: '#fff', fontSize: 18, fontWeight: 900, fontFamily: "'DM Sans',sans-serif" }}>{PLAN.price.toLocaleString()} <span style={{ fontSize: 12, color: C.w50 }}>{PLAN.currency}</span></div>
+              </div>
+            </div>
+
+            <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 800, marginBottom: 4 }}>
+              {ar ? 'بيانات الدفع' : 'Payment Details'}
+            </h2>
+            <p style={{ color: C.w30, fontSize: 12, marginBottom: 24 }}>
+              {ar ? 'أدخل بيانات بطاقتك الائتمانية' : 'Enter your credit card information'}
+            </p>
+
+            {/* Card Icons */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              {['Visa', 'Mastercard', 'mada'].map((card) => (
+                <div key={card} style={{ padding: '6px 12px', borderRadius: 6, background: C.w05, border: `1px solid ${C.w10}`, color: C.w50, fontSize: 11, fontWeight: 600 }}>{card}</div>
+              ))}
+            </div>
+
+            {/* Card Number */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>{ar ? 'رقم البطاقة' : 'Card Number'}</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text" value={cardNumber}
+                  onChange={e => setCardNumber(formatCard(e.target.value))}
+                  placeholder="0000 0000 0000 0000"
+                  style={cardInputStyle}
+                  onFocus={focusCard} onBlur={blurCard}
+                  maxLength={19}
+                />
+                <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [ar ? 'left' : 'right']: 14, display: 'flex', alignItems: 'center' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.w25} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Cardholder Name */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>{ar ? 'اسم حامل البطاقة' : 'Cardholder Name'}</label>
+              <input
+                type="text" value={cardName}
+                onChange={e => setCardName(e.target.value)}
+                placeholder={ar ? 'كما هو مطبوع على البطاقة' : 'As printed on card'}
+                style={{ ...cardInputStyle, textTransform: 'uppercase' }}
+                onFocus={focusCard} onBlur={blurCard}
+              />
+            </div>
+
+            {/* Expiry + CVV row */}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>{ar ? 'تاريخ الانتهاء' : 'Expiry'}</label>
+                <input
+                  type="text" value={expiry}
+                  onChange={e => setExpiry(formatExpiry(e.target.value))}
+                  placeholder="MM/YY"
+                  style={cardInputStyle}
+                  onFocus={focusCard} onBlur={blurCard}
+                  maxLength={5}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>CVV</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="password" value={cvv}
+                    onChange={e => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="•••"
+                    style={cardInputStyle}
+                    onFocus={focusCard} onBlur={blurCard}
+                    maxLength={4}
+                  />
+                  <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [ar ? 'left' : 'right']: 14 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.w25} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', color: '#f87171', fontSize: 12, border: '1px solid rgba(239,68,68,0.2)' }}>{error}</div>}
+
+            {/* Pay Button */}
+            <button onClick={handlePay} disabled={processing} style={{
+              width: '100%', padding: '16px 0', borderRadius: 14, border: 'none',
+              background: processing ? `${C.teal}60` : `linear-gradient(135deg,${C.teal} 0%,#25a89c 100%)`,
+              color: C.deep, fontSize: 16, fontWeight: 800, cursor: processing ? 'wait' : 'pointer',
+              fontFamily: "'Tajawal',sans-serif", transition: 'all 0.35s',
+              boxShadow: `0 6px 24px ${C.tealDim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+            }}>
+              {processing && <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${C.deep}40`, borderTopColor: C.deep, animation: 'spin 0.7s linear infinite' }} />}
+              {processing ? (ar ? 'جاري المعالجة...' : 'Processing...') : (ar ? `ادفع ${PLAN.price.toLocaleString()} ${PLAN.currency}` : `Pay ${PLAN.price.toLocaleString()} ${PLAN.currency}`)}
+            </button>
+
+            {/* Security badges */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.w25, fontSize: 10 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                SSL {ar ? 'مشفر' : 'Encrypted'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.w25, fontSize: 10 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                PCI DSS
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.w25, fontSize: 10 }}>
+                <span>🔒</span> {ar ? 'ضمان 14 يوم' : '14-day guarantee'}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ textAlign: 'center', color: C.w20, fontSize: 10, marginTop: 16, lineHeight: 1.6 }}>
+            {ar ? 'بالضغط على "ادفع" أنت توافق على' : 'By clicking "Pay" you agree to our'}{' '}
+            <a href="/terms" style={{ color: C.teal, textDecoration: 'none' }}>{ar ? 'شروط الاستخدام' : 'Terms'}</a>
+            {' '}{ar ? 'و' : '&'}{' '}
+            <a href="/privacy" style={{ color: C.teal, textDecoration: 'none' }}>{ar ? 'سياسة الخصوصية' : 'Privacy'}</a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // AUTH GATE
 // ═══════════════════════════════════════════════════════════
 export function AuthGate({ children }) {
@@ -174,6 +493,7 @@ export function AuthGate({ children }) {
   const [showPublicAcademy,setShowPublicAcademy]=useState(false)
   const [showPw,setShowPw]=useState(false)
   const [mounted,setMounted]=useState(false)
+  const [subStatus,setSubStatus]=useState(null) // null=loading, 'active'|'trial'|'none'
   const width=useWidth()
   const ar=lang==='ar'; const isRTL=ar; const dir=ar?'rtl':'ltr'; const isMobile=width<900;
 
@@ -185,9 +505,39 @@ export function AuthGate({ children }) {
     return()=>subscription?.unsubscribe()
   },[])
 
+  // Check subscription status when session changes
+  useEffect(()=>{
+    if(!session){setSubStatus(null);return}
+    const uid=session.user.id
+    const stored=localStorage.getItem(`haseef_sub_${uid}`)
+    if(stored){
+      try{
+        const d=JSON.parse(stored)
+        const now=Date.now()
+        if(d.status==='active'&&d.expiresAt>now){setSubStatus('active');return}
+        if(d.status==='trial'&&d.trialEndsAt>now){setSubStatus('trial');return}
+      }catch(e){}
+    }
+    // Check if user signed up within 3 days (auto trial)
+    const createdAt=new Date(session.user.created_at).getTime()
+    const threeDays=3*24*60*60*1000
+    if(Date.now()-createdAt<threeDays){
+      localStorage.setItem(`haseef_sub_${uid}`,JSON.stringify({status:'trial',trialEndsAt:createdAt+threeDays,startedAt:createdAt}))
+      setSubStatus('trial');return
+    }
+    setSubStatus('none')
+  },[session])
+
   if(!supabase)return children({user:null,userId:'anonymous',signOut:()=>{}})
   if(loading)return <LoadingScreen/>
-  if(session)return children({user:session.user,userId:session.user.id,signOut:()=>supabase.auth.signOut()})
+  if(session&&subStatus==='active')return children({user:session.user,userId:session.user.id,signOut:()=>supabase.auth.signOut()})
+  if(session&&subStatus==='trial')return children({user:session.user,userId:session.user.id,signOut:()=>supabase.auth.signOut()})
+  if(session&&subStatus==='none')return <SubscriptionPage user={session.user} lang={lang} setLang={setLang} isMobile={isMobile} onSubscribe={()=>{
+    const uid=session.user.id
+    localStorage.setItem(`haseef_sub_${uid}`,JSON.stringify({status:'active',expiresAt:Date.now()+365*24*60*60*1000,startedAt:Date.now(),plan:'annual'}))
+    setSubStatus('active')
+  }} onSignOut={()=>supabase.auth.signOut()} />
+  if(session)return <LoadingScreen/>
   if(showPublicAcademy)return children({user:null,userId:'anonymous',signOut:null,publicAcademy:true,exitAcademy:()=>setShowPublicAcademy(false)})
 
   const calcPwd=(p)=>{let s=0;if(p.length>=4)s++;if(p.length>=6)s++;if(p.length>=8)s++;if(p.length>=10)s++;setPwdStr(s)}
