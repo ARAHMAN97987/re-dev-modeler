@@ -33,9 +33,14 @@ const TX = {
   academyP: { en: "Learn real estate financial modeling with interactive lessons, demo projects, and guided learning paths. No account required.", ar: "تعلم النمذجة المالية العقارية مع دروس تفاعلية، مشاريع تجريبية، ومسارات تعليمية موجهة. بدون حساب." },
   academyCta: { en: "Start Learning", ar: "ابدأ التعلم" },
   free: { en: "FREE", ar: "مجاني" },
-  emailPh: { en: "you@example.com", ar: "you@example.com" },
-  pwPh: { en: "6+ characters", ar: "6 أحرف أو أكثر" },
+  emailPh: { en: "example@company.com", ar: "example@company.com" },
+  pwPh: { en: "Enter your password", ar: "أدخل كلمة المرور" },
   poweredBy: { en: "Built for the Saudi real estate market", ar: "مصمم للسوق العقاري السعودي" },
+  terms: { en: "Terms of Service", ar: "شروط الاستخدام" },
+  privacy: { en: "Privacy Policy", ar: "سياسة الخصوصية" },
+  termsAnd: { en: "and", ar: "و" },
+  termsAgree: { en: "By signing in, you agree to our", ar: "بتسجيل الدخول، أنت توافق على" },
+  appleSignIn: { en: "Sign in with Apple", ar: "الدخول بحساب Apple" },
   sendLink: { en: "Send Recovery Link", ar: "إرسال رابط الاستعادة" },
   loading: { en: "Loading...", ar: "جاري..." },
   createAcc: { en: "Create Account", ar: "إنشاء حساب" },
@@ -50,7 +55,7 @@ const TX = {
   stats: [
     { v: "50+", l: { en: "Year Projections", ar: "سنة توقعات" } },
     { v: "8", l: { en: "Scenarios", ar: "سيناريوهات" } },
-    { v: "633", l: { en: "Tests Pass", ar: "اختبار ناجح" } },
+    { v: "634", l: { en: "Tests Pass", ar: "اختبار ناجح" } },
     { v: "5", l: { en: "Core Modules", ar: "وحدات أساسية" } },
   ],
 };
@@ -247,7 +252,7 @@ export function AuthGate({ children }) {
             </div>
             {mode==='signup'&&<PasswordStrength strength={pwdStr}/>}
           </div>)}
-          {mode==='signup'&&(<div><label style={lbl}>{t(TX.confirmPw,lang)}</label><input type="password" placeholder="••••••••" value={confirm} onChange={e=>setConfirm(e.target.value)} style={inp} onFocus={focusIn} onBlur={blurIn} onKeyDown={e=>e.key==='Enter'&&go()}/></div>)}
+          {mode==='signup'&&(<div><label style={lbl}>{t(TX.confirmPw,lang)}</label><input type="password" placeholder={ar?"أعد إدخال كلمة المرور":"Re-enter your password"} value={confirm} onChange={e=>setConfirm(e.target.value)} style={inp} onFocus={focusIn} onBlur={blurIn} onKeyDown={e=>e.key==='Enter'&&go()}/></div>)}
         </div>
         {error&&<div style={{marginTop:14,padding:'12px 16px',borderRadius:10,background:'rgba(239,68,68,0.08)',color:'#f87171',fontSize:12,border:'1px solid rgba(239,68,68,0.2)'}}>{error}</div>}
         {message&&<div style={{marginTop:14,padding:'12px 16px',borderRadius:10,background:'rgba(74,222,128,0.08)',color:'#4ade80',fontSize:12,border:'1px solid rgba(74,222,128,0.2)'}}>{message}</div>}
@@ -265,8 +270,18 @@ export function AuthGate({ children }) {
           <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
           {ar?'الدخول بحساب Google':'Sign in with Google'}
         </button>
+        <button onClick={async()=>{if(!supabase)return;setBusy(true);try{await supabase.auth.signInWithOAuth({provider:'apple',options:{redirectTo:window.location.origin}})}catch(e){setError(e.message)}setBusy(false)}} style={{width:'100%',padding:'13px 0',borderRadius:11,border:`1px solid ${C.w15}`,background:'rgba(255,255,255,0.04)',color:'#fff',fontSize:13.5,fontWeight:700,fontFamily:"'Tajawal',sans-serif",cursor:'pointer',transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:10}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.borderColor=C.w25}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.borderColor=C.w15}}>
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 6.28c-.09.07-1.66.95-1.66 2.92 0 2.28 2.01 3.09 2.07 3.11-.01.06-.32 1.1-1.06 2.17-.64.94-1.31 1.87-2.33 1.87s-1.28-.59-2.46-.59c-1.14 0-1.55.61-2.49.61s-1.56-.87-2.33-1.93C3.72 13.01 2.87 11.08 2.87 9.27c0-2.85 1.86-4.36 3.68-4.36 .97 0 1.78.63 2.39.63.57 0 1.47-.67 2.58-.67.42 0 1.91.04 2.9.73l.68.68zM11.35 3.3c.48-.57.82-1.36.82-2.15 0-.11-.01-.22-.03-.31-.78.03-1.7.52-2.26 1.16-.44.5-.85 1.3-.85 2.1 0 .12.02.24.03.28.05.01.14.02.22.02.7 0 1.56-.47 2.07-1.1z" fill="#fff"/></svg>
+          {t(TX.appleSignIn,lang)}
+        </button>
         <button onClick={()=>setShowPublicAcademy(true)} style={{width:'100%',padding:'12px 0',borderRadius:11,border:`1px solid ${C.goldBorder}`,background:C.goldDim,color:C.gold,fontSize:13.5,fontWeight:700,fontFamily:"'Tajawal',sans-serif",cursor:'pointer',transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>{IC.book}{t(TX.academy,lang)}<span style={{padding:'1px 8px',borderRadius:20,background:`${C.gold}30`,fontSize:10,fontWeight:800}}>{t(TX.free,lang)}</span></button>
-        {isMobile&&<div style={{marginTop:20,display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>{TX.features.map((f,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:8,background:i%2===0?C.tealDim:C.goldDim,border:`1px solid ${i%2===0?C.tealBorder:C.goldBorder}`}}><span style={{color:i%2===0?C.teal:C.gold,display:'flex'}}>{IC.check}</span><span style={{color:C.w70,fontSize:11.5,fontWeight:600,fontFamily:"'Tajawal',sans-serif"}}>{t(f.t,lang)}</span></div>))}</div>}
+        {isMobile&&<div style={{marginTop:20,display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>{TX.features.map((f,i)=>(<div key={i} onClick={()=>setShowPublicAcademy(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:8,background:i%2===0?C.tealDim:C.goldDim,border:`1px solid ${i%2===0?C.tealBorder:C.goldBorder}`,cursor:'pointer',transition:'all 0.2s'}}><span style={{color:i%2===0?C.teal:C.gold,display:'flex'}}>{IC.check}</span><span style={{color:C.w70,fontSize:11.5,fontWeight:600,fontFamily:"'Tajawal',sans-serif"}}>{t(f.t,lang)}</span></div>))}</div>}
+        <div style={{textAlign:'center',marginTop:16,fontSize:11,color:C.w25,lineHeight:1.6}}>
+          {t(TX.termsAgree,lang)}{' '}
+          <a href="/terms" style={{color:C.teal,textDecoration:'none',fontWeight:600}}>{t(TX.terms,lang)}</a>
+          {' '}{t(TX.termsAnd,lang)}{' '}
+          <a href="/privacy" style={{color:C.teal,textDecoration:'none',fontWeight:600}}>{t(TX.privacy,lang)}</a>
+        </div>
       </div>
       <div style={{textAlign:'center',color:C.w25,fontSize:11,marginTop:18,opacity:0.8}}>© 2026 {t(TX.cr,lang)}</div>
     </div>
