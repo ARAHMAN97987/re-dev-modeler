@@ -886,7 +886,8 @@ suite('LR1-LandRentPaidByProject');
   const w = E.computeWaterfall(p, r, f, i);
   t('Project pays: gpPaysLandRent=false', !w.gpPaysLandRent);
   t('Project pays: gpLandRentTotal=0', w.gpLandRentTotal === 0);
-  t('Project pays: GP net CF no land deduction', w.gpNetCF.every((v,y) => near(v, -w.equityCalls[y]*w.gpPct + w.gpDist[y], TOL.MONEY_SMALL)));
+  // gpNetCF uses gpCalls (which respects cash vs in-kind split), not equityCalls*gpPct
+  t('Project pays: GP net CF no land deduction', w.gpNetCF.every((v,y) => near(v, -(w.gpCalls[y]||0) + w.gpDist[y], TOL.MONEY_SMALL)));
 }
 
 suite('LR2-LandRentPaidByDeveloper');

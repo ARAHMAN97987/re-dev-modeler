@@ -241,12 +241,23 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     equityCalls[fundStartIdx] += effectiveLandCap;
   }
 
-  // GP/LP call split (for transparency and proper net CF calculation)
+  // GP/LP call split
+  // When GP's equity is purely from land capitalization (in-kind, non-cash),
+  // GP does NOT pay any cash — all cash calls go to LP (and debt).
+  // GP's "call" is only the land cap lump sum at fund start.
   const gpCalls = new Array(h).fill(0);
   const lpCalls = new Array(h).fill(0);
+  // Determine GP's cash equity (equity minus in-kind contributions)
+  const gpCashEquity = Math.max(0, gpEquity - effectiveLandCap);
+  const totalCashEquity = gpCashEquity + lpEquity;
+  const gpCashPct = totalCashEquity > 0 ? gpCashEquity / totalCashEquity : 0;
   for (let y = 0; y < h; y++) {
-    gpCalls[y] = equityCalls[y] * gpPct;
-    lpCalls[y] = equityCalls[y] * lpPct;
+    // The land cap lump sum at fundStartIdx is GP's only non-cash "call"
+    // Cash calls (capex equity + fees) are split by CASH equity ratio
+    const landCapCall = (y === fundStartIdx && effectiveLandCap > 0) ? effectiveLandCap : 0;
+    const cashCall = equityCalls[y] - landCapCall;
+    gpCalls[y] = landCapCall + cashCall * gpCashPct;
+    lpCalls[y] = cashCall * (1 - gpCashPct);
   }
 
   // Exit proceeds - GROSS (net of exit cost only, NOT net of debt). Debt repaid via balloon in debtService.
