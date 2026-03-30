@@ -353,9 +353,26 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     investYears: Math.max(...names.map(n => phaseWaterfalls[n]?.investYears || 0)),
     // Income fund metrics (aggregated from phases)
     isIncomeFund: names.some(n => phaseWaterfalls[n]?.isIncomeFund),
-    distributionYield: sumArr('distributionYield'),
-    avgDistYield: (() => { const vals = names.map(n => phaseWaterfalls[n]?.avgDistYield).filter(v => v > 0); return vals.length > 0 ? vals.reduce((a,b)=>a+b,0)/vals.length : 0; })(),
-    payoutRatio: sumArr('payoutRatio'),
+    // distributionYield per year: recompute from aggregated lpDist / total lpEquity
+    distributionYield: (() => {
+      const arr = new Array(h).fill(0);
+      if (lpEquity > 0) { const lpD = sumArr('lpDist'); for (let y = 0; y < h; y++) arr[y] = lpD[y] / lpEquity; }
+      return arr;
+    })(),
+    avgDistYield: (() => {
+      if (lpEquity <= 0) return 0;
+      const lpD = sumArr('lpDist');
+      const constrEnd = Math.max(...names.map(n => phaseFinancings[n]?.constrEnd || 0));
+      let stableYields = [];
+      for (let y = constrEnd + 1; y < h; y++) { const yld = lpD[y] / lpEquity; if (yld > 0) stableYields.push(yld); }
+      return stableYields.length > 0 ? stableYields.reduce((a, b) => a + b, 0) / stableYields.length : 0;
+    })(),
+    // payoutRatio: weighted average (totalDist / totalCash), not sum of percentages
+    payoutRatio: (() => {
+      const totalDist = sum('lpTotalDist') + sum('gpTotalDist');
+      const totalCash = sumArr('cashAvail').reduce((a, b) => a + b, 0);
+      return totalCash > 0 ? totalDist / totalCash : 0;
+    })(),
     navEstimate: sumArr('navEstimate'),
     cumDistributions: sumArr('cumDistributions'),
     ffoProxy: sumArr('ffoProxy'),

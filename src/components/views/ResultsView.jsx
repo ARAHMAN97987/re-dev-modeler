@@ -72,7 +72,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
   if (isMixedMode) {
     const fundPhaseNames = (project.phases || []).filter((p, i) => {
       const m = p.financing?.finMode || mode;
-      return m === "fund" || m === "hybrid";
+      return m === "fund" || m === "hybrid" || m === "incomeFund" || m === "jv";
     }).map(p => p.name);
     const bankPhaseNames = (project.phases || []).filter((p, i) => {
       const m = p.financing?.finMode || mode;

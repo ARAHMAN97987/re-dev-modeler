@@ -61,7 +61,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     if ((project.govFinanceRate ?? 3) < 0)
       add("T0","Gov Rate < 0", false, "Government financing rate cannot be negative");
   }
-  if ((project.maxLtvPct ?? 70) >= 100 && (project.finMode === "fund" || project.finMode === "hybrid"))
+  if ((project.maxLtvPct ?? 70) >= 100 && (project.finMode === "fund" || project.finMode === "hybrid" || project.finMode === "incomeFund"))
     add("T0","LTV ≥ 100% in Fund", false, "100% LTV in fund mode leaves no equity for investors");
   if (project.finMode === "hybrid" && (project.govFinancingPct ?? 70) >= 100)
     add("T0","Gov 100%", true, "100% government financing leaves no fund equity — consider using debt mode instead");
