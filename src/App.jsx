@@ -404,10 +404,14 @@ async function loadProject(id, ownerId, permission) {
     // the simplified model (performance incentive only). Reset them to defaults.
     // NOTE: We check actual values, not just the flag, because _waterfallVersion:1
     // may have been saved from defaults before the migration code existed.
+    const hasLegacyPhaseWaterfall = (migrated.phases || []).some(ph =>
+      ph.financing && (ph.financing.prefReturnPct > 0 || ph.financing.carryPct > 0 || (ph.financing.lpProfitSplitPct != null && ph.financing.lpProfitSplitPct < 100))
+    );
     const needsWaterfallMigration = !p._waterfallVersion
       || migrated.prefReturnPct > 0
       || migrated.carryPct > 0
-      || migrated.lpProfitSplitPct < 100;
+      || migrated.lpProfitSplitPct < 100
+      || hasLegacyPhaseWaterfall;
     if (needsWaterfallMigration) {
       migrated.prefReturnPct = 0;
       migrated.gpCatchup = false;
