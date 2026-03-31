@@ -6,6 +6,7 @@ import { generateFormulaExcel } from "./excelFormulaExport";
 import { generateTemplateExcel } from "./excelTemplateExport";
 import { embeddedFontCSS } from "./embeddedFonts";
 import AiAssistant from "./AiAssistant";
+import { IncomeFundResultsView } from "./components/views/ResultsView";
 
 // ═══════════════════════════════════════════════════════════════
 // Haseef Financial Modeler — Project Engine v3 (Stable)
@@ -1467,6 +1468,11 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
   if (!project || !results) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>{ar?"أضف أصول لرؤية النتائج":"Add assets to see results"}</div>;
 
   const mode = project.finMode || financing?.mode || "self";
+
+  // ── INCOME FUND: Dedicated view ──
+  if (mode === "incomeFund") {
+    return <IncomeFundResultsView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
+  }
 
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
   if (mode === "fund" || mode === "hybrid") {
