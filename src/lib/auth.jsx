@@ -256,8 +256,8 @@ function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOu
   const cB=(e)=>{e.target.style.borderColor='#1b3a5c';e.target.style.boxShadow='none';};
 
   return (
-    <div dir={dir} style={{minHeight:'100vh',background:'linear-gradient(145deg,'+C.deep+' 0%,'+C.navy+' 40%,#0e3050 100%)',fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",display:'flex',flexDirection:'column',alignItems:'center',padding:isMobile?'24px 16px':'40px 24px',overflowY:'auto'}}>
-      <style>{"@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.35)!important}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}*{box-sizing:border-box}"}</style>
+    <div dir={dir} className="haseef-auth" style={{minHeight:'100vh',background:'linear-gradient(145deg,'+C.deep+' 0%,'+C.navy+' 40%,#0e3050 100%)',fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",display:'flex',flexDirection:'column',alignItems:'center',padding:isMobile?'24px 16px':'40px 24px',overflowY:'auto'}}>
+      <style>{"@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.35)!important}input[type=email],input[type=password],input[type=text]{background:#0d1f35!important;border-color:#1b3a5c!important;color:#e0e4ea!important}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}*{box-sizing:border-box}"}</style>
       <Orbs/>
       <div style={{position:'relative',zIndex:10,display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:800,marginBottom:28}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -528,8 +528,8 @@ export function AuthGate({ children }) {
   );
 
   return (
-    <div dir={dir} style={{minHeight:'100vh',background:`linear-gradient(145deg,${C.deep} 0%,${C.navy} 40%,#0e3050 100%)`,fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",direction:dir,overflowX:'hidden',position:'relative'}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.45)!important}@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}`}</style>
+    <div dir={dir} className="haseef-auth" style={{minHeight:'100vh',background:`linear-gradient(145deg,${C.deep} 0%,${C.navy} 40%,#0e3050 100%)`,fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",direction:dir,overflowX:'hidden',position:'relative'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.45)!important}input[type=email],input[type=password],input[type=text]{background:#0d1f35!important;border-color:#1b3a5c!important;color:#e0e4ea!important}@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}`}</style>
       <Orbs/>
       <div style={{position:'relative',zIndex:20,display:'flex',alignItems:'center',justifyContent:'space-between',padding:isMobile?'14px 16px':'18px 32px',maxWidth:1400,margin:'0 auto'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>

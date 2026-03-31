@@ -437,3 +437,45 @@ body {
    FUND: dashboard, assets, financing, waterfall, results, reports, scenarios
    Merged: Market+Incentives→Settings, Checks→StatusBar+Dashboard, CashFlow→Results sub-tab
    ========================================== */
+
+/* ========== AUTH PAGE INPUT OVERRIDES ==========
+   Auth/subscription pages use dark navy inputs on dark backgrounds.
+   These rules override the global light-mode input styles that use !important.
+   The .haseef-auth class provides higher specificity to win over global rules.
+   ================================================ */
+@media (prefers-color-scheme: dark) {
+  .haseef-auth input[type="text"],
+  .haseef-auth input[type="email"],
+  .haseef-auth input[type="password"],
+  .haseef-auth input[type="number"] {
+    background: #0d1f35 !important;
+    border-color: #1b3a5c !important;
+    color: #e0e4ea !important;
+  }
+  .haseef-auth input::placeholder {
+    color: rgba(255,255,255,0.4) !important;
+  }
+}
+[data-theme="dark"] .haseef-auth input[type="text"],
+[data-theme="dark"] .haseef-auth input[type="email"],
+[data-theme="dark"] .haseef-auth input[type="password"],
+[data-theme="dark"] .haseef-auth input[type="number"] {
+  background: #0d1f35 !important;
+  border-color: #1b3a5c !important;
+  color: #e0e4ea !important;
+}
+[data-theme="dark"] .haseef-auth input::placeholder {
+  color: rgba(255,255,255,0.4) !important;
+}
+/* Also force for light theme since auth page is always on dark bg */
+[data-theme="light"] .haseef-auth input[type="text"],
+[data-theme="light"] .haseef-auth input[type="email"],
+[data-theme="light"] .haseef-auth input[type="password"],
+[data-theme="light"] .haseef-auth input[type="number"] {
+  background: #0d1f35 !important;
+  border-color: #1b3a5c !important;
+  color: #e0e4ea !important;
+}
+[data-theme="light"] .haseef-auth input::placeholder {
+  color: rgba(255,255,255,0.4) !important;
+}
