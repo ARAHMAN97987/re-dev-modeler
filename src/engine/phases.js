@@ -345,11 +345,11 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     // GP/LP call arrays
     gpCalls: sumArr('gpCalls'),
     lpCalls: sumArr('lpCalls'),
-    // Simple return metrics
-    lpSimpleROE: names.length === 1 ? (phaseWaterfalls[names[0]]?.lpSimpleROE ?? 0) : 0,
-    gpSimpleROE: names.length === 1 ? (phaseWaterfalls[names[0]]?.gpSimpleROE ?? 0) : 0,
-    lpSimpleAnnual: names.length === 1 ? (phaseWaterfalls[names[0]]?.lpSimpleAnnual ?? 0) : 0,
-    gpSimpleAnnual: names.length === 1 ? (phaseWaterfalls[names[0]]?.gpSimpleAnnual ?? 0) : 0,
+    // Simple return metrics — compute from aggregated totals for multi-phase
+    lpSimpleROE: (() => { const called = sum('lpTotalCalled'); const net = sum('lpNetDist'); return called > 0 ? (net - called) / called : 0; })(),
+    gpSimpleROE: (() => { const called = sum('gpTotalCalled'); const net = sum('gpNetDist'); return called > 0 ? (net - called) / called : 0; })(),
+    lpSimpleAnnual: (() => { const called = sum('lpTotalCalled'); const net = sum('lpNetDist'); const roe = called > 0 ? (net - called) / called : 0; const yrs = Math.max(...names.map(n => phaseWaterfalls[n]?.investYears || 0)); return yrs > 0 ? roe / yrs : 0; })(),
+    gpSimpleAnnual: (() => { const called = sum('gpTotalCalled'); const net = sum('gpNetDist'); const roe = called > 0 ? (net - called) / called : 0; const yrs = Math.max(...names.map(n => phaseWaterfalls[n]?.investYears || 0)); return yrs > 0 ? roe / yrs : 0; })(),
     investYears: Math.max(...names.map(n => phaseWaterfalls[n]?.investYears || 0)),
     // Income fund metrics (aggregated from phases)
     isIncomeFund: names.some(n => phaseWaterfalls[n]?.isIncomeFund),
