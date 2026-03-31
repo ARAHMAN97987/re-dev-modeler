@@ -903,7 +903,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
               <SecHd text={ar?"مؤشرات المستثمر":"INVESTOR METRICS"} />
               <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={lpSimpleROE?fmtPct(lpSimpleROE*100):"—"} c="#8b5cf6" bold />
               <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={lpSimpleAnnual?fmtPct(lpSimpleAnnual*100):"—"} c="#8b5cf6" />
-              {(w.lpIRR && lpSimpleAnnual && w.lpIRR > lpSimpleAnnual * 1.05) && <div style={{gridColumn:"1/-1",fontSize:9,color:"#6b7280",fontStyle:"italic",margin:"-2px 0 2px",lineHeight:1.3}}>{ar?"⚡ IRR أعلى من العائد البسيط لأن طلبات رأس المال موزعة على سنوات — IRR يحسب توقيت كل دفعة":"⚡ IRR > Simple because capital calls are staggered — IRR accounts for timing of each call"}</div>}
+              {(w.lpIRR > 0 && lpSimpleAnnual > 0 && w.lpIRR > lpSimpleAnnual * 1.05) ? <div style={{gridColumn:"1/-1",fontSize:9,color:"#6b7280",fontStyle:"italic",margin:"-2px 0 2px",lineHeight:1.3}}>{ar?"⚡ IRR أعلى من العائد البسيط لأن طلبات رأس المال موزعة على سنوات — IRR يحسب توقيت كل دفعة":"⚡ IRR > Simple because capital calls are staggered — IRR accounts for timing of each call"}</div> : null}
               <KR l={ar?"صافي IRR (مركب)":"Net IRR (Compounded)"} v={w.lpIRR!==null?fmtPct(w.lpIRR*100):"—"} c={getMetricColor("IRR",w.lpIRR)} bold />
               {w.lpCashIRR != null && w.lpCashIRR !== w.lpIRR ? <KR l={ar?"IRR نقدي":"Cash IRR"} v={fmtPct(w.lpCashIRR*100)} c={getMetricColor("IRR",w.lpCashIRR)} /> : null}
               <KR l="MOIC" v={w.lpMOIC?w.lpMOIC.toFixed(2)+"x":"—"} c={getMetricColor("MOIC",w.lpMOIC)} bold />
