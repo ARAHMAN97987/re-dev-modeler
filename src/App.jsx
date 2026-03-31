@@ -4596,11 +4596,11 @@ function LandingPage({ onSignIn, lang, setLang, pendingShare }) {
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <div>
             <label style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:4,display:"block"}}>{ar?"البريد الإلكتروني":"Email"}</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #1e2230",background:"rgba(11,35,65,0.6)",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={ar?"example@company.com":"example@company.com"} style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #1b3a5c",background:"#0d1f35",color:"#e0e4ea",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           <div>
             <label style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:4,display:"block"}}>{ar?"كلمة المرور":"Password"}</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #1e2230",background:"rgba(11,35,65,0.6)",color:"#d0d4dc",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={ar?"أدخل كلمة المرور":"Enter your password"} style={{width:"100%",padding:"12px 14px",borderRadius:8,border:"1px solid #1b3a5c",background:"#0d1f35",color:"#e0e4ea",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
           </div>
           {error && <div style={{fontSize:11,color:"#f87171",background:"rgba(239,68,68,0.1)",border:"1px solid rgba(239,68,68,0.2)",padding:"8px 12px",borderRadius:6}}>{error}</div>}
           <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"13px",borderRadius:8,border:"none",background:"#2EC4B6",color:"#fff",fontSize:14,fontWeight:700,cursor:loading?"wait":"pointer",fontFamily:"'Tajawal',sans-serif",transition:"all 0.2s",letterSpacing:0.3}} onMouseEnter={e=>e.currentTarget.style.background="#0f766e"} onMouseLeave={e=>e.currentTarget.style.background="#2EC4B6"}>

@@ -157,323 +157,211 @@ function AcademyCard({lang,isRTL,isMobile,onEnter}) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SUBSCRIPTION PAGE — صفحة الاشتراك
+// PRICING PLANS DATA
+// ═══════════════════════════════════════════════════════════
+const PLANS = [
+  { id:'starter', projects:1, price:2998, monthly:250, popular:false },
+  { id:'growth',  projects:3, price:4990, monthly:416, popular:true },
+  { id:'pro',     projects:5, price:7490, monthly:624, popular:false },
+];
+const PLAN_FEATURES = [
+  { icon:'\u{1F4D0}', en:'Asset management & programming',      ar:'\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0623\u0635\u0648\u0644 \u0648\u0627\u0644\u0628\u0631\u0645\u062C\u0629' },
+  { icon:'\u{1F4B0}', en:'Financial structuring & modeling',     ar:'\u0627\u0644\u0647\u064A\u0643\u0644\u0629 \u0648\u0627\u0644\u0646\u0645\u0630\u062C\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629' },
+  { icon:'\u{1F3E6}', en:'Financing & debt engine',              ar:'\u0645\u062D\u0631\u0643 \u0627\u0644\u062A\u0645\u0648\u064A\u0644 \u0648\u0627\u0644\u062F\u064A\u0646' },
+  { icon:'\u{1F4A7}', en:'Waterfall distribution engine',        ar:'\u0645\u062D\u0631\u0643 \u062A\u0648\u0632\u064A\u0639\u0627\u062A \u0627\u0644\u0623\u0631\u0628\u0627\u062D' },
+  { icon:'\u{1F4C4}', en:'Bank pack & report export (PDF/Excel)',ar:'\u062A\u0635\u062F\u064A\u0631 \u0645\u0644\u0641 \u0627\u0644\u0628\u0646\u0643 \u0648\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 PDF/Excel' },
+  { icon:'\u{1F4CA}', en:'8 scenario comparison & sensitivity',  ar:'\u0645\u0642\u0627\u0631\u0646\u0629 8 \u0633\u064A\u0646\u0627\u0631\u064A\u0648\u0647\u0627\u062A \u0648\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0633\u064A\u0629' },
+  { icon:'\u{1F3DB}\uFE0F', en:'Government incentives calculator', ar:'\u062D\u0627\u0633\u0628\u0629 \u0627\u0644\u062D\u0648\u0627\u0641\u0632 \u0627\u0644\u062D\u0643\u0648\u0645\u064A\u0629' },
+  { icon:'\u{1F916}', en:'Built-in AI assistant',                ar:'\u0645\u0633\u0627\u0639\u062F \u0630\u0643\u0627\u0621 \u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0645\u062F\u0645\u062C' },
+  { icon:'\u{1F4DA}', en:'Haseef Academy (free)',                ar:'\u0623\u0643\u0627\u062F\u064A\u0645\u064A\u0629 \u062D\u0635\u064A\u0641 (\u0645\u062C\u0627\u0646\u0627\u064B)' },
+  { icon:'\u{1F504}', en:'Continuous updates & priority support', ar:'\u062A\u062D\u062F\u064A\u062B\u0627\u062A \u0645\u0633\u062A\u0645\u0631\u0629 \u0648\u062F\u0639\u0645 \u0641\u0646\u064A \u0623\u0648\u0644\u0648\u064A' },
+];
+function PlanName({id,ar}){
+  const n={starter:{en:'Starter',ar:'\u0627\u0644\u0645\u0628\u062A\u062F\u0626'},growth:{en:'Growth',ar:'\u0627\u0644\u0646\u0645\u0648'},pro:{en:'Professional',ar:'\u0627\u0644\u0627\u062D\u062A\u0631\u0627\u0641\u064A'}};
+  return (n[id]||n.starter)[ar?'ar':'en'];
+}
+function ProjLabel({count,ar}){
+  return count===1?(ar?'\u0645\u0634\u0631\u0648\u0639 \u0648\u0627\u062D\u062F':'1 Project'):(ar?`\u062D\u062A\u0649 ${count} \u0645\u0634\u0627\u0631\u064A\u0639`:`Up to ${count} Projects`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRICING SHOWCASE — for login page
+// ═══════════════════════════════════════════════════════════
+function PricingShowcase({ lang, isMobile }) {
+  const ar = lang === 'ar';
+  return (
+    <div style={{marginTop:isMobile?24:32}}>
+      <div style={{textAlign:'center',marginBottom:20}}>
+        <h2 style={{color:'#fff',fontSize:isMobile?20:24,fontWeight:900,fontFamily:"'Tajawal',sans-serif",marginBottom:6}}>
+          {ar?'\u062E\u0637\u0637 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643':'Subscription Plans'}
+        </h2>
+        <p style={{color:C.w40,fontSize:12}}>{ar?'3 \u0623\u064A\u0627\u0645 \u0645\u062C\u0627\u0646\u0627\u064B \u0639\u0646\u062F \u0627\u0644\u062A\u0633\u062C\u064A\u0644. \u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A.':'3 days free on signup. Annual billing.'}</p>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:12}}>
+        {PLANS.map((p)=>(
+          <div key={p.id} style={{background:p.popular?'rgba(46,196,182,0.08)':C.w05,border:`1px solid ${p.popular?C.tealBorder:C.w10}`,borderRadius:16,padding:isMobile?'18px 16px':'22px 20px',position:'relative',textAlign:'center'}}>
+            {p.popular&&<div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',padding:'3px 14px',borderRadius:12,background:`linear-gradient(135deg,${C.teal},#25a89c)`,color:C.deep,fontSize:10,fontWeight:800,whiteSpace:'nowrap'}}>{ar?'\u0627\u0644\u0623\u0643\u062B\u0631 \u0637\u0644\u0628\u0627\u064B':'Most Popular'}</div>}
+            <div style={{color:C.w50,fontSize:12,fontWeight:600,marginBottom:4,marginTop:p.popular?8:0}}><PlanName id={p.id} ar={ar}/></div>
+            <div style={{display:'flex',alignItems:'baseline',justifyContent:'center',gap:4}}>
+              <span style={{color:'#fff',fontSize:28,fontWeight:900,fontFamily:"'DM Sans',sans-serif"}}>{p.price.toLocaleString()}</span>
+              <span style={{color:C.w30,fontSize:11}}>SAR</span>
+            </div>
+            <div style={{color:C.w40,fontSize:11,marginTop:2}}>{ar?'\u0633\u0646\u0648\u064A\u0627\u064B':'/year'}</div>
+            <div style={{marginTop:10,padding:'6px 12px',background:C.w05,borderRadius:8,display:'inline-block'}}>
+              <span style={{color:p.popular?C.teal:C.w70,fontSize:12,fontWeight:700}}><ProjLabel count={p.projects} ar={ar}/></span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{textAlign:'center',marginTop:14,color:C.w25,fontSize:11}}>{ar?'\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u0627\u0642\u0627\u062A \u062A\u0634\u0645\u0644 \u0643\u0644 \u0627\u0644\u0645\u0632\u0627\u064A\u0627. \u0627\u0644\u0641\u0631\u0642 \u0641\u0642\u0637 \u0641\u064A \u0639\u062F\u062F \u0627\u0644\u0645\u0634\u0627\u0631\u064A\u0639.':'All plans include every feature. Only project count differs.'}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SUBSCRIPTION PAGE
 // ═══════════════════════════════════════════════════════════
 function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOut }) {
   const ar = lang === 'ar';
   const dir = ar ? 'rtl' : 'ltr';
+  const [selectedPlan, setSelectedPlan] = useState('growth');
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState('plan'); // plan | payment | success
+  const [step, setStep] = useState('plan');
 
-  const formatCard = (v) => {
-    const d = v.replace(/\D/g, '').slice(0, 16);
-    return d.replace(/(.{4})/g, '$1 ').trim();
-  };
-  const formatExpiry = (v) => {
-    const d = v.replace(/\D/g, '').slice(0, 4);
-    if (d.length >= 3) return d.slice(0, 2) + '/' + d.slice(2);
-    return d;
-  };
+  const plan = PLANS.find(p => p.id === selectedPlan) || PLANS[1];
+  const fmtCard = (v) => { const d=v.replace(/\D/g,'').slice(0,16); return d.replace(/(.{4})/g,'$1 ').trim(); };
+  const fmtExp = (v) => { const d=v.replace(/\D/g,'').slice(0,4); return d.length>=3?d.slice(0,2)+'/'+d.slice(2):d; };
 
   const handlePay = async () => {
     setError('');
-    if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) { setError(ar ? 'أدخل رقم البطاقة كاملاً' : 'Enter full card number'); return; }
-    if (!cardName.trim()) { setError(ar ? 'أدخل اسم حامل البطاقة' : 'Enter cardholder name'); return; }
-    if (!expiry || expiry.length < 5) { setError(ar ? 'أدخل تاريخ الانتهاء' : 'Enter expiry date'); return; }
-    if (!cvv || cvv.length < 3) { setError(ar ? 'أدخل رمز CVV' : 'Enter CVV'); return; }
+    if (!cardNumber||cardNumber.replace(/\s/g,'').length<16){setError(ar?'\u0623\u062F\u062E\u0644 \u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0643\u0627\u0645\u0644\u0627\u064B':'Enter full card number');return;}
+    if (!cardName.trim()){setError(ar?'\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u062D\u0627\u0645\u0644 \u0627\u0644\u0628\u0637\u0627\u0642\u0629':'Enter cardholder name');return;}
+    if (!expiry||expiry.length<5){setError(ar?'\u0623\u062F\u062E\u0644 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621':'Enter expiry date');return;}
+    if (!cvv||cvv.length<3){setError(ar?'\u0623\u062F\u062E\u0644 \u0631\u0645\u0632 CVV':'Enter CVV');return;}
     setProcessing(true);
-    // Simulate payment processing
-    await new Promise(r => setTimeout(r, 2500));
+    await new Promise(r=>setTimeout(r,2500));
     setProcessing(false);
     setStep('success');
-    setTimeout(() => onSubscribe(), 2000);
+    setTimeout(()=>onSubscribe(),2000);
   };
 
-  const PLAN = {
-    price: 2988,
-    monthly: 249,
-    currency: 'SAR',
-    period: ar ? 'سنوياً' : '/year',
-    trial: ar ? '3 أيام مجاناً' : '3 days free',
-    name: ar ? 'الباقة الاحترافية' : 'Professional Plan',
-  };
-
-  const FEATURES = [
-    { t: ar ? 'محرك المشاريع - أصول غير محدودة' : 'Project Engine - Unlimited assets', icon: '📐' },
-    { t: ar ? 'محرك التمويل والدين' : 'Financing & Debt Engine', icon: '🏦' },
-    { t: ar ? 'محرك التوزيعات (Waterfall)' : 'Waterfall Distribution Engine', icon: '💧' },
-    { t: ar ? 'ملف البنك والتقارير PDF/Excel' : 'Bank Pack & Reports PDF/Excel', icon: '📄' },
-    { t: ar ? 'تحليل 8 سيناريوهات' : '8 Scenario Analysis', icon: '📊' },
-    { t: ar ? 'الحوافز الحكومية' : 'Government Incentives', icon: '🏛️' },
-    { t: ar ? 'مساعد AI مدمج' : 'Built-in AI Assistant', icon: '🤖' },
-    { t: ar ? 'أكاديمية حصيف التعليمية' : 'Haseef Academy', icon: '📚' },
-    { t: ar ? 'تحديثات مستمرة ودعم فني' : 'Continuous updates & support', icon: '🔄' },
-  ];
-
-  const cardInputStyle = {
-    width: '100%', padding: '14px 16px', background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff',
-    fontSize: 15, outline: 'none', fontFamily: "'DM Sans','Tajawal',sans-serif",
-    direction: 'ltr', textAlign: 'left', boxSizing: 'border-box',
-    transition: 'border-color 0.3s, box-shadow 0.3s', letterSpacing: '0.5px'
-  };
-  const labelStyle = { display: 'block', color: C.w50, fontSize: 12, marginBottom: 6, fontFamily: "'Tajawal',sans-serif", textAlign: ar ? 'right' : 'left' };
-  const focusCard = (e) => { e.target.style.borderColor = C.teal; e.target.style.boxShadow = `0 0 0 3px ${C.tealDim}`; };
-  const blurCard = (e) => { e.target.style.borderColor = 'rgba(255,255,255,0.15)'; e.target.style.boxShadow = 'none'; };
+  const cI={width:'100%',padding:'14px 16px',background:'#0d1f35',border:'1px solid #1b3a5c',borderRadius:10,color:'#e0e4ea',fontSize:15,outline:'none',fontFamily:"'DM Sans','Tajawal',sans-serif",direction:'ltr',textAlign:'left',boxSizing:'border-box',transition:'border-color 0.3s,box-shadow 0.3s',letterSpacing:'0.5px'};
+  const cL={display:'block',color:C.w50,fontSize:12,marginBottom:6,fontFamily:"'Tajawal',sans-serif",textAlign:ar?'right':'left'};
+  const cF=(e)=>{e.target.style.borderColor=C.teal;e.target.style.boxShadow='0 0 0 3px '+C.tealDim;};
+  const cB=(e)=>{e.target.style.borderColor='#1b3a5c';e.target.style.boxShadow='none';};
 
   return (
-    <div dir={dir} style={{ minHeight: '100vh', background: `linear-gradient(145deg,${C.deep} 0%,${C.navy} 40%,#0e3050 100%)`, fontFamily: "'Tajawal','IBM Plex Sans Arabic',sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '24px 16px' : '40px 24px', overflowY: 'auto' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.35)!important}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}*{box-sizing:border-box}`}</style>
-      <Orbs />
-
-      {/* Header */}
-      <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 520, marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: 2 }}>{ar ? 'حصيف' : 'Haseef'}</span>
-          <span style={{ width: 1, height: 22, background: `${C.teal}50` }} />
-          <span style={{ color: C.teal, fontSize: 11, fontWeight: 600 }}>{ar ? 'النمذجة المالية' : 'Financial Modeler'}</span>
+    <div dir={dir} style={{minHeight:'100vh',background:'linear-gradient(145deg,'+C.deep+' 0%,'+C.navy+' 40%,#0e3050 100%)',fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",display:'flex',flexDirection:'column',alignItems:'center',padding:isMobile?'24px 16px':'40px 24px',overflowY:'auto'}}>
+      <style>{"@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.35)!important}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}*{box-sizing:border-box}"}</style>
+      <Orbs/>
+      <div style={{position:'relative',zIndex:10,display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:800,marginBottom:28}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:28,fontWeight:900,color:'#fff',letterSpacing:2}}>{ar?'\u062D\u0635\u064A\u0641':'Haseef'}</span>
+          <span style={{width:1,height:22,background:C.teal+'50'}}/>
+          <span style={{color:C.teal,fontSize:11,fontWeight:600}}>{ar?'\u0627\u0644\u0646\u0645\u0630\u062C\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629':'Financial Modeler'}</span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setLang(l => l === 'en' ? 'ar' : 'en')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.w15}`, background: C.w05, color: C.w70, fontSize: 12, cursor: 'pointer', fontFamily: "'Tajawal',sans-serif" }}>{lang === 'en' ? 'عربي' : 'EN'}</button>
-          <button onClick={onSignOut} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid rgba(239,68,68,0.3)`, background: 'rgba(239,68,68,0.08)', color: '#f87171', fontSize: 12, cursor: 'pointer', fontFamily: "'Tajawal',sans-serif" }}>{ar ? 'خروج' : 'Sign Out'}</button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setLang(l=>l==='en'?'ar':'en')} style={{padding:'6px 12px',borderRadius:8,border:'1px solid '+C.w15,background:C.w05,color:C.w70,fontSize:12,cursor:'pointer',fontFamily:"'Tajawal',sans-serif"}}>{lang==='en'?'\u0639\u0631\u0628\u064A':'EN'}</button>
+          <button onClick={onSignOut} style={{padding:'6px 12px',borderRadius:8,border:'1px solid rgba(239,68,68,0.3)',background:'rgba(239,68,68,0.08)',color:'#f87171',fontSize:12,cursor:'pointer',fontFamily:"'Tajawal',sans-serif"}}>{ar?'\u062E\u0631\u0648\u062C':'Sign Out'}</button>
         </div>
       </div>
 
-      {/* Success State */}
-      {step === 'success' && (
-        <div style={{ position: 'relative', zIndex: 10, textAlign: 'center', maxWidth: 400 }}>
-          <div style={{ width: 80, height: 80, borderRadius: '50%', background: `linear-gradient(135deg,${C.teal},#25a89c)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', animation: 'checkPop 0.5s ease-out' }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+      {step==='success'&&(<div style={{position:'relative',zIndex:10,textAlign:'center',maxWidth:400,marginTop:80}}>
+        <div style={{width:80,height:80,borderRadius:'50%',background:'linear-gradient(135deg,'+C.teal+',#25a89c)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',animation:'checkPop 0.5s ease-out'}}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h2 style={{color:'#fff',fontSize:24,fontWeight:800,marginBottom:8}}>{ar?'\u062A\u0645 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0628\u0646\u062C\u0627\u062D!':'Subscription Activated!'}</h2>
+        <p style={{color:C.w50,fontSize:14}}>{ar?'\u062C\u0627\u0631\u064A \u062A\u062D\u0648\u064A\u0644\u0643 \u0644\u0644\u0645\u0646\u0635\u0629...':'Redirecting to platform...'}</p>
+      </div>)}
+
+      {step==='plan'&&(<div style={{position:'relative',zIndex:10,width:'100%',maxWidth:800}}>
+        <div style={{textAlign:'center',marginBottom:8}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:8,padding:'8px 20px',background:'linear-gradient(135deg,'+C.tealDim+',rgba(46,196,182,0.05))',border:'1px solid '+C.tealBorder,borderRadius:24,marginBottom:16}}>
+            <span style={{fontSize:16}}>{'\u{1F389}'}</span>
+            <span style={{color:C.teal,fontSize:13,fontWeight:700}}>{ar?'\u0627\u0646\u062A\u0647\u062A \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629':'Your free trial has ended'}</span>
           </div>
-          <h2 style={{ color: '#fff', fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{ar ? 'تم الاشتراك بنجاح!' : 'Subscription Activated!'}</h2>
-          <p style={{ color: C.w50, fontSize: 14 }}>{ar ? 'جاري تحويلك للمنصة...' : 'Redirecting to platform...'}</p>
         </div>
-      )}
+        <h1 style={{textAlign:'center',color:'#fff',fontSize:isMobile?22:30,fontWeight:900,marginBottom:6}}>{ar?'\u0627\u062E\u062A\u0631 \u0628\u0627\u0642\u062A\u0643':'Choose Your Plan'}</h1>
+        <p style={{textAlign:'center',color:C.w40,fontSize:13,marginBottom:32}}>{ar?'\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u0627\u0642\u0627\u062A \u062A\u0634\u0645\u0644 \u0643\u0644 \u0627\u0644\u0645\u0632\u0627\u064A\u0627. \u0627\u0644\u0641\u0631\u0642 \u0641\u064A \u0639\u062F\u062F \u0627\u0644\u0645\u0634\u0627\u0631\u064A\u0639.':'All plans include every feature. Only project count differs.'}</p>
 
-      {/* Plan Selection */}
-      {step === 'plan' && (
-        <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 520 }}>
-          {/* Trial Badge */}
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 20px', background: `linear-gradient(135deg,${C.tealDim},rgba(46,196,182,0.05))`, border: `1px solid ${C.tealBorder}`, borderRadius: 24 }}>
-              <span style={{ fontSize: 16 }}>🎉</span>
-              <span style={{ color: C.teal, fontSize: 13, fontWeight: 700 }}>{ar ? 'انتهت الفترة التجريبية المجانية' : 'Your free trial has ended'}</span>
-            </div>
-          </div>
-
-          <h1 style={{ textAlign: 'center', color: '#fff', fontSize: isMobile ? 22 : 28, fontWeight: 900, marginBottom: 6, lineHeight: 1.3 }}>
-            {ar ? 'اشترك في حصيف' : 'Subscribe to Haseef'}
-          </h1>
-          <p style={{ textAlign: 'center', color: C.w40, fontSize: 13, marginBottom: 28 }}>
-            {ar ? 'منصة النمذجة المالية المتكاملة للتطوير العقاري' : 'The all-in-one financial modeling platform for real estate development'}
-          </p>
-
-          {/* Pricing Card */}
-          <div style={{ background: 'rgba(11,35,65,0.6)', backdropFilter: 'blur(20px)', border: `1px solid ${C.tealBorder}`, borderRadius: 20, padding: isMobile ? '28px 22px' : '36px 32px', marginBottom: 20, position: 'relative', overflow: 'hidden' }}>
-            {/* Shimmer accent */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,transparent,${C.teal},${C.gold},${C.teal},transparent)`, backgroundSize: '200% 100%', animation: 'shimmer 3s linear infinite' }} />
-
-            {/* Plan name + badge */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <div>
-                <div style={{ color: '#fff', fontSize: 18, fontWeight: 800 }}>{PLAN.name}</div>
-                <div style={{ color: C.w40, fontSize: 12, marginTop: 2 }}>{ar ? 'وصول كامل لجميع الأدوات' : 'Full access to all tools'}</div>
+        <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:16,marginBottom:32}}>
+          {PLANS.map((p)=>{const sel=selectedPlan===p.id;return(
+            <div key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{background:sel?'rgba(46,196,182,0.06)':'rgba(11,35,65,0.5)',backdropFilter:'blur(16px)',border:'2px solid '+(sel?C.teal:p.popular?'rgba(46,196,182,0.25)':'rgba(255,255,255,0.08)'),borderRadius:20,padding:isMobile?'24px 20px':'28px 24px',cursor:'pointer',transition:'all 0.3s',position:'relative',transform:sel?'scale(1.02)':'scale(1)',boxShadow:sel?'0 8px 32px '+C.tealDim:'none'}}>
+              {p.popular&&<div style={{position:'absolute',top:-12,left:'50%',transform:'translateX(-50%)',padding:'4px 16px',borderRadius:14,background:'linear-gradient(135deg,'+C.teal+',#25a89c)',color:C.deep,fontSize:11,fontWeight:800,whiteSpace:'nowrap'}}>{ar?'\u0627\u0644\u0623\u0643\u062B\u0631 \u0637\u0644\u0628\u0627\u064B':'Most Popular'}</div>}
+              <div style={{position:'absolute',top:16,[ar?'left':'right']:16,width:22,height:22,borderRadius:'50%',border:'2px solid '+(sel?C.teal:C.w25),display:'flex',alignItems:'center',justifyContent:'center'}}>{sel&&<div style={{width:12,height:12,borderRadius:'50%',background:C.teal}}/>}</div>
+              <div style={{color:C.w50,fontSize:12,fontWeight:600,marginBottom:8,marginTop:p.popular?6:0}}><PlanName id={p.id} ar={ar}/></div>
+              <div style={{display:'flex',alignItems:'baseline',gap:4}}>
+                <span style={{color:'#fff',fontSize:36,fontWeight:900,fontFamily:"'DM Sans',sans-serif",letterSpacing:'-1px'}}>{p.price.toLocaleString()}</span>
+                <span style={{color:C.w40,fontSize:12}}>SAR</span>
               </div>
-              <div style={{ padding: '4px 14px', borderRadius: 20, background: `${C.gold}25`, border: `1px solid ${C.goldBorder}`, color: C.gold, fontSize: 11, fontWeight: 700 }}>{ar ? 'الأكثر قيمة' : 'Best Value'}</div>
+              <div style={{color:C.w30,fontSize:11,marginBottom:14}}>{ar?'\u2248 '+p.monthly+' \u0631.\u0633/\u0634\u0647\u0631\u064A\u0627\u064B':'\u2248 '+p.monthly+' SAR/mo'}</div>
+              <div style={{padding:'8px 14px',background:sel?C.teal+'15':C.w05,borderRadius:10,border:'1px solid '+(sel?C.tealBorder:C.w10),textAlign:'center'}}>
+                <span style={{color:sel?C.teal:'#fff',fontSize:14,fontWeight:800}}><ProjLabel count={p.projects} ar={ar}/></span>
+              </div>
             </div>
+          );})}
+        </div>
 
-            {/* Price */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
-              <span style={{ color: '#fff', fontSize: 42, fontWeight: 900, fontFamily: "'DM Sans',sans-serif", letterSpacing: '-1px' }}>{PLAN.price.toLocaleString()}</span>
-              <span style={{ color: C.w50, fontSize: 14 }}>{PLAN.currency}</span>
-              <span style={{ color: C.w30, fontSize: 13 }}>{PLAN.period}</span>
-            </div>
-            <div style={{ color: C.w40, fontSize: 12, marginBottom: 24 }}>
-              {ar ? `ما يعادل ${PLAN.monthly} ر.س / شهرياً` : `Equivalent to ${PLAN.monthly} SAR / month`}
-            </div>
-
-            {/* Divider */}
-            <div style={{ height: 1, background: C.w10, marginBottom: 20 }} />
-
-            {/* Features */}
-            <div style={{ display: 'grid', gap: 12 }}>
-              {FEATURES.map((f, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 15, width: 24, textAlign: 'center' }}>{f.icon}</span>
-                  <span style={{ color: C.w70, fontSize: 13, fontWeight: 500 }}>{f.t}</span>
-                </div>
-              ))}
-            </div>
+        <div style={{background:'rgba(11,35,65,0.5)',backdropFilter:'blur(16px)',border:'1px solid '+C.w10,borderRadius:18,padding:isMobile?'24px 20px':'28px 32px',marginBottom:24}}>
+          <h3 style={{color:'#fff',fontSize:16,fontWeight:800,marginBottom:16,textAlign:'center'}}>{ar?'\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u0627\u0642\u0627\u062A \u062A\u0634\u0645\u0644':'All Plans Include'}</h3>
+          <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(2,1fr)',gap:12}}>
+            {PLAN_FEATURES.map((f,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:10}}><span style={{fontSize:16,width:26,textAlign:'center'}}>{f.icon}</span><span style={{color:C.w70,fontSize:13,fontWeight:500}}>{ar?f.ar:f.en}</span></div>))}
           </div>
+        </div>
 
-          {/* CTA Button */}
-          <button onClick={() => setStep('payment')} style={{
-            width: '100%', padding: '16px 0', borderRadius: 14, border: 'none',
-            background: `linear-gradient(135deg,${C.teal} 0%,#25a89c 100%)`,
-            color: C.deep, fontSize: 16, fontWeight: 800, cursor: 'pointer',
-            fontFamily: "'Tajawal',sans-serif", transition: 'all 0.35s',
-            boxShadow: `0 6px 24px ${C.tealDim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-          }}>
-            💳 {ar ? 'اشترك الآن' : 'Subscribe Now'}
+        <button onClick={()=>setStep('payment')} style={{width:'100%',maxWidth:400,margin:'0 auto',display:'flex',padding:'16px 0',borderRadius:14,border:'none',background:'linear-gradient(135deg,'+C.teal+' 0%,#25a89c 100%)',color:C.deep,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",boxShadow:'0 6px 24px '+C.tealDim,alignItems:'center',justifyContent:'center',gap:8}}>
+          {'\u{1F4B3}'} {ar?'\u0627\u0634\u062A\u0631\u0643 \u0628\u0640 '+plan.price.toLocaleString()+' \u0631.\u0633/\u0633\u0646\u0629':'Subscribe for '+plan.price.toLocaleString()+' SAR/year'}
+        </button>
+        <div style={{textAlign:'center',marginTop:14,color:C.w25,fontSize:11}}>{ar?'\u062F\u0641\u0639 \u0622\u0645\u0646 \u0648\u0645\u0634\u0641\u0631. \u0636\u0645\u0627\u0646 \u0627\u0633\u062A\u0631\u062F\u0627\u062F 14 \u064A\u0648\u0645.':'Secure payment. 14-day money-back guarantee.'}</div>
+        <div style={{textAlign:'center',color:C.w25,fontSize:11,marginTop:16}}>{ar?'\u0645\u0633\u062C\u0644 \u0643\u0640':'Signed in as'}: {user?.email}</div>
+      </div>)}
+
+      {step==='payment'&&(<div style={{position:'relative',zIndex:10,width:'100%',maxWidth:480,marginTop:20}}>
+        <button onClick={()=>setStep('plan')} style={{background:'none',border:'none',color:C.w40,fontSize:13,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",marginBottom:16,display:'flex',alignItems:'center',gap:4}}>
+          <span style={{transform:ar?'rotate(180deg)':'none',display:'inline-block'}}>{'\u2190'}</span> {ar?'\u0631\u062C\u0648\u0639':'Back'}
+        </button>
+        <div style={{background:'rgba(11,35,65,0.6)',backdropFilter:'blur(20px)',border:'1px solid '+C.w10,borderRadius:20,padding:isMobile?'28px 22px':'36px 32px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24,padding:'14px 18px',background:C.w05,borderRadius:12}}>
+            <div>
+              <div style={{color:'#fff',fontSize:14,fontWeight:700}}><PlanName id={selectedPlan} ar={ar}/></div>
+              <div style={{color:C.w40,fontSize:11,marginTop:2}}><ProjLabel count={plan.projects} ar={ar}/> {'\u00B7'} {ar?'\u0633\u0646\u0648\u064A':'annual'}</div>
+            </div>
+            <div><div style={{color:'#fff',fontSize:20,fontWeight:900,fontFamily:"'DM Sans',sans-serif"}}>{plan.price.toLocaleString()} <span style={{fontSize:11,color:C.w50}}>SAR</span></div></div>
+          </div>
+          <h2 style={{color:'#fff',fontSize:18,fontWeight:800,marginBottom:4}}>{ar?'\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u0641\u0639':'Payment Details'}</h2>
+          <p style={{color:C.w30,fontSize:12,marginBottom:20}}>{ar?'\u0623\u062F\u062E\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0637\u0627\u0642\u062A\u0643 \u0627\u0644\u0627\u0626\u062A\u0645\u0627\u0646\u064A\u0629':'Enter your credit card information'}</p>
+          <div style={{display:'flex',gap:8,marginBottom:20}}>{['Visa','Mastercard','mada'].map(c=>(<div key={c} style={{padding:'6px 12px',borderRadius:6,background:C.w05,border:'1px solid '+C.w10,color:C.w50,fontSize:11,fontWeight:600}}>{c}</div>))}</div>
+          <div style={{marginBottom:16}}><label style={cL}>{ar?'\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629':'Card Number'}</label><input type="text" value={cardNumber} onChange={e=>setCardNumber(fmtCard(e.target.value))} placeholder="0000 0000 0000 0000" style={cI} onFocus={cF} onBlur={cB} maxLength={19}/></div>
+          <div style={{marginBottom:16}}><label style={cL}>{ar?'\u0627\u0633\u0645 \u062D\u0627\u0645\u0644 \u0627\u0644\u0628\u0637\u0627\u0642\u0629':'Cardholder Name'}</label><input type="text" value={cardName} onChange={e=>setCardName(e.target.value)} placeholder={ar?'\u0643\u0645\u0627 \u0647\u0648 \u0645\u0637\u0628\u0648\u0639 \u0639\u0644\u0649 \u0627\u0644\u0628\u0637\u0627\u0642\u0629':'As printed on card'} style={{...cI,textTransform:'uppercase'}} onFocus={cF} onBlur={cB}/></div>
+          <div style={{display:'flex',gap:14,marginBottom:20}}>
+            <div style={{flex:1}}><label style={cL}>{ar?'\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621':'Expiry'}</label><input type="text" value={expiry} onChange={e=>setExpiry(fmtExp(e.target.value))} placeholder="MM/YY" style={cI} onFocus={cF} onBlur={cB} maxLength={5}/></div>
+            <div style={{flex:1}}><label style={cL}>CVV</label><input type="password" value={cvv} onChange={e=>setCvv(e.target.value.replace(/\D/g,'').slice(0,4))} placeholder={'\u2022\u2022\u2022'} style={cI} onFocus={cF} onBlur={cB} maxLength={4}/></div>
+          </div>
+          {error&&<div style={{marginBottom:14,padding:'10px 14px',borderRadius:10,background:'rgba(239,68,68,0.08)',color:'#f87171',fontSize:12,border:'1px solid rgba(239,68,68,0.2)'}}>{error}</div>}
+          <button onClick={handlePay} disabled={processing} style={{width:'100%',padding:'16px 0',borderRadius:14,border:'none',background:processing?C.teal+'60':'linear-gradient(135deg,'+C.teal+' 0%,#25a89c 100%)',color:C.deep,fontSize:16,fontWeight:800,cursor:processing?'wait':'pointer',fontFamily:"'Tajawal',sans-serif",boxShadow:'0 6px 24px '+C.tealDim,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            {processing&&<div style={{width:18,height:18,borderRadius:'50%',border:'2px solid '+C.deep+'40',borderTopColor:C.deep,animation:'spin 0.7s linear infinite'}}/>}
+            {processing?(ar?'\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629...':'Processing...'):(ar?'\u0627\u062F\u0641\u0639 '+plan.price.toLocaleString()+' \u0631.\u0633':'Pay '+plan.price.toLocaleString()+' SAR')}
           </button>
-
-          {/* Guarantee */}
-          <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <div style={{ color: C.w30, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-              {ar ? 'دفع آمن ومشفر. ضمان استرداد خلال 14 يوم.' : 'Secure encrypted payment. 14-day money-back guarantee.'}
-            </div>
-          </div>
-
-          {/* User info */}
-          <div style={{ textAlign: 'center', color: C.w25, fontSize: 11, marginTop: 20 }}>
-            {ar ? 'مسجل كـ' : 'Signed in as'}: {user?.email}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16,marginTop:18}}>
+            <span style={{color:C.w25,fontSize:10}}>{'\u{1F512}'} SSL</span>
+            <span style={{color:C.w25,fontSize:10}}>{'\u{1F6E1}\uFE0F'} PCI DSS</span>
+            <span style={{color:C.w25,fontSize:10}}>{'\u2705'} {ar?'\u0636\u0645\u0627\u0646 14 \u064A\u0648\u0645':'14-day guarantee'}</span>
           </div>
         </div>
-      )}
-
-      {/* Payment Form */}
-      {step === 'payment' && (
-        <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 480 }}>
-          <button onClick={() => setStep('plan')} style={{ background: 'none', border: 'none', color: C.w40, fontSize: 13, cursor: 'pointer', fontFamily: "'Tajawal',sans-serif", marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ transform: ar ? 'rotate(180deg)' : 'none', display: 'inline-block' }}>←</span> {ar ? 'رجوع' : 'Back'}
-          </button>
-
-          <div style={{ background: 'rgba(11,35,65,0.6)', backdropFilter: 'blur(20px)', border: `1px solid ${C.w10}`, borderRadius: 20, padding: isMobile ? '28px 22px' : '36px 32px' }}>
-            {/* Order summary */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, padding: '14px 18px', background: C.w05, borderRadius: 12 }}>
-              <div>
-                <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{PLAN.name}</div>
-                <div style={{ color: C.w40, fontSize: 11, marginTop: 2 }}>{ar ? 'اشتراك سنوي' : 'Annual subscription'}</div>
-              </div>
-              <div style={{ textAlign: ar ? 'left' : 'right' }}>
-                <div style={{ color: '#fff', fontSize: 18, fontWeight: 900, fontFamily: "'DM Sans',sans-serif" }}>{PLAN.price.toLocaleString()} <span style={{ fontSize: 12, color: C.w50 }}>{PLAN.currency}</span></div>
-              </div>
-            </div>
-
-            <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 800, marginBottom: 4 }}>
-              {ar ? 'بيانات الدفع' : 'Payment Details'}
-            </h2>
-            <p style={{ color: C.w30, fontSize: 12, marginBottom: 24 }}>
-              {ar ? 'أدخل بيانات بطاقتك الائتمانية' : 'Enter your credit card information'}
-            </p>
-
-            {/* Card Icons */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              {['Visa', 'Mastercard', 'mada'].map((card) => (
-                <div key={card} style={{ padding: '6px 12px', borderRadius: 6, background: C.w05, border: `1px solid ${C.w10}`, color: C.w50, fontSize: 11, fontWeight: 600 }}>{card}</div>
-              ))}
-            </div>
-
-            {/* Card Number */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>{ar ? 'رقم البطاقة' : 'Card Number'}</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text" value={cardNumber}
-                  onChange={e => setCardNumber(formatCard(e.target.value))}
-                  placeholder="0000 0000 0000 0000"
-                  style={cardInputStyle}
-                  onFocus={focusCard} onBlur={blurCard}
-                  maxLength={19}
-                />
-                <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [ar ? 'left' : 'right']: 14, display: 'flex', alignItems: 'center' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.w25} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
-                </div>
-              </div>
-            </div>
-
-            {/* Cardholder Name */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>{ar ? 'اسم حامل البطاقة' : 'Cardholder Name'}</label>
-              <input
-                type="text" value={cardName}
-                onChange={e => setCardName(e.target.value)}
-                placeholder={ar ? 'كما هو مطبوع على البطاقة' : 'As printed on card'}
-                style={{ ...cardInputStyle, textTransform: 'uppercase' }}
-                onFocus={focusCard} onBlur={blurCard}
-              />
-            </div>
-
-            {/* Expiry + CVV row */}
-            <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>{ar ? 'تاريخ الانتهاء' : 'Expiry'}</label>
-                <input
-                  type="text" value={expiry}
-                  onChange={e => setExpiry(formatExpiry(e.target.value))}
-                  placeholder="MM/YY"
-                  style={cardInputStyle}
-                  onFocus={focusCard} onBlur={blurCard}
-                  maxLength={5}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>CVV</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="password" value={cvv}
-                    onChange={e => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    placeholder="•••"
-                    style={cardInputStyle}
-                    onFocus={focusCard} onBlur={blurCard}
-                    maxLength={4}
-                  />
-                  <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [ar ? 'left' : 'right']: 14 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.w25} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', color: '#f87171', fontSize: 12, border: '1px solid rgba(239,68,68,0.2)' }}>{error}</div>}
-
-            {/* Pay Button */}
-            <button onClick={handlePay} disabled={processing} style={{
-              width: '100%', padding: '16px 0', borderRadius: 14, border: 'none',
-              background: processing ? `${C.teal}60` : `linear-gradient(135deg,${C.teal} 0%,#25a89c 100%)`,
-              color: C.deep, fontSize: 16, fontWeight: 800, cursor: processing ? 'wait' : 'pointer',
-              fontFamily: "'Tajawal',sans-serif", transition: 'all 0.35s',
-              boxShadow: `0 6px 24px ${C.tealDim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-            }}>
-              {processing && <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${C.deep}40`, borderTopColor: C.deep, animation: 'spin 0.7s linear infinite' }} />}
-              {processing ? (ar ? 'جاري المعالجة...' : 'Processing...') : (ar ? `ادفع ${PLAN.price.toLocaleString()} ${PLAN.currency}` : `Pay ${PLAN.price.toLocaleString()} ${PLAN.currency}`)}
-            </button>
-
-            {/* Security badges */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.w25, fontSize: 10 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                SSL {ar ? 'مشفر' : 'Encrypted'}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.w25, fontSize: 10 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                PCI DSS
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.w25, fontSize: 10 }}>
-                <span>🔒</span> {ar ? 'ضمان 14 يوم' : '14-day guarantee'}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div style={{ textAlign: 'center', color: C.w20, fontSize: 10, marginTop: 16, lineHeight: 1.6 }}>
-            {ar ? 'بالضغط على "ادفع" أنت توافق على' : 'By clicking "Pay" you agree to our'}{' '}
-            <a href="/terms" style={{ color: C.teal, textDecoration: 'none' }}>{ar ? 'شروط الاستخدام' : 'Terms'}</a>
-            {' '}{ar ? 'و' : '&'}{' '}
-            <a href="/privacy" style={{ color: C.teal, textDecoration: 'none' }}>{ar ? 'سياسة الخصوصية' : 'Privacy'}</a>
-          </div>
+        <div style={{textAlign:'center',color:C.w20,fontSize:10,marginTop:16}}>
+          {ar?'\u0628\u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 "\u0627\u062F\u0641\u0639" \u0623\u0646\u062A \u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u0649':'By clicking "Pay" you agree to our'}{' '}
+          <a href="/terms" style={{color:C.teal,textDecoration:'none'}}>{ar?'\u0634\u0631\u0648\u0637 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645':'Terms'}</a>
+          {' '}{ar?'\u0648':'&'}{' '}
+          <a href="/privacy" style={{color:C.teal,textDecoration:'none'}}>{ar?'\u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629':'Privacy'}</a>
         </div>
-      )}
+      </div>)}
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════════
 // AUTH GATE
@@ -564,7 +452,7 @@ export function AuthGate({ children }) {
     setBusy(false)
   }
 
-  const inp={width:'100%',padding:'13px 16px',background:'rgba(255,255,255,0.08)',border:`1px solid rgba(255,255,255,0.18)`,borderRadius:10,color:'#fff',fontSize:14,outline:'none',transition:'border-color 0.3s,box-shadow 0.3s',fontFamily:"'Tajawal',sans-serif",direction:dir,boxSizing:'border-box'}
+  const inp={width:'100%',padding:'13px 16px',background:'#0d1f35',border:'1px solid #1b3a5c',borderRadius:10,color:'#e0e4ea',fontSize:14,outline:'none',transition:'border-color 0.3s,box-shadow 0.3s',fontFamily:"'Tajawal',sans-serif",direction:dir,boxSizing:'border-box'}
   const lbl={display:'block',color:C.w50,fontSize:12.5,marginBottom:6,fontFamily:"'Tajawal',sans-serif",textAlign:isRTL?'right':'left'}
   const focusIn=(e)=>{e.target.style.borderColor=C.teal;e.target.style.boxShadow=`0 0 0 3px ${C.tealDim}`}
   const blurIn=(e)=>{e.target.style.borderColor=C.w15;e.target.style.boxShadow='none'}
@@ -583,6 +471,7 @@ export function AuthGate({ children }) {
         {TX.features.map((f,i)=>(<FeatCard key={i} idx={i} icon={f.icon} title={t(f.t,lang)} desc={t(f.d,lang)} rtl={isRTL} compact={isMobile}/>))}
       </div>
       <AcademyCard lang={lang} isRTL={isRTL} isMobile={isMobile} onEnter={()=>setShowPublicAcademy(true)}/>
+      <PricingShowcase lang={lang} isMobile={isMobile}/>
     </div>
   );
 
