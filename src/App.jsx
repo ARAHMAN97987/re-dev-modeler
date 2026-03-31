@@ -416,6 +416,21 @@ async function loadProject(id, ownerId, permission) {
       migrated.prefAllocation = "lpOnly";
       migrated.catchupMethod = "perYear";
       migrated._waterfallVersion = 2;
+      // Also clean up per-phase financing that may have inherited old waterfall values
+      if (migrated.phases) {
+        migrated.phases = migrated.phases.map(ph => {
+          if (ph.financing) {
+            const f = { ...ph.financing };
+            delete f.prefReturnPct;
+            delete f.gpCatchup;
+            delete f.carryPct;
+            delete f.lpProfitSplitPct;
+            delete f.prefAllocation;
+            return { ...ph, financing: f };
+          }
+          return ph;
+        });
+      }
     }
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
