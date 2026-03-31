@@ -4535,6 +4535,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <button onClick={()=>setShowFeatures(true)} className="z-btn z-btn-teal" title={ar?"اعرف المزايا":"Explore Features"}>✦ {ar?"المزايا":"Features"}</button>
+            <span style={{fontSize:10,padding:"3px 8px",borderRadius:10,background:"#dcfce7",color:"#166534",fontWeight:600,border:"1px solid #86efac"}}>{ar?"تجربة مجانية":"Free Trial"}</span>
             {onOpenAcademy && <button onClick={onOpenAcademy} className="z-btn z-btn-primary" style={{background:"var(--zan-navy-700)",border:"1px solid var(--zan-gold-700)"}} title={ar?"أكاديمية حصيف":"Haseef Academy"}>📚 <span style={{color:"var(--zan-gold-500)"}}>{ar?"الأكاديمية":"Academy"}</span></button>}
             {!isMobile && user && <div style={{fontSize:11,color:"var(--text-secondary)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} className="z-btn z-btn-danger">{ar?"خروج":"Sign Out"}</button>}

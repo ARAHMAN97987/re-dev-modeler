@@ -406,14 +406,14 @@ export function AuthGate({ children }) {
         if(d.status==='trial'&&d.trialEndsAt>now){setSubStatus('trial');return}
       }catch(e){}
     }
-    // Check if user signed up within 3 days (auto trial)
+    // Everyone gets free trial (subscriptions not enforced yet)
+    // When subscriptions are activated, restore the 3-day check below:
+    // const createdAt=new Date(session.user.created_at).getTime()
+    // const threeDays=3*24*60*60*1000
+    // if(Date.now()-createdAt<threeDays){ ... } else setSubStatus('none')
     const createdAt=new Date(session.user.created_at).getTime()
-    const threeDays=3*24*60*60*1000
-    if(Date.now()-createdAt<threeDays){
-      localStorage.setItem(`haseef_sub_${uid}`,JSON.stringify({status:'trial',trialEndsAt:createdAt+threeDays,startedAt:createdAt}))
-      setSubStatus('trial');return
-    }
-    setSubStatus('none')
+    localStorage.setItem(`haseef_sub_${uid}`,JSON.stringify({status:'trial',trialEndsAt:createdAt+365*24*60*60*1000,startedAt:createdAt}))
+    setSubStatus('trial')
   },[session])
 
   if(!supabase)return children({user:null,userId:'anonymous',signOut:()=>{}})
