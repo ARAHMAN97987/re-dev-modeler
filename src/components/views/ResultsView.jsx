@@ -601,6 +601,10 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     return Math.max(1, first >= 0 ? last - first + 1 : h);
   })();
   const bankSimpleAnnual = bankInvestYears > 0 ? bankSimpleROE / bankInvestYears : 0;
+  // For hold mode with very long horizons (>20yr), simple return is misleading (e.g. 7341%).
+  // Show stabilized annual yield instead, which is more useful for income-producing assets.
+  const isHoldMode = (project.exitStrategy || "sale") === "hold" || project.finMode === "incomeFund";
+  const isLongHold = isHoldMode && bankInvestYears > 20;
 
   // ── Developer Feasibility Metrics ──
   const cumLevCF = useMemo(() => {
@@ -818,7 +822,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         </div>
         {!kpiOpen.dev ? (
           <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap",alignItems:"center",animation:"zanFade 0.15s ease"}}>
-            {badge(ar?"عائد بسيط":"Simple", bankSimpleROE?fmtPct(bankSimpleROE*100):"—", "#f59e0b")}
+            {isLongHold
+              ? badge(ar?"عائد نقدي":"Cash Yield", cashOnCash>0?fmtPct(cashOnCash*100):"—", "#f59e0b")
+              : badge(ar?"عائد بسيط":"Simple", bankSimpleROE?fmtPct(bankSimpleROE*100):"—", "#f59e0b")}
             {badge("IRR", pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—", getMetricColor("IRR",pf.leveredIRR))}
             {badge(ar?"استرداد":"Payback", paybackLev?`Yr ${paybackLev}`:"—", "#6366f1")}
           </div>
@@ -830,8 +836,13 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"تكلفة التطوير":"Dev Cost"} v={fmtM(pf.devCostInclLand)} bold />
             {pf.landCapValue>0 && <KR l={ar?"رسملة أرض":"Land Cap"} v={fmtM(pf.landCapValue)} />}
             <SecHd text={ar?"العائد البسيط (عرف السوق)":"SIMPLE RETURN (MARKET CONVENTION)"} />
-            <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={bankSimpleROE?fmtPct(bankSimpleROE*100):"N/A"} c="#f59e0b" bold />
-            <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={bankSimpleAnnual?fmtPct(bankSimpleAnnual*100):"N/A"} c="#f59e0b" />
+            {isLongHold ? <>
+              <KR l={ar?"عائد نقدي سنوي (مستقر)":"Stabilized Cash Yield"} v={cashOnCash>0?fmtPct(cashOnCash*100):"N/A"} c="#f59e0b" bold />
+              <KR l={ar?"فترة الاحتفاظ":"Hold Period"} v={`${bankInvestYears} ${ar?"سنة":"yr"}`} c="#6b7080" />
+            </> : <>
+              <KR l={ar?"العائد البسيط (إجمالي)":"Simple Return (Total)"} v={bankSimpleROE?fmtPct(bankSimpleROE*100):"N/A"} c="#f59e0b" bold />
+              <KR l={ar?"العائد البسيط (سنوي)":"Simple Return (Annual)"} v={bankSimpleAnnual?fmtPct(bankSimpleAnnual*100):"N/A"} c="#f59e0b" />
+            </>}
             <KR l={ar?"فترة الاستثمار":"Investment Period"} v={`${bankInvestYears} ${ar?"سنة":"yr"}`} />
             <SecHd text={ar?"المؤشرات الدقيقة":"PRECISE METRICS"} />
             <KR l={ar?"صافي IRR (مركب) بعد التمويل":"Levered IRR (Compounded)"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"} c={getMetricColor("IRR",pf.leveredIRR)} bold />
@@ -845,7 +856,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"IRR بدون دين":"Without Debt"} v={pc.irr!==null?fmtPct(pc.irr*100):"—"} c="#6b7080" />
             <KR l={ar?"IRR مع دين":"With Debt"} v={pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"—"} c={getMetricColor("IRR",pf.leveredIRR)} bold />
             <KR l={ar?"الفرق (أثر الدين)":"IRR Boost"} v={pc.irr!==null&&pf.leveredIRR!==null?`+${((pf.leveredIRR-pc.irr)*100).toFixed(2)}%`:"—"} c={pf.leveredIRR>pc.irr?"#10b981":"#ef4444"} bold />
-            <KR l={ar?"مضاعف الملكية":"Equity Multiple"} v={pf.totalEquity>0?((exitProc+devNetCF)/pf.totalEquity).toFixed(2)+"x":"—"} c={exitProc+devNetCF>pf.totalEquity?"#16a34a":"#ef4444"} bold />
+            {!isLongHold && <KR l={ar?"مضاعف الملكية":"Equity Multiple"} v={pf.totalEquity>0?((exitProc+devNetCF)/pf.totalEquity).toFixed(2)+"x":"—"} c={exitProc+devNetCF>pf.totalEquity?"#16a34a":"#ef4444"} bold />}
             </>}
             <SecHd text="NPV" />
             <KR l="@10%" v={fmtM(calcNPV(pf.leveredCF,0.10))} />
@@ -1158,7 +1169,10 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         <td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11}}>
           <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
-            <span>{ar?"عائد بسيط":"Simple"} <strong style={{color:"#f59e0b"}}>{bankSimpleROE?fmtPct(bankSimpleROE*100):"—"}</strong> <span style={{fontSize:9,color:"#6b7080"}}>({ar?"سنوي":"ann."} {bankSimpleAnnual?fmtPct(bankSimpleAnnual*100):"—"})</span></span>
+            {isLongHold
+              ? <span>{ar?"عائد نقدي":"Cash Yield"} <strong style={{color:"#f59e0b"}}>{cashOnCash>0?fmtPct(cashOnCash*100):"—"}</strong></span>
+              : <span>{ar?"عائد بسيط":"Simple"} <strong style={{color:"#f59e0b"}}>{bankSimpleROE?fmtPct(bankSimpleROE*100):"—"}</strong> <span style={{fontSize:9,color:"#6b7080"}}>({ar?"سنوي":"ann."} {bankSimpleAnnual?fmtPct(bankSimpleAnnual*100):"—"})</span></span>
+            }
             <span>IRR <strong style={{color:getMetricColor("IRR",pf.leveredIRR)}}>{pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"}</strong></span>
             <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
             <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(pf.leveredCF,0.12))}</strong></span>
