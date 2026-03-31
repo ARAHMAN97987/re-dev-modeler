@@ -3204,7 +3204,7 @@ When to use:
 
       return <>
       {/* LP = 0 warning - only relevant for fund/jv where LP is expected */}
-      {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid") && (
+      {f.lpEquity === 0 && (project.finMode === "fund" || project.finMode === "jv" || project.finMode === "hybrid" || project.finMode === "incomeFund") && (
         <div style={{background:"#fef3c7",borderRadius:8,border:"1px solid #fde68a",padding:"12px 16px",marginBottom:14,fontSize:12,color:"#92400e"}}>
           <strong>⚠ {ar?"حصة المستثمر = صفر":"Investor Equity = 0"}</strong><br/>
           {ar ? "لا يوجد مستثمرين. لتفعيل حصة المستثمر: فعّل رسملة حق الانتفاع أو أضف استثمار أتعاب التطوير أو استثمار نقدي" : "No investor equity. Enable Leasehold Capitalization, invest dev fee, or add cash investment."}
@@ -4693,7 +4693,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             {[
               {label:ar?"المشاريع":"Projects",value:index.length,icon:"📁",color:"#2563eb"},
               {label:ar?"الأصول":"Assets",value:totalAssets,icon:"🏗",color:"#0f766e"},
-              ...((finModes.fund||finModes.hybrid)?[{label:ar?"صناديق":"Funds",value:(finModes.fund||0)+(finModes.hybrid||0),icon:"🏦",color:"#8b5cf6"}]:[]),
+              ...((finModes.fund||finModes.hybrid||finModes.incomeFund)?[{label:ar?"صناديق":"Funds",value:(finModes.fund||0)+(finModes.hybrid||0)+(finModes.incomeFund||0),icon:"🏦",color:"#8b5cf6"}]:[]),
               ...(finModes.debt?[{label:ar?"تمويل بنكي":"Bank",value:finModes.debt+(finModes.bank100||0),icon:"💳",color:"#f59e0b"}]:[]),
             ].map((kpi,i)=>(
               <div key={i} className="z-kpi" style={{flex:1}}>
@@ -4773,7 +4773,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
                   <div style={{fontSize:isMobile?10:11,color:"var(--text-secondary)",marginTop:2,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <span>{new Date(p.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",...(!isMobile?{year:"numeric",hour:"2-digit",minute:"2-digit"}:{})})}</span>
                     {!isMobile && p.assetCount > 0 && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>{p.assetCount} {ar?"أصل":"assets"}</span>}
-                    {!isMobile && p.finMode && p.finMode !== "self" && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:p.finMode==="fund"||p.finMode==="hybrid"?"#f3e8ff":"#dbeafe",color:p.finMode==="fund"||p.finMode==="hybrid"?"#7c3aed":"#2563eb"}}>{p.finMode==="fund"?(ar?"صندوق":"Fund"):p.finMode==="hybrid"?(ar?"مختلط":"Hybrid"):p.finMode==="bank100"?(ar?"بنك 100%":"Bank 100%"):(ar?"بنكي":"Bank")}</span>}
+                    {!isMobile && p.finMode && p.finMode !== "self" && <span style={{fontSize:9,padding:"1px 6px",borderRadius:3,background:p.finMode==="fund"||p.finMode==="hybrid"||p.finMode==="incomeFund"?"#f3e8ff":"#dbeafe",color:p.finMode==="fund"||p.finMode==="hybrid"||p.finMode==="incomeFund"?"#7c3aed":"#2563eb"}}>{p.finMode==="fund"?(ar?"صندوق":"Fund"):p.finMode==="incomeFund"?(ar?"صندوق دخل":"Income"):p.finMode==="hybrid"?(ar?"مختلط":"Hybrid"):p.finMode==="bank100"?(ar?"بنك 100%":"Bank 100%"):(ar?"بنكي":"Bank")}</span>}
                   </div>
                 </div>
                 <span style={{fontSize:isMobile?9:10,padding:"3px 8px",borderRadius:4,fontWeight:500,background:p._shared?"#dbeafe":p.status==="Complete"?"#dcfce7":p.status==="In Progress"?"#dbeafe":"#f0f1f5",color:p._shared?(p._permission==="view"?"#fbbf24":"#60a5fa"):p.status==="Complete"?"#4ade80":p.status==="In Progress"?"#60a5fa":"#9ca3af",flexShrink:0}}>{p._shared?(p._permission==="view"?(lang==="ar"?"قراءة":"View"):(lang==="ar"?"تعديل":"Edit")):p.status||"Draft"}</span>
