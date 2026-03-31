@@ -2295,8 +2295,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     {pf && pf.totalDebt > 0 && (() => {
       const dscrData = years.map(y => ({
         year: sy + y,
-        dscr: pf.dscr?.[y] ?? null,
-      })).filter(d => d.dscr !== null && d.dscr > 0);
+        dscr: pf.dscr?.[y] != null && pf.dscr[y] > 0 ? Math.min(pf.dscr[y], 50) : null,
+      })).filter(d => d.dscr !== null);
       const debtData = years.map(y => ({
         year: sy + y,
         balance: pf.debtBalClose?.[y] || 0,
@@ -2338,7 +2338,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
               <LineChart data={dscrData} margin={{top:5,right:10,left:0,bottom:5}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f1f5" />
                 <XAxis dataKey="year" tick={{fontSize:9,fill:"#6b7080"}} />
-                <YAxis tick={{fontSize:9,fill:"#6b7080"}} domain={[0, 'auto']} tickFormatter={v => v.toFixed(1)+"x"} />
+                <YAxis tick={{fontSize:9,fill:"#6b7080"}} domain={[0, dataMax => Math.min(Math.max(dataMax * 1.1, 3), 50)]} tickFormatter={v => v.toFixed(1)+"x"} />
                 <Tooltip formatter={v => v.toFixed(2)+"x"} />
                 <ReferenceLine y={1.2} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5} label={{value:"1.2x min",position:"right",fontSize:9,fill:"#ef4444"}} />
                 <ReferenceLine y={1.5} stroke="#10b981" strokeDasharray="4 4" strokeWidth={1} label={{value:"1.5x target",position:"right",fontSize:9,fill:"#10b981"}} />
