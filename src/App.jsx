@@ -402,14 +402,20 @@ async function loadProject(id, ownerId, permission) {
     // Waterfall migration: old projects may have legacy 4-tier waterfall settings
     // (prefReturnPct, gpCatchup, carryPct, lpProfitSplitPct) that conflict with
     // the simplified model (performance incentive only). Reset them to defaults.
-    if (!p._waterfallVersion) {
+    // NOTE: We check actual values, not just the flag, because _waterfallVersion:1
+    // may have been saved from defaults before the migration code existed.
+    const needsWaterfallMigration = !p._waterfallVersion
+      || migrated.prefReturnPct > 0
+      || migrated.carryPct > 0
+      || migrated.lpProfitSplitPct < 100;
+    if (needsWaterfallMigration) {
       migrated.prefReturnPct = 0;
       migrated.gpCatchup = false;
       migrated.carryPct = 0;
       migrated.lpProfitSplitPct = 100;
       migrated.prefAllocation = "lpOnly";
       migrated.catchupMethod = "perYear";
-      migrated._waterfallVersion = 1;
+      migrated._waterfallVersion = 2;
     }
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
