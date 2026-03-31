@@ -14,6 +14,7 @@ import SidebarInput from "./components/shared/SidebarInput";
 import { EDUCATIONAL_CONTENT } from "./data/educational-content.js";
 import HelpLink from "./components/shared/HelpLink";
 import EducationalModal from "./components/shared/EducationalModal";
+import { useIsMobile } from "./components/shared/hooks";
 
 // ═══════════════════════════════════════════════════════════════
 // Haseef Financial Modeler — Project Engine v3 (Stable)
@@ -3611,16 +3612,7 @@ When to use:
 
 // ═══════════════════════════════════════════════════════════════
 // MOBILE RESPONSIVE HOOK
-// ═══════════════════════════════════════════════════════════════
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < breakpoint : false);
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [breakpoint]);
-  return isMobile;
-}
+// useIsMobile — imported from ./components/shared/hooks
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN APP
