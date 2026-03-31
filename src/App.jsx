@@ -374,7 +374,7 @@ async function loadProject(id, ownerId, permission) {
     // Apply defaults for fees that were never explicitly set by the user.
     // We detect "never set" by checking if the field is 0/undefined AND the project
     // was created before these fields existed (no _feesVersion flag).
-    if (!migrated._feesVersion) {
+    if (!p._feesVersion) {
       const feeDefaults = {
         subscriptionFeePct: def.subscriptionFeePct,
         annualMgmtFeePct: def.annualMgmtFeePct,
@@ -402,7 +402,7 @@ async function loadProject(id, ownerId, permission) {
     // Waterfall migration: old projects may have legacy 4-tier waterfall settings
     // (prefReturnPct, gpCatchup, carryPct, lpProfitSplitPct) that conflict with
     // the simplified model (performance incentive only). Reset them to defaults.
-    if (!migrated._waterfallVersion) {
+    if (!p._waterfallVersion) {
       migrated.prefReturnPct = 0;
       migrated.gpCatchup = false;
       migrated.carryPct = 0;
