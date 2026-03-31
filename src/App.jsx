@@ -399,6 +399,18 @@ async function loadProject(id, ownerId, permission) {
       }
       migrated._feesVersion = 2;
     }
+    // Waterfall migration: old projects may have legacy 4-tier waterfall settings
+    // (prefReturnPct, gpCatchup, carryPct, lpProfitSplitPct) that conflict with
+    // the simplified model (performance incentive only). Reset them to defaults.
+    if (!migrated._waterfallVersion) {
+      migrated.prefReturnPct = 0;
+      migrated.gpCatchup = false;
+      migrated.carryPct = 0;
+      migrated.lpProfitSplitPct = 100;
+      migrated.prefAllocation = "lpOnly";
+      migrated.catchupMethod = "perYear";
+      migrated._waterfallVersion = 1;
+    }
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
     if (ownerId) migrated._permission = permission || "edit";

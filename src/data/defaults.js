@@ -138,4 +138,5 @@ export const defaultProject = () => ({
     notes: "",
   },
   _feesVersion: 2, // Migration flag for auto-populated fees
+  _waterfallVersion: 1, // Migration flag: simplified waterfall (no pref/carry, performance incentive only)
 });
