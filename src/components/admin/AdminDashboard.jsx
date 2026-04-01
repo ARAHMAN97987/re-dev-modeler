@@ -383,6 +383,105 @@ function UserDetail({ userId, adminKey, onClose, onOpenProject, onDeleted }) {
 }
 
 // ═══════════════════════════════════════════════════
+// TRANSFER PROJECT MODAL
+// ═══════════════════════════════════════════════════
+function TransferModal({ project, users, adminKey, onClose, onDone }) {
+  const [targetUserId, setTargetUserId] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const filtered = users.filter(u => u.id !== project.userId && u.email?.toLowerCase().includes(userSearch.toLowerCase()));
+
+  const transfer = async () => {
+    if (!targetUserId) { setError("Select a target user"); return; }
+    setBusy(true); setError("");
+    try {
+      const r = await fetch(`${API_BASE}/transfer-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ projectId: project.id, fromUserId: project.userId, toUserId: targetUserId }),
+      });
+      const d = await r.json();
+      if (r.ok) { onDone(); onClose(); }
+      else setError(d.error || "Transfer failed");
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+
+  const unassign = async () => {
+    if (!confirm(`Unassign "${project.name}" from its owner? It will be stored under admin.`)) return;
+    setBusy(true); setError("");
+    try {
+      const r = await fetch(`${API_BASE}/transfer-project`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ projectId: project.id, fromUserId: project.userId, toUserId: "admin" }),
+      });
+      const d = await r.json();
+      if (r.ok) { onDone(); onClose(); }
+      else setError(d.error || "Unassign failed");
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999 }}>
+      <div style={{ ...cardS, width: 460, maxHeight: "85vh", overflow: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>Transfer Project</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.textMuted }}>✕</button>
+        </div>
+
+        <div style={{ background: "#f0f4ff", borderRadius: 8, padding: 12, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: C.textSec }}>Project</div>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{project.name}</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+            Current owner: {project.ownerEmail || (project.userId === "admin" ? "⚠ Unassigned" : project.userId?.slice(0, 8) + "...")}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: C.textSec, display: "block", marginBottom: 4 }}>Transfer to User</label>
+          <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search by email..." style={{ ...inputS, marginBottom: 8 }} />
+          <div style={{ maxHeight: 200, overflow: "auto", border: `1px solid ${C.border}`, borderRadius: 6 }}>
+            {filtered.length === 0 && <div style={{ padding: 12, textAlign: "center", fontSize: 11, color: C.textMuted }}>No users found</div>}
+            {filtered.map(u => (
+              <div
+                key={u.id}
+                onClick={() => setTargetUserId(u.id)}
+                style={{
+                  padding: "8px 12px", cursor: "pointer", fontSize: 12, borderBottom: `1px solid ${C.border}`,
+                  background: targetUserId === u.id ? "#e0f2fe" : "transparent",
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                }}
+              >
+                <span style={{ fontWeight: targetUserId === u.id ? 600 : 400 }}>{u.email}</span>
+                <span style={badgeS(u.subscription?.status || "none")}>{STATUS_COLORS[u.subscription?.status]?.label || "None"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {error && <div style={{ fontSize: 11, color: C.red, marginBottom: 8 }}>{error}</div>}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button onClick={transfer} disabled={busy || !targetUserId} style={{ ...btnPrim, flex: 1, opacity: (!targetUserId || busy) ? 0.5 : 1 }}>
+            {busy ? "Transferring..." : "🔄 Transfer"}
+          </button>
+          {project.userId !== "admin" && (
+            <button onClick={unassign} disabled={busy} style={{ ...btnDanger, flex: 0, whiteSpace: "nowrap", opacity: busy ? 0.5 : 1 }}>
+              📌 Unassign
+            </button>
+          )}
+          <button onClick={onClose} style={{ ...btnGhost, flex: 0 }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
 // MAIN ADMIN DASHBOARD
 // ═══════════════════════════════════════════════════
 export default function AdminDashboard({ onOpenProject, onExit }) {
@@ -397,6 +496,12 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
   const [loading, setLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
+  // Projects page
+  const [allProjects, setAllProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState("all"); // all | assigned | unassigned
+  const [transferProject, setTransferProject] = useState(null); // project to transfer
 
   // Verify stored key on mount
   useEffect(() => {
@@ -456,6 +561,19 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
   }, [adminKey]);
 
   // Export users to CSV
+  // Fetch all projects
+  const fetchProjects = useCallback(async () => {
+    setProjectsLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/projects?limit=200`, { headers: { "X-Admin-Key": adminKey } });
+      if (r.ok) {
+        const d = await r.json();
+        setAllProjects(d.projects || []);
+      }
+    } catch {}
+    setProjectsLoading(false);
+  }, [adminKey]);
+
   const exportCSV = useCallback(() => {
     const headers = ["Email", "Status", "Plan", "Projects", "Signed Up", "Last Active"];
     const rows = users.map(u => [
@@ -495,6 +613,7 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => { setPage("overview"); setSelectedUserId(null); }} style={{ ...btnGhost, color: page === "overview" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Overview</button>
           <button onClick={() => { setPage("users"); setSelectedUserId(null); }} style={{ ...btnGhost, color: page === "users" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Users</button>
+          <button onClick={() => { setPage("projects"); fetchProjects(); }} style={{ ...btnGhost, color: page === "projects" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Projects</button>
           <button onClick={() => { setPage("logs"); fetchLogs(); }} style={{ ...btnGhost, color: page === "logs" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Activity Log</button>
           <button onClick={() => setShowInvite(true)} style={{ ...btnS, background: C.teal, color: "#fff", fontSize: 11 }}>+ Invite User</button>
           {onExit && <button onClick={onExit} style={{ ...btnGhost, color: "#fff", borderColor: "rgba(255,255,255,0.2)", fontSize: 11 }}>← Exit Admin</button>}
@@ -607,6 +726,84 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ── PROJECTS PAGE ── */}
+        {page === "projects" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>All Projects ({allProjects.length})</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  value={projectSearch}
+                  onChange={e => setProjectSearch(e.target.value)}
+                  placeholder="Search projects..."
+                  style={{ ...inputS, width: 200 }}
+                />
+                <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)} style={{ ...inputS, width: 130 }}>
+                  <option value="all">All Projects</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="unassigned">Unassigned</option>
+                </select>
+                <button onClick={fetchProjects} style={btnPrim} disabled={projectsLoading}>
+                  {projectsLoading ? "..." : "Refresh"}
+                </button>
+              </div>
+            </div>
+
+            <div style={cardS}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>{["Name", "Owner", "Mode", "Assets", "Updated", "Actions"].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {allProjects
+                    .filter(p => {
+                      const q = projectSearch.toLowerCase();
+                      const matchName = !q || p.name?.toLowerCase().includes(q) || p.ownerEmail?.toLowerCase().includes(q);
+                      const matchOwner = ownerFilter === "all" || (ownerFilter === "unassigned" && p.userId === "admin") || (ownerFilter === "assigned" && p.userId !== "admin");
+                      return matchName && matchOwner;
+                    })
+                    .map(p => (
+                    <tr key={p.id + p.userId}>
+                      <td style={{ ...tdS, fontWeight: 500 }}>{p.name || "—"}</td>
+                      <td style={tdS}>
+                        {p.userId === "admin"
+                          ? <span style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4, background: C.orangeBg, color: C.orange }}>⚠ Unassigned</span>
+                          : <span style={{ fontSize: 11 }}>{p.ownerEmail || p.userId?.slice(0, 8) + "..."}</span>
+                        }
+                      </td>
+                      <td style={tdS}>{p.finMode || "—"}</td>
+                      <td style={tdS}>{p.assetCount || 0}</td>
+                      <td style={tdS}>{fmtRel(p.updatedAt)}</td>
+                      <td style={{ ...tdS, whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => setTransferProject(p)} style={{ ...btnGhost, padding: "2px 8px", fontSize: 10 }}>🔄 Transfer</button>
+                          <button onClick={() => onOpenProject?.(p.id, p.userId, p.ownerEmail)} style={{ ...btnGhost, padding: "2px 8px", fontSize: 10 }}>👁 View</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {allProjects.length === 0 && (
+                    <tr><td colSpan={6} style={{ ...tdS, textAlign: "center", color: C.textMuted }}>
+                      {projectsLoading ? "Loading..." : "No projects found"}
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Transfer Modal */}
+        {transferProject && (
+          <TransferModal
+            project={transferProject}
+            users={users}
+            adminKey={adminKey}
+            onClose={() => setTransferProject(null)}
+            onDone={() => { fetchProjects(); fetchUsers(); }}
+          />
         )}
 
         {/* ── USER DETAIL PAGE ── */}
