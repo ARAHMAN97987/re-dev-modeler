@@ -115,10 +115,10 @@ export async function generateFormulaExcel(project, results, financing, waterfal
   const rEC = inp("Exit Cost %", p.exitCostPct || 2, PCT, true);
 
   sec("Waterfall / حافز حسن الأداء");
-  const rGP = inp("Developer Equity %", p.gpEquityPct || 20, PCT, true);
-  const rPF = inp("Preferred Return %", p.prefReturnPct || 15, PCT, true);
-  const rCR_ = inp("Carry %", p.carryPct || 25, PCT, true);
-  const rLS = inp("Investor Profit Split %", p.lpProfitSplitPct || 70, PCT, true);
+  const rGP = inp("Developer Equity %", p.gpEquityPct ?? 20, PCT, true);
+  const rPF = inp("Preferred Return %", p.prefReturnPct ?? 0, PCT, true);
+  const rCR_ = inp("Carry %", p.carryPct ?? 0, PCT, true);
+  const rLS = inp("Investor Profit Split %", p.lpProfitSplitPct ?? 100, PCT, true);
 
   sec("Fees / الرسوم");
   const rSUB = inp("Subscription Fee %", p.subscriptionFeePct || 2, PCT, true);

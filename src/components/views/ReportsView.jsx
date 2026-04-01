@@ -1,7 +1,5 @@
 // Extracted from App.jsx lines 9578-10689
 import { useState, useMemo, useRef } from "react";
-import { generateProfessionalExcel } from "../../excelExport";
-import { generateFormulaExcel } from "../../excelFormulaExport";
 import { generateTemplateExcel } from "../../excelTemplateExport";
 import { embeddedFontCSS } from "../../embeddedFonts";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
@@ -514,14 +512,8 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
       {activeReport && <button className="zan-btn-prim" onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#2EC4B6)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"\u2B07 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062a\u0642\u0631\u064a\u0631 (HTML/PDF)":"\u2B07 Download Report (HTML/PDF)"}</button>}
-      <button onClick={async()=>{try{await generateFormulaExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"\u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u0627\u0644\u0646\u0645\u0648\u0630\u062c \u0627\u0644\u0643\u0627\u0645\u0644 (Excel)":"Full Model exported (Excel)","success");}catch(e){console.error("Formula Excel error:",e);addToast((ar?"\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u062a\u0635\u062f\u064a\u0631: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#0f766e",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
-        {ar?"\u2B07 \u0627\u0644\u0646\u0645\u0648\u0630\u062c \u0627\u0644\u0643\u0627\u0645\u0644 (Excel + \u0645\u0639\u0627\u062f\u0644\u0627\u062a)":"\u2B07 Full Model (Excel + Formulas)"}
-      </button>
-      <button onClick={async()=>{try{await generateTemplateExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"\u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u0627\u0644\u0646\u0645\u0648\u0630\u062c \u0627\u0644\u062f\u064a\u0646\u0627\u0645\u064a\u0643\u064a (Excel)":"Dynamic Model exported (Excel)","success");}catch(e){console.error("Template Excel error:",e);addToast((ar?"\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u062a\u0635\u062f\u064a\u0631: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#1B4F72",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
-        {ar?"\u2B07 \u0627\u0644\u0646\u0645\u0648\u0630\u062c \u0627\u0644\u062f\u064a\u0646\u0627\u0645\u064a\u0643\u064a (15 \u0634\u064a\u062a)":"\u2B07 Dynamic Model (15 sheets)"}
-      </button>
-      <button onClick={async()=>{try{await generateProfessionalExcel(project, results, financing, waterfall, incentivesResult, checks);addToast(ar?"\u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u062a\u0642\u0631\u064a\u0631 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a (Excel)":"Data Report exported (Excel)","success");}catch(e){console.error("Data Excel error:",e);addToast((ar?"\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u062a\u0635\u062f\u064a\u0631: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"8px 14px",fontSize:11,border:"1px solid #bbf7d0",fontWeight:500,borderRadius:8}}>
-        {ar?"\u2B07 \u062a\u0642\u0631\u064a\u0631 \u0628\u064a\u0627\u0646\u0627\u062a (Excel)":"\u2B07 Data Report (Excel)"}
+      <button onClick={async()=>{try{await generateTemplateExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"\u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u0627\u0644\u0646\u0645\u0648\u0630\u062c (Excel)":"Excel Model exported","success");}catch(e){console.error("Template Excel error:",e);addToast((ar?"\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u062a\u0635\u062f\u064a\u0631: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#1B4F72",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
+        {ar?"\u2B07 \u062a\u062d\u0645\u064a\u0644 \u0646\u0645\u0648\u0630\u062c Excel":"\u2B07 Download Excel Model"}
       </button>
     </div>
 
