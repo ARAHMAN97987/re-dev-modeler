@@ -264,9 +264,10 @@ function InviteModal({ adminKey, onClose, onDone }) {
 // ═══════════════════════════════════════════════════
 // USER DETAIL PANEL
 // ═══════════════════════════════════════════════════
-function UserDetail({ userId, adminKey, onClose, onOpenProject }) {
+function UserDetail({ userId, adminKey, onClose, onOpenProject, onDeleted }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -347,6 +348,36 @@ function UserDetail({ userId, adminKey, onClose, onOpenProject }) {
           </table>
         </div>
       )}
+
+      {/* Danger Zone — Delete User */}
+      <div style={{ ...cardS, marginTop: 20, border: `1px solid ${C.red}20` }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: C.red, marginBottom: 8 }}>⚠️ Danger Zone</div>
+        <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12 }}>
+          Permanently delete this user and all their data (account, projects, subscription). This cannot be undone.
+        </div>
+        <button
+          disabled={deleting}
+          onClick={async () => {
+            const msg = `Are you sure you want to DELETE "${user.email}"?\n\nThis will permanently remove:\n• User account\n• ${user.projectCount || 0} project(s)\n• Subscription data\n\nThis action CANNOT be undone.`;
+            if (!confirm(msg)) return;
+            if (!confirm(`FINAL CONFIRMATION: Type-check — you are deleting ${user.email}. Proceed?`)) return;
+            setDeleting(true);
+            try {
+              const r = await fetch(`${API_BASE}/delete-user`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+                body: JSON.stringify({ userId: user.id }),
+              });
+              const d = await r.json();
+              if (r.ok) { alert(`✓ User ${user.email} deleted successfully.`); onDeleted?.(); onClose(); }
+              else { alert(`Error: ${d.error}`); setDeleting(false); }
+            } catch (e) { alert(`Error: ${e.message}`); setDeleting(false); }
+          }}
+          style={{ ...btnDanger, opacity: deleting ? 0.5 : 1 }}
+        >
+          {deleting ? "Deleting..." : "🗑 Delete User Permanently"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -585,6 +616,7 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
             adminKey={adminKey}
             onClose={() => { setSelectedUserId(null); setPage("users"); }}
             onOpenProject={(projectId, ownerId, ownerEmail) => onOpenProject?.(projectId, ownerId, ownerEmail)}
+            onDeleted={fetchUsers}
           />
         )}
 
