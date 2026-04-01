@@ -3661,7 +3661,7 @@ When to use:
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 
-function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy }) {
+function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy, adminProject, readOnly }) {
   const isMobile = useIsMobile();
   // ── Public Academy Mode state (hook must run unconditionally) ──
   const [publicLang, setPublicLang] = useState("ar");
@@ -3674,10 +3674,10 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     return parseNavHash();
   }, []);
   const _initProjectId = useRef(_initNav.view === "editor" ? _initNav.projectId : null);
-  const [view, setView] = useState(_initNav.view === "editor" ? "editor" : _initNav.view);
+  const [view, setView] = useState(adminProject ? "editor" : (_initNav.view === "editor" ? "editor" : _initNav.view));
   const [projectIndex, setProjectIndex] = useState([]);
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [project, setProject] = useState(adminProject || null);
+  const [loading, setLoading] = useState(!adminProject);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(_initNav.tab || "dashboard");
   const [globalExpand, setGlobalExpand] = useState(0); // increment to toggle; odd=expand, even=collapse
@@ -3861,6 +3861,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   }, [undo]);
 
   const up = useCallback((u) => {
+    if (readOnly) return; // Admin read-only mode — block all edits
     const scrollTop = sidebarRef.current?.scrollTop;
     setProject(prev => { pushUndo(prev); return {...prev,...(typeof u === 'function' ? u(prev) : u)}; });
     if (scrollTop != null) {
@@ -3868,12 +3869,13 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop;
       });
     }
-  }, [pushUndo]);
+  }, [pushUndo, readOnly]);
   const upAsset = useCallback((i, u) => {
+    if (readOnly) return;
     const scrollTop = sidebarRef.current?.scrollTop;
     setProject(prev => { pushUndo(prev); const a=[...prev.assets]; a[i]={...a[i],...u}; return {...prev,assets:a}; });
     if (scrollTop != null) requestAnimationFrame(() => { if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop; });
-  }, [pushUndo]);
+  }, [pushUndo, readOnly]);
   const addAsset = useCallback((tmplDefaults) => setProject(prev => { pushUndo(prev); const base = {
     id: crypto.randomUUID(), phase: prev.phases[0]?.name||"Phase 1", category:"Retail", name:"", code:"", notes:"",
     plotArea:0, footprint:0, gfa:0, revType:"Lease", efficiency: prev.defaultEfficiency||85,

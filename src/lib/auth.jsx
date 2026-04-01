@@ -353,7 +353,7 @@ function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOu
         </div>
         <div style={{textAlign:'center',color:C.w20,fontSize:10,marginTop:16}}>
           {ar?'\u0628\u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 "\u0627\u062F\u0641\u0639" \u0623\u0646\u062A \u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u0649':'By clicking "Pay" you agree to our'}{' '}
-          <a href="/terms" style={{color:C.teal,textDecoration:'none'}}>{ar?'\u0634\u0631\u0648\u0637 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645':'Terms'}</a>
+          <a href="#/terms" style={{color:C.teal,textDecoration:'none'}}>{ar?'\u0634\u0631\u0648\u0637 \u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645':'Terms'}</a>
           {' '}{ar?'\u0648':'&'}{' '}
           <a href="/privacy" style={{color:C.teal,textDecoration:'none'}}>{ar?'\u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629':'Privacy'}</a>
         </div>
@@ -518,7 +518,7 @@ export function AuthGate({ children }) {
         {isMobile&&<div style={{marginTop:20,display:'flex',flexWrap:'wrap',gap:8,justifyContent:'center'}}>{TX.features.map((f,i)=>(<div key={i} onClick={()=>setShowPublicAcademy(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',borderRadius:8,background:i%2===0?C.tealDim:C.goldDim,border:`1px solid ${i%2===0?C.tealBorder:C.goldBorder}`,cursor:'pointer',transition:'all 0.2s'}}><span style={{color:i%2===0?C.teal:C.gold,display:'flex'}}>{IC.check}</span><span style={{color:C.w70,fontSize:11.5,fontWeight:600,fontFamily:"'Tajawal',sans-serif"}}>{t(f.t,lang)}</span></div>))}</div>}
         <div style={{textAlign:'center',marginTop:16,fontSize:11,color:C.w25,lineHeight:1.6}}>
           {t(TX.termsAgree,lang)}{' '}
-          <a href="/terms" style={{color:C.teal,textDecoration:'none',fontWeight:600}}>{t(TX.terms,lang)}</a>
+          <a href="#/terms" style={{color:C.teal,textDecoration:'none',fontWeight:600}}>{t(TX.terms,lang)}</a>
           {' '}{t(TX.termsAnd,lang)}{' '}
           <a href="/privacy" style={{color:C.teal,textDecoration:'none',fontWeight:600}}>{t(TX.privacy,lang)}</a>
         </div>
