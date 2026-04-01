@@ -418,17 +418,33 @@ export async function generateTemplateExcel(project, results, financing, waterfa
   // 8. ADD "READ ME" SHEET (first sheet)
   // ═══════════════════════════════════════════════════════════
   const rm = wb.addWorksheet("Read Me", { properties: { tabColor: { argb: "FF2EC4B6" } } });
-  // Move to first position
-  rm.orderNo = 0;
-  // Try to reorder sheets: ExcelJS doesn't have a direct move method,
-  // but we can set the order by moving it
-  const sheetNames = wb.worksheets.map(ws => ws.name);
-  const rmIdx = sheetNames.indexOf("Read Me");
-  if (rmIdx > 0) {
-    // Move Read Me to position 0 by splicing the internal array
-    const rmSheet = wb.worksheets.splice(rmIdx, 1)[0];
-    wb.worksheets.unshift(rmSheet);
-  }
+  // Move Read Me to first position using ExcelJS internal structure
+  // ExcelJS stores worksheets in _worksheets (1-based sparse array) and uses orderNo for tab order
+  // The most reliable way is to set orderNo on all sheets
+  wb.eachSheet((ws) => {
+    if (ws.name === "Read Me") {
+      ws.orderNo = 0;
+    } else if (ws.orderNo !== undefined) {
+      ws.orderNo = (ws.orderNo || 0) + 1;
+    }
+  });
+  // Also try direct array manipulation for the internal _worksheets
+  try {
+    const wsArr = wb._worksheets;
+    if (Array.isArray(wsArr)) {
+      const rmEntry = wsArr.find(w => w && w.name === "Read Me");
+      const rmOldIdx = wsArr.indexOf(rmEntry);
+      if (rmEntry && rmOldIdx > 0) {
+        wsArr.splice(rmOldIdx, 1);
+        // Insert at position 1 (ExcelJS _worksheets is 1-based, index 0 is usually null)
+        wsArr.splice(1, 0, rmEntry);
+        // Reassign IDs
+        for (let i = 1; i < wsArr.length; i++) {
+          if (wsArr[i]) wsArr[i].id = i;
+        }
+      }
+    }
+  } catch(e) { /* fallback: sheet will be last tab */ }
 
   // Column widths
   rm.getColumn(1).width = 4;
