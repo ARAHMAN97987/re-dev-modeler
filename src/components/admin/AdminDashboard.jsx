@@ -154,6 +154,114 @@ function SubActions({ user, adminKey, onDone }) {
 }
 
 // ═══════════════════════════════════════════════════
+// INVITE USER MODAL
+// ═══════════════════════════════════════════════════
+function InviteModal({ adminKey, onClose, onDone }) {
+  const [email, setEmail] = useState("");
+  const [plan, setPlan] = useState(""); // empty = trial
+  const [trialDays, setTrialDays] = useState(14);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const send = async () => {
+    if (!email || !email.includes("@")) { setError("Enter a valid email"); return; }
+    setBusy(true); setError("");
+    try {
+      const r = await fetch(`${API_BASE}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
+        body: JSON.stringify({ email, plan: plan || undefined, trialDays }),
+      });
+      const d = await r.json();
+      if (r.ok) { setResult(d); }
+      else setError(d.error || "Failed to invite");
+    } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+
+  const copyLink = () => {
+    if (result?.inviteLink) { navigator.clipboard.writeText(result.inviteLink); }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999 }}>
+      <div style={{ ...cardS, width: 440, maxHeight: "90vh", overflow: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>Invite New User</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: C.textMuted }}>✕</button>
+        </div>
+
+        {!result ? (
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: C.textSec, display: "block", marginBottom: 4 }}>Email Address *</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="user@example.com" style={inputS} />
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: C.textSec, display: "block", marginBottom: 4 }}>Plan (optional — leave empty for trial)</label>
+              <select value={plan} onChange={e => setPlan(e.target.value)} style={inputS}>
+                <option value="">Free Trial</option>
+                <option value="starter">Starter</option>
+                <option value="growth">Growth</option>
+                <option value="pro">Pro</option>
+              </select>
+            </div>
+
+            {!plan && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.textSec, display: "block", marginBottom: 4 }}>Trial Duration (days)</label>
+                <select value={trialDays} onChange={e => setTrialDays(Number(e.target.value))} style={inputS}>
+                  <option value={7}>7 days</option>
+                  <option value={14}>14 days</option>
+                  <option value={30}>30 days</option>
+                  <option value={90}>90 days</option>
+                  <option value={365}>1 year</option>
+                </select>
+              </div>
+            )}
+
+            {error && <div style={{ fontSize: 11, color: C.red, marginBottom: 8 }}>{error}</div>}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={send} disabled={busy} style={{ ...btnPrim, flex: 1, padding: "10px 0" }}>
+                {busy ? "Sending..." : "Send Invite"}
+              </button>
+              <button onClick={onClose} style={{ ...btnGhost, flex: 1 }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ background: C.greenBg, border: `1px solid ${C.green}`, borderRadius: 8, padding: 16, marginBottom: 16, textAlign: "center" }}>
+              <div style={{ fontSize: 20, marginBottom: 4 }}>✅</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.green }}>Invite Sent!</div>
+              <div style={{ fontSize: 12, color: C.textSec, marginTop: 4 }}>{result.email}</div>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                {result.plan === "trial" ? `${trialDays}-day trial` : `${result.plan} plan (1 year)`}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: C.textSec, display: "block", marginBottom: 4 }}>Or share this invite link directly:</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input readOnly value={result.inviteLink} style={{ ...inputS, fontSize: 10 }} onClick={e => e.target.select()} />
+                <button onClick={copyLink} style={{ ...btnGhost, whiteSpace: "nowrap", fontSize: 11 }}>📋 Copy</button>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={() => { setResult(null); setEmail(""); setError(""); }} style={{ ...btnPrim, flex: 1 }}>Invite Another</button>
+              <button onClick={() => { onDone(); onClose(); }} style={{ ...btnGhost, flex: 1 }}>Done</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
 // USER DETAIL PANEL
 // ═══════════════════════════════════════════════════
 function UserDetail({ userId, adminKey, onClose, onOpenProject }) {
@@ -257,6 +365,7 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showInvite, setShowInvite] = useState(false);
 
   // Verify stored key on mount
   useEffect(() => {
@@ -356,6 +465,7 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
           <button onClick={() => { setPage("overview"); setSelectedUserId(null); }} style={{ ...btnGhost, color: page === "overview" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Overview</button>
           <button onClick={() => { setPage("users"); setSelectedUserId(null); }} style={{ ...btnGhost, color: page === "users" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Users</button>
           <button onClick={() => { setPage("logs"); fetchLogs(); }} style={{ ...btnGhost, color: page === "logs" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Activity Log</button>
+          <button onClick={() => setShowInvite(true)} style={{ ...btnS, background: C.teal, color: "#fff", fontSize: 11 }}>+ Invite User</button>
           {onExit && <button onClick={onExit} style={{ ...btnGhost, color: "#fff", borderColor: "rgba(255,255,255,0.2)", fontSize: 11 }}>← Exit Admin</button>}
           <button onClick={logout} style={{ ...btnGhost, color: C.red, borderColor: "rgba(239,68,68,0.3)", fontSize: 11 }}>Logout</button>
         </div>
@@ -477,6 +587,9 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
             onOpenProject={(projectId, ownerId, ownerEmail) => onOpenProject?.(projectId, ownerId, ownerEmail)}
           />
         )}
+
+        {/* Invite Modal */}
+        {showInvite && <InviteModal adminKey={adminKey} onClose={() => setShowInvite(false)} onDone={fetchUsers} />}
 
         {/* ── ACTIVITY LOG PAGE ── */}
         {page === "logs" && (
