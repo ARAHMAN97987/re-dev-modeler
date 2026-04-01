@@ -3887,7 +3887,8 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const goBack = () => { setView("dashboard"); setProject(null); pushNavHash("dashboard", null, null); window.scrollTo(0,0); };
 
   // ── Landing page (no auth) — moved here to run AFTER all hooks ──
-  if (!user && !loading) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} pendingShare={pendingShare} />;
+  // Skip landing page if admin is viewing a project (adminProject prop)
+  if (!user && !loading && !adminProject) return <LandingPage onSignIn={onSignIn} lang={lang} setLang={setLang} pendingShare={pendingShare} />;
 
   // ── Public Academy Mode (no auth required) — moved here to run AFTER all hooks ──
   if (publicAcademy) {
