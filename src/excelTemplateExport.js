@@ -345,6 +345,51 @@ export async function generateTemplateExcel(project, results, financing, waterfa
     // ALL other Fund cells (C9, C12, C14, C17, C18, C19, rows 47-99)
     // remain as template formulas — fully dynamic.
     // No forceSet needed: template formulas now match engine logic.
+
+    // ── Write engine-computed reference values (rows 125-140) ──
+    // These are the platform's authoritative outputs for comparison.
+    // The template formulas compute independently — these are reference only.
+    const phaseName = ph?.name || `Phase ${pi + 1}`;
+    const pw = phaseWaterfalls?.[phaseName];
+    const pf2 = phaseFinancings?.[phaseName];
+    if (pw && ws) {
+      // Helper to write a reference row
+      const writeRef = (row, label, value, fmt) => {
+        const labelCell = ws.getCell(`A${row}`);
+        labelCell.value = label;
+        labelCell.font = { name: "Arial", size: 9, italic: true, color: { argb: "FF6B7280" } };
+        const valCell = ws.getCell(`C${row}`);
+        valCell.value = value;
+        valCell.font = { name: "Arial", size: 9, bold: true, color: { argb: "FF2563EB" } };
+        if (fmt === 'pct') valCell.numFmt = '0.00%';
+        else if (fmt === 'num') valCell.numFmt = '#,##0';
+        else if (fmt === 'x') valCell.numFmt = '0.00"x"';
+      };
+
+      let rr = 126;
+      const secCell = ws.getCell(`A${rr}`);
+      secCell.value = "PLATFORM REFERENCE VALUES (Haseef Engine)";
+      secCell.font = { name: "Arial", size: 10, bold: true, color: { argb: "FF2563EB" } };
+      rr += 1;
+
+      writeRef(rr++, "LP IRR (Investor)", pw.lpIRR, 'pct');
+      writeRef(rr++, "GP IRR (Developer)", pw.gpIRR, 'pct');
+      writeRef(rr++, "LP MOIC", pw.lpMOIC, 'x');
+      writeRef(rr++, "GP MOIC", pw.gpMOIC, 'x');
+      writeRef(rr++, "LP DPI", pw.lpDPI, 'x');
+      writeRef(rr++, "Total Equity", pw.totalEquity, 'num');
+      writeRef(rr++, "LP Equity", pw.lpEquity, 'num');
+      writeRef(rr++, "GP Equity", pw.gpEquity, 'num');
+      writeRef(rr++, "Total Fees", pw.totalFees, 'num');
+      writeRef(rr++, "LP Total Distributions", pw.lpTotalDist, 'num');
+      writeRef(rr++, "GP Total Distributions", pw.gpTotalDist, 'num');
+      writeRef(rr++, "Exit Proceeds", pw.exitProceeds?.reduce?.((a,b)=>a+b,0) || 0, 'num');
+      if (pf2) {
+        writeRef(rr++, "Total Debt", pf2.totalDebt, 'num');
+        writeRef(rr++, "Total Interest", pf2.totalInterest, 'num');
+        writeRef(rr++, "Levered IRR", pf2.leveredIRR, 'pct');
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
