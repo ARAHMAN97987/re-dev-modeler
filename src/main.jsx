@@ -49,19 +49,25 @@ function AdminProjectViewer({ projectId }) {
     </div>
   </div>;
 
+  const goBack = () => { window.location.hash = '#/admin'; };
+
   return (
     <div>
-      {/* Admin banner */}
-      <div style={{background:'#1e40af',color:'#fff',padding:'8px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:12,fontFamily:"'DM Sans',sans-serif",zIndex:9999,position:'sticky',top:0}}>
+      {/* Admin banner — sticky top */}
+      <div style={{background:'linear-gradient(135deg,#1e40af,#7c3aed)',color:'#fff',padding:'10px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:12,fontFamily:"'DM Sans',sans-serif",zIndex:99999,position:'fixed',top:0,left:0,right:0,boxShadow:'0 2px 12px rgba(0,0,0,0.3)'}}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <span style={{fontWeight:700}}>Admin View — Read Only</span>
-          <span style={{opacity:0.7}}>User: {meta.ownerEmail}</span>
-          <span style={{opacity:0.7}}>Project: {project?.name}</span>
+          <button onClick={goBack} style={{padding:'5px 14px',background:'rgba(255,255,255,0.2)',border:'1px solid rgba(255,255,255,0.4)',borderRadius:6,color:'#fff',fontSize:12,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>
+            ← Back to Admin
+          </button>
+          <span style={{fontWeight:700,fontSize:13}}>🔒 Admin View — Read Only</span>
         </div>
-        <button onClick={() => { window.location.hash = '#/admin'; }} style={{padding:'4px 12px',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',borderRadius:4,color:'#fff',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>
-          Exit Admin View
-        </button>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <span style={{opacity:0.8,fontSize:11}}>👤 {meta.ownerEmail}</span>
+          <span style={{opacity:0.8,fontSize:11}}>📁 {project?.name}</span>
+        </div>
       </div>
+      {/* Spacer for fixed banner */}
+      <div style={{height:42}} />
       {/* Render the actual App with the loaded project */}
       <App
         user={null}

@@ -249,7 +249,7 @@ function UserDetail({ userId, adminKey, onClose, onOpenProject }) {
 export default function AdminDashboard({ onOpenProject, onExit }) {
   const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem("haseef_admin_key") || "");
   const [authed, setAuthed] = useState(false);
-  const [page, setPage] = useState("overview"); // overview | users | user-detail
+  const [page, setPage] = useState("overview"); // overview | users | user-detail | logs
   const [users, setUsers] = useState([]);
   const [totalUsers, setTotalUsers] = useState(0);
   const [search, setSearch] = useState("");
@@ -284,6 +284,56 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
 
   useEffect(() => { if (authed) fetchUsers(); }, [authed, fetchUsers]);
 
+  // Activity logs
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const fetchLogs = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      // Fetch admin_log_* keys from kv_store via the export-project API
+      const r = await fetch(`/api/export-project`, { headers: { "X-Admin-Key": adminKey } });
+      if (r.ok) {
+        const d = await r.json();
+        const logKeys = (d.keys || []).filter(k => k.key.startsWith("admin_log_"));
+        // Fetch each log entry
+        const entries = [];
+        for (const lk of logKeys.slice(0, 50)) {
+          try {
+            const lr = await fetch(`/api/export-project?key=${encodeURIComponent(lk.key)}`, { headers: { "X-Admin-Key": adminKey } });
+            if (lr.ok) {
+              const ld = await lr.json();
+              if (ld.parsed) entries.push(ld.parsed);
+              else if (ld.value) try { entries.push(JSON.parse(ld.value)); } catch {}
+            }
+          } catch {}
+        }
+        entries.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+        setLogs(entries);
+      }
+    } catch {}
+    setLogsLoading(false);
+  }, [adminKey]);
+
+  // Export users to CSV
+  const exportCSV = useCallback(() => {
+    const headers = ["Email", "Status", "Plan", "Projects", "Signed Up", "Last Active"];
+    const rows = users.map(u => [
+      u.email,
+      u.subscription?.status || "none",
+      u.subscription?.plan || "",
+      u.projectCount || 0,
+      u.created_at ? new Date(u.created_at).toISOString().split("T")[0] : "",
+      u.last_sign_in_at ? new Date(u.last_sign_in_at).toISOString().split("T")[0] : "",
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `haseef-users-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }, [users]);
+
   if (!authed) return <AdminLogin onLogin={(k) => { setAdminKey(k); setAuthed(true); }} />;
 
   const logout = () => { sessionStorage.removeItem("haseef_admin_key"); setAdminKey(""); setAuthed(false); };
@@ -305,6 +355,7 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => { setPage("overview"); setSelectedUserId(null); }} style={{ ...btnGhost, color: page === "overview" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Overview</button>
           <button onClick={() => { setPage("users"); setSelectedUserId(null); }} style={{ ...btnGhost, color: page === "users" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Users</button>
+          <button onClick={() => { setPage("logs"); fetchLogs(); }} style={{ ...btnGhost, color: page === "logs" ? C.teal : "#fff", borderColor: "transparent", fontSize: 11 }}>Activity Log</button>
           {onExit && <button onClick={onExit} style={{ ...btnGhost, color: "#fff", borderColor: "rgba(255,255,255,0.2)", fontSize: 11 }}>← Exit Admin</button>}
           <button onClick={logout} style={{ ...btnGhost, color: C.red, borderColor: "rgba(239,68,68,0.3)", fontSize: 11 }}>Logout</button>
         </div>
@@ -377,6 +428,9 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
                 <button onClick={fetchUsers} style={btnPrim} disabled={loading}>
                   {loading ? "..." : "Refresh"}
                 </button>
+                <button onClick={exportCSV} style={{ ...btnGhost, fontSize: 11 }} title="Export to CSV">
+                  📥 Export CSV
+                </button>
               </div>
             </div>
 
@@ -422,6 +476,48 @@ export default function AdminDashboard({ onOpenProject, onExit }) {
             onClose={() => { setSelectedUserId(null); setPage("users"); }}
             onOpenProject={(projectId, ownerId, ownerEmail) => onOpenProject?.(projectId, ownerId, ownerEmail)}
           />
+        )}
+
+        {/* ── ACTIVITY LOG PAGE ── */}
+        {page === "logs" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>Activity Log</div>
+              <button onClick={fetchLogs} style={btnPrim} disabled={logsLoading}>{logsLoading ? "Loading..." : "Refresh"}</button>
+            </div>
+            <div style={cardS}>
+              {logs.length === 0 && !logsLoading && (
+                <div style={{ textAlign: "center", padding: 32, color: C.textMuted, fontSize: 13 }}>No admin actions logged yet. Actions like subscription changes will appear here.</div>
+              )}
+              {logs.length > 0 && (
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>{["Time", "Action", "User ID", "Plan", "Days", "Details"].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log, i) => (
+                      <tr key={i}>
+                        <td style={tdS}>{log.timestamp ? fmtRel(log.timestamp) : "—"}</td>
+                        <td style={tdS}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4,
+                            background: log.action === "activate" ? C.greenBg : log.action === "cancel" ? C.redBg : log.action === "extend_trial" ? C.blueBg : C.grayBg,
+                            color: log.action === "activate" ? C.green : log.action === "cancel" ? C.red : log.action === "extend_trial" ? C.blue : C.gray,
+                          }}>{log.action}</span>
+                        </td>
+                        <td style={{ ...tdS, fontSize: 10, fontFamily: "monospace" }}>{log.userId?.slice(0, 8)}...</td>
+                        <td style={tdS}>{log.plan || "—"}</td>
+                        <td style={tdS}>{log.days || "—"}</td>
+                        <td style={{ ...tdS, fontSize: 10, color: C.textMuted }}>
+                          {log.previous?.status ? `was: ${log.previous.status}` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
