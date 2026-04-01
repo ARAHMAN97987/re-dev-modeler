@@ -34,7 +34,8 @@ export default async function handler(req, res) {
     if (id) {
       const userResp = await fetch(`${authUrl}/users/${id}`, { headers: authHeaders });
       if (!userResp.ok) return res.status(404).json({ error: 'User not found' });
-      const { user } = await userResp.json();
+      const userJson = await userResp.json();
+      const user = userJson.user || userJson; // Supabase may return {user:{...}} or {...} directly
 
       // Get subscription from kv_store
       const subKey = `haseef_sub_${id}`;

@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       let ownerEmail = null;
       try {
         const userResp = await fetch(authUrl, { headers: authHeaders });
-        if (userResp.ok) { const { user } = await userResp.json(); ownerEmail = user.email; }
+        if (userResp.ok) { const uj = await userResp.json(); const user = uj.user || uj; ownerEmail = user.email; }
       } catch {}
 
       return res.status(200).json({
@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     for (const uid of uniqueUserIds) {
       try {
         const r = await fetch(`${supabaseUrl}/auth/v1/admin/users/${uid}`, { headers: authHeaders });
-        if (r.ok) { const { user } = await r.json(); emailMap[uid] = user.email; }
+        if (r.ok) { const uj = await r.json(); const user = uj.user || uj; emailMap[uid] = user.email; }
       } catch {}
     }
     allProjects = allProjects.map(p => ({ ...p, ownerEmail: emailMap[p.userId] || null }));
