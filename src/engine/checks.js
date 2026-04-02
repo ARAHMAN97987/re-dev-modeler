@@ -346,7 +346,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     const totCalled=(w.equityCalls||[]).reduce((s,v)=>s+v,0);
     add("T3","ROC ≤ Called Capital", totROC<=totCalled+tol, "Return of capital ≤ called",
       `ROC: ${fmt(totROC)} vs Called: ${fmt(totCalled)}`);
-    add("T3","LP IRR Computed", w.lpIRR!==null||w.lpTotalDist===0, "LP IRR computed", `${fp(w.lpIRR)}`);
+    add("T3","LP IRR Computed", w.lpIRR!==null||w.lpTotalDist===0||w.lpTotalInvested===0, "LP IRR computed (N/A if LP has no equity)", `${fp(w.lpIRR)}`);
     add("T3","GP IRR Computed", w.gpIRR!==null||w.gpTotalInvested===0||w.gpTotalDist===0||w.gpTotalDist<w.gpTotalInvested, "GP IRR computed (N/A if GP has no equity or return < equity)", `${fp(w.gpIRR)}`);
 
     // FIX#18: Warn if perYear + proRata — GP gets investor share of T2 AND catch-up
