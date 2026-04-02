@@ -19,3 +19,5 @@ export const HOTEL_PRESETS = {
   "4-Star Hotel": { keys: 230, adr: 548, stabOcc: 70, roomsPct: 72, fbPct: 22, micePct: 4, otherPct: 2, roomExpPct: 20, fbExpPct: 60, miceExpPct: 58, otherExpPct: 50, undistPct: 29, fixedPct: 9 },
   "5-Star Resort": { keys: 175, adr: 920, stabOcc: 73, roomsPct: 64, fbPct: 25, micePct: 7, otherPct: 4, roomExpPct: 20, fbExpPct: 60, miceExpPct: 58, otherExpPct: 55, undistPct: 28, fixedPct: 9 },
 };
+
+export const MARINA_PRESET = { berths: 80, avgLength: 14, unitPrice: 2063, stabOcc: 90, fuelPct: 25, otherRevPct: 10, berthingOpexPct: 58, fuelOpexPct: 96, otherOpexPct: 30 };

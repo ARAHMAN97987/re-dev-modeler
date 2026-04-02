@@ -18,6 +18,8 @@ import { useIsMobile } from "./components/shared/hooks";
 import StatusBadge from "./components/shared/StatusBadge";
 import FeaturesGrid from "./components/shared/FeaturesGrid";
 import NI from "./components/shared/NI";
+import HotelPLModal from "./components/shared/HotelPLModal";
+import MarinaPLModal from "./components/shared/MarinaPLModal";
 
 // ═══════════════════════════════════════════════════════════════
 // Haseef Financial Modeler — Project Engine v3 (Stable)
@@ -137,7 +139,7 @@ function pushNavHash(view, projectId, tab) {
 import { L, CAT_AR, REV_AR, catL, revL } from './data/translations.js';
 import { CATEGORIES, REV_TYPES, CURRENCIES, SCENARIOS, LAND_TYPES, HOTEL_PRESETS } from './data/constants.js';
 
-const MARINA_PRESET = { berths: 80, avgLength: 14, unitPrice: 2063, stabOcc: 90, fuelPct: 25, otherRevPct: 10, berthingOpexPct: 58, fuelOpexPct: 96, otherOpexPct: 30 };
+// MARINA_PRESET moved to data/constants.js
 
 // ── Saudi Market Benchmarks — imported from data/benchmarks.js ──
 import { getBenchmark, benchmarkColor, getAutoFillDefaults, BENCHMARKS } from './data/benchmarks.js';
@@ -5039,139 +5041,9 @@ Default construction cost for new assets in SAR/sqm"><SidebarInput type="number"
 // ═══════════════════════════════════════════════════════════════
 // HOTEL P&L MODAL
 // ═══════════════════════════════════════════════════════════════
-function HotelPLModal({ data, onSave, onClose, t, lang }) {
-  const ar = lang === "ar";
-  const [h, setH] = useState(data || defaultHotelPL());
-  const upH = (u) => setH(prev => ({...prev, ...u}));
-  const calc = calcHotelEBITDA(h);
+// HotelPLModal — imported from ./components/shared/HotelPLModal.jsx
 
-  const applyPreset = (key) => { const p = HOTEL_PRESETS[key]; if (p) setH(prev => ({...prev, ...p})); };
-
-  const Row = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"var(--text-secondary)"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
-  const NumIn = ({value, onChange}) => {
-    const [loc, setLoc] = useState(String(value ?? ""));
-    const ref = useRef(null);
-    useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
-    return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"var(--surface-card)",color:"var(--text-primary)",border:"0.5px solid var(--border-default)",textAlign:"right",width:"100%"}} />;
-  };
-
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={onClose}>
-      <div style={{background:"var(--surface-card)",borderRadius:10,width:520,maxHeight:"85vh",overflow:"auto",padding:0}} onClick={e=>e.stopPropagation()}>
-        <div style={{padding:"16px 20px",borderBottom:"0.5px solid var(--border-default)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:15,fontWeight:700}}>{t.hotelPL}</div>
-          <button onClick={onClose} style={{...btnSm,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>✕</button>
-        </div>
-        <div style={{padding:"12px 20px"}}>
-          {/* Presets */}
-          <div style={{display:"flex",gap:8,marginBottom:16}}>
-            {Object.keys(HOTEL_PRESETS).map(k=><button key={k} onClick={()=>applyPreset(k)} style={{...btnS,background:"#eef2ff",color:"#2563eb",padding:"6px 12px",fontSize:11,fontWeight:500}}>{k}</button>)}
-          </div>
-
-          <div style={{fontSize:11,fontWeight:600,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{t.keys}</div>
-          <Row label={t.keys}><NumIn value={h.keys} onChange={v=>upH({keys:v})} /></Row>
-          <Row label={t.adr}><NumIn value={h.adr} onChange={v=>upH({adr:v})} /></Row>
-          <Row label={t.stabOcc}><NumIn value={h.stabOcc} onChange={v=>upH({stabOcc:v})} /></Row>
-          <Row label={t.daysYear}><NumIn value={h.daysYear} onChange={v=>upH({daysYear:v})} /></Row>
-
-          <div style={{fontSize:11,fontWeight:600,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:1,marginTop:14,marginBottom:8}}>{t.revMix}</div>
-          <Row label={t.roomsPct}><NumIn value={h.roomsPct} onChange={v=>upH({roomsPct:v})} /></Row>
-          <Row label={t.fbPct}><NumIn value={h.fbPct} onChange={v=>upH({fbPct:v})} /></Row>
-          <Row label={t.micePct}><NumIn value={h.micePct} onChange={v=>upH({micePct:v})} /></Row>
-          <Row label={t.otherPct}><NumIn value={h.otherPct} onChange={v=>upH({otherPct:v})} /></Row>
-
-          <div style={{fontSize:11,fontWeight:600,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:1,marginTop:14,marginBottom:8}}>{t.opexRatios}</div>
-          <Row label={t.roomExpPct}><NumIn value={h.roomExpPct} onChange={v=>upH({roomExpPct:v})} /></Row>
-          <Row label={t.fbExpPct}><NumIn value={h.fbExpPct} onChange={v=>upH({fbExpPct:v})} /></Row>
-          <Row label={t.miceExpPct}><NumIn value={h.miceExpPct} onChange={v=>upH({miceExpPct:v})} /></Row>
-          <Row label={t.otherExpPct}><NumIn value={h.otherExpPct} onChange={v=>upH({otherExpPct:v})} /></Row>
-          <Row label={t.undistPct}><NumIn value={h.undistPct} onChange={v=>upH({undistPct:v})} /></Row>
-          <Row label={t.fixedPct}><NumIn value={h.fixedPct} onChange={v=>upH({fixedPct:v})} /></Row>
-
-          {/* Calculated results */}
-          <div style={{marginTop:16,padding:14,background:"var(--surface-table-header)",borderRadius:8}}>
-            <div style={{fontSize:11,fontWeight:600,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{t.stabRevenue}</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:12}}>
-              <span style={{color:"var(--text-secondary)"}}>Rooms Rev</span><span style={{textAlign:"right"}}>{fmt(calc.roomsRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>F&B Rev</span><span style={{textAlign:"right"}}>{fmt(calc.fbRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>MICE Rev</span><span style={{textAlign:"right"}}>{fmt(calc.miceRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>Other Rev</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
-              <span style={{fontWeight:600}}>Total Revenue</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
-            </div>
-            <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:12}}>
-                <span style={{color:"#ef4444"}}>Total OPEX</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
-                <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"#16a34a"}}>{fmt(calc.ebitda)}</span>
-                <span style={{color:"var(--text-secondary)"}}>{t.ebitdaMargin}</span><span style={{textAlign:"right"}}>{fmtPct(calc.margin*100)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style={{padding:"12px 20px",borderTop:"1px solid #e5e7ec",display:"flex",justifyContent:"flex-end",gap:8}}>
-          <button onClick={onClose} style={{...btnS,background:"var(--surface-sidebar)",color:"var(--text-secondary)",padding:"8px 16px",fontSize:12}}>{ar?"إلغاء":"Cancel"}</button>
-          <button onClick={()=>{onSave(h, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>{ar?"حفظ وتطبيق":"Save & Apply EBITDA"}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// MARINA P&L MODAL
-// ═══════════════════════════════════════════════════════════════
-function MarinaPLModal({ data, onSave, onClose, t, lang }) {
-  const ar = lang === "ar";
-  const [m, setM] = useState(data || defaultMarinaPL());
-  const upM = (u) => setM(prev => ({...prev, ...u}));
-  const calc = calcMarinaEBITDA(m);
-
-  const Row = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"var(--text-secondary)"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
-  const NumIn = ({value, onChange}) => {
-    const [loc, setLoc] = useState(String(value ?? ""));
-    const ref = useRef(null);
-    useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
-    return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"var(--surface-card)",color:"var(--text-primary)",border:"0.5px solid var(--border-default)",textAlign:"right",width:"100%"}} />;
-  };
-
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={onClose}>
-      <div style={{background:"var(--surface-card)",borderRadius:10,width:480,maxHeight:"85vh",overflow:"auto",padding:0}} onClick={e=>e.stopPropagation()}>
-        <div style={{padding:"16px 20px",borderBottom:"0.5px solid var(--border-default)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:15,fontWeight:700}}>{t.marinaPL}</div>
-          <button onClick={onClose} style={{...btnSm,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>✕</button>
-        </div>
-        <div style={{padding:"12px 20px"}}>
-          <button onClick={()=>setM(prev=>({...prev,...MARINA_PRESET}))} style={{...btnS,background:"#eef2ff",color:"#2563eb",padding:"6px 12px",fontSize:11,fontWeight:500,marginBottom:12}}>Marina Preset</button>
-          <Row label={t.berths}><NumIn value={m.berths} onChange={v=>upM({berths:v})} /></Row>
-          <Row label={t.avgLength}><NumIn value={m.avgLength} onChange={v=>upM({avgLength:v})} /></Row>
-          <Row label={t.unitPrice}><NumIn value={m.unitPrice} onChange={v=>upM({unitPrice:v})} /></Row>
-          <Row label={t.stabOcc||"Occ %"}><NumIn value={m.stabOcc} onChange={v=>upM({stabOcc:v})} /></Row>
-          <Row label={t.fuelPct}><NumIn value={m.fuelPct} onChange={v=>upM({fuelPct:v})} /></Row>
-          <Row label={t.otherRevPct}><NumIn value={m.otherRevPct} onChange={v=>upM({otherRevPct:v})} /></Row>
-          <Row label={t.berthingOpex}><NumIn value={m.berthingOpexPct} onChange={v=>upM({berthingOpexPct:v})} /></Row>
-          <Row label={t.fuelOpex}><NumIn value={m.fuelOpexPct} onChange={v=>upM({fuelOpexPct:v})} /></Row>
-          <Row label={t.otherOpex}><NumIn value={m.otherOpexPct} onChange={v=>upM({otherOpexPct:v})} /></Row>
-
-          <div style={{marginTop:16,padding:14,background:"var(--surface-table-header)",borderRadius:8}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:12}}>
-              <span style={{color:"var(--text-secondary)"}}>Berthing Rev</span><span style={{textAlign:"right"}}>{fmt(calc.berthingRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>Fuel Rev</span><span style={{textAlign:"right"}}>{fmt(calc.fuelRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>Other Rev</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
-              <span style={{fontWeight:600}}>Total Revenue</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
-              <span style={{color:"#ef4444"}}>Total OPEX</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
-              <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"#16a34a"}}>{fmt(calc.ebitda)}</span>
-              <span style={{color:"var(--text-secondary)"}}>{t.ebitdaMargin}</span><span style={{textAlign:"right"}}>{fmtPct(calc.margin*100)}</span>
-            </div>
-          </div>
-        </div>
-        <div style={{padding:"12px 20px",borderTop:"1px solid #e5e7ec",display:"flex",justifyContent:"flex-end",gap:8}}>
-          <button onClick={onClose} style={{...btnS,background:"var(--surface-sidebar)",color:"var(--text-secondary)",padding:"8px 16px",fontSize:12}}>{ar?"إلغاء":"Cancel"}</button>
-          <button onClick={()=>{onSave(m, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>{ar?"حفظ وتطبيق":"Save & Apply EBITDA"}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// MarinaPLModal — imported from ./components/shared/MarinaPLModal.jsx
 
 // ── Score Tooltip Cell (fixed-position, escapes overflow) ──
 function ScoreCell({ sc, name, ar }) {
