@@ -1,10 +1,12 @@
 /**
  * ZAN Financial Engine — Model Integrity Checks
  * @module engine/checks
- * 
- * Zero engine dependencies (reads results passed as parameters).
- * Pure validation - no calculations, no mutations.
+ *
+ * Dependencies: engine/math.js (calcIRR — used in T5 incentive check)
+ * Pure validation - no mutations.
  */
+
+import { calcIRR } from './math.js';
 
 export function runChecks(project, results, financing, waterfall, incentivesResult) {
   const as = results.assetSchedules;
