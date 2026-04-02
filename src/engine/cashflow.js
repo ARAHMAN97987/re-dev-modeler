@@ -261,7 +261,13 @@ export function computeProjectCashFlows(project) {
   });
 
   const ci = new Array(horizon).fill(0), cc = new Array(horizon).fill(0), cl = new Array(horizon).fill(0), cn = new Array(horizon).fill(0);
-  Object.values(phaseResults).forEach(pr => { for (let y=0;y<horizon;y++) { ci[y]+=pr.income[y]; cc[y]+=pr.capex[y]; cl[y]+=pr.landRent[y]; cn[y]+=pr.netCF[y]; }});
+  Object.values(phaseResults).forEach(pr => { for (let y=0;y<horizon;y++) { ci[y]+=pr.income[y]; cc[y]+=pr.capex[y]; cn[y]+=pr.netCF[y]; }});
+  // FIX: Consolidated land rent uses the full schedule (landSch), NOT the sum of phase allocations.
+  // If manual allocation sums to <100%, phase land rents are partial — but the consolidated
+  // must always reflect the FULL contractual land rent obligation.
+  for (let y = 0; y < horizon; y++) { cl[y] = landSch[y]; }
+  // Recompute consolidated netCF to use full land rent
+  for (let y = 0; y < horizon; y++) { cn[y] = ci[y] - cl[y] - cc[y]; }
 
   // Payback + Peak Negative
   let cumCF = 0, paybackYear = null, peakNegative = 0, peakNegativeYear = 0, _pbWasNeg = false;

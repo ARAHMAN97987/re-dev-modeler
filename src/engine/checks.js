@@ -79,15 +79,23 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
   if (maxConstrEnd > (project.horizon||50))
     add("T0","Horizon < Construction", false, "Horizon doesn't cover full construction period", `Constr ends Y${maxConstrEnd}, Horizon Y${project.horizon||50}`);
 
-  // H11: Exit during ramp-up warning
+  // H11: Exit during ramp-up warning — enhanced with valuation impact
   if (f && project.exitStrategy !== "hold") {
     const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2026) : 0;
     const maxRamp = Math.max(...as.map(a => {
       const lastCapex = a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0);
       return lastCapex + (a.rampUpYears??3);
     }));
-    if (exitYrIdx > 0 && exitYrIdx < maxRamp)
-      add("T0","Exit Before Stabilization", true, "Exit year is during ramp-up. Valuation may use unstabilized income", `Exit Y${exitYrIdx}, Full stabilization Y${maxRamp}`);
+    if (exitYrIdx > 0 && exitYrIdx < maxRamp) {
+      // Calculate how much income is lost vs stabilized
+      const exitIncome = c.income[exitYrIdx] || 0;
+      const stabIdx = Math.min(maxRamp, h - 1);
+      const stabIncome = c.income[stabIdx] || c.income[Math.min(stabIdx + 1, h - 1)] || 0;
+      const pctOfStab = stabIncome > 0 ? Math.round(exitIncome / stabIncome * 100) : 0;
+      add("T0","Exit Before Stabilization", true,
+        "Exit year is during ramp-up — valuation uses unstabilized income which may significantly undervalue the project",
+        `Exit Y${exitYrIdx} income: ${fmt(exitIncome)} (${pctOfStab}% of stabilized ${fmt(stabIncome)}). Full stabilization at Y${maxRamp}`);
+    }
   }
 
   // ═══════════════════════════════════════════════

@@ -197,32 +197,33 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const feeTreatment = project.feeTreatment || "capital";
   // ── Land Capitalization (in-kind equity at fund start) ──
   // effectiveLandCap is a non-cash equity contribution recognized at fund start.
-  // It must be added as a lump-sum equity call (matching financing.js line 352).
+  // ZAN Excel: land cap is distributed proportionally across construction (not lump sum).
+  // It inflates GP's equity% → GP's share of ALL calls (incl. land cap) = gpPct.
   const effectiveLandCap = f.effectiveLandCap || 0;
-  // cashEquity = equity excluding the in-kind land cap portion (what is actually called in cash)
-  const cashEquity = Math.max(0, totalEquity - effectiveLandCap);
 
   // ── Equity Calls ──
   // capitalCallOrder: "prorata" (default) = equity pro-rata to CAPEX each year
   //                   "debtFirst" = exhaust debt before calling equity (back-loaded calls, boosts IRR)
+  // ZAN Excel convention: ALL equity (including land cap) distributed proportionally to CAPEX.
+  // Land cap is NOT a lump sum — it's recognized as construction progresses.
   const callOrder = project.capitalCallOrder || "prorata";
   const equityCalls = new Array(h).fill(0);
   if (callOrder === "debtFirst" && f.drawdown && c.totalCapex > 0) {
-    // Debt-First: equity = residual after debt drawdown each year, scaled to cashEquity (not total)
+    // Debt-First: equity = residual after debt drawdown each year, scaled to totalEquity
     const finEquityCalls = new Array(h).fill(0);
     let finTotalEquity = 0;
     for (let y = 0; y < h; y++) {
       finEquityCalls[y] = Math.max(0, (c.capex[y] || 0) - (f.drawdown[y] || 0));
       finTotalEquity += finEquityCalls[y];
     }
-    const scale = finTotalEquity > 0 ? cashEquity / finTotalEquity : 0;
+    const scale = finTotalEquity > 0 ? totalEquity / finTotalEquity : 0;
     for (let y = 0; y < h; y++) {
       equityCalls[y] = finEquityCalls[y] * scale + unfundedFees[y];
     }
   } else {
-    // Pro-Rata (default): cash equity distributed proportionally to CAPEX each year
+    // Pro-Rata (default): ALL equity (incl. land cap) distributed proportionally to CAPEX each year
     for (let y = 0; y < h; y++) {
-      const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * cashEquity : 0;
+      const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
       equityCalls[y] = capexPortion + unfundedFees[y];
     }
   }
@@ -236,28 +237,16 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     }
     equityCalls[fundStartIdx] += preFundCalls;
   }
-  // Add land cap as lump-sum in-kind equity call at fund start (matches financing.js)
-  if (effectiveLandCap > 0) {
-    equityCalls[fundStartIdx] += effectiveLandCap;
-  }
 
   // GP/LP call split
-  // When GP's equity is purely from land capitalization (in-kind, non-cash),
-  // GP does NOT pay any cash — all cash calls go to LP (and debt).
-  // GP's "call" is only the land cap lump sum at fund start.
+  // ZAN Excel: ALL calls (including land cap portion) split by overall equity ratio (gpPct/lpPct).
+  // Land cap inflates GP equity% (e.g. 69.6%), so GP bears proportionally larger calls.
+  // This is correct: land cap is an in-kind contribution — GP "pays" via land, not cash.
   const gpCalls = new Array(h).fill(0);
   const lpCalls = new Array(h).fill(0);
-  // Determine GP's cash equity (equity minus in-kind contributions)
-  const gpCashEquity = Math.max(0, gpEquity - effectiveLandCap);
-  const totalCashEquity = gpCashEquity + lpEquity;
-  const gpCashPct = totalCashEquity > 0 ? gpCashEquity / totalCashEquity : 0;
   for (let y = 0; y < h; y++) {
-    // The land cap lump sum at fundStartIdx is GP's only non-cash "call"
-    // Cash calls (capex equity + fees) are split by CASH equity ratio
-    const landCapCall = (y === fundStartIdx && effectiveLandCap > 0) ? effectiveLandCap : 0;
-    const cashCall = equityCalls[y] - landCapCall;
-    gpCalls[y] = landCapCall + cashCall * gpCashPct;
-    lpCalls[y] = cashCall * (1 - gpCashPct);
+    gpCalls[y] = equityCalls[y] * gpPct;
+    lpCalls[y] = equityCalls[y] * lpPct;
   }
 
   // Exit proceeds - GROSS (net of exit cost only, NOT net of debt). Debt repaid via balloon in debtService.
@@ -570,10 +559,12 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     const gpCashNetCF = new Array(h).fill(0);
     const lpCashNetCF = new Array(h).fill(0);
     for (let y = 0; y < h; y++) {
-      const gpLandCapInCall = (y === fundStartIdx) ? effectiveLandCap * gpPct : 0;
-      const lpLandCapInCall = (y === fundStartIdx) ? effectiveLandCap * lpPct : 0;
-      gpCashNetCF[y] = gpNetCF[y] + gpLandCapInCall;
-      lpCashNetCF[y] = lpNetCF[y] + lpLandCapInCall;
+      // Land cap is distributed proportionally across construction (not lump sum).
+      // Remove the in-kind land cap portion from each year's call for cash IRR.
+      const landCapInCall = c.totalCapex > 0 && c.capex[y] > 0
+        ? (c.capex[y] / c.totalCapex) * effectiveLandCap : 0;
+      gpCashNetCF[y] = gpNetCF[y] + landCapInCall * gpPct;
+      lpCashNetCF[y] = lpNetCF[y] + landCapInCall * lpPct;
     }
     gpCashIRR = calcIRR(gpCashNetCF);
     lpCashIRR = calcIRR(lpCashNetCF);

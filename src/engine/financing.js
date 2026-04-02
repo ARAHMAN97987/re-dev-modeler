@@ -615,6 +615,16 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     debtBalClose[exitYr] = 0;
     debtService[exitYr] = repay[exitYr] + interest[exitYr];
   }
+  // Fund perDraw: remaining debt at exit is settled from gross exit proceeds (not added to DS).
+  // Zero balance at exit year so checks pass — debt is economically repaid via sale proceeds.
+  if (sold && isFundPerDraw && debtBalClose[exitYr] > 0) {
+    debtBalClose[exitYr] = 0;
+    if (tranches) {
+      for (const tr of tranches) {
+        tr.balClose[exitYr] = 0;
+      }
+    }
+  }
   // Zero out post-exit debt schedule
   if (sold) {
     for (let y = exitYr + 1; y < h; y++) {

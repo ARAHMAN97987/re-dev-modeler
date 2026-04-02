@@ -167,7 +167,7 @@ const getMetricColor = (metric, value, opts = {}) => {
   return raw ? level : palette[level];
 };
 
-function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
+function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -190,7 +190,19 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
-  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const togglePhase = (p) => {
+    setSelectedPhases(prev => {
+      const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p];
+      if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all");
+      return next;
+    });
+  };
+  // Sync from KPI bar dropdown
+  useEffect(() => {
+    if (!kpiPhase || allPhaseNames.length <= 1) return;
+    if (kpiPhase === "all") { setSelectedPhases([]); }
+    else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
+  }, [kpiPhase]);
 
   const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
     : (isFiltered && activePh.length > 0) ? getPhaseFinancing(project, activePh[0])
@@ -345,7 +357,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>{setSelectedPhases([]);if(setKpiPhase)setKpiPhase("all");}} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p=>{

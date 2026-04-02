@@ -4250,15 +4250,15 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             });
 
             return <div style={{background:"var(--surface-table-header)",borderBottom:"0.5px solid var(--border-default)",position:"sticky",top:0,zIndex:20}}>
-              {hasPhases && (
-                <div style={{display:"flex",padding:"0 18px",borderBottom:"0.5px solid var(--surface-separator)",overflowX:"auto"}}>
-                  <button onClick={()=>setKpiPhase("all")} style={tabStyle(kpiPhase==="all")}>{ar?"الإجمالي":"All"}</button>
-                  {phaseNames.map(p => <button key={p} onClick={()=>setKpiPhase(p)} style={tabStyle(kpiPhase===p)}>{p}</button>)}
-                </div>
-              )}
-              <div style={{padding:isMobile?"5px 10px":"5px 18px",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"wrap"}}>
+              <div style={{padding:isMobile?"5px 10px":"5px 18px",display:"flex",alignItems:"center",gap:isMobile?8:16,flexWrap:"nowrap",overflowX:"auto"}}>
+                {hasPhases && (
+                  <select value={kpiPhase} onChange={e=>setKpiPhase(e.target.value)} style={{fontSize:10,fontWeight:600,padding:"3px 8px",borderRadius:5,border:"1px solid var(--border-default)",background:"var(--surface-card)",color:"var(--text-primary)",cursor:"pointer",fontFamily:"inherit",minWidth:0,flexShrink:0}}>
+                    <option value="all">{ar?"الإجمالي":"All Phases"}</option>
+                    {phaseNames.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                )}
                 {kpis.map(kpi => (
-                  <div key={kpi.k} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11}}>
+                  <div key={kpi.k} style={{display:"flex",alignItems:"baseline",gap:3,fontSize:11,flexShrink:0}}>
                     <span style={{color:"var(--text-tertiary)",fontSize:9,fontWeight:500}}>{kpi.l}</span>
                     <span style={{fontWeight:700,color:kpi.c,fontVariantNumeric:"tabular-nums"}}>{kpi.v}</span>
                   </div>
@@ -4274,7 +4274,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
-            ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />],
+            ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />],
             ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],

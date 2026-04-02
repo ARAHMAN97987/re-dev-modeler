@@ -56,7 +56,7 @@ const getMetricColor = (metric, value, opts = {}) => {
   return raw ? level : palette[level];
 };
 
-function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
+function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase }) {
   const ar = lang === "ar";
   if (!project || !results) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"أضف أصول لرؤية النتائج":"Add assets to see results"}</div>;
 
@@ -94,7 +94,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
           <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
             <span>🏦</span> {ar?`نتائج المالك — ${bankPhaseNames.join("، ")}`:`Developer Results — ${bankPhaseNames.join(", ")}`}
           </div>
-          <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />
+          <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />
         </div>
         {/* Fund phases results */}
         {waterfall && (
@@ -102,7 +102,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
             <div style={{fontSize:13,fontWeight:700,color:"#7c3aed",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
               <span>📊</span> {ar?`نتائج الصندوق — ${fundPhaseNames.join("، ")}`:`Fund Results — ${fundPhaseNames.join(", ")}`}
             </div>
-            <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />
+            <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />
           </div>
         )}
       </div>
@@ -116,22 +116,22 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
   if (mode === "fund" || mode === "hybrid" || mode === "jv") {
-    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
+    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />;
   }
 
   // ── BANK DEBT / BANK 100%: Full bank results ──
   if (mode === "debt" || mode === "bank100") {
-    return <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
+    return <BankResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />;
   }
 
   // ── SELF: Full self-funded results ──
-  return <SelfResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} />;
+  return <SelfResultsView project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // SELF-FUNDED RESULTS VIEW
 // ═══════════════════════════════════════════════════════════════
-function SelfResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
+function SelfResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -146,7 +146,20 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   const allPhaseNames = Object.keys(results.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
-  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const togglePhase = (p) => {
+    setSelectedPhases(prev => {
+      const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p];
+      // Sync KPI bar: single phase → show that phase, otherwise "all"
+      if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all");
+      return next;
+    });
+  };
+  // Sync from KPI bar dropdown to local phase selection
+  useEffect(() => {
+    if (!kpiPhase || allPhaseNames.length <= 1) return;
+    if (kpiPhase === "all") { setSelectedPhases([]); }
+    else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
+  }, [kpiPhase]);
 
   const h = results.horizon;
   const sy = results.startYear;
@@ -269,7 +282,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
     {allPhaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>{setSelectedPhases([]);if(setKpiPhase)setKpiPhase("all");}} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {allPhaseNames.map(p => {
@@ -495,7 +508,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
 // ═══════════════════════════════════════════════════════════════
 // BANK RESULTS VIEW - For debt & bank100 modes
 // ═══════════════════════════════════════════════════════════════
-function BankResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up, globalExpand }) {
+function BankResultsView({ project, results, financing, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -515,7 +528,19 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
-  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const togglePhase = (p) => {
+    setSelectedPhases(prev => {
+      const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p];
+      if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all");
+      return next;
+    });
+  };
+  // Sync from KPI bar dropdown
+  useEffect(() => {
+    if (!kpiPhase || allPhaseNames.length <= 1) return;
+    if (kpiPhase === "all") { setSelectedPhases([]); }
+    else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
+  }, [kpiPhase]);
   const hasPhases = allPhaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
 
   const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
@@ -669,7 +694,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     {hasPhases && (
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
+          <button onClick={()=>{setSelectedPhases([]);if(setKpiPhase)setKpiPhase("all");}} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
             {ar?"كل المراحل":"All Phases"}
           </button>
           {phaseNames.map(p => {
