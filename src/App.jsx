@@ -21,6 +21,8 @@ import NI from "./components/shared/NI";
 import HotelPLModal from "./components/shared/HotelPLModal";
 import MarinaPLModal from "./components/shared/MarinaPLModal";
 import LandingPage from "./components/auth/LandingPage";
+import SmartReviewerPanel, { SmartReviewerBadge } from "./components/shared/SmartReviewerPanel";
+import { runAllRules } from "./smartReviewer.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Haseef Financial Modeler — Project Engine v3 (Stable)
@@ -3550,6 +3552,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const [activeTab, setActiveTab] = useState(_initNav.tab || "dashboard");
   const [globalExpand, setGlobalExpand] = useState(0); // increment to toggle; odd=expand, even=collapse
   const [kpiPhase, setKpiPhase] = useState("all"); // phase selection for sticky KPI bar
+  const [smartAlerts, setSmartAlerts] = useState({ alerts: [], summary: {} }); // Smart Reviewer
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
@@ -3683,6 +3686,15 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   // Phase financings: from independent results
   const phaseFinancings = useMemo(() => independentPhaseResults?.phaseFinancings || {}, [independentPhaseResults]);
   const checks = useMemo(() => { try { return project && results ? runChecks(project, results, financing, waterfall, incentivesResult) : []; } catch(e) { console.error("runChecks error:", e); return []; } }, [project, results, financing, waterfall, incentivesResult]);
+
+  // Smart Reviewer — 300ms debounced
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try { setSmartAlerts(runAllRules(project, results, financing, waterfall)); }
+      catch(e) { setSmartAlerts({ alerts: [], summary: {} }); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [project, results, financing, waterfall]);
 
   const createProject = async (templateId) => {
     const p = defaultProject();
@@ -4142,7 +4154,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
-            ["results", <ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />],
+            ["results", <><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} /><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} /></>],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} />],
             ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],
