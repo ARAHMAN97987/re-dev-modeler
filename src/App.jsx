@@ -15,6 +15,9 @@ import { EDUCATIONAL_CONTENT } from "./data/educational-content.js";
 import HelpLink from "./components/shared/HelpLink";
 import EducationalModal from "./components/shared/EducationalModal";
 import { useIsMobile } from "./components/shared/hooks";
+import StatusBadge from "./components/shared/StatusBadge";
+import FeaturesGrid from "./components/shared/FeaturesGrid";
+import NI from "./components/shared/NI";
 
 // ═══════════════════════════════════════════════════════════════
 // Haseef Financial Modeler — Project Engine v3 (Stable)
@@ -4265,33 +4268,7 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FEATURES GRID (shared between landing page and dashboard)
-// ═══════════════════════════════════════════════════════════════
-function FeaturesGrid({ lang }) {
-  const ar = lang === "ar";
-  const features = [
-    { icon: "🏗", color: "#2563eb", title: ar?"نمذجة متعددة الأصول":"Multi-Asset Modeling", desc: ar?"فنادق، محلات، مكاتب، مارينا، سكني - كل أنواع العقارات في نموذج واحد مع P&L مفصّل للفنادق والمارينا":"Hotels, retail, offices, marina, residential - all property types in one model with detailed Hotel & Marina P&L" },
-    { icon: "🏦", color: "#8b5cf6", title: ar?"تمويل متقدم":"Advanced Financing", desc: ar?"تمويل بنكي، صندوق استثماري (مطور/مستثمر)، تمويل إسلامي (مرابحة/إجارة)، رسملة حق الانتفاع، هيكل رأس المال":"Bank debt, Developer/Investor fund structure, Islamic finance (Murabaha/Ijara), leasehold capitalization, capital structure" },
-    { icon: "📊", color: "#16a34a", title: ar?"توزيع الأرباح":"Profit Distribution", desc: ar?"رد رأس المال → العائد التفضيلي → تقسيم الأرباح مع IRR وMOIC لكل طرف":"Return of Capital → Preferred Return → Profit Split with IRR & MOIC per party" },
-    { icon: "📈", color: "#f59e0b", title: ar?"سيناريوهات وتحليل حساسية":"Scenarios & Sensitivity", desc: ar?"8 سيناريوهات جاهزة، جدول حساسية ثنائي المتغيرات، تحليل نقطة التعادل مع ملخص المخاطر":"8 built-in scenarios, 2-variable sensitivity table, break-even analysis with risk summary" },
-    { icon: "📄", color: "#ef4444", title: ar?"تقارير جاهزة للبنك والمستثمر":"Bank & Investor Reports", desc: ar?"ملخص تنفيذي، حزمة البنك (مع DSCR)، مذكرة المستثمر - كلها بصيغة PDF وExcel":"Executive summary, Bank pack (with DSCR), Investor memo - all exportable as PDF & Excel" },
-    { icon: "🌐", color: "#06b6d4", title: ar?"ثنائي اللغة + حوافز حكومية":"Bilingual + Gov Incentives", desc: ar?"واجهة عربي/إنجليزي كاملة مع دعم منح CAPEX، إعفاء إيجار الأرض، دعم التمويل، واسترداد الرسوم":"Full Arabic/English interface with CAPEX grants, land rent rebates, finance subsidies, and fee waivers" },
-  ];
-  return (
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit, minmax(260px, 1fr))",gap:16}}>
-      {features.map((f, i) => (
-        <div key={i} style={{background:"#f8f7f5",borderRadius:12,border:"1px solid #e5e0d8",padding:"20px 18px",transition:"all 0.2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=f.color+"60";e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e0d8";e.currentTarget.style.transform="translateY(0)";}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-            <div style={{width:40,height:40,borderRadius:10,background:f.color+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{f.icon}</div>
-            <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>{f.title}</div>
-          </div>
-          <div style={{fontSize:12,color:"var(--text-secondary)",lineHeight:1.6}}>{f.desc}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// FeaturesGrid extracted to ./components/shared/FeaturesGrid.jsx
 
 // ═══════════════════════════════════════════════════════════════
 // LANDING PAGE (before sign-in: split screen - features + auth)
@@ -4708,18 +4685,7 @@ function ShareModal({ project, up, lang, user, onClose }) {
   </>);
 }
 
-function StatusBadge({status,onChange}) {
-  const [open,setOpen]=useState(false);
-  const sts=["Draft","In Progress","Complete"];
-  const col={Draft:{bg:"#f0f1f5",fg:"#6b7080"},"In Progress":{bg:"#dbeafe",fg:"#2563eb"},Complete:{bg:"#dcfce7",fg:"#16a34a"}};
-  const c=col[status]||col.Draft;
-  return (<div style={{position:"relative"}}>
-    <button onClick={()=>setOpen(!open)} style={{...btnS,background:c.bg,color:c.fg,padding:"4px 12px",fontSize:11,fontWeight:600}}>{status||"Draft"} ▾</button>
-    {open&&<div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"var(--surface-card)",border:"0.5px solid var(--border-default)",borderRadius:6,boxShadow:"0 4px 12px rgba(0,0,0,0.1)",zIndex:100,overflow:"hidden"}}>
-      {sts.map(s=><button key={s} onClick={()=>{onChange(s);setOpen(false);}} style={{display:"block",width:"100%",padding:"8px 16px",border:"none",background:status===s?"#f0f1f5":"#fff",fontSize:12,cursor:"pointer",textAlign:"start",color:"var(--text-primary)"}}>{s}</button>)}
-    </div>}
-  </div>);
-}
+// StatusBadge extracted to ./components/shared/StatusBadge.jsx
 
 // ═══════════════════════════════════════════════════════════════
 // CONTROL PANEL
@@ -7336,11 +7302,7 @@ function runScenario(project, overrides) {
 // ═══════════════════════════════════════════════════════════════
 // MARKET INDICATORS VIEW
 // ═══════════════════════════════════════════════════════════════
-// Stable input component for Market view (defined outside to prevent focus loss)
-const mktInputStyle = { padding: "6px 10px", border: "1px solid #e5e7ec", borderRadius: 6, fontSize: 12, fontFamily: "inherit", width: "100%", boxSizing: "border-box", background: "#fafbfc" };
-function NI({ value, onChange, style: sx }) {
-  return <input type="number" value={value||""} onChange={e => onChange(parseFloat(e.target.value) || 0)} style={{ ...mktInputStyle, ...sx }} />;
-}
+// NI (NumberInput) extracted to ./components/shared/NI.jsx
 
 // MarketView extracted to ./components/views/MarketView.jsx (Phase 2.2)
 
