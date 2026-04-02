@@ -6,53 +6,8 @@ import { computeFinancing } from "../../engine/financing.js";
 import { computeWaterfall } from "../../engine/waterfall.js";
 import { fmt, fmtPct, fmtM } from "../../utils/format.js";
 import { catL } from "../../data/translations.js";
-
-// ── Metric color helpers (local copy) ──
-const METRIC_COLORS = { success: "#10b981", warning: "#f59e0b", error: "#ef4444", neutral: "#6b7080", muted: "#9ca3af" };
-const METRIC_COLORS_DARK = { success: "#4ade80", warning: "#fbbf24", error: "#f87171", neutral: "#8b90a0", muted: "#6b7080" };
-const getMetricColor = (metric, value, opts = {}) => {
-  const { dark = false, raw = false } = opts;
-  if (value === null || value === undefined || (typeof value === "number" && isNaN(value))) {
-    return raw ? "neutral" : (dark ? METRIC_COLORS_DARK.muted : METRIC_COLORS.muted);
-  }
-  const palette = dark ? METRIC_COLORS_DARK : METRIC_COLORS;
-  let level = "neutral";
-  switch (metric) {
-    case "IRR":
-      level = value >= 0.15 ? "success" : value >= 0.10 ? "warning" : "error";
-      break;
-    case "DSCR":
-      level = value >= 1.5 ? "success" : value >= 1.2 ? "warning" : "error";
-      break;
-    case "LTV":
-      level = value <= 60 ? "success" : value <= 70 ? "warning" : "error";
-      break;
-    case "NPV":
-      level = value > 0 ? "success" : value === 0 ? "warning" : "error";
-      break;
-    case "MOIC":
-      level = value >= 2.0 ? "success" : value >= 1.5 ? "warning" : "error";
-      break;
-    case "cashFlow":
-      level = value > 0 ? "success" : value === 0 ? "neutral" : "error";
-      break;
-    default:
-      return raw ? "neutral" : palette.neutral;
-  }
-  return raw ? level : palette[level];
-};
-
-// ── Mobile hook (local copy) ──
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
-  useState(() => {
-    if (typeof window === "undefined") return;
-    const handler = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  });
-  return isMobile;
-}
+import { getMetricColor } from "../../utils/metricColor.js";
+import { useIsMobile } from "../shared/hooks.js";
 
 // ── Styles (from App.jsx lines 12138-12147) ──
 const btnS={border:"none",borderRadius:5,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"};

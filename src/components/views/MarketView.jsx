@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
 import { catL } from "../../data/translations.js";
+import { useIsMobile } from "../shared/hooks.js";
 
 const btnS = { border: "none", borderRadius: 5, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" };
 const btnPrim = { ...btnS, background: "#2563eb", color: "#fff", fontWeight: 600 };
@@ -12,14 +13,6 @@ const mktInputStyle = { padding: "6px 10px", border: "1px solid #e5e7ec", border
 
 function NI({ value, onChange, style: sx }) {
   return <input type="number" value={value||""} onChange={e => onChange(parseFloat(e.target.value) || 0)} style={{ ...mktInputStyle, ...sx }} />;
-}
-
-function useIsMobile(breakpoint = 768) {
-  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
-  if (typeof window !== "undefined") {
-    window.addEventListener("resize", () => setW(window.innerWidth));
-  }
-  return w < breakpoint;
 }
 
 function MarketView({ project, results, lang, up }) {

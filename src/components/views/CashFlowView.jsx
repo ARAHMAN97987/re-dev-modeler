@@ -13,30 +13,13 @@ const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
 // ── Lazy-imported helpers expected from App.jsx context ──
 // These are passed as props or imported from engine
 import { calcIRR, calcNPV } from "../../engine/math.js";
-
-// useIsMobile hook (copied from App.jsx)
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
-  useState(() => {
-    if (typeof window === "undefined") return;
-    const handler = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  });
-  return isMobile;
-}
+import { useIsMobile } from "../shared/hooks.js";
+import { getMetricColor } from "../../utils/metricColor.js";
 
 // Tip component (minimal, used in KPI)
 function Tip({text,children}) {
   return <span title={text} style={{cursor:"help",borderBottom:"1px dashed #9ca3af"}}>{children}</span>;
 }
-
-// getMetricColor helper
-const getMetricColor = (metric, value, opts = {}) => {
-  if (value === null || value === undefined) return "#9ca3af";
-  if (metric === "IRR") return value >= 0.15 ? "#16a34a" : value >= 0.10 ? "#f59e0b" : "#ef4444";
-  return "#1a1d23";
-};
 
 export function KPI({label,value,sub,color,tip}) {
   const isMobile = useIsMobile();

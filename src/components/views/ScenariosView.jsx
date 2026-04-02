@@ -6,18 +6,7 @@ import { computeFinancing } from "../../engine/financing.js";
 import { computeWaterfall } from "../../engine/waterfall.js";
 import { calcIRR, calcNPV } from "../../engine/math.js";
 import { fmt, fmtPct, fmtM } from "../../utils/format.js";
-
-// ── Mobile hook (local copy) ──
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
-  useState(() => {
-    if (typeof window === "undefined") return;
-    const handler = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  });
-  return isMobile;
-}
+import { useIsMobile } from "../shared/hooks.js";
 
 // ── Tip component (local copy from App.jsx) ──
 function Tip({text,children}) {

@@ -6,42 +6,7 @@ import { fmt, fmtPct, fmtM } from "../../utils/format";
 import { btnS, btnPrim, sideInputStyle, tblStyle, thSt, tdSt, tdN } from "../shared/styles";
 import { FINANCING_FIELDS, getPhaseFinancing, hasPerPhaseFinancing } from "../../engine/phases";
 import { calcIRR } from "../../engine/math";
-
-// ── Functional Colors — consistent metric coloring across all tabs ──
-const METRIC_COLORS = { success: "#10b981", warning: "#f59e0b", error: "#ef4444", neutral: "#6b7080", muted: "#9ca3af" };
-const METRIC_COLORS_DARK = { success: "#4ade80", warning: "#fbbf24", error: "#f87171", neutral: "#8b90a0", muted: "#6b7080" };
-
-const getMetricColor = (metric, value, opts = {}) => {
-  const { dark = false, raw = false } = opts;
-  if (value === null || value === undefined || (typeof value === "number" && isNaN(value))) {
-    return raw ? "neutral" : (dark ? METRIC_COLORS_DARK.muted : METRIC_COLORS.muted);
-  }
-  const palette = dark ? METRIC_COLORS_DARK : METRIC_COLORS;
-  let level = "neutral";
-  switch (metric) {
-    case "IRR":
-      level = value >= 0.15 ? "success" : value >= 0.10 ? "warning" : "error";
-      break;
-    case "DSCR":
-      level = value >= 1.5 ? "success" : value >= 1.2 ? "warning" : "error";
-      break;
-    case "LTV":
-      level = value <= 60 ? "success" : value <= 70 ? "warning" : "error";
-      break;
-    case "NPV":
-      level = value > 0 ? "success" : value === 0 ? "warning" : "error";
-      break;
-    case "MOIC":
-      level = value >= 2.0 ? "success" : value >= 1.5 ? "warning" : "error";
-      break;
-    case "cashFlow":
-      level = value > 0 ? "success" : value === 0 ? "neutral" : "error";
-      break;
-    default:
-      return raw ? "neutral" : palette.neutral;
-  }
-  return raw ? level : palette[level];
-};
+import { getMetricColor } from "../../utils/metricColor.js";
 
 const _finInpSt = {padding:"8px 11px",borderRadius:7,border:"1px solid #e0e3ea",background:"#f8f9fb",color:"#1a1d23",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
 const _finSelSt = {..._finInpSt,cursor:"pointer",appearance:"auto"};

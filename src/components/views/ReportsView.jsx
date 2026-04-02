@@ -18,17 +18,7 @@ const thSt={padding:"7px 8px",textAlign:"start",fontSize:10,fontWeight:600,color
 const tdSt={padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:12,whiteSpace:"nowrap"};
 const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
 
-// useIsMobile hook (copied from App.jsx)
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
-  useState(() => {
-    if (typeof window === "undefined") return;
-    const handler = () => setIsMobile(window.innerWidth < breakpoint);
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  });
-  return isMobile;
-}
+import { useIsMobile } from "../shared/hooks.js";
 
 // Simple toast helper (uses window.__addToast if available, else console)
 function addToast(msg, type) {
