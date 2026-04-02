@@ -178,6 +178,8 @@ const FUND_FEE_RULES = [
   { id:'FUND-FEE-05', field:'developerFeePct', scope:'fund', condition:v=>v>0&&v<7, severity:'info', ar:'رسوم مطور < 7% أقل من أدنى مستوى مرصود (طويق: 7%)', en:'Dev fee < 7% below lowest observed (Tuwaiq: 7%)' },
   { id:'FUND-FEE-06', field:'structuringFeePct', scope:'fund', condition:v=>v>2, severity:'warning', ar:'رسوم هيكلة > 2% أعلى من المعتاد. المتوسط: 1-1.5%', en:'Structuring > 2% above typical. Average: 1-1.5%' },
   { id:'FUND-FEE-07', field:'structuringFeePct', scope:'fund', condition:v=>v>3, severity:'critical', ar:'رسوم هيكلة > 3% مرتفعة جداً', en:'Structuring > 3% very high' },
+  { id:'FUND-FEE-08', field:'totalFeesOverEquity', scope:'fund', condition:v=>v>0.50, severity:'critical', ar:'إجمالي الرسوم > 50% من الإكوتي - يأكل العوائد', en:'Total fees > 50% of equity - erodes returns' },
+  { id:'FUND-FEE-09', field:'totalFeesOverEquity', scope:'fund', condition:v=>v>0.30&&v<=0.50, severity:'warning', ar:'إجمالي الرسوم > 30% من الإكوتي - عبء مرتفع', en:'Total fees > 30% of equity - high burden' },
 ];
 
 const FUND_PERF_RULES = [
@@ -204,6 +206,7 @@ const FUND_STRUCT_RULES = [
   { id:'FUND-STRUCT-03', field:'maxLtvPct', scope:'fund', condition:(v,p)=>['fund','jv','hybrid'].includes(p.finMode)&&v>0&&v<40, severity:'info', ar:'تمويل < 40% محافظ. قد يحد من العوائد لكنه يقلل المخاطر', en:'LTV < 40% conservative. May limit returns but reduces risk' },
   { id:'FUND-STRUCT-04', field:'fundLife', scope:'fund', condition:v=>v>0&&v<2, severity:'warning', ar:'مدة صندوق < سنتين قصيرة جداً للتطوير', en:'Fund duration < 2 years very short' },
   { id:'FUND-STRUCT-05', field:'fundLife', scope:'fund', condition:v=>v>7, severity:'info', ar:'مدة صندوق > 7 سنوات طويلة. الأطول مرصود: 5+2 سنوات', en:'Fund duration > 7 years long. Longest observed: 5+2 years' },
+  { id:'FUND-STRUCT-06', field:'finMode', scope:'fund', condition:(v,p)=>v==='fund'&&(p.exitStrategy||'hold')==='hold', severity:'warning', ar:'هيكل صندوق بدون خطة تخارج محددة', en:'Fund structure with no defined exit strategy' },
 ];
 
 const FUND_RET_RULES = [
@@ -226,6 +229,7 @@ const CROSS_RULES = [
   { id:'STRUCT-04', field:'finMode', scope:'cross', condition:(v,ctx)=>v==='self'&&(ctx.ltv||0)>0, severity:'info', ar:'وضع ذاتي مع نسبة تمويل - هل تقصد وضع البنك؟', en:'Self-funded with LTV - did you mean bank mode?' },
   { id:'FUND-GOV-01', field:'finMode', scope:'cross', condition:(v,ctx)=>(v==='fund'||v==='jv')&&!ctx.hasWaterfall, severity:'warning', ar:'صندوق بدون شلال توزيع', en:'Fund without distribution waterfall' },
   { id:'FUND-GOV-02', field:'year1Fees', scope:'cross', condition:(v,ctx)=>ctx.totalEquity>0&&v/ctx.totalEquity>0.20, severity:'warning', ar:'رسوم السنة الأولى > 20% من الإكوتي', en:'Year 1 fees > 20% of equity' },
+  { id:'CROSS-06', field:'lpMOIC', scope:'cross', condition:(v)=>v!==null&&v>0&&v<1.5, severity:'warning', ar:'عائد ضعيف للمستثمر - MOIC < 1.5x', en:'Weak LP return - MOIC < 1.5x' },
   { id:'CROSS-07', field:'latePhases', scope:'cross', condition:(v,ctx)=>v>0, severity:'warning', ar:'بعض المراحل تبدأ في آخر 5 سنوات', en:'Some phases start in last 5 years' },
 ];
 
@@ -320,8 +324,11 @@ export function runAllRules(project, results, financing, waterfall) {
 
   // --- Fund rules ---
   if (isFund) {
+    const feesOverEquity = (w && f?.totalEquity > 0) ? (w.totalFees / f.totalEquity) : 0;
     [...FUND_FEE_RULES, ...FUND_PERF_RULES, ...FUND_EXIT_RULES, ...FUND_STRUCT_RULES].forEach(rule => {
-      const v = p[rule.field];
+      let v = p[rule.field];
+      if (rule.field === 'totalFeesOverEquity') v = feesOverEquity;
+      if (rule.field === 'finMode') v = p.finMode;
       if (v === undefined || v === null) return;
       try { if (rule.condition(v, p)) alerts.push({ id: rule.id, severity: rule.severity, ar: rule.ar, en: rule.en, field: rule.field }); } catch(e) {}
     });
@@ -370,6 +377,7 @@ export function runAllRules(project, results, financing, waterfall) {
     else if (rule.field === 'finMode') v = p.finMode;
     else if (rule.field === 'year1Fees') v = ctx.year1Fees;
     else if (rule.field === 'latePhases') v = ctx.latePhases;
+    else if (rule.field === 'lpMOIC') v = w?.lpMOIC ?? null;
     else return;
     try { if (rule.condition(v, ctx)) alerts.push({ id: rule.id, severity: rule.severity, ar: rule.ar, en: rule.en, field: rule.field }); } catch(e) {}
   });
@@ -387,4 +395,22 @@ export function runAllRules(project, results, financing, waterfall) {
   deduped.forEach(a => { summary[a.severity] = (summary[a.severity] || 0) + 1; });
 
   return { alerts: deduped, summary };
+}
+
+/**
+ * Run rules for a single field — returns alerts for that field only.
+ * Useful for inline validation (FieldAlertDot).
+ */
+export function runFieldRules(fieldName, value, context = {}) {
+  const alerts = [];
+  const allFieldRules = RULES.filter(r => r.field === fieldName);
+  allFieldRules.forEach(rule => {
+    if (rule.assetFilter && context.asset && !rule.assetFilter(context.asset)) return;
+    try {
+      if (rule.condition(value, context.asset || context.project || context)) {
+        alerts.push({ id: rule.id, severity: rule.severity, ar: rule.ar, en: rule.en, field: rule.field });
+      }
+    } catch(e) {}
+  });
+  return alerts;
 }

@@ -22,6 +22,7 @@ import HotelPLModal from "./components/shared/HotelPLModal";
 import MarinaPLModal from "./components/shared/MarinaPLModal";
 import LandingPage from "./components/auth/LandingPage";
 import SmartReviewerPanel, { SmartReviewerBadge } from "./components/shared/SmartReviewerPanel";
+import FieldAlertDot from "./components/shared/FieldAlertDot";
 import { runAllRules } from "./smartReviewer.js";
 
 // ═══════════════════════════════════════════════════════════════
@@ -4144,6 +4145,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                   </div>
                 ))}
                 <div style={{flex:1}} />
+                <SmartReviewerBadge alerts={smartAlerts.alerts} onClick={()=>{setActiveTab("results");}} />
                 <button onClick={()=>setGlobalExpand(p=>p+1)} className="z-btn z-btn-secondary z-btn-sm" style={{fontSize:9,flexShrink:0,background:globalExpand%2===1?"var(--color-info-bg)":"var(--surface-card)",color:globalExpand%2===1?"var(--zan-teal-500)":"var(--text-secondary)"}}>
                   {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
                 </button>
@@ -4152,7 +4154,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           })()}
           {[
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
-            ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} />],
+            ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} smartAlerts={smartAlerts.alerts} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
             ["results", <><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} /><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} /></>],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
@@ -4993,7 +4995,7 @@ function ScoreCell({ sc, name, ar }) {
 // ═══════════════════════════════════════════════════════════════
 // ASSET PROGRAM TABLE
 // ═══════════════════════════════════════════════════════════════
-function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t, lang, updateProject, globalExpand }) {
+function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t, lang, updateProject, globalExpand, smartAlerts }) {
   const isMobile = useIsMobile();
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
@@ -5660,7 +5662,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                     <tr key={a.id||i} style={{background:bg}}>
                       <td style={{...tdSt,color:"var(--text-tertiary)",fontWeight:500,width:28,...hd("#")}}>{i+1}</td>
                       <td style={{...tdSt,...hd("phase")}}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={{...tdSt,...hd("name")}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /></td>
+                      <td style={{...tdSt,...hd("name")}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><FieldAlertDot alerts={(smartAlerts||[]).filter(al=>al.assetIndex===i)} lang={lang} /></td>
                       <td style={{...tdSt,...hd("category")}}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
                       <td style={{...tdSt,...hd("code")}}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:40}} /></td>
                       <td style={{...tdSt,...hd("gfa")}}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
