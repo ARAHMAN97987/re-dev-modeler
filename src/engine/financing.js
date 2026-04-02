@@ -49,7 +49,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       if (assetScheds.length > 0) {
         for (const as of assetScheds) {
           if (as.revType === "Sale") continue;
-          const assetIncome = as.revenueSchedule[exitIdx] ?? 0;
+          const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[Math.min(exitIdx + 1, h - 1)] || 0;
           if (exitStrategy === "caprate") {
             const capRate = (project.exitCapRate ?? 9) / 100;
             exitVal += capRate > 0 ? assetIncome / capRate : 0;
@@ -153,7 +153,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       if (assetScheds.length > 0) {
         for (const as of assetScheds) {
           if (as.revType === "Sale") continue; // Skip - already realized through sales
-          const assetIncome = as.revenueSchedule[exitIdx] ?? as.revenueSchedule[fallbackIdx] ?? 0;
+          const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0;
           if (exitStrategySelf === "caprate") {
             const capRate = (project.exitCapRate ?? 9) / 100;
             exitVal += capRate > 0 ? assetIncome / capRate : 0;
@@ -572,7 +572,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     const assetScheds = projectResults.assetSchedules || [];
     if (assetScheds.length > 0) {
       for (const as of assetScheds) {
-        const assetIncome = as.revenueSchedule[exitIdx] ?? as.revenueSchedule[fallbackIdx] ?? 0;
+        const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0;
         if (as.revType === "Sale") {
           // Sale: remaining unsold value (skip - already realized through sales)
         } else if (exitStrategy === "caprate") {
