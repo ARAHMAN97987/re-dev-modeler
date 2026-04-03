@@ -409,51 +409,42 @@ const mdComponents = {
 // Fix pipe-delimited text into proper markdown tables
 function fixTables(text) {
   if (!text || !text.includes('|')) return text;
+  // Step 1: Ensure blank lines around table blocks for react-markdown
+  // Step 2: Ensure separator line after header row
   const lines = text.split('\n');
-  const result = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i].trim();
-    // Detect a pipe-delimited line (at least 2 pipes, starts with |)
-    const pipeCount = (line.match(/\|/g) || []).length;
-    if (line.startsWith('|') && pipeCount >= 3) {
-      // Collect consecutive pipe lines
-      const tableLines = [];
-      while (i < lines.length) {
-        const cl = lines[i].trim();
-        const cp = (cl.match(/\|/g) || []).length;
-        if (cl.startsWith('|') && cp >= 3) {
-          tableLines.push(lines[i]);
-          i++;
-        } else break;
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    const isTableLine = trimmed.startsWith('|') && trimmed.endsWith('|') && (trimmed.match(/\|/g) || []).length >= 3;
+    const isSepLine = isTableLine && /^\|[\s\-:]+(\|[\s\-:]+)+\|$/.test(trimmed.replace(/\s/g, ''));
+
+    if (isTableLine) {
+      // Add blank line before table start
+      if (i === 0 || !(lines[i - 1]?.trim().startsWith('|'))) {
+        if (out.length > 0 && out[out.length - 1]?.trim() !== '') out.push('');
       }
-      if (tableLines.length >= 2) {
-        // Check if any line is a separator (only dashes, colons, pipes, spaces)
-        const isSep = (l) => /^\|[\s\-:|\u2014\u2013]+\|?\s*$/.test(l.trim());
-        const sepIdx = tableLines.findIndex((l, j) => j > 0 && isSep(l));
-        if (sepIdx === -1) {
-          // No separator found — inject one after first row
-          const cols = Math.max(1, pipeCount - 1);
-          tableLines.splice(1, 0, '| ' + Array(cols).fill('---').join(' | ') + ' |');
-        } else if (sepIdx > 1) {
-          // Separator exists but not at position 1 — move it
-          const sep = tableLines.splice(sepIdx, 1)[0];
-          tableLines.splice(1, 0, sep);
-        }
-        // Normalize separator to standard format
-        const sepLine = tableLines[1];
-        if (isSep(sepLine)) {
-          const cols = Math.max(1, (tableLines[0].match(/\|/g) || []).length - 1);
-          tableLines[1] = '| ' + Array(cols).fill('---').join(' | ') + ' |';
+      out.push(line);
+
+      // If this is a header row (first table line) and next line is NOT a separator, inject one
+      const prevIsTable = i > 0 && lines[i - 1]?.trim().startsWith('|');
+      if (!prevIsTable && !isSepLine) {
+        const nextLine = lines[i + 1]?.trim() || '';
+        const nextIsSep = nextLine.startsWith('|') && /^\|[\s\-:]+(\|[\s\-:]+)+\|?$/.test(nextLine.replace(/\s/g, ''));
+        if (!nextIsSep) {
+          const cols = Math.max(1, (trimmed.match(/\|/g) || []).length - 1);
+          out.push('| ' + Array(cols).fill('---').join(' | ') + ' |');
         }
       }
-      result.push(...tableLines);
-      continue;
+    } else {
+      // Add blank line after table end
+      if (i > 0 && lines[i - 1]?.trim().startsWith('|') && lines[i - 1]?.trim().endsWith('|')) {
+        if (trimmed !== '') out.push('');
+      }
+      out.push(line);
     }
-    result.push(lines[i]);
-    i++;
   }
-  return result.join('\n');
+  return out.join('\n');
 }
 
 function renderMarkdown(text) {

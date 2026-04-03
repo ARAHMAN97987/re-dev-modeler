@@ -54,7 +54,7 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
 
   const fmtDate = () => {
     const opts = { year: "numeric", month: "long", day: "numeric" };
-    if (ar) return new Date().toLocaleDateString("ar-SA", { ...opts, calendar: "gregory" });
+    if (ar) return new Date().toLocaleDateString("ar-EG", opts); // ar-EG = Gregorian by default
     return new Date().toLocaleDateString("en-US", opts);
   };
 

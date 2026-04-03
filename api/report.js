@@ -42,7 +42,7 @@ IMPORTANT: Return ONLY valid JSON. No markdown fences. No preamble. No trailing 
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
+        model: 'claude-sonnet-4-6', // Sonnet for speed — report needs fast first token
         max_tokens: 8192,
         stream: true,
         system: systemPrompt,
