@@ -802,41 +802,50 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         throw new Error(errMsg);
       }
 
-      // Add empty assistant message immediately
-      setMessages(prev => [...prev, { role: "assistant", content: "", displayText: "▌", parsed: null, _streaming: true }]);
+      // Add empty assistant message (will be updated live as stream arrives)
+      setMessages(prev => [...prev, { role: "assistant", content: "", displayText: "", parsed: null, _streaming: true }]);
 
-      // Read the full response as text first, then parse SSE events
-      const responseText = await res.text();
+      // ── Read SSE stream word-by-word ──
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
       let fullText = "";
+      let buffer = "";
 
-      // Parse all SSE data lines
-      const lines = responseText.split("\n");
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
-        if (!data || data === "[DONE]") continue;
-        try {
-          const event = JSON.parse(data);
-          if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
-            fullText += event.delta.text;
-          }
-        } catch (_) {}
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (!data || data === "[DONE]") continue;
+          try {
+            const ev = JSON.parse(data);
+            if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
+              fullText += ev.delta.text;
+              // Update message live (strip JSON blocks for display)
+              const liveDisplay = fullText.replace(/```json[\s\S]*?```/g, "").trim();
+              setMessages(prev => {
+                const u = [...prev];
+                const last = u[u.length - 1];
+                if (last && last._streaming) u[u.length - 1] = { ...last, content: fullText, displayText: liveDisplay || "▌" };
+                return u;
+              });
+            }
+          } catch (_) {}
+        }
       }
 
-      // Finalize message
+      // Stream done — finalize
       const parsed = extractJSON(fullText);
       const displayText = fullText.replace(/```json[\s\S]*?```/g, "").trim();
       setMessages(prev => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last && last._streaming) {
-          updated[updated.length - 1] = {
-            role: "assistant", content: fullText,
-            displayText: displayText || (isAr ? "تم ✓" : "Done ✓"),
-            parsed,
-          };
-        }
-        return updated;
+        const u = [...prev];
+        const last = u[u.length - 1];
+        if (last && last._streaming) u[u.length - 1] = { role: "assistant", content: fullText, displayText: displayText || (isAr ? "تم ✓" : "Done ✓"), parsed };
+        return u;
       });
 
       if (parsed && onApply) {
