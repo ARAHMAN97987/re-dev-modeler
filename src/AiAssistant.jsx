@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import Markdown from "react-markdown";
 
 // ── System prompt that teaches Claude the project state structure ──
 const SYSTEM_PROMPT = `You are the AI assistant for Haseef (حصيف), a real estate development financial modeling platform based in Saudi Arabia.
@@ -305,119 +306,58 @@ When user asks "ايش لو" / "what if" / "لو غيرت" questions:
 
 // ── Styles ──
 const panelStyle = {
-  position: "fixed", top: 0, right: 0, width: 480, maxWidth: "92vw", height: "100vh",
-  background: "#0c0f16", color: "#d0d4dc", display: "flex", flexDirection: "column",
-  zIndex: 9999, boxShadow: "-4px 0 32px rgba(0,0,0,0.5)",
-  fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif",
-  borderLeft: "1px solid #1a1f2e",
+  position: "fixed", top: 0, right: 0, width: 520, maxWidth: "95vw", height: "100vh",
+  background: "linear-gradient(180deg, #0a0e17 0%, #0f1420 100%)", color: "#c8cdd8",
+  display: "flex", flexDirection: "column",
+  zIndex: 9999, boxShadow: "-8px 0 40px rgba(0,0,0,0.6)",
+  fontFamily: "'DM Sans','Tajawal','Segoe UI',system-ui,sans-serif",
+  borderLeft: "1px solid rgba(46,196,182,0.15)",
 };
 const headerStyle = {
-  padding: "14px 18px", borderBottom: "1px solid #1a1f2e",
+  padding: "16px 20px", borderBottom: "1px solid rgba(46,196,182,0.1)",
   display: "flex", alignItems: "center", justifyContent: "space-between",
+  background: "rgba(46,196,182,0.03)",
 };
 const msgAreaStyle = {
-  flex: 1, overflowY: "auto", padding: "16px 18px",
-  display: "flex", flexDirection: "column", gap: 12,
+  flex: 1, overflowY: "auto", padding: "20px",
+  display: "flex", flexDirection: "column", gap: 16,
 };
 const inputBarStyle = {
-  padding: "12px 16px", borderTop: "1px solid #1a1f2e",
+  padding: "14px 18px", borderTop: "1px solid rgba(46,196,182,0.1)",
   display: "flex", gap: 8, alignItems: "flex-end",
+  background: "rgba(0,0,0,0.2)",
 };
 const btnStyle = {
-  border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "inherit",
+  border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
 };
 
 // ── Simple Markdown to JSX renderer ──
+// ── Styled Markdown renderer using react-markdown ──
+const mdComponents = {
+  h1: ({children}) => <div style={{fontSize:16,fontWeight:800,color:"#f0f4f8",margin:"12px 0 6px",paddingBottom:4,borderBottom:"1px solid #2a3347"}}>{children}</div>,
+  h2: ({children}) => <div style={{fontSize:14,fontWeight:700,color:"#e2e8f0",margin:"10px 0 4px",display:"flex",alignItems:"center",gap:6}}>{children}</div>,
+  h3: ({children}) => <div style={{fontSize:13,fontWeight:600,color:"#cbd5e1",margin:"8px 0 3px"}}>{children}</div>,
+  p: ({children}) => <div style={{margin:"4px 0",lineHeight:1.7}}>{children}</div>,
+  strong: ({children}) => <strong style={{fontWeight:700,color:"#e2e8f0"}}>{children}</strong>,
+  em: ({children}) => <em style={{color:"#94a3b8",fontStyle:"italic"}}>{children}</em>,
+  code: ({inline,children}) => inline
+    ? <code style={{background:"#1e293b",color:"#2EC4B6",padding:"1px 6px",borderRadius:4,fontSize:"0.88em",fontFamily:"'SF Mono',Menlo,monospace"}}>{children}</code>
+    : <pre style={{background:"#0f172a",border:"1px solid #1e293b",borderRadius:8,padding:"10px 14px",margin:"6px 0",overflowX:"auto",fontSize:11,lineHeight:1.5,color:"#94a3b8",fontFamily:"'SF Mono',Menlo,monospace"}}><code>{children}</code></pre>,
+  ul: ({children}) => <ul style={{margin:"4px 0",paddingInlineStart:16,listStyle:"none"}}>{children}</ul>,
+  ol: ({children}) => <ol style={{margin:"4px 0",paddingInlineStart:16,listStyle:"none",counterReset:"item"}}>{children}</ol>,
+  li: ({children,ordered}) => <li style={{display:"flex",gap:8,margin:"3px 0",lineHeight:1.6}}><span style={{color:"#2EC4B6",flexShrink:0,marginTop:1}}>{ordered?"•":"●"}</span><span style={{flex:1}}>{children}</span></li>,
+  table: ({children}) => <div style={{overflowX:"auto",margin:"8px 0"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:11,lineHeight:1.5}}>{children}</table></div>,
+  thead: ({children}) => <thead style={{borderBottom:"2px solid #2EC4B6"}}>{children}</thead>,
+  th: ({children}) => <th style={{padding:"6px 10px",textAlign:"start",fontWeight:700,color:"#e2e8f0",fontSize:10,textTransform:"uppercase",letterSpacing:0.3,whiteSpace:"nowrap"}}>{children}</th>,
+  td: ({children}) => <td style={{padding:"5px 10px",borderBottom:"1px solid #1e293b",color:"#cbd5e1",whiteSpace:"nowrap"}}>{children}</td>,
+  hr: () => <hr style={{border:"none",borderTop:"1px solid #1e293b",margin:"10px 0"}} />,
+  a: ({href,children}) => <a href={href} target="_blank" rel="noopener" style={{color:"#2EC4B6",textDecoration:"underline"}}>{children}</a>,
+  blockquote: ({children}) => <div style={{borderInlineStart:"3px solid #2EC4B6",paddingInlineStart:12,margin:"6px 0",color:"#94a3b8",fontStyle:"italic"}}>{children}</div>,
+};
+
 function renderMarkdown(text) {
   if (!text) return null;
-  const lines = text.split("\n");
-  const elements = [];
-  let key = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-
-    // Empty line = spacing
-    if (!line.trim()) {
-      elements.push(<div key={key++} style={{ height: 6 }} />);
-      continue;
-    }
-
-    // Numbered list: "1. text" or "١. text"
-    const numMatch = line.match(/^\s*(\d+[\.\)٫])\s+(.*)/);
-    if (numMatch) {
-      elements.push(
-        <div key={key++} style={{ display: "flex", gap: 8, padding: "2px 0", marginRight: 8 }}>
-          <span style={{ color: "#2EC4B6", fontWeight: 600, minWidth: 18 }}>{numMatch[1]}</span>
-          <span>{renderInline(numMatch[2])}</span>
-        </div>
-      );
-      continue;
-    }
-
-    // Bullet: "- text"
-    const bulletMatch = line.match(/^\s*[-•]\s+(.*)/);
-    if (bulletMatch) {
-      elements.push(
-        <div key={key++} style={{ display: "flex", gap: 8, padding: "2px 0", paddingRight: 4, marginRight: 8 }}>
-          <span style={{ color: "#2EC4B6", marginTop: 2 }}>●</span>
-          <span>{renderInline(bulletMatch[1])}</span>
-        </div>
-      );
-      continue;
-    }
-
-    // Sub-bullet: "  - text"
-    const subBulletMatch = line.match(/^\s{2,}[-•]\s+(.*)/);
-    if (subBulletMatch) {
-      elements.push(
-        <div key={key++} style={{ display: "flex", gap: 8, padding: "1px 0", paddingRight: 16 }}>
-          <span style={{ color: "#4a5568", marginTop: 2 }}>○</span>
-          <span>{renderInline(subBulletMatch[1])}</span>
-        </div>
-      );
-      continue;
-    }
-
-    // Regular line
-    elements.push(<div key={key++} style={{ padding: "1px 0" }}>{renderInline(line)}</div>);
-  }
-
-  return elements;
-}
-
-// Inline markdown: **bold**, *italic*, `code`
-function renderInline(text) {
-  if (!text) return text;
-  const parts = [];
-  let remaining = text;
-  let k = 0;
-
-  while (remaining.length > 0) {
-    // Bold: **text**
-    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-    if (boldMatch) {
-      const idx = remaining.indexOf(boldMatch[0]);
-      if (idx > 0) parts.push(<span key={k++}>{remaining.substring(0, idx)}</span>);
-      parts.push(<span key={k++} style={{ fontWeight: 700, color: "#e2e8f0" }}>{boldMatch[1]}</span>);
-      remaining = remaining.substring(idx + boldMatch[0].length);
-      continue;
-    }
-    // Code: `text`
-    const codeMatch = remaining.match(/`(.+?)`/);
-    if (codeMatch) {
-      const idx = remaining.indexOf(codeMatch[0]);
-      if (idx > 0) parts.push(<span key={k++}>{remaining.substring(0, idx)}</span>);
-      parts.push(<span key={k++} style={{ background: "#1e2230", padding: "1px 5px", borderRadius: 3, fontSize: "0.9em", color: "#2EC4B6" }}>{codeMatch[1]}</span>);
-      remaining = remaining.substring(idx + codeMatch[0].length);
-      continue;
-    }
-    // No more matches
-    parts.push(<span key={k++}>{remaining}</span>);
-    break;
-  }
-
-  return parts.length === 1 ? parts[0] : <>{parts}</>;
+  return <Markdown components={mdComponents}>{text}</Markdown>;
 }
 
 // ── Component ──
@@ -965,14 +905,19 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         {/* Messages */}
         <div style={msgAreaStyle}>
           {messages.map((m, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", gap: 6 }}>
+            m._streaming && !m.content ? null : /* hide empty streaming placeholder */
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", gap: 8 }}>
+              {/* Role label */}
+              {m.role === "assistant" && <div style={{fontSize:10,fontWeight:600,color:"#2EC4B6",letterSpacing:0.5,textTransform:"uppercase",paddingInlineStart:4}}>AI</div>}
               {/* Message bubble */}
               <div style={{
-                maxWidth: "92%", padding: "12px 16px", borderRadius: 14,
-                background: m.role === "user" ? "#1e3a5f" : "#151922",
+                maxWidth: "95%", borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                padding: m.role === "user" ? "10px 16px" : "16px 20px",
+                background: m.role === "user" ? "linear-gradient(135deg, #1e3a5f, #1a3050)" : "#111827",
                 color: m.role === "user" ? "#93c5fd" : "#c8cdd8",
-                fontSize: 13, lineHeight: 1.65,
-                border: m.role === "user" ? "1px solid #2a4a6f" : "1px solid #1e2230",
+                fontSize: 13, lineHeight: 1.7,
+                border: m.role === "user" ? "1px solid #2a4a6f" : "1px solid #1e293b",
+                boxShadow: m.role === "assistant" ? "0 2px 8px rgba(0,0,0,0.2)" : "none",
               }}>
                 {m.role === "user"
                   ? (m.displayText || m.content)
