@@ -281,7 +281,27 @@ RESPONSE STYLE FOR ANALYSIS:
 - Prioritize the 2-3 most impactful recommendations
 - Use the user's language (Arabic/English)
 - Format with clear sections and bold key numbers
-- End with "Next actions" listing 2-3 specific steps`;
+- End with "Next actions" listing 2-3 specific steps
+
+SAUDI MARKET BENCHMARKS (use for comparison - AECOM 2025, JLL 2024, Compass 2024):
+Construction Cost (SAR/m² GFA):
+- Residential villa: 3,400-9,000 | Apartment mid: 4,875-7,500 | Apartment high-rise: 6,500-11,250
+- Office low S&C: 3,000-7,000 | Office mid: 4,875-8,000 | Office high: 6,000-12,375
+- Retail community: 4,500-6,750 | Regional mall: 5,300-8,250 | Super regional: 6,200-10,125
+- Hotel 3★: 4,954-11,500 | 4★: 6,685-13,250 | 5★: 8,476-18,000 | Resort: 14,000-24,000
+- Industrial: 2,900-4,500 | Parking above-ground: 2,200-4,125
+
+Fund Structure (27 CMA-licensed Saudi funds):
+- Subscription: 2% standard | Mgmt fee: avg 1.32% | Dev fee: avg 12.1% (7-15%)
+- Structuring: avg 1.25% | Carry: avg 23% (15-40%) | Hurdle: 14-16% typical
+- Fund LTV: 60-70% safe CMA range | Duration: 2-5 years + extensions
+
+WHAT-IF MODE:
+When user asks "ايش لو" / "what if" / "لو غيرت" questions:
+1. Acknowledge the current value being changed
+2. Output JSON change (same Role 1 format) so the app can apply it
+3. Explain the expected impact on IRR/NPV/DSCR with specific numbers
+4. Recommend whether the change is beneficial`;
 
 // ── Styles ──
 const panelStyle = {
@@ -401,19 +421,33 @@ function renderInline(text) {
 }
 
 // ── Component ──
-export default function AiAssistant({ open, onClose, project, onApply, lang, projectIndex, loadProjectFn, results, financing, waterfall }) {
+export default function AiAssistant({ open, onClose, project, onApply, lang, projectIndex, loadProjectFn, results, financing, waterfall, smartAlerts, pendingMessage, onClearPending }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [attachments, setAttachments] = useState([]); // {file, preview, type}
   const [isRecording, setIsRecording] = useState(false);
+  const [beforeSnapshot, setBeforeSnapshot] = useState(null);
   const msgEndRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
 
   const isAr = lang === "ar";
+
+  // Handle pending message from SmartReviewerPanel "suggest fix"
+  useEffect(() => {
+    if (open && pendingMessage) {
+      setInput(pendingMessage);
+      if (onClearPending) onClearPending();
+      // Auto-send after a tick
+      setTimeout(() => {
+        const ta = textareaRef.current;
+        if (ta) { ta.focus(); }
+      }, 200);
+    }
+  }, [open, pendingMessage]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -656,6 +690,18 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
     const text = input.trim();
     if ((!text && attachments.length === 0) || loading) return;
 
+    // What-if snapshot: capture current state before changes
+    const whatIfTriggers = ['ايش لو','ماذا لو','what if','لو غيرت','لو رفعت','لو نزلت','لو زدت','لو قللت','increase','decrease','change to','raise','reduce','ارفع','نزل','غير','عدل'];
+    if (whatIfTriggers.some(t => text.toLowerCase().includes(t)) && results) {
+      setBeforeSnapshot({
+        irr: results.consolidatedIRR, npv: results.consolidatedNPV,
+        leveredIRR: financing?.leveredIRR, avgDSCR: financing?.avgDSCR, minDSCR: financing?.minDSCR,
+        lpIRR: waterfall?.lpIRR, gpIRR: waterfall?.gpIRR,
+        lpMOIC: waterfall?.lpMOIC, gpMOIC: waterfall?.gpMOIC,
+        timestamp: Date.now(),
+      });
+    }
+
     setInput("");
     setError(null);
 
@@ -758,7 +804,10 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
           lpMOIC: waterfall.lpMOIC,
           gpMOIC: waterfall.gpMOIC,
           totalDistributions: waterfall.totalDistributions,
-        })}` : "")
+        })}` : "") +
+        (smartAlerts && smartAlerts.length > 0
+          ? `\n\nSMART REVIEWER ALERTS (${smartAlerts.length} issues found by automated validation):\n${smartAlerts.filter(a=>a.severity==='critical'||a.severity==='error'||a.severity==='warning').map(a=>`- [${a.severity.toUpperCase()}] ${a.id}: ${a.en}${a.assetName?' ('+a.assetName+')':''}`).join('\n')}\n\nWhen analyzing this project, address these alerts specifically. For each critical/error alert, explain the risk and suggest a concrete fix with numbers.`
+          : "")
       : "";
 
     // Include other saved projects as reference
@@ -913,6 +962,40 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
                     : (isAr ? "⚡ طبّق على المشروع" : "⚡ Apply to Project")}
                 </button>
               )}
+
+              {/* What-if comparison after applied change */}
+              {m.applied && beforeSnapshot && i === messages.length - 1 && results && (() => {
+                const after = { irr: results.consolidatedIRR, npv: results.consolidatedNPV, leveredIRR: financing?.leveredIRR, avgDSCR: financing?.avgDSCR, lpIRR: waterfall?.lpIRR, gpIRR: waterfall?.gpIRR };
+                const fmtV = v => v != null ? (v * 100).toFixed(2) + '%' : '-';
+                const metrics = [
+                  { k:'irr', l: isAr?'IRR المشروع':'Project IRR' },
+                  { k:'leveredIRR', l: isAr?'IRR بعد التمويل':'Levered IRR' },
+                  { k:'avgDSCR', l:'DSCR' },
+                  { k:'lpIRR', l:'LP IRR' },
+                  { k:'gpIRR', l:'GP IRR' },
+                ];
+                return <div style={{ background:'#111827', borderRadius:8, padding:12, margin:'4px 0', border:'1px solid #1f2937', maxWidth:'92%', fontSize:11 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:'#9ca3af', marginBottom:6 }}>{isAr?'📊 مقارنة قبل / بعد':'📊 Before / After'}</div>
+                  <table style={{ width:'100%', color:'#d1d5db' }}>
+                    <thead><tr style={{ borderBottom:'1px solid #374151' }}>
+                      <th style={{ textAlign:'start', padding:3 }}></th>
+                      <th style={{ textAlign:'center', padding:3, color:'#6b7080' }}>{isAr?'قبل':'Before'}</th>
+                      <th style={{ textAlign:'center', padding:3, color:'#e5e7eb' }}>{isAr?'بعد':'After'}</th>
+                    </tr></thead>
+                    <tbody>{metrics.map(m => {
+                      const bv = beforeSnapshot[m.k], av = after[m.k];
+                      const delta = bv!=null&&av!=null ? av-bv : null;
+                      return <tr key={m.k}><td style={{padding:3}}>{m.l}</td>
+                        <td style={{textAlign:'center',padding:3,color:'#9ca3af'}}>{m.k==='avgDSCR'?(bv?.toFixed(2)+'x'):fmtV(bv)}</td>
+                        <td style={{textAlign:'center',padding:3,color:delta>0?'#22c55e':delta<0?'#ef4444':'#e5e7eb'}}>{m.k==='avgDSCR'?(av?.toFixed(2)+'x'):fmtV(av)}</td>
+                      </tr>;
+                    })}</tbody>
+                  </table>
+                  <button onClick={()=>setBeforeSnapshot(null)} style={{ ...btnStyle, background:'#7f1d1d', color:'#fca5a5', padding:'4px 12px', fontSize:10, marginTop:6, border:'1px solid #991b1b', borderRadius:12 }}>
+                    {isAr?'⏪ إغلاق المقارنة':'⏪ Close Comparison'}
+                  </button>
+                </div>;
+              })()}
             </div>
           ))}
 
@@ -941,27 +1024,53 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
           <div ref={msgEndRef} />
         </div>
 
-        {/* Quick suggestions */}
+        {/* Quick suggestions / quick actions */}
         {messages.length <= 1 && (
           <div style={{ padding: "0 16px 8px", display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {(isAr ? [
-              "مشروع فندقي 5 نجوم في نيوم",
-              "مجمع سكني في الرياض",
-              "مول تجاري + أبراج مكتبية في جدة",
-            ] : [
-              "5-star hotel resort in NEOM",
-              "Residential compound in Riyadh",
-              "Mall + office towers in Jeddah",
-            ]).map((s, i) => (
-              <button key={i} onClick={() => setInput(s)} style={{
-                ...btnStyle, background: "#1a1f2e", color: "#8b90a0", padding: "5px 10px",
-                fontSize: 10.5, border: "1px solid #252a3a",
-                transition: "all 0.15s",
-              }}
-                onMouseEnter={e => { e.target.style.background = "#252a3a"; e.target.style.color = "#c8cdd8"; }}
-                onMouseLeave={e => { e.target.style.background = "#1a1f2e"; e.target.style.color = "#8b90a0"; }}
-              >{s}</button>
-            ))}
+            {project && results ? (
+              // Advisor quick actions when project is loaded
+              [
+                { key: "analyze", icon: "📊", ar: "حلل مشروعي", en: "Analyze Project",
+                  msg: isAr ? "حلل مشروعي بالكامل: صحة المشروع، الافتراضات، المخاطر، والتوصيات. خذ بعين الاعتبار تنبيهات المراجع الذكي." : "Full project analysis: health check, assumptions review, risks, and recommendations. Consider Smart Reviewer alerts." },
+                { key: "optimize", icon: "⚡", ar: "حسّن الهيكل", en: "Optimize Structure",
+                  msg: isAr ? "كيف أحسّن هيكل التمويل؟ قارن بين الخيارات واعطني أرقام محددة." : "How can I optimize the financing structure? Compare options with specific numbers." },
+                { key: "risks", icon: "⚠️", ar: "المخاطر", en: "Key Risks",
+                  msg: isAr ? "ايش أكبر 5 مخاطر في مشروعي وكيف أخففها؟" : "What are the top 5 risks and how to mitigate them?" },
+                { key: "incentives", icon: "🏛️", ar: "الحوافز الحكومية", en: "Gov Incentives",
+                  msg: isAr ? "ايش البرامج الحكومية اللي يمكن مشروعي يستفيد منها؟ كن محدد بالمبالغ والشروط." : "What government programs could my project benefit from? Be specific with amounts and conditions." },
+                { key: "whatif", icon: "🔄", ar: "ايش لو...", en: "What if...",
+                  msg: isAr ? 'أنا في وضع "ايش لو". قولي ايش تبي تغير وسأعدله وأوريك الفرق. مثال: "ارفع الإيجار 10%" أو "غير التمويل لـ60% بنكي"' : 'I\'m in "What If" mode. Tell me what to change and I\'ll show you the impact. Example: "increase rent by 10%" or "change LTV to 60%"' },
+              ].map(qa => (
+                <button key={qa.key} onClick={() => { setInput(qa.msg); setTimeout(() => textareaRef.current?.focus(), 100); }} style={{
+                  ...btnStyle, background: "#1a2235", color: "#8b95a8", padding: "5px 12px",
+                  fontSize: 11, border: "1px solid #2a3347", borderRadius: 20,
+                  transition: "all 0.15s", whiteSpace: "nowrap",
+                }}
+                  onMouseEnter={e => { e.target.style.background = "#2a3347"; e.target.style.color = "#c8cdd6"; }}
+                  onMouseLeave={e => { e.target.style.background = "#1a2235"; e.target.style.color = "#8b95a8"; }}
+                >{qa.icon} {isAr ? qa.ar : qa.en}</button>
+              ))
+            ) : (
+              // Project creation suggestions when no project
+              (isAr ? [
+                "مشروع فندقي 5 نجوم في نيوم",
+                "مجمع سكني في الرياض",
+                "مول تجاري + أبراج مكتبية في جدة",
+              ] : [
+                "5-star hotel resort in NEOM",
+                "Residential compound in Riyadh",
+                "Mall + office towers in Jeddah",
+              ]).map((s, i) => (
+                <button key={i} onClick={() => setInput(s)} style={{
+                  ...btnStyle, background: "#1a1f2e", color: "#8b90a0", padding: "5px 10px",
+                  fontSize: 10.5, border: "1px solid #252a3a",
+                  transition: "all 0.15s",
+                }}
+                  onMouseEnter={e => { e.target.style.background = "#252a3a"; e.target.style.color = "#c8cdd8"; }}
+                  onMouseLeave={e => { e.target.style.background = "#1a1f2e"; e.target.style.color = "#8b90a0"; }}
+                >{s}</button>
+              ))
+            )}
           </div>
         )}
 

@@ -12,7 +12,7 @@ const SEV = {
   info:     { icon: "ℹ️", bg: "#eff6ff", border: "#60a5fa", text: "#1e40af", label_ar: "معلومة", label_en: "Info" },
 };
 
-export default function SmartReviewerPanel({ alerts, lang, summary }) {
+export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI }) {
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(new Set());
   const ar = lang === "ar";
@@ -107,16 +107,30 @@ export default function SmartReviewerPanel({ alerts, lang, summary }) {
                       </span>
                     )}
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); dismiss(alert); }}
-                    style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      fontSize: 14, color: "#9ca3af", padding: 2, flexShrink: 0,
-                    }}
-                    title={ar ? "إخفاء" : "Dismiss"}
-                  >
-                    ✕
-                  </button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
+                    {onAskAI && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onAskAI(alert); }}
+                        style={{
+                          background: "none", border: "1px solid #d1d5db", borderRadius: 4,
+                          padding: "2px 8px", fontSize: 10, color: "#6b7280",
+                          cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                        }}
+                      >
+                        {ar ? "💡 اقترح تعديل" : "💡 Suggest Fix"}
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); dismiss(alert); }}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        fontSize: 14, color: "#9ca3af", padding: 2, alignSelf: "center",
+                      }}
+                      title={ar ? "إخفاء" : "Dismiss"}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
