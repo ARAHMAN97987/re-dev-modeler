@@ -865,97 +865,48 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         throw new Error(errMsg);
       }
 
-      const contentType = res.headers.get("content-type") || "";
+      // Add empty assistant message immediately
+      setMessages(prev => [...prev, { role: "assistant", content: "", displayText: "▌", parsed: null, _streaming: true }]);
 
-      if (contentType.includes("text/event-stream")) {
-        // ── SSE STREAMING ──
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = "";
-        let buffer = "";
+      // Read the full response as text first, then parse SSE events
+      const responseText = await res.text();
+      let fullText = "";
 
-        // Add empty assistant message immediately
-        setMessages(prev => [...prev, { role: "assistant", content: "", displayText: "▌", parsed: null, _streaming: true }]);
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          // Split on newlines, keep incomplete last line in buffer
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (!data || data === "[DONE]") continue;
-            try {
-              const event = JSON.parse(data);
-              if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
-                fullText += event.delta.text;
-                const displayNow = fullText.replace(/```json[\s\S]*?```/g, "").trim();
-                setMessages(prev => {
-                  const updated = [...prev];
-                  const last = updated[updated.length - 1];
-                  if (last && last._streaming) {
-                    updated[updated.length - 1] = { ...last, content: fullText, displayText: displayNow || "▌" };
-                  }
-                  return updated;
-                });
-              }
-            } catch (_) {}
+      // Parse all SSE data lines
+      const lines = responseText.split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const event = JSON.parse(data);
+          if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
+            fullText += event.delta.text;
           }
+        } catch (_) {}
+      }
+
+      // Finalize message
+      const parsed = extractJSON(fullText);
+      const displayText = fullText.replace(/```json[\s\S]*?```/g, "").trim();
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last && last._streaming) {
+          updated[updated.length - 1] = {
+            role: "assistant", content: fullText,
+            displayText: displayText || (isAr ? "تم ✓" : "Done ✓"),
+            parsed,
+          };
         }
+        return updated;
+      });
 
-        // Finalize
-        const parsed = extractJSON(fullText);
-        const displayText = fullText.replace(/```json[\s\S]*?```/g, "").trim();
-        setMessages(prev => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last && last._streaming) {
-            updated[updated.length - 1] = {
-              role: "assistant", content: fullText,
-              displayText: displayText || (isAr ? "تم تحليل البيانات ✓" : "Data parsed ✓"),
-              parsed,
-            };
-          }
-          return updated;
-        });
-
-        if (parsed && onApply) {
-          try {
-            if (parsed._action === "load_project" && parsed.projectId && loadProjectFn) {
-              await loadProjectFn(parsed.projectId);
-            } else {
-              onApply(prev => {
-                const updated = { ...prev };
-                for (const [k, v] of Object.entries(parsed)) {
-                  if (k === "_action") continue;
-                  if (k === "assets" && Array.isArray(v)) updated.assets = v;
-                  else if (k === "phases" && Array.isArray(v)) updated.phases = v;
-                  else updated[k] = v;
-                }
-                return updated;
-              });
-            }
-          } catch (_) {}
-        }
-
-      } else {
-        // ── JSON FALLBACK ──
-        const data = await res.json();
-        const assistantText = data.content?.map(c => c.text || "").join("") || "";
-        const parsed = extractJSON(assistantText);
-        const displayText = assistantText.replace(/```json[\s\S]*?```/g, "").trim();
-        setMessages(prev => [...prev, {
-          role: "assistant", content: assistantText,
-          displayText: displayText || (isAr ? "تم تحليل البيانات ✓" : "Data parsed ✓"),
-          parsed,
-        }]);
-        if (parsed && onApply) {
-          try {
+      if (parsed && onApply) {
+        try {
+          if (parsed._action === "load_project" && parsed.projectId && loadProjectFn) {
+            await loadProjectFn(parsed.projectId);
+          } else {
             onApply(prev => {
               const updated = { ...prev };
               for (const [k, v] of Object.entries(parsed)) {
@@ -966,8 +917,8 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
               }
               return updated;
             });
-          } catch (_) {}
-        }
+          }
+        } catch (_) {}
       }
 
     } catch (e) {
