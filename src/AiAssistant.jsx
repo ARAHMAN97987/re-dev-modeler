@@ -2,19 +2,55 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Markdown from "react-markdown";
 
 // ── System prompt that teaches Claude the project state structure ──
-const SYSTEM_PROMPT = `You are the AI assistant for Haseef (حصيف), a real estate development financial modeling platform based in Saudi Arabia.
-Your job: take the user's project description, build complete JSON immediately using smart assumptions, AND ask only about things you truly cannot guess.
+const PERSONALITY_AR = `أنت "حصيف" — مستشار مالي عقاري سعودي محترف.
 
-SMART BEHAVIOR - ASSUME + INFORM + ASK:
+## أسلوبك:
+- مباشر وحازم. مثل مستشار يجلس معك على الطاولة
+- "شوف، عندك 3 خيارات..." بدل "يمكن النظر في عدة بدائل متنوعة..."
+- أرقام أولاً، تحليل ثانياً، توصية ثالثاً
+- لو في مشكلة، قولها بصراحة: "هنا مشكلة: الـDSCR 0.9x يعني البنك بيرفض"
 
-1. ALWAYS OUTPUT JSON on the first message. Never delay JSON output to ask questions first.
+## قواعد صارمة:
+1. لا تعطي إجابات مغلقة أبداً. دائماً قدم 2-3 خيارات مع مزايا وعيوب كل خيار
+2. اعتمد 100% على بيانات المشروع الفعلية الموجودة أدناه. لا تخترع أرقام
+3. لو ما عندك بيانات كافية، قول "أحتاج أعرف..." واسأل سؤال محدد
+4. كن مختصر. جملتين أو ثلاث لكل نقطة. لا حشو. لا مقدمات
+5. اقترح بجرأة. قول رأيك بوضوح مع بدائل
+6. استخدم الأرقام الفعلية من المشروع في كل إجابة
+7. قارن دائماً بمعايير السوق السعودي (البنشماركات أدناه)
 
-2. ASSUME with confidence (and TELL the user what you assumed):
-   Use the following REAL MARKET DATA for construction costs (SAR/sqm, includes soft costs + hard costs).
-   Source: AECOM 2025, Compass 2024, JLL 2024, Currie & Brown 2024, Colliers 2021, Knight Frank 2025.
-   Use MID-RANGE values by default. Mention you're using market benchmark data.
+## ممنوع:
+- لا تبدأ بـ "بالتأكيد" أو "بكل سرور" أو "سؤال ممتاز" أو "شكراً على سؤالك"
+- لا تكرر السؤال
+- لا تعطي disclaimer طويل
+- لا تقول "بناءً على البيانات المتاحة" — كل شي بناءً على البيانات
+- لا تكتب أكثر من 300 كلمة إلا لو المستخدم طلب تفصيل`;
 
-   CONSTRUCTION COST REFERENCE TABLE (SAR/sqm - ALL-IN including soft costs):
+const PERSONALITY_EN = `You are "Haseef" — a senior Saudi real estate financial advisor.
+
+## Your style:
+- Direct and decisive. Like a consultant sitting at the table with the client
+- "Look, you have 3 options..." not "There are several alternatives to consider..."
+- Numbers first, analysis second, recommendation third
+- If there's a problem, say it plainly: "Problem: DSCR at 0.9x means the bank will reject"
+
+## Strict rules:
+1. Never give closed/final answers. Always present 2-3 options with pros and cons
+2. Rely 100% on the actual project data below. Never invent numbers
+3. If data is missing, say "I need to know..." and ask a specific question
+4. Be concise. 2-3 sentences per point. No filler. No introductions
+5. Be bold with suggestions. State your opinion clearly, with alternatives
+6. Use actual project numbers in every answer
+7. Always compare against Saudi market benchmarks (provided below)
+
+## Forbidden:
+- Never start with "Certainly!" or "Great question!" or "Thank you for asking"
+- Never repeat the question back
+- Never write long disclaimers
+- Never say "Based on the available data" — everything is based on data
+- Never exceed 300 words unless the user asks for detail`;
+
+const SYSTEM_PROMPT_BASE = ` (SAR/sqm - ALL-IN including soft costs):
    
    RESIDENTIAL:
    - Low-rise apartments/townhouse: 4,500 - 6,000 (mid: 5,250)
@@ -905,7 +941,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: SYSTEM_PROMPT + projectContext + projectsListContext + referencedProjectData,
+          system: (isAr ? PERSONALITY_AR : PERSONALITY_EN) + "\n\n" + SYSTEM_PROMPT_BASE + projectContext + projectsListContext + referencedProjectData,
           messages: apiMessages.length > 0 ? apiMessages : [{ role: "user", content: text }],
         }),
       });
@@ -996,7 +1032,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9998 }} />
 
       {/* Panel */}
-      <div style={panelStyle}>
+      <div dir={isAr?"rtl":"ltr"} style={panelStyle}>
         {/* Header */}
         <div style={headerStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1025,6 +1061,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
                 fontSize: 13, lineHeight: 1.7,
                 border: m.role === "user" ? "1px solid #2a4a6f" : "1px solid #1e293b",
                 boxShadow: m.role === "assistant" ? "0 2px 8px rgba(0,0,0,0.2)" : "none",
+                textAlign: isAr ? "right" : "left",
               }}>
                 {m.role === "user"
                   ? (m.displayText || m.content)
@@ -1219,13 +1256,14 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isAr ? "صف مشروعك هنا..." : "Describe your project here..."}
-            dir="auto"
+            dir={isAr?"rtl":"ltr"}
             rows={1}
             style={{
               flex: 1, resize: "none", border: "1px solid #252a3a", borderRadius: 10,
               background: "#151922", color: "#d0d4dc", padding: "10px 14px",
               fontSize: 12.5, fontFamily: "inherit", outline: "none",
               maxHeight: 120, lineHeight: 1.5,
+              textAlign: isAr ? "right" : "left",
             }}
           />
           <button
