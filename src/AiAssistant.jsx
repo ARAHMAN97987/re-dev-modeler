@@ -355,9 +355,48 @@ const mdComponents = {
   blockquote: ({children}) => <div style={{borderInlineStart:"3px solid #2EC4B6",paddingInlineStart:12,margin:"6px 0",color:"#94a3b8",fontStyle:"italic"}}>{children}</div>,
 };
 
+// Fix pipe-delimited text into proper markdown tables
+function fixTables(text) {
+  if (!text || !text.includes('|')) return text;
+  const lines = text.split('\n');
+  const result = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    // Detect a pipe-delimited line (at least 2 pipes)
+    if (line.trim().startsWith('|') && (line.match(/\|/g) || []).length >= 2) {
+      // Collect consecutive pipe lines
+      const tableLines = [];
+      while (i < lines.length && lines[i].trim().startsWith('|') && (lines[i].match(/\|/g) || []).length >= 2) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      if (tableLines.length >= 1) {
+        // Ensure separator after header (line index 1)
+        const hasSep = tableLines.length > 1 && /^\s*\|[\s\-:]+\|/.test(tableLines[1]);
+        if (!hasSep && tableLines.length >= 2) {
+          // Count columns from first row
+          const cols = (tableLines[0].match(/\|/g) || []).length - 1;
+          const sep = '|' + Array(Math.max(cols, 1)).fill('---').join('|') + '|';
+          tableLines.splice(1, 0, sep);
+        } else if (!hasSep && tableLines.length === 1) {
+          // Single header row — add separator anyway
+          const cols = (tableLines[0].match(/\|/g) || []).length - 1;
+          tableLines.push('|' + Array(Math.max(cols, 1)).fill('---').join('|') + '|');
+        }
+        result.push(...tableLines);
+      }
+      continue;
+    }
+    result.push(line);
+    i++;
+  }
+  return result.join('\n');
+}
+
 function renderMarkdown(text) {
   if (!text) return null;
-  return <Markdown components={mdComponents}>{text}</Markdown>;
+  return <Markdown components={mdComponents}>{fixTables(text)}</Markdown>;
 }
 
 // ── Component ──
