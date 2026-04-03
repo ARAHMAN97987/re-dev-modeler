@@ -114,9 +114,32 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
       setStep(3);
       let sections;
       try {
-        sections = JSON.parse(fullText.replace(/```json\s*/g, "").replace(/```/g, "").trim());
-      } catch {
-        sections = { executiveSummary: fullText };
+        // Clean: remove code fences, trim whitespace
+        let cleaned = fullText.replace(/```json\s*/g, "").replace(/```/g, "").trim();
+        // If truncated (doesn't end with }), try to close it
+        if (!cleaned.endsWith("}")) {
+          // Find last complete value (ends with ")
+          const lastQuote = cleaned.lastIndexOf('"');
+          if (lastQuote > 0) {
+            cleaned = cleaned.substring(0, lastQuote + 1) + "}";
+          }
+        }
+        sections = JSON.parse(cleaned);
+      } catch (parseErr) {
+        // Try extracting individual sections with regex
+        const sectionKeys = ["executiveSummary","projectDescription","financialAnalysis","capitalStructure","riskAnalysis","marketComparison","recommendations","conclusion"];
+        sections = {};
+        for (const key of sectionKeys) {
+          const regex = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)(?:"\\s*[,}]|"$)`);
+          const match = fullText.match(regex);
+          if (match) {
+            sections[key] = match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+          }
+        }
+        if (Object.keys(sections).length === 0) {
+          // Last resort: show raw text as single section
+          sections = { executiveSummary: fullText.replace(/^[\s\S]*?"executiveSummary"\s*:\s*"/, "").replace(/\\n/g, "\n").replace(/\\"/g, '"') };
+        }
       }
       setAiSections(sections);
       setState("ready");
