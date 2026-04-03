@@ -22,6 +22,7 @@ import HotelPLModal from "./components/shared/HotelPLModal";
 import MarinaPLModal from "./components/shared/MarinaPLModal";
 import LandingPage from "./components/auth/LandingPage";
 import SmartReviewerPanel, { SmartReviewerBadge } from "./components/shared/SmartReviewerPanel";
+import AdvisoryReport from "./components/shared/AdvisoryReport";
 import FieldAlertDot from "./components/shared/FieldAlertDot";
 import { runAllRules } from "./smartReviewer.js";
 
@@ -3586,6 +3587,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     return () => window.removeEventListener("popstate", onPopState);
   }, [project?.id, projectIndex]);
   const [aiOpen, setAiOpen] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   // ── Toast Notification System ──
@@ -4157,7 +4159,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} smartAlerts={smartAlerts.alerts} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
-            ["results", <><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} onAskAI={(alert) => { setPendingChatMsg(lang==='ar' ? `تنبيه المراجع الذكي [${alert.id}]: ${alert.ar}\n${alert.assetName?'الأصل: '+alert.assetName+'\n':''}ايش تقترح أعدل عشان أحل هالمشكلة؟ اعطني رقم محدد ووضح الأثر على IRR/NPV.` : `Smart Reviewer alert [${alert.id}]: ${alert.en}\n${alert.assetName?'Asset: '+alert.assetName+'\n':''}What do you suggest I change to fix this? Give me a specific number and explain the impact on IRR/NPV.`); setAiOpen(true); }} /><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} /></>],
+            ["results", <><div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} onAskAI={(alert) => { setPendingChatMsg(lang==='ar' ? `تنبيه المراجع الذكي [${alert.id}]: ${alert.ar}\n${alert.assetName?'الأصل: '+alert.assetName+'\n':''}ايش تقترح أعدل عشان أحل هالمشكلة؟ اعطني رقم محدد ووضح الأثر على IRR/NPV.` : `Smart Reviewer alert [${alert.id}]: ${alert.en}\n${alert.assetName?'Asset: '+alert.assetName+'\n':''}What do you suggest I change to fix this? Give me a specific number and explain the impact on IRR/NPV.`); setAiOpen(true); }} /></div><div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}><button onClick={()=>setShowReport(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:8,border:"1px solid #2EC4B6",background:"linear-gradient(135deg,#f0fdfa,#ecfdf5)",color:"#0d9488",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#ccfbf1"} onMouseLeave={e=>e.currentTarget.style.background="linear-gradient(135deg,#f0fdfa,#ecfdf5)"}><span style={{fontSize:16}}>📄</span>{lang==="ar"?"توليد تقرير استشاري":"Generate Advisory Report"}</button></div><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} /></>],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} up={up} />],
             ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],
@@ -4179,6 +4181,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
         />
       )}
       <AiAssistant open={aiOpen} onClose={()=>setAiOpen(false)} project={project} onApply={up} lang={lang} projectIndex={projectIndex} loadProjectFn={loadProject} results={results} financing={financing} waterfall={waterfall} smartAlerts={smartAlerts.alerts} pendingMessage={pendingChatMsg} onClearPending={()=>setPendingChatMsg(null)} />
+      {showReport && <AdvisoryReport project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} smartAlerts={smartAlerts.alerts} lang={lang} onClose={()=>setShowReport(false)} />}
       {shareModalOpen && project && !project._shared && <ShareModal project={project} up={up} lang={lang} user={user} onClose={()=>setShareModalOpen(false)} />}
     </div>
   );
