@@ -864,29 +864,94 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         throw new Error(errData.error || `API Error ${res.status}`);
       }
 
-      const data = await res.json();
-      const assistantText = data.content?.map(c => c.text || "").join("") || "";
+      // ── Stream reading ──
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
 
-      // Try to extract and parse JSON
-      const parsed = extractJSON(assistantText);
+      // Add empty assistant message immediately (updated as stream comes in)
+      setMessages(prev => [...prev, { role: "assistant", content: "", displayText: "", parsed: null, _streaming: true }]);
 
-      // Clean display text (remove JSON block for display)
-      const displayText = assistantText.replace(/```json[\s\S]*?```/g, "").trim();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
 
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: assistantText,
-        displayText: displayText || (isAr ? "تم تحليل البيانات ✓" : "Data parsed ✓"),
-        parsed,
-      }]);
+        // Parse SSE events from Anthropic streaming format
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+          try {
+            const event = JSON.parse(data);
+            if (event.type === 'content_block_delta' && event.delta?.text) {
+              fullText += event.delta.text;
+              const displayNow = fullText.replace(/```json[\s\S]*?```/g, "").trim();
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last && last._streaming) {
+                  updated[updated.length - 1] = { ...last, content: fullText, displayText: displayNow || "▌" };
+                }
+                return updated;
+              });
+            }
+          } catch (_) { /* not all lines are valid JSON */ }
+        }
+      }
+
+      // Stream ended — finalize message
+      const parsed = extractJSON(fullText);
+      const displayText = fullText.replace(/```json[\s\S]*?```/g, "").trim();
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last && last._streaming) {
+          updated[updated.length - 1] = {
+            role: "assistant",
+            content: fullText,
+            displayText: displayText || (isAr ? "تم تحليل البيانات ✓" : "Data parsed ✓"),
+            parsed,
+          };
+        }
+        return updated;
+      });
+
+      // Apply parsed JSON to project if present
+      if (parsed && onApply) {
+        try {
+          if (parsed._action === "load_project" && parsed.projectId && loadProjectFn) {
+            const refProj = await loadProjectFn(parsed.projectId);
+            if (refProj) {
+              setMessages(prev => [...prev, { role: "system", content: `Project "${refProj.name}" loaded. Adapting...` }]);
+            }
+          } else {
+            onApply(prev => {
+              const updated = { ...prev };
+              for (const [k, v] of Object.entries(parsed)) {
+                if (k === '_action') continue;
+                if (k === 'assets' && Array.isArray(v)) { updated.assets = v; }
+                else if (k === 'phases' && Array.isArray(v)) { updated.phases = v; }
+                else { updated[k] = v; }
+              }
+              return updated;
+            });
+          }
+        } catch (_) {}
+      }
 
     } catch (e) {
       setError(e.message);
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: isAr ? "حدث خطأ في الاتصال. حاول مرة أخرى." : "Connection error. Please try again.",
-        parsed: null,
-      }]);
+      setMessages(prev => {
+        // Remove streaming placeholder if it exists
+        const cleaned = prev.filter(m => !m._streaming);
+        return [...cleaned, {
+          role: "assistant",
+          content: isAr ? "حدث خطأ في الاتصال. حاول مرة أخرى." : "Connection error. Please try again.",
+          parsed: null,
+        }];
+      });
     } finally {
       setLoading(false);
     }
