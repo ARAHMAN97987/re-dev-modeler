@@ -774,20 +774,17 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
           carryPct: project.carryPct,
           incentives: project.incentives,
         })}` +
-        (results ? `\n\nMODEL RESULTS (use these for analysis):\n${JSON.stringify({
-          totalCAPEX: results.totalCapex,
-          totalRevenue50yr: results.totalRevenue,
-          consolidatedIRR: results.consolidatedIRR,
-          consolidatedNPV: results.consolidatedNPV,
-          year1Income: results.year1Income,
-          stabilizedIncome: results.stabilizedIncome,
-          phaseResults: results.phaseResults?.map(p => ({
-            phase: p.phase,
+        (results?.consolidated ? `\n\nMODEL RESULTS (use these for analysis):\n${JSON.stringify({
+          totalCAPEX: results.consolidated.totalCapex,
+          totalRevenue50yr: results.consolidated.totalIncome,
+          consolidatedIRR: results.consolidated.irr,
+          consolidatedNPV: results.consolidated.npv10,
+          phaseResults: results.phaseResults ? Object.entries(results.phaseResults).map(([name, p]) => ({
+            phase: name,
             capex: p.totalCapex,
             irr: p.irr,
-            npv: p.npv,
-            year1Income: p.year1Income,
-          })),
+            npv: p.npv10,
+          })) : [],
         })}` : "") +
         (financing ? `\n\nFINANCING RESULTS:\n${JSON.stringify({
           totalEquity: financing.totalEquity,
