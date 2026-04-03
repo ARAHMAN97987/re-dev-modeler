@@ -633,31 +633,51 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
       }));
     }
 
-    // Assets - full replace
+    // Assets — MERGE by name (don't replace all)
     if (parsed.assets && Array.isArray(parsed.assets)) {
-      update.assets = parsed.assets.map(a => ({
-        id: crypto.randomUUID(),
-        phase: a.phase || update.phases?.[0]?.name || project?.phases?.[0]?.name || "Phase 1",
-        category: a.category || "Retail",
-        name: a.name || "",
-        code: a.code || "",
-        notes: a.notes || "",
-        plotArea: a.plotArea || 0,
-        footprint: a.footprint || 0,
-        gfa: a.gfa || 0,
-        revType: a.revType || "Lease",
-        efficiency: a.efficiency ?? 85,
-        leaseRate: a.leaseRate || 0,
-        opEbitda: a.opEbitda || 0,
-        escalation: a.escalation ?? 0.75,
-        rampUpYears: a.rampUpYears ?? 3,
-        stabilizedOcc: a.stabilizedOcc ?? 100,
-        costPerSqm: a.costPerSqm || 0,
-        constrStart: a.constrStart || 1,
-        constrDuration: a.constrDuration || 24,
-        hotelPL: a.hotelPL || null,
-        marinaPL: a.marinaPL || null,
-      }));
+      const existing = [...(project?.assets || [])];
+      const isFullSetup = !project?.assets?.length || parsed.assets.length >= 3;
+      if (isFullSetup) {
+        // Full project setup (new project or major restructure) — replace all
+        update.assets = parsed.assets.map(a => ({
+          id: crypto.randomUUID(),
+          phase: a.phase || update.phases?.[0]?.name || project?.phases?.[0]?.name || "Phase 1",
+          category: a.category || "Retail",
+          name: a.name || "", code: a.code || "", notes: a.notes || "",
+          plotArea: a.plotArea || 0, footprint: a.footprint || 0, gfa: a.gfa || 0,
+          revType: a.revType || "Lease", efficiency: a.efficiency ?? 85,
+          leaseRate: a.leaseRate || 0, opEbitda: a.opEbitda || 0,
+          escalation: a.escalation ?? 0.75, rampUpYears: a.rampUpYears ?? 3,
+          stabilizedOcc: a.stabilizedOcc ?? 100, costPerSqm: a.costPerSqm || 0,
+          constrStart: a.constrStart || 1, constrDuration: a.constrDuration || 24,
+          hotelPL: a.hotelPL || null, marinaPL: a.marinaPL || null,
+        }));
+      } else {
+        // Partial update — merge by name, update matching assets, add new ones
+        const merged = [...existing];
+        for (const a of parsed.assets) {
+          const idx = merged.findIndex(e => e.name === a.name || (a.name && e.name?.includes(a.name)));
+          if (idx >= 0) {
+            // Update existing asset (merge fields, keep existing values for unspecified)
+            merged[idx] = { ...merged[idx], ...Object.fromEntries(Object.entries(a).filter(([_, v]) => v !== undefined && v !== null)) };
+          } else {
+            // New asset — add it
+            merged.push({
+              id: crypto.randomUUID(),
+              phase: a.phase || project?.phases?.[0]?.name || "Phase 1",
+              category: a.category || "Retail", name: a.name || "", code: a.code || "",
+              plotArea: a.plotArea || 0, footprint: a.footprint || 0, gfa: a.gfa || 0,
+              revType: a.revType || "Lease", efficiency: a.efficiency ?? 85,
+              leaseRate: a.leaseRate || 0, opEbitda: a.opEbitda || 0,
+              escalation: a.escalation ?? 0.75, rampUpYears: a.rampUpYears ?? 3,
+              stabilizedOcc: a.stabilizedOcc ?? 100, costPerSqm: a.costPerSqm || 0,
+              constrStart: a.constrStart || 1, constrDuration: a.constrDuration || 24,
+              hotelPL: a.hotelPL || null, marinaPL: a.marinaPL || null,
+            });
+          }
+        }
+        update.assets = merged;
+      }
     }
 
     if (Object.keys(update).length > 0) {
@@ -887,24 +907,8 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
         return u;
       });
 
-      if (parsed && onApply) {
-        try {
-          if (parsed._action === "load_project" && parsed.projectId && loadProjectFn) {
-            await loadProjectFn(parsed.projectId);
-          } else {
-            onApply(prev => {
-              const updated = { ...prev };
-              for (const [k, v] of Object.entries(parsed)) {
-                if (k === "_action") continue;
-                if (k === "assets" && Array.isArray(v)) updated.assets = v;
-                else if (k === "phases" && Array.isArray(v)) updated.phases = v;
-                else updated[k] = v;
-              }
-              return updated;
-            });
-          }
-        } catch (_) {}
-      }
+      // DON'T auto-apply — let user click "Apply" button
+      // The parsed JSON is stored in the message for the Apply button to use
 
     } catch (e) {
       console.error("Chat error:", e);
@@ -969,7 +973,9 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
               }}>
                 {m.role === "user"
                   ? (m.displayText || m.content)
-                  : renderMarkdown(m.displayText || m.content)
+                  : m._streaming
+                    ? <div style={{whiteSpace:"pre-wrap"}}>{(m.displayText || m.content)}<span style={{opacity:0.5,animation:"pulse 1s infinite"}}>▌</span></div>
+                    : renderMarkdown(m.displayText || m.content)
                 }
               </div>
 
