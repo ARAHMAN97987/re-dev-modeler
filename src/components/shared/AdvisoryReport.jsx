@@ -48,24 +48,29 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
   const [aiSections, setAiSections] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
+  const [wordCount, setWordCount] = useState(0);
   const reportRef = useRef(null);
   const ar = lang === "ar";
+
+  const fmtDate = () => {
+    const opts = { year: "numeric", month: "long", day: "numeric" };
+    if (ar) return new Date().toLocaleDateString("ar-SA", { ...opts, calendar: "gregory" });
+    return new Date().toLocaleDateString("en-US", opts);
+  };
 
   useEffect(() => { generate(); }, []);
 
   const generate = async () => {
-    setState("generating"); setStep(0); setError(null);
+    setState("generating"); setStep(0); setError(null); setWordCount(0);
 
     // Step 1: Collect data
     const data = collectReportData(project, results, financing, waterfall, incentivesResult, smartAlerts);
     setReportData(data);
     setStep(1);
-
-    // Step 2: Analyze
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 300));
     setStep(2);
 
-    // Step 3: Call AI
+    // Step 2: Call AI (streaming)
     try {
       const res = await fetch("/api/report", {
         method: "POST",
@@ -74,13 +79,45 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error || err.details || `Error ${res.status}`);
+        let errMsg = `Error ${res.status}`;
+        try { const ed = await res.json(); errMsg = ed.error || ed.details || errMsg; } catch {}
+        throw new Error(errMsg);
       }
 
-      const { sections } = await res.json();
+      // Read SSE stream
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const d = line.slice(6).trim();
+          if (!d || d === "[DONE]") continue;
+          try {
+            const ev = JSON.parse(d);
+            if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
+              fullText += ev.delta.text;
+              setWordCount(fullText.split(/\s+/).length);
+            }
+          } catch {}
+        }
+      }
+
+      // Stream done — parse JSON
       setStep(3);
-      await new Promise(r => setTimeout(r, 300));
+      let sections;
+      try {
+        sections = JSON.parse(fullText.replace(/```json\s*/g, "").replace(/```/g, "").trim());
+      } catch {
+        sections = { executiveSummary: fullText };
+      }
       setAiSections(sections);
       setState("ready");
     } catch (e) {
@@ -126,7 +163,7 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
             <div style={{fontSize:11,color:"#6b7280",letterSpacing:1,textTransform:"uppercase",marginTop:2}}>{ar ? "التقرير الاستشاري للجدوى المالية" : "Financial Feasibility Advisory Report"}</div>
             <hr style={{border:"none",borderTop:"2px solid #2EC4B6",width:80,margin:"16px auto"}} />
             <div style={{fontSize:18,fontWeight:700,color:"#111",marginTop:12}}>{rd?.project?.name || project?.name}</div>
-            <div style={{fontSize:12,color:"#6b7280",marginTop:4}}>{rd?.project?.location} | {new Date().toLocaleDateString(ar ? "ar-SA" : "en-US", {year:"numeric",month:"long",day:"numeric"})}</div>
+            <div style={{fontSize:12,color:"#6b7280",marginTop:4}}>{rd?.project?.location} | {fmtDate()}</div>
           </div>
 
           {/* Loading state */}
@@ -142,7 +179,8 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
                   </div>
                 ))}
               </div>
-              <div style={{fontSize:11,color:"#9ca3af",marginTop:20}}>{ar ? "يستغرق 15-30 ثانية" : "Takes 15-30 seconds"}</div>
+              {wordCount > 0 && <div style={{fontSize:12,color:"#2EC4B6",fontWeight:600,marginTop:12}}>{ar ? `${wordCount.toLocaleString()} كلمة...` : `${wordCount.toLocaleString()} words...`}</div>}
+              <div style={{fontSize:11,color:"#9ca3af",marginTop:8}}>{ar ? "يستغرق 15-30 ثانية" : "Takes 15-30 seconds"}</div>
             </div>
           )}
 
@@ -231,7 +269,7 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
             <div style={{marginTop:40,paddingTop:20,borderTop:"2px solid #e5e7eb",textAlign:"center",color:"#9ca3af",fontSize:10}}>
               <div style={{color:"#2EC4B6",fontWeight:700,fontSize:12,marginBottom:4}}>Haseef | حصيف</div>
               <div>Generated by Haseef Financial Modeler | haseefdev.com</div>
-              <div>{new Date().toLocaleDateString(ar?"ar-SA":"en-US",{year:"numeric",month:"long",day:"numeric"})}</div>
+              <div>{fmtDate()}</div>
               <div style={{marginTop:8,fontStyle:"italic"}}>{ar?"هذا التقرير تم إعداده آلياً ولا يُعد استشارة مالية رسمية":"This report is auto-generated and does not constitute formal financial advice"}</div>
             </div>
           </>)}

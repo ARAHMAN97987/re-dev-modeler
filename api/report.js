@@ -2,16 +2,16 @@ export const config = { runtime: 'edge' };
 
 export default async function handler(request) {
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
+    return new Response(null, { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
   }
   if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
   }
 
   try {
     const { reportData, lang } = await request.json();
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    if (!apiKey) return new Response(JSON.stringify({ error: 'No API key' }), { status: 500 });
 
     const isAr = lang === 'ar';
     const systemPrompt = `You are a senior real estate financial advisor writing a professional feasibility report for a Saudi Arabian real estate development project.
@@ -28,7 +28,7 @@ Return ONLY valid JSON with these sections (each is markdown text):
 {
   "executiveSummary": "1-page overview with project name, total CAPEX, key returns, verdict, top 3 risks",
   "projectDescription": "2-3 paragraphs about the project components, location, strategy",
-  "financialAnalysis": "Detailed returns analysis (IRR, NPV, payback), revenue structure, cost breakdown with traffic lights 🟢🟡🔴",
+  "financialAnalysis": "Detailed returns analysis (IRR, NPV, payback), revenue structure, cost breakdown with traffic lights",
   "capitalStructure": "Financing structure, debt vs equity, DSCR analysis, leverage assessment",
   "riskAnalysis": "Top 5 risks with mitigation strategies. Reference Smart Reviewer alerts.",
   "marketComparison": "Compare against Saudi benchmarks. Flag outliers with specific numbers.",
@@ -44,34 +44,20 @@ IMPORTANT: Return ONLY valid JSON. No markdown fences. No preamble. No trailing 
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 8192,
+        stream: true,
         system: systemPrompt,
-        messages: [{ role: 'user', content: `Generate a professional feasibility report:\n\n${JSON.stringify(reportData, null, 2)}` }],
+        messages: [{ role: 'user', content: `Generate report:\n${JSON.stringify(reportData)}` }],
       }),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      return new Response(JSON.stringify({ error: `API error: ${response.status}`, details: error }), {
-        status: response.status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      });
+      return new Response(await response.text(), { status: response.status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
 
-    const data = await response.json();
-    const text = data.content?.map(c => c.text || '').join('') || '';
-
-    let sections;
-    try {
-      sections = JSON.parse(text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim());
-    } catch {
-      sections = { executiveSummary: text, error: 'Could not parse sections' };
-    }
-
-    return new Response(JSON.stringify({ sections }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    return new Response(response.body, {
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
   }
 }
