@@ -1,28 +1,25 @@
-// Vercel Serverless Function - proxies to Anthropic Claude API with STREAMING
-// Supports multimodal content (text, images, PDFs)
+// Vercel EDGE Function - proxies to Anthropic Claude API with streaming
+// Edge runtime has 30s timeout (vs 10s for serverless on Hobby plan)
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-  // Streaming requires longer timeout
-  maxDuration: 60,
-};
+export const config = { runtime: 'edge' };
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(request) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' }
+    });
+  }
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  if (!apiKey) {
+    return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
 
   try {
-    const { messages, system } = req.body;
+    const { system, messages } = await request.json();
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -41,31 +38,19 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      console.error('Anthropic API error:', response.status, err);
-      return res.status(response.status).json({ error: err });
+      const errText = await response.text();
+      return new Response(errText, { status: response.status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
 
-    // Stream the SSE response through to the client
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      res.write(chunk);
-    }
-
-    res.end();
+    // Pipe the SSE stream directly to client
+    return new Response(response.body, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
   } catch (e) {
-    console.error('Chat API error:', e);
-    if (!res.headersSent) {
-      res.status(500).json({ error: e.message });
-    }
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
   }
 }
