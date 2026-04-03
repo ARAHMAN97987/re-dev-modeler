@@ -367,7 +367,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
-  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
+  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
   useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase]);
 
   const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
@@ -1426,7 +1426,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   const allPhaseNames = Object.keys(results.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
-  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
+  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
   useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase]);
 
   const h = results.horizon;
@@ -1795,7 +1795,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
-  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
+  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
   useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase]);
   const hasPhases = allPhaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
 
@@ -2408,7 +2408,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
-  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
+  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
   const hasPhases = allPhaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
 
   // ── Settings source: single phase → phase settings, multi → first selected, all → project ──
@@ -5880,7 +5880,7 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
   const phaseNames = Object.keys(results.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
-  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
+  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
   const failedChecks = checks.filter(ch => !ch.pass).length;
 
   // ── Filtered consolidated: aggregate selected phases only ──
@@ -6566,7 +6566,7 @@ function CashFlowView({ project, results, t, incentivesResult, financing }) {
   const allPhaseNames = Object.keys(results.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
-  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
+  const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
 
   // ── Read from engine results, filtered by selected phases ──
   const phases = allPhaseNames.filter(pName => activePh.includes(pName)).map(pName => {
