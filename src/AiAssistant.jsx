@@ -212,13 +212,28 @@ Response:
 1. **التمويل** - ذاتي؟ بنكي؟ صندوق استثماري؟
 2. **الخروج** - تحتفظ بالمشروع للدخل؟ ولا تبيع بعد فترة؟
 
-IMPORTANT:
-- When "_action" is "add_assets", only append the new assets to existing ones.
-- When "_action" is absent, it's a full/initial project setup - replace all fields provided.
+IMPORTANT JSON ACTIONS:
+- "_action": "add_assets" → append new assets to existing project (don't replace)
+- "_action": "update_assets" → modify specific assets by name. Include ONLY the fields to change:
+  \`\`\`json
+  {"_action": "update_assets", "assets": [{"name": "Flexible Block (Branded)", "plotArea": 8500, "footprint": 3500}]}
+  \`\`\`
+  The app will find the asset by name and update ONLY the specified fields. All other fields stay unchanged.
+- "_action": "update_project" → modify project-level fields only:
+  \`\`\`json
+  {"_action": "update_project", "maxLtvPct": 60, "debtGrace": 5}
+  \`\`\`
+- No "_action" → full/initial project setup (replace all fields provided)
+
+CRITICAL RULES FOR SUGGESTIONS:
+- When suggesting a fix for an asset, use "_action": "update_assets" with ONLY the changed fields.
+- NEVER replace all assets when fixing one asset. NEVER send a full assets array for a single fix.
+- When the user asks about a problem (e.g. footprint > plot area), ASK which value is wrong before suggesting. Example: "البصمة 2,948 أكبر من القطعة 2,500. أيهما الصحيح؟ هل أعدّل Plot Area لـ3,500 أو أنقص Footprint لـ2,500؟"
+- For ambiguous problems, present 2-3 options with tradeoffs, then ask user to choose.
 - Use Arabic names if user writes in Arabic, English if English.
 - ALWAYS output JSON immediately. NEVER delay JSON to ask questions first.
 - ALWAYS list your assumptions clearly after the JSON so user knows what to verify.
-- Only ASK about financing mode and exit strategy if not mentioned - these are the only things you cannot assume.
+- Only ASK about financing mode and exit strategy if not mentioned.
 
 ROLE 2: FINANCIAL ADVISOR & STRATEGIC ANALYST
 
@@ -362,33 +377,44 @@ function fixTables(text) {
   const result = [];
   let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
-    // Detect a pipe-delimited line (at least 2 pipes)
-    if (line.trim().startsWith('|') && (line.match(/\|/g) || []).length >= 2) {
+    const line = lines[i].trim();
+    // Detect a pipe-delimited line (at least 2 pipes, starts with |)
+    const pipeCount = (line.match(/\|/g) || []).length;
+    if (line.startsWith('|') && pipeCount >= 3) {
       // Collect consecutive pipe lines
       const tableLines = [];
-      while (i < lines.length && lines[i].trim().startsWith('|') && (lines[i].match(/\|/g) || []).length >= 2) {
-        tableLines.push(lines[i]);
-        i++;
+      while (i < lines.length) {
+        const cl = lines[i].trim();
+        const cp = (cl.match(/\|/g) || []).length;
+        if (cl.startsWith('|') && cp >= 3) {
+          tableLines.push(lines[i]);
+          i++;
+        } else break;
       }
-      if (tableLines.length >= 1) {
-        // Ensure separator after header (line index 1)
-        const hasSep = tableLines.length > 1 && /^\s*\|[\s\-:]+\|/.test(tableLines[1]);
-        if (!hasSep && tableLines.length >= 2) {
-          // Count columns from first row
-          const cols = (tableLines[0].match(/\|/g) || []).length - 1;
-          const sep = '|' + Array(Math.max(cols, 1)).fill('---').join('|') + '|';
+      if (tableLines.length >= 2) {
+        // Check if any line is a separator (only dashes, colons, pipes, spaces)
+        const isSep = (l) => /^\|[\s\-:|\u2014\u2013]+\|?\s*$/.test(l.trim());
+        const sepIdx = tableLines.findIndex((l, j) => j > 0 && isSep(l));
+        if (sepIdx === -1) {
+          // No separator found — inject one after first row
+          const cols = Math.max(1, pipeCount - 1);
+          tableLines.splice(1, 0, '| ' + Array(cols).fill('---').join(' | ') + ' |');
+        } else if (sepIdx > 1) {
+          // Separator exists but not at position 1 — move it
+          const sep = tableLines.splice(sepIdx, 1)[0];
           tableLines.splice(1, 0, sep);
-        } else if (!hasSep && tableLines.length === 1) {
-          // Single header row — add separator anyway
-          const cols = (tableLines[0].match(/\|/g) || []).length - 1;
-          tableLines.push('|' + Array(Math.max(cols, 1)).fill('---').join('|') + '|');
         }
-        result.push(...tableLines);
+        // Normalize separator to standard format
+        const sepLine = tableLines[1];
+        if (isSep(sepLine)) {
+          const cols = Math.max(1, (tableLines[0].match(/\|/g) || []).length - 1);
+          tableLines[1] = '| ' + Array(cols).fill('---').join(' | ') + ' |';
+        }
       }
+      result.push(...tableLines);
       continue;
     }
-    result.push(line);
+    result.push(lines[i]);
     i++;
   }
   return result.join('\n');
@@ -571,6 +597,35 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
 
   const applyToProject = useCallback((parsed) => {
     if (!parsed || !onApply) return;
+
+    // ── update_assets: modify specific assets by name (field-level) ──
+    if (parsed._action === "update_assets" && parsed.assets) {
+      onApply(prev => {
+        const updated = { ...prev, assets: [...(prev.assets || [])] };
+        for (const change of parsed.assets) {
+          const idx = updated.assets.findIndex(a =>
+            a.name === change.name || (change.name && a.name?.toLowerCase().includes(change.name.toLowerCase()))
+          );
+          if (idx >= 0) {
+            // Merge only specified fields
+            const fields = Object.entries(change).filter(([k, v]) => k !== 'name' && k !== '_action' && v !== undefined);
+            for (const [k, v] of fields) { updated.assets[idx] = { ...updated.assets[idx], [k]: v }; }
+          }
+        }
+        return updated;
+      });
+      return;
+    }
+
+    // ── update_project: modify project-level fields only ──
+    if (parsed._action === "update_project") {
+      const fields = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (k !== '_action' && v !== undefined) fields[k] = v;
+      }
+      if (Object.keys(fields).length > 0) onApply(fields);
+      return;
+    }
 
     // Handle incremental asset additions
     if (parsed._action === "add_assets" && parsed.assets) {
@@ -973,9 +1028,7 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
               }}>
                 {m.role === "user"
                   ? (m.displayText || m.content)
-                  : m._streaming
-                    ? <div style={{whiteSpace:"pre-wrap"}}>{(m.displayText || m.content)}<span style={{opacity:0.5,animation:"pulse 1s infinite"}}>▌</span></div>
-                    : renderMarkdown(m.displayText || m.content)
+                  : <>{renderMarkdown(m.displayText || m.content)}{m._streaming && <span style={{opacity:0.5,animation:"pulse 1s infinite"}}>▌</span>}</>
                 }
               </div>
 
