@@ -13,6 +13,7 @@ import { defaultHotelPL, defaultMarinaPL } from "../../data/defaults";
 import { getMetricColor } from "../../utils/metricColor.js";
 import AssetDetailPanel from "../AssetDetailPanel.jsx";
 import { ASSET_TEMPLATES, TEMPLATE_GROUPS } from "../../data/assetTemplates.js";
+import { deriveAreas } from "../../data/areaBenchmarks.js";
 
 function StatusBadge({status,onChange}) {
   const [open,setOpen]=useState(false);
@@ -335,6 +336,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
     { key:"revType", en:"Type", ar:"النوع", w:65 },
     { key:"eff", en:"Eff%", ar:"كفاءة", w:45 },
     { key:"leasable", en:"Lease.", ar:"تأجير", w:55 },
+    { key:"netArea", en:"Net Area", ar:"صافي المساحة", w:65 },
     { key:"rate", en:"Rate", ar:"إيجار", w:55 },
     { key:"opEbitda", en:"EBITDA", ar:"تشغيلي", w:75 },
     { key:"esc", en:"Esc%", ar:"زيادة", w:40 },
@@ -352,7 +354,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [filterPhase, setFilterPhase] = useState("all");
   const [filterCat, setFilterCat] = useState("all");
   const [filterRev, setFilterRev] = useState("all");
-  const [hiddenCols, setHiddenCols] = useState(() => new Set(["plotArea","footprint","esc","ramp","occ"]));
+  const [hiddenCols, setHiddenCols] = useState(() => new Set(["plotArea","footprint","esc","ramp","occ","netArea"]));
   const [showColPicker, setShowColPicker] = useState(false);
   const [cfOpen, setCfOpen] = useState({}); // which asset CFs are expanded
   const [cfAllOpen, setCfAllOpen] = useState(false); // global toggle
@@ -863,6 +865,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <td style={{...tdSt,...hd("revType")}}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
                       <td style={{...tdSt,...hd("eff")}}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,color:"#6b7080",textAlign:"right",fontSize:11,...hd("leasable")}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
+                      <td style={{...tdSt,color:"#0369a1",textAlign:"right",fontSize:11,...hd("netArea")}}>{fmt(deriveAreas(a).netArea)}</td>
                       <td style={{...tdSt,background:isOp?"#f5f5f5":undefined,...hd("rate")}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("opEbitda")}}>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>

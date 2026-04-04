@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ASSET_TYPES } from "../data/assetTypes.js";
+import { deriveAreas, getBenchmarkEfficiency, getAreaLabel } from "../data/areaBenchmarks.js";
 
 export default function AssetDetailPanel({
   asset,
@@ -191,9 +192,46 @@ export default function AssetDetailPanel({
             {field("Efficiency %", "الكفاءة", asset.efficiency, (v) => up("efficiency", v), { type: "number", suffix: "%" })}
             {field("GLA", "المساحة القابلة للتأجير",
               asset.gla || Math.round((asset.gfa || 0) * ((asset.efficiency || 85) / 100)),
-              (v) => up("gla", v),
+              (v) => {
+                if (asset.gfa > 0) {
+                  const newEff = Math.min(100, Math.round((v / asset.gfa) * 100));
+                  upAsset(index, { gla: v, efficiency: newEff });
+                } else {
+                  up("gla", v);
+                }
+              },
               { type: "number", suffix: "m²", derived: !asset.gla }
             )}
+            {/* Derived Values Box */}
+            {(() => {
+              const derived = deriveAreas(asset);
+              const benchEff = getBenchmarkEfficiency(asset.assetType);
+              return (
+                <div style={{ padding: "8px 12px", background: "#f0f9ff", borderRadius: 6, marginTop: 8 }}>
+                  <div style={{ fontSize: 10, color: "#0369a1", marginBottom: 4 }}>
+                    {lang === "ar" ? "قيم مشتقة" : "Derived Values"}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 11 }}>
+                    <div>{getAreaLabel(asset.assetType, lang)}: <b>{derived.netArea.toLocaleString()}</b> m²</div>
+                    <div>{lang === "ar" ? "نسبة التغطية" : "Coverage"}: <b>{derived.coveragePct}%</b></div>
+                    <div>FAR: <b>{derived.far}</b></div>
+                    <div>{lang === "ar" ? "المرجعية" : "Benchmark"}: <b>{benchEff}%</b></div>
+                  </div>
+                  {asset.efficiency !== benchEff && (
+                    <button
+                      onClick={() => upAsset(index, { efficiency: benchEff })}
+                      style={{
+                        marginTop: 6, fontSize: 10, padding: "2px 8px",
+                        background: "#2EC4B620", color: "#2EC4B6", border: "1px solid #2EC4B6",
+                        borderRadius: 4, cursor: "pointer",
+                      }}
+                    >
+                      {lang === "ar" ? "تطبيق المرجعية" : "Apply Benchmark"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
             {field("NLA", "صافي المساحة", asset.nla, (v) => up("nla", v), { type: "number", suffix: "m²" })}
             {field("Parking Area", "مساحة المواقف", asset.parkingArea, (v) => up("parkingArea", v), { type: "number", suffix: "m²" })}
             {field("Open Area", "مساحة مفتوحة", asset.openArea, (v) => up("openArea", v), { type: "number", suffix: "m²" })}
