@@ -41,6 +41,11 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T0","Exit Cap Rate = 0", false, "Cap rate exit with 0% cap rate causes division by zero");
   if ((project.exitStrategy||"sale") === "sale" && (project.exitMultiple??10) === 0)
     add("T0","Exit Multiple = 0", false, "Sale exit with 0x multiple produces zero exit value");
+  // Land capitalization with zero land area → equity calculation will be zero
+  if (project.landCapitalize && (project.landType === "lease" || project.landType === "bot") && (!project.landArea || project.landArea === 0))
+    add("T0","Land Cap + Area=0", false,
+      "Land capitalization is enabled but land area is 0. This will produce incorrect equity calculations. | رسملة الأرض مفعّلة لكن مساحة الأرض = 0. هذا سيعطي حسابات ملكية خاطئة.",
+      `landCapitalize=true, landArea=${project.landArea||0}`, "error");
   if (f && project.debtAllowed) {
     const _isHyb = project.finMode === "hybrid";
     const _tnr = _isHyb ? (project.govLoanTenor ?? 15) : (project.loanTenor ?? 7);
@@ -284,6 +289,21 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
       }
     }
     add("T2","DSCR = NOI / Debt Service", dscrOk, "DSCR calculation consistent");
+    // DSCR below 1.0x warning — only for post-construction operating years
+    {
+      let dscrWarnYear = -1; let dscrWarnValue = null;
+      for (let y = maxConstrEnd; y < h; y++) {
+        if (f.debtService[y] > 0 && f.dscr[y] !== null && f.dscr[y] < 1.0) {
+          dscrWarnYear = y; dscrWarnValue = f.dscr[y]; break;
+        }
+      }
+      if (dscrWarnYear >= 0) {
+        const suggestLtv = Math.max(10, Math.round((project.maxLtvPct||70) * 0.85));
+        add("T2","DSCR < 1.0x", true,
+          `DSCR falls below 1.0x in year ${dscrWarnYear+1} (${dscrWarnValue!=null?dscrWarnValue.toFixed(2):"?"}x). Consider reducing LTV or extending tenor. | معدل تغطية خدمة الدين أقل من 1.0 في سنة ${dscrWarnYear+1} (${dscrWarnValue!=null?dscrWarnValue.toFixed(2):"?"}). فكر في تقليل نسبة التمويل إلى ${suggestLtv}% أو تمديد المدة.`,
+          `Worst DSCR: ${dscrWarnValue!=null?dscrWarnValue.toFixed(3):"?"}x at Y${dscrWarnYear+1} | Consider LTV ≤ ${suggestLtv}%`, "warn");
+      }
+    }
     add("T2","GP + LP = Equity", Math.abs(f.gpEquity+f.lpEquity-f.totalEquity)<1, "GP + LP = total equity");
     if (f.leveredIRR!==null&&c.irr!==null) {
       add("T2","Leverage Changes IRR", Math.abs(f.leveredIRR-c.irr)>0.001, "Levered ≠ Unlevered IRR",
