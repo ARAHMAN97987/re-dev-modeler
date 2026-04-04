@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "/bin/bash",
-      "runtimeArgs": ["-c", "export HOME=/Users/abdulrahman && export NVM_DIR=\"$HOME/.nvm\" && . \"$NVM_DIR/nvm.sh\" && cd /Users/abdulrahman/Desktop/re-dev-modeler && npx vite --port 5175"],
+      "runtimeExecutable": "/Users/abdulrahman/.nvm/versions/node/v22.22.2/bin/npx",
+      "runtimeArgs": ["vite", "--port", "5175"],
       "port": 5175
     }
   ]

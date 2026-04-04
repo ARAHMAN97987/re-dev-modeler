@@ -79,23 +79,24 @@ const getMetricColor = (metric, value, opts = {}) => {
 class AppErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
-  componentDidCatch(error, info) { console.error("Haseef Error Boundary caught:", error, info?.componentStack); }
+  componentDidCatch(error, info) { console.error("Haseef Error Boundary caught:", error, info?.componentStack); this.setState({ componentStack: info?.componentStack || "" }); }
   render() {
     if (this.state.hasError) {
       const isAr = document.documentElement.lang === "ar";
+      const stack = this.state.componentStack || "";
       return (
         <div style={{height:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0f1117",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",color:"#d0d4dc"}}>
-          <div style={{textAlign:"center",maxWidth:460,padding:32}}>
+          <div style={{textAlign:"center",maxWidth:600,padding:32}}>
             <div style={{fontSize:28,fontWeight:900,color:"#fff",fontFamily:"'Tajawal',sans-serif",marginBottom:8}}>{isAr?"حصيف":"Haseef"}</div>
             <div style={{fontSize:16,fontWeight:600,color:"#f87171",marginBottom:16}}>{isAr?"حدث خطأ غير متوقع":"An unexpected error occurred"}</div>
             <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:24,lineHeight:1.6}}>{isAr?"يمكنك إعادة المحاولة أو تحميل الصفحة من جديد. بياناتك محفوظة.":"You can retry or reload the page. Your data is saved."}</div>
             <div style={{display:"flex",gap:12,justifyContent:"center"}}>
-              <button onClick={()=>this.setState({hasError:false,error:null})} style={{padding:"10px 24px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"إعادة المحاولة":"Retry"}</button>
+              <button onClick={()=>this.setState({hasError:false,error:null,componentStack:""})} style={{padding:"10px 24px",background:"#2563eb",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"إعادة المحاولة":"Retry"}</button>
               <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",background:"#1e2230",color:"#d0d4dc",border:"1px solid #282d3a",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{isAr?"تحديث الصفحة":"Reload Page"}</button>
             </div>
-            <details style={{marginTop:24,textAlign:"start"}}>
-              <summary style={{fontSize:10,color:"var(--text-secondary)",cursor:"pointer"}}>{isAr?"تفاصيل الخطأ":"Error details"}</summary>
-              <pre style={{fontSize:10,color:"var(--text-secondary)",background:"#0F2D4F",padding:12,borderRadius:6,marginTop:8,overflow:"auto",maxHeight:120,whiteSpace:"pre-wrap"}}>{this.state.error?.message || "Unknown error"}{"\n"}{this.state.error?.stack?.split("\n").slice(0,4).join("\n")}</pre>
+            <details open style={{marginTop:24,textAlign:"start"}}>
+              <summary style={{fontSize:11,color:"#f87171",cursor:"pointer",fontWeight:600}}>Component Stack (send to developer)</summary>
+              <pre style={{fontSize:10,color:"#93c5fd",background:"#0F2D4F",padding:12,borderRadius:6,marginTop:8,overflow:"auto",maxHeight:300,whiteSpace:"pre-wrap",userSelect:"all"}}>{this.state.error?.message || "Unknown error"}{"\n\n--- Component Stack ---\n"}{stack}{"\n\n--- JS Stack ---\n"}{this.state.error?.stack || ""}</pre>
             </details>
           </div>
         </div>
@@ -357,13 +358,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [showHybridCF, setShowHybridCF] = useState(false);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand,devTotal:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
 
-  if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>
-    <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
-    <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
-  </div>;
-
-  // ── Phase filter (multi-select) ──
-  const allPhaseNames = Object.keys(results.phaseResults || {});
+  // ── Phase filter (multi-select) — MUST be before early return to keep hook order stable ──
+  const allPhaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
@@ -397,6 +393,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
   // ── Filtered waterfall ──
   const w = useMemo(() => {
+    if (!waterfall) return null;
     if (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) {
       const _pw = phaseWaterfalls[singlePhaseName];
       return { ..._pw,
@@ -456,6 +453,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     return {income,capex,landRent,netCF,totalCapex:capex.reduce((a,b)=>a+b,0),totalIncome:income.reduce((a,b)=>a+b,0),totalLandRent:landRent.reduce((a,b)=>a+b,0),totalNetCF:netCF.reduce((a,b)=>a+b,0),irr:calcIRR(netCF)};
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h]);
   const f = useMemo(() => {
+    if (!financing) return null;
     if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
     if (!isFiltered) return financing;
     const pfs = activePh.map(p=>phaseFinancings?.[p]).filter(Boolean);
@@ -467,6 +465,12 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       devCostInclLand:pfs.reduce((s,p2)=>s+(p2.devCostInclLand||0),0), totalInterest:pfs.reduce((s,p2)=>s+(p2.totalInterest||0),0),
     };
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h]);
+
+  // ── Early return AFTER all hooks (React hooks rules: hooks must always run in same order) ──
+  if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>
+    <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
+    <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
+  </div>;
 
   // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
   const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0, wasNeg = false; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum < -1) wasNeg = true; if (wasNeg && cum >= 0) return y + 1; } return null; })();
@@ -2397,6 +2401,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
+  const [tracerOpen, setTracerOpen] = useState(false);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; const allSec = {mode:expand,debt:expand,exit:expand,land:expand,fund:expand,wf:expand,fees:expand,dscr:expand,equity:expand,cf:expand}; setCollapsed(expand?allSec:{}); setCfgSec(expand?{debt:true,exit:true,land:true,fund:true,wf:true,fees:true}:{}); setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true}); }}, [globalExpand]);
   const ar = lang === "ar";
   const cur = project.currency || "SAR";
@@ -3414,7 +3419,7 @@ When to use:
 
     {/* ═══ LEVERED CF TRACER — formula transparency like Excel ═══ */}
     {f && f.leveredCF && (() => {
-      const [tracerOpen, setTracerOpen] = useState(false);
+      // tracerOpen/setTracerOpen hoisted to FinancingView top level (React hooks rules)
       const c = pc; // phase or consolidated
       const adjLR = ir?.adjustedLandRent || c.landRent;
       const isSelfMode = f.mode === "self";
@@ -5144,30 +5149,30 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   };
 
   const cols = [
-    { key:"#", en:"#", ar:"#", w:28 },
-    { key:"phase", en:"Phase", ar:"المرحلة", w:70 },
-    { key:"name", en:"Asset Name", ar:"اسم الأصل", w:120 },
-    { key:"category", en:"Category", ar:"التصنيف", w:85 },
-    { key:"code", en:"Code", ar:"الرمز", w:40 },
-    { key:"gfa", en:"GFA", ar:"م.إجمالية", w:60 },
-    { key:"eff", en:"Eff%", ar:"كفاءة%", w:44 },
-    { key:"leasable", en:"Leasable", ar:"م.تأجير", w:58 },
-    { key:"plotArea", en:"Plot", ar:"القطعة", w:58 },
-    { key:"footprint", en:"Footprint", ar:"البصمة", w:58 },
-    { key:"revType", en:"Rev Type", ar:"نوع الدخل", w:68 },
-    { key:"rate", en:"Rate", ar:"إيجار/م²", w:58 },
-    { key:"opEbitda", en:"EBITDA", ar:"تشغيلي", w:72 },
-    { key:"occ", en:"Occ%", ar:"إشغال%", w:42 },
-    { key:"esc", en:"Esc%", ar:"زيادة%", w:40 },
-    { key:"ramp", en:"Ramp", ar:"نمو", w:38 },
-    { key:"cost", en:"Cost/m²", ar:"تكلفة/م²", w:62 },
-    { key:"dur", en:"Build", ar:"بناء(شهر)", w:52 },
-    { key:"hardCost", en:"Hard Cost", ar:"تكلفة صلبة", w:78 },
-    { key:"addons", en:"Soft+Cont", ar:"غير مباشرة", w:74 },
-    { key:"totalCapex", en:"Total CAPEX", ar:"إجمالي", w:82 },
-    { key:"totalInc", en:"Revenue", ar:"الإيرادات", w:78 },
-    { key:"score", en:"Score", ar:"تقييم", w:88 },
-    { key:"ops", en:"", ar:"", w:28 },
+    { key:"#", en:"#", ar:"#", w:32 },
+    { key:"phase", en:"Phase", ar:"المرحلة", w:85 },
+    { key:"name", en:"Asset Name", ar:"اسم الأصل", w:150 },
+    { key:"category", en:"Category", ar:"التصنيف", w:100 },
+    { key:"code", en:"Code", ar:"الرمز", w:48 },
+    { key:"gfa", en:"GFA", ar:"م.إجمالية", w:72 },
+    { key:"eff", en:"Eff%", ar:"كفاءة%", w:52 },
+    { key:"leasable", en:"Leasable", ar:"م.تأجير", w:68 },
+    { key:"plotArea", en:"Plot", ar:"القطعة", w:68 },
+    { key:"footprint", en:"Footprint", ar:"البصمة", w:68 },
+    { key:"revType", en:"Rev Type", ar:"نوع الدخل", w:80 },
+    { key:"rate", en:"Rate", ar:"إيجار/م²", w:68 },
+    { key:"opEbitda", en:"EBITDA", ar:"تشغيلي", w:82 },
+    { key:"occ", en:"Occ%", ar:"إشغال%", w:50 },
+    { key:"esc", en:"Esc%", ar:"زيادة%", w:48 },
+    { key:"ramp", en:"Ramp", ar:"نمو", w:44 },
+    { key:"cost", en:"Cost/m²", ar:"تكلفة/م²", w:72 },
+    { key:"dur", en:"Build", ar:"بناء(شهر)", w:60 },
+    { key:"hardCost", en:"Hard Cost", ar:"تكلفة صلبة", w:88 },
+    { key:"addons", en:"Soft+Cont", ar:"غير مباشرة", w:84 },
+    { key:"totalCapex", en:"Total CAPEX", ar:"إجمالي", w:92 },
+    { key:"totalInc", en:"Revenue", ar:"الإيرادات", w:88 },
+    { key:"score", en:"Score", ar:"تقييم", w:100 },
+    { key:"ops", en:"", ar:"", w:36 },
   ];
 
   const [editingPhase, setEditingPhase] = useState(null);
@@ -5639,7 +5644,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             <thead>
               <tr>
                 {visibleCols.map(c=>(
-                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w,maxWidth:c.w*2.5, ...(c.key==="hardCost"?{background:"#f8fafc"}:c.key==="addons"?{background:"#faf5ff"}:c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
+                  <th key={c.key} style={{...thSt,whiteSpace:"normal",minWidth:c.w, ...(c.key==="hardCost"?{background:"#f8fafc"}:c.key==="addons"?{background:"#faf5ff"}:c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
                     <div style={{fontSize:11}}>{ar?c.ar:c.en}</div>
                     {c.ar!==c.en&&!ar&&<div style={{fontWeight:400,fontSize:8,color:"var(--text-tertiary)",lineHeight:1.1}}>{c.ar}</div>}
                   </th>
@@ -7463,7 +7468,7 @@ const btnS={border:"none",borderRadius:"var(--radius-sm)",cursor:"pointer",fontF
 const btnPrim={...btnS,background:"var(--btn-primary-bg)",color:"var(--btn-primary-text)",fontWeight:600};
 const btnSm={...btnS,padding:"4px 8px",fontSize:11,fontWeight:500,borderRadius:"var(--radius-sm)"};
 const sideInputStyle={width:"100%",padding:"7px 10px",borderRadius:"var(--radius-sm)",border:"0.5px solid var(--nav-btn-border)",background:"var(--nav-btn-bg)",color:"var(--nav-btn-text)",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
-const cellInputStyle={padding:"4px 6px",borderRadius:3,border:"1px solid transparent",background:"transparent",color:"var(--text-primary)",fontSize:11,fontFamily:"inherit",outline:"none",boxSizing:"border-box",width:"100%"};
+const cellInputStyle={padding:"5px 8px",borderRadius:3,border:"1px solid transparent",background:"transparent",color:"var(--text-primary)",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box",width:"100%",minWidth:0};
 const tblStyle={width:"100%",borderCollapse:"collapse"};
 const thSt={padding:"7px 8px",textAlign:"start",fontSize:11,fontWeight:600,color:"var(--text-secondary)",background:"var(--surface-table-header)",borderBottom:"0.5px solid var(--border-default)",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
 const tdSt={padding:"5px 8px",borderBottom:"0.5px solid var(--surface-separator)",fontSize:12,whiteSpace:"nowrap"};
