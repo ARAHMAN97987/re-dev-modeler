@@ -2450,11 +2450,6 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     upCfg({ ...source });
   };
 
-  if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"var(--text-tertiary)"}}>
-    <div style={{fontSize:32,marginBottom:12}}>📊</div>
-    <div style={{fontSize:14,fontWeight:500,color:"var(--text-secondary)",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
-    <div style={{fontSize:12}}>{ar?"أضف أصول في تاب 'برنامج الأصول' ثم ارجع هنا":"Add assets in the 'Asset Program' tab, then return here"}</div>
-  </div>;
 
   const h = results.horizon;
   const sy = results.startYear;
@@ -2507,6 +2502,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; for (let y=0;y<h;y++) { income[y]+=pr.income[y]||0; capex[y]+=pr.capex[y]||0; landRent[y]+=pr.landRent[y]||0; netCF[y]+=pr.netCF[y]||0; }});
     return { income, capex, landRent, netCF, totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0), totalLandRent: landRent.reduce((a,b)=>a+b,0), totalNetCF: netCF.reduce((a,b)=>a+b,0), irr: calcIRR(netCF) };
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h, c]);
+
+  // Hooks-safe: early return AFTER all hooks
+  if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"var(--text-tertiary)"}}>
+    <div style={{fontSize:32,marginBottom:12}}>📊</div>
+    <div style={{fontSize:14,fontWeight:500,color:"var(--text-secondary)",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
+    <div style={{fontSize:12}}>{ar?"أضف أصول في تاب 'برنامج الأصول' ثم ارجع هنا":"Add assets in the 'Asset Program' tab, then return here"}</div>
+  </div>;
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"var(--surface-table-header)"}:{};
@@ -4081,7 +4083,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           })()}
           </>)}
         </div>
-        <div style={{flex:1,overflow:"hidden",position:"relative"}}>
+        <div style={{flex:1,overflow:"auto",position:"relative"}}>
           {presentMode ? (
             <div style={{overflow:"auto",height:"100%",padding:isMobile?10:24}}>
             <PresentationView project={project} results={results} financing={financing} waterfall={waterfall} incentivesResult={incentivesResult} lang={lang} audienceView={audienceView} liveSliders={liveSliders} setLiveSliders={setLiveSliders} checks={checks} />
@@ -5015,7 +5017,6 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [landOpen, setLandOpen] = useState(false);
   const fileRef = useRef(null);
-  if (!project) return null;
   const assets = project.assets || [];
   const phaseNames = project.phases.map(p => p.name);
 
@@ -5186,6 +5187,9 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [cfDetail, setCfDetail] = useState(false); // show detail rows
   const [cfYrs, setCfYrs] = useState(15);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCfAllOpen(expand); setCfDetail(expand); setLandOpen(expand); setShowLandRentDetail(expand); const obj = {}; (project?.assets||[]).forEach((_, i) => { obj[i] = expand; }); setCfOpen(obj); }}, [globalExpand]);
+
+  // Hooks-safe: early return AFTER all hooks
+  if (!project) return null;
   const ar = lang === "ar";
   const toggleCol = (key) => { setHiddenCols(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); };
   const visibleCols = cols.filter(c => !hiddenCols.has(c.key));
@@ -5878,7 +5882,6 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
 // PROJECT DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 function ProjectDash({ project, results, checks, t, financing, phaseFinancings, onGoToAssets, lang, incentivesResult, setActiveTab }) {
-  if (!project || !results) return null;
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
@@ -5941,6 +5944,9 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
       interestSubsidyTotal: pfs.reduce((s,pf) => s + (pf.interestSubsidyTotal||0), 0),
     };
   }, [isFiltered, selectedPhases, financing, phaseFinancings, results]);
+
+  // Hooks-safe: early return AFTER all hooks
+  if (!project || !results) return null;
 
   const h = results.horizon;
   const ar = lang === "ar";
@@ -6562,7 +6568,6 @@ function KPI({label,value,sub,color,tip}) {
 // CASH FLOW VIEW
 // ═══════════════════════════════════════════════════════════════
 function CashFlowView({ project, results, t, incentivesResult, financing }) {
-  if (!project||!results) return <div style={{color:"var(--text-tertiary)"}}>Add assets to see projections.</div>;
   const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
   const [selectedPhases, setSelectedPhases] = useState([]);
@@ -6609,6 +6614,9 @@ function CashFlowView({ project, results, t, incentivesResult, financing }) {
       paybackYear: pbYr, peakNegative: peakNeg, peakNegativeYear: peakNegY,
     };
   }, [isFiltered, selectedPhases, results, horizon]);
+
+  // Hooks-safe: early return AFTER all hooks
+  if (!project||!results) return <div style={{color:"var(--text-tertiary)"}}>Add assets to see projections.</div>;
 
   // ── Period detection: construction vs operating years ──
   let constrEnd = 0;
@@ -7098,7 +7106,6 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [activePhase, setActivePhase] = useState("consolidated"); // "consolidated" or phase name
-  if (!results || !project) return <div style={{textAlign:"center",padding:60,color:"var(--text-secondary)",fontSize:14}}>{ar?"لا توجد بيانات للعرض":"No data to present"}</div>;
 
   // ── Real Engine Recalculation when sliders change ──
   const slidersDefault = liveSliders.capex === 100 && liveSliders.rent === 100 && liveSliders.exitMult === (project.exitMultiple || 10);
@@ -7111,6 +7118,9 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
   const liveFinancing = useMemo(() => { try { return computeFinancing(liveProject, liveResults, liveIncentives); } catch(e) { return financing; } }, [liveProject, liveResults, liveIncentives]);
   const liveWaterfall = useMemo(() => { try { return computeWaterfall(liveProject, liveResults, liveFinancing, liveIncentives); } catch(e) { return waterfall; } }, [liveProject, liveResults, liveFinancing, liveIncentives]);
 
+
+  // Hooks-safe: early return AFTER all hooks
+  if (!results || !project) return <div style={{textAlign:"center",padding:60,color:"var(--text-secondary)",fontSize:14}}>{ar?"لا توجد بيانات للعرض":"No data to present"}</div>;
   // Use live-recalculated data
   const c = liveResults.consolidated;
   const f = liveFinancing;
