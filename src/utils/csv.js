@@ -81,18 +81,34 @@ export function generateTemplate() {
 }
 
 export function parseAssetFile(file, project) {
+  const isExcel = /\.(xlsx|xls)$/i.test(file.name);
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target.result;
-        const rows = csvParse(text);
-        if (rows.length < 2) { reject("No data rows found"); return; }
-        resolve(mapRowsToAssets(rows[0], rows.slice(1), project));
-      } catch(err) { reject(String(err)); }
-    };
-    reader.onerror = () => reject("Failed to read file");
-    reader.readAsText(file);
+    if (isExcel) {
+      reader.onload = async (e) => {
+        try {
+          const XLSX = await import("xlsx");
+          const wb = XLSX.read(e.target.result, { type: "binary" });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+          if (rows.length < 2) { reject("No data rows found"); return; }
+          resolve(mapRowsToAssets(rows[0], rows.slice(1), project));
+        } catch(err) { reject(String(err)); }
+      };
+      reader.onerror = () => reject("Failed to read file");
+      reader.readAsBinaryString(file);
+    } else {
+      reader.onload = (e) => {
+        try {
+          const text = e.target.result;
+          const rows = csvParse(text);
+          if (rows.length < 2) { reject("No data rows found"); return; }
+          resolve(mapRowsToAssets(rows[0], rows.slice(1), project));
+        } catch(err) { reject(String(err)); }
+      };
+      reader.onerror = () => reject("Failed to read file");
+      reader.readAsText(file);
+    }
   });
 }
 

@@ -356,6 +356,18 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [filterRev, setFilterRev] = useState("all");
   const [hiddenCols, setHiddenCols] = useState(() => new Set(["plotArea","footprint","esc","ramp","occ","netArea"]));
   const [showColPicker, setShowColPicker] = useState(false);
+  const [colWidths, setColWidths] = useState(() => { try { return JSON.parse(localStorage.getItem('haseef-col-widths') || '{}'); } catch { return {}; } });
+
+  const handleColumnResize = (colKey, startX, startWidth) => {
+    const onMove = (e) => {
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(40, startWidth + diff);
+      setColWidths(prev => { const next = {...prev, [colKey]: newWidth}; localStorage.setItem('haseef-col-widths', JSON.stringify(next)); return next; });
+    };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
   const [cfOpen, setCfOpen] = useState({}); // which asset CFs are expanded
   const [cfAllOpen, setCfAllOpen] = useState(false); // global toggle
   const [cfDetail, setCfDetail] = useState(false); // show detail rows
@@ -649,7 +661,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         <button onClick={()=>{exportAssetsToExcel(project, results);addToast(ar?"تم تصدير الأصول":"Assets exported","success");}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
           {lang==='ar'?'⬇ تصدير':'⬇ Export'}
         </button>
-        <input type="file" accept=".csv,.tsv" ref={fileRef} onChange={handleUpload} style={{display:"none"}} />
+        <input type="file" accept=".csv,.tsv,.xlsx,.xls" ref={fileRef} onChange={handleUpload} style={{display:"none"}} />
         <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}} title={lang==='ar'?"رفع ملف Excel":"Upload Excel File"}>
           {lang==='ar'?'⬆ رفع ملف':'⬆ Upload'}
         </button>
@@ -828,12 +840,19 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           <table style={{...tblStyle,fontSize:11}}>
             <thead>
               <tr>
-                {visibleCols.map(c=>(
-                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",minWidth:c.w, ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
-                    <div>{c.en}</div>
-                    {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"#9ca3af"}}>{c.ar}</div>}
+                {visibleCols.map(c=>{
+                  const colW = colWidths[c.key] || c.w;
+                  return (
+                  <th key={c.key} style={{...thSt,whiteSpace:"nowrap",width:colW,minWidth:40,maxWidth:400,position:"relative",overflow:"hidden", ...(c.key==="totalCapex"?{background:"#eef2ff"}:c.key==="totalInc"?{background:"#ecfdf5"}:c.key==="score"?{background:"#fefce8"}:{})}}>
+                    <div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={c.en}>{c.en}</div>
+                    {c.ar!==c.en&&<div style={{fontWeight:400,fontSize:9,color:"#9ca3af",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.ar}</div>}
+                    <div
+                      style={{position:"absolute",right:0,top:0,bottom:0,width:5,cursor:"col-resize",background:"transparent",zIndex:10}}
+                      onMouseDown={(e)=>{e.preventDefault();handleColumnResize(c.key,e.clientX,colW);}}
+                    />
                   </th>
-                ))}
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -864,8 +883,8 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <td style={{...tdSt,...hd("gfa")}}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
                       <td style={{...tdSt,...hd("revType")}}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
                       <td style={{...tdSt,...hd("eff")}}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
-                      <td style={{...tdSt,color:"#6b7080",textAlign:"right",fontSize:11,...hd("leasable")}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
-                      <td style={{...tdSt,color:"#0369a1",textAlign:"right",fontSize:11,...hd("netArea")}}>{fmt(deriveAreas(a).netArea)}</td>
+                      <td style={{...tdSt,color:"#6b7080",textAlign:"right",fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",...hd("leasable")}} title={String(fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100))}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
+                      <td style={{...tdSt,color:"#0369a1",textAlign:"right",fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",...hd("netArea")}} title={String(fmt(deriveAreas(a).netArea))}>{fmt(deriveAreas(a).netArea)}</td>
                       <td style={{...tdSt,background:isOp?"#f5f5f5":undefined,...hd("rate")}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("opEbitda")}}>
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -884,8 +903,8 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <td style={{...tdSt,...hd("occ")}}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} /></td>
                       <td style={{...tdSt,...hd("cost")}}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("dur")}}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
-                      <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
-                      <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11,...hd("totalInc")}}>{fmt(comp?.totalRevenue||0)}</td>
+                      <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",...hd("totalCapex")}} title={String(fmt(comp?.totalCapex||computeAssetCapex(a,project)))}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
+                      <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",...hd("totalInc")}} title={String(fmt(comp?.totalRevenue||0))}>{fmt(comp?.totalRevenue||0)}</td>
                       <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative",...hd("score")}}>{(()=>{
                         const sc = getAssetScore(a, comp);
                         return <ScoreCell sc={sc} name={a.name} ar={ar} />;
