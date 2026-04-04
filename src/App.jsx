@@ -218,6 +218,7 @@ import {
 import { computePhaseWaterfalls } from './engine/legacy/phaseWaterfalls.js';
 import { runChecks } from './engine/checks.js';
 import { defaultProject, defaultHotelPL, defaultMarinaPL } from './data/defaults.js';
+import { ASSET_TYPES, migrateCategory, getCategoryFromType } from './data/assetTypes.js';
 import { fmt, fmtPct, fmtM } from './utils/format.js';
 
 // ── Storage ──
@@ -234,6 +235,40 @@ async function loadSharedProjects(email) {
     }).filter(Boolean);
   } catch { return []; }
 }
+// === Asset Development Engine: Phase 1 Migration ===
+function migrateAssets(assets) {
+  if (!assets) return assets;
+  const newFieldDefaults = {
+    assetType: "",
+    assetSubtype: "",
+    isBuilding: true,
+    plotReference: "",
+    assetNotes: "",
+    floorsAboveGround: 0,
+    basementLevels: 0,
+    coveragePct: 0,
+    far: 0,
+    gla: 0,
+    nla: 0,
+    nsa: 0,
+    nua: 0,
+    parkingArea: 0,
+    openArea: 0,
+    areaBasis: "gfa",
+    startYear: 0,
+    openingYear: 0,
+    assetPriority: "standard",
+  };
+  return assets.map(asset => {
+    const migrated = { ...newFieldDefaults, ...asset };
+    if (!migrated.assetType && migrated.category) {
+      migrated.assetType = migrateCategory(migrated.category, migrated);
+      migrated.isBuilding = ASSET_TYPES[migrated.assetType]?.isBuilding ?? true;
+    }
+    return migrated;
+  });
+}
+
 async function loadProject(id, ownerId, permission) {
   try {
     let r;
@@ -326,6 +361,8 @@ async function loadProject(id, ownerId, permission) {
     // Deep merge market
     if (!migrated.market) migrated.market = def.market;
     else migrated.market = { ...def.market, ...migrated.market, gaps: { ...def.market.gaps, ...(migrated.market.gaps||{}) }, thresholds: { ...def.market.thresholds, ...(migrated.market.thresholds||{}) }, conversionFactors: { ...def.market.conversionFactors, ...(migrated.market.conversionFactors||{}) } };
+    // Asset Development Engine: migrate asset fields
+    if (migrated.assets) migrated.assets = migrateAssets(migrated.assets);
     return migrated;
   } catch { return null; }
 }
@@ -3707,6 +3744,17 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     return () => clearTimeout(timer);
   }, [project, results, financing, waterfall]);
 
+  // Recalculating indicator — briefly shows "updating" badge when engine reruns
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const recalcTimerRef = useRef(null);
+  useEffect(() => {
+    if (!project) return;
+    setIsRecalculating(true);
+    if (recalcTimerRef.current) clearTimeout(recalcTimerRef.current);
+    recalcTimerRef.current = setTimeout(() => setIsRecalculating(false), 400);
+    return () => { if (recalcTimerRef.current) clearTimeout(recalcTimerRef.current); };
+  }, [project]);
+
   const createProject = async (templateId) => {
     const p = defaultProject();
     const tmpl = templateId ? PROJECT_TEMPLATES.find(t=>t.id===templateId) : null;
@@ -3764,7 +3812,23 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const upAsset = useCallback((i, u) => {
     if (readOnly) return;
     const scrollTop = sidebarRef.current?.scrollTop;
-    setProject(prev => { pushUndo(prev); const a=[...prev.assets]; a[i]={...a[i],...u}; return {...prev,assets:a}; });
+    setProject(prev => {
+      pushUndo(prev);
+      const a = [...prev.assets];
+      const merged = { ...a[i], ...u };
+      // Sync assetType <-> category for engine compatibility
+      if (u.assetType !== undefined && u.assetType !== a[i].assetType) {
+        const newCat = getCategoryFromType(merged.assetType);
+        if (newCat && newCat !== "Other") merged.category = newCat;
+        merged.isBuilding = ASSET_TYPES[merged.assetType]?.isBuilding ?? true;
+      } else if (u.category !== undefined && u.category !== a[i].category) {
+        const newType = migrateCategory(merged.category, merged);
+        merged.assetType = newType;
+        merged.isBuilding = ASSET_TYPES[newType]?.isBuilding ?? true;
+      }
+      a[i] = merged;
+      return { ...prev, assets: a };
+    });
     if (scrollTop != null) requestAnimationFrame(() => { if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop; });
   }, [pushUndo, readOnly]);
   const addAsset = useCallback((tmplDefaults) => setProject(prev => { pushUndo(prev); const base = {
@@ -3772,6 +3836,26 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     plotArea:0, footprint:0, gfa:0, revType:"Lease", efficiency: prev.defaultEfficiency||85,
     leaseRate:0, opEbitda:0, escalation: prev.rentEscalation||0.75, rampUpYears:3, stabilizedOcc:100,
     costPerSqm:0, constrStart:0, constrDuration:12, hotelPL:null, marinaPL:null,
+    // === Asset Development Engine Phase 1 ===
+    assetType: "retail_lifestyle",
+    assetSubtype: "",
+    isBuilding: true,
+    plotReference: "",
+    assetNotes: "",
+    floorsAboveGround: 0,
+    basementLevels: 0,
+    coveragePct: 0,
+    far: 0,
+    gla: 0,
+    nla: 0,
+    nsa: 0,
+    nua: 0,
+    parkingArea: 0,
+    openArea: 0,
+    areaBasis: "gfa",
+    startYear: 0,
+    openingYear: 0,
+    assetPriority: "standard",
   }; return {...prev, assets:[...prev.assets, tmplDefaults ? {...base,...tmplDefaults} : base]}; }), [pushUndo]);
   const dupAsset = useCallback((i) => setProject(prev => { pushUndo(prev); const src = prev.assets[i]; if(!src) return prev; const copy = {...src, id:crypto.randomUUID(), name:(src.name||"")+" (Copy)"}; return {...prev, assets:[...prev.assets, copy]}; }), [pushUndo]);
   const rmAsset = useCallback((i) => setProject(prev => { pushUndo(prev); return {...prev, assets:prev.assets.filter((_,j)=>j!==i)}; }), [pushUndo]);
@@ -4155,6 +4239,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                   </div>
                 ))}
                 <div style={{flex:1}} />
+                {isRecalculating && <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:"rgba(46,196,182,0.12)",color:"#0f766e",fontWeight:600,animation:"zanShimmer 1s infinite",backgroundSize:"200% 100%"}}>{ar?"جاري الحساب...":"Updating..."}</span>}
                 <SmartReviewerBadge alerts={smartAlerts.alerts} onClick={()=>{setActiveTab("results");}} />
                 <button onClick={()=>setGlobalExpand(p=>p+1)} className="z-btn z-btn-secondary z-btn-sm" style={{fontSize:11,flexShrink:0,background:globalExpand%2===1?"var(--color-info-bg)":"var(--surface-card)",color:globalExpand%2===1?"var(--zan-teal-500)":"var(--text-secondary)"}}>
                   {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
