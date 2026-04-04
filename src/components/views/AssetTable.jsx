@@ -12,6 +12,7 @@ import { calcHotelEBITDA, calcMarinaEBITDA } from "../../engine/hospitality";
 import { defaultHotelPL, defaultMarinaPL } from "../../data/defaults";
 import { getMetricColor } from "../../utils/metricColor.js";
 import AssetDetailPanel from "../AssetDetailPanel.jsx";
+import { ASSET_TEMPLATES, TEMPLATE_GROUPS } from "../../data/assetTemplates.js";
 
 function StatusBadge({status,onChange}) {
   const [open,setOpen]=useState(false);
@@ -225,47 +226,15 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const assets = project.assets || [];
   const phaseNames = project.phases.map(p => p.name);
 
-  // ── Asset Templates (Saudi market defaults) ──
+  // ── Asset Templates (from src/data/assetTemplates.js) ──
   const _ar = lang === "ar";
-  const ASSET_TEMPLATES = [
-    { id:"hotel5", icon:"🏨", label:_ar?"فندق 5 نجوم":"5-Star Hotel", defaults:{
-      name:_ar?"فندق 5 نجوم":"5-Star Hotel", category:"Hospitality", revType:"Operating", code:"H5",
-      plotArea:12000, footprint:5000, gfa:35000, efficiency:0, leaseRate:0,
-      costPerSqm:12000, constrStart:1, constrDuration:30, rampUpYears:4, stabilizedOcc:100, escalation:0.75,
-      opEbitda:47630685, hotelPL:{keys:200, adr:920, stabOcc:73, daysYear:365, roomsPct:64, fbPct:25, micePct:7, otherPct:4, roomExpPct:20, fbExpPct:60, miceExpPct:58, otherExpPct:55, undistPct:28, fixedPct:9},
-    }},
-    { id:"hotel4", icon:"🏢", label:_ar?"فندق 4 نجوم":"4-Star Hotel", defaults:{
-      name:_ar?"فندق 4 نجوم":"4-Star Hotel", category:"Hospitality", revType:"Operating", code:"H4",
-      plotArea:5000, footprint:2000, gfa:16000, efficiency:0, leaseRate:0,
-      costPerSqm:8000, constrStart:1, constrDuration:30, rampUpYears:4, stabilizedOcc:100, escalation:0.75,
-      opEbitda:13901057, hotelPL:{keys:230, adr:548, stabOcc:70, daysYear:365, roomsPct:72, fbPct:22, micePct:4, otherPct:2, roomExpPct:20, fbExpPct:60, miceExpPct:58, otherExpPct:50, undistPct:29, fixedPct:9},
-    }},
-    { id:"mall", icon:"🛍️", label:_ar?"مول تجاري":"Retail Mall", defaults:{
-      name:_ar?"مول تجاري":"Retail Mall", category:"Retail", revType:"Lease", code:"RM",
-      plotArea:28000, footprint:20000, gfa:40000, efficiency:80, leaseRate:2100,
-      costPerSqm:3900, constrStart:1, constrDuration:36, rampUpYears:4, stabilizedOcc:100, escalation:0.75,
-    }},
-    { id:"office", icon:"🏛️", label:_ar?"برج مكاتب":"Office Tower", defaults:{
-      name:_ar?"برج مكاتب":"Office Tower", category:"Office", revType:"Lease", code:"OF",
-      plotArea:5500, footprint:2700, gfa:16000, efficiency:90, leaseRate:900,
-      costPerSqm:2600, constrStart:1, constrDuration:36, rampUpYears:2, stabilizedOcc:100, escalation:0.75,
-    }},
-    { id:"resi", icon:"🏠", label:_ar?"سكني (أبراج)":"Residential Tower", defaults:{
-      name:_ar?"برج سكني":"Residential Tower", category:"Residential", revType:"Lease", code:"R1",
-      plotArea:4000, footprint:2000, gfa:14000, efficiency:85, leaseRate:800,
-      costPerSqm:2800, constrStart:1, constrDuration:30, rampUpYears:2, stabilizedOcc:92, escalation:0.75,
-    }},
-    { id:"marina", icon:"⚓", label:_ar?"مارينا":"Marina", defaults:{
-      name:_ar?"مارينا":"Marina", category:"Marina", revType:"Operating", code:"MAR",
-      plotArea:3000, footprint:0, gfa:2400, efficiency:0, leaseRate:0,
-      costPerSqm:16000, constrStart:1, constrDuration:12, rampUpYears:4, stabilizedOcc:90, escalation:0.75,
-      opEbitda:1129331, marinaPL:{berths:80, avgLength:14, unitPrice:2063, stabOcc:90, fuelPct:25, otherRevPct:10, berthingOpexPct:58, fuelOpexPct:96, otherOpexPct:30},
-    }},
-    { id:"custom", icon:"✏️", label:_ar?"مخصص (فارغ)":"Custom (Empty)", defaults:{} },
-  ];
 
-  const handleTemplateSelect = (defaults) => {
-    addAsset(Object.keys(defaults).length > 0 ? defaults : undefined);
+  const handleTemplateSelect = (tmpl) => {
+    if (!tmpl) { addAsset(undefined); setShowTemplatePicker(false); setTimeout(() => setEditIdx(assets.length), 50); return; }
+    const { id, group, groupAr, icon, label, labelAr, description, descAr, name, nameAr, ...defaults } = tmpl;
+    const assetName = _ar && nameAr ? nameAr : (name || label || "");
+    const filled = Object.keys(defaults).length > 0 ? { ...defaults, name: assetName } : undefined;
+    addAsset(filled);
     setShowTemplatePicker(false);
     setTimeout(() => setEditIdx(assets.length), 50);
   };
@@ -744,18 +713,37 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         {/* ═══ TEMPLATE PICKER MODAL ═══ */}
         {showTemplatePicker && (<>
           <div onClick={()=>setShowTemplatePicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9990}} />
-          <div style={{position:"fixed",zIndex:9991,top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:520,maxWidth:"94vw",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",overflow:"hidden",animation:"zanModalIn 0.2s ease-out"}}>
-            <div style={{padding:"20px 24px 12px",borderBottom:"1px solid #f0f1f5"}}>
-              <div style={{fontSize:18,fontWeight:700,color:"#1a1d23"}}>{ar?"اختر نوع الأصل":"Choose Asset Type"}</div>
-              <div style={{fontSize:12,color:"#6b7080",marginTop:4}}>{ar?"اختر قالب جاهز بقيم السوق السعودي، أو ابدأ فارغ":"Pick a template with Saudi market defaults, or start empty"}</div>
+          <div style={{position:"fixed",zIndex:9991,top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:680,maxWidth:"96vw",maxHeight:"88vh",background:"#fff",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",overflow:"hidden",display:"flex",flexDirection:"column",animation:"zanModalIn 0.2s ease-out"}}>
+            <div style={{padding:"20px 24px 14px",borderBottom:"1px solid #f0f1f5",display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexShrink:0}}>
+              <div>
+                <div style={{fontSize:18,fontWeight:700,color:"#1a1d23"}}>{ar?"اختر نوع الأصل":"Choose Asset Type"}</div>
+                <div style={{fontSize:12,color:"#6b7080",marginTop:4}}>{ar?"قوالب جاهزة بقيم السوق السعودي — 17 نوع أصل":"Ready-made templates with Saudi market defaults — 17 asset types"}</div>
+              </div>
+              <button onClick={()=>setShowTemplatePicker(false)} style={{...btnS,background:"#f0f1f5",padding:"6px 10px",fontSize:16,lineHeight:1,flexShrink:0}}>✕</button>
             </div>
-            <div style={{padding:"16px 24px 24px",display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)",gap:10}}>
-              {ASSET_TEMPLATES.map(tmpl=>(
-                <button key={tmpl.id} onClick={()=>handleTemplateSelect(tmpl.defaults)} style={{padding:"16px 12px",background:"#fafbfc",border:"2px solid #e5e7ec",borderRadius:12,cursor:"pointer",textAlign:"center",transition:"all 0.15s",fontFamily:"inherit"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.background="#f0fdfa";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7ec";e.currentTarget.style.background="#fafbfc";}}>
-                  <div style={{fontSize:28,marginBottom:6}}>{tmpl.icon}</div>
-                  <div style={{fontSize:12,fontWeight:600,color:"#1a1d23"}}>{tmpl.label}</div>
-                </button>
-              ))}
+            <div style={{overflowY:"auto",flex:1,padding:"16px 24px 24px"}}>
+              {TEMPLATE_GROUPS.map(grp=>{
+                const grpTmpls = ASSET_TEMPLATES.filter(t=>t.group===grp.id);
+                if (!grpTmpls.length) return null;
+                return <div key={grp.id} style={{marginBottom:20}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#6b7080",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8,borderBottom:"1px solid #f0f1f5",paddingBottom:6}}>{ar?grp.labelAr:grp.label}</div>
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:8}}>
+                    {grpTmpls.map(tmpl=>(
+                      <button key={tmpl.id} onClick={()=>handleTemplateSelect(tmpl)} style={{padding:"12px 12px 10px",background:"#fafbfc",border:"2px solid #e5e7ec",borderRadius:10,cursor:"pointer",textAlign:"start",transition:"all 0.15s",fontFamily:"inherit",display:"flex",flexDirection:"column",gap:3}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#2EC4B6";e.currentTarget.style.background="#f0fdfa";}} onMouseLeave={e=>{e.currentTarget.style.borderColor="#e5e7ec";e.currentTarget.style.background="#fafbfc";}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                          <span style={{fontSize:20}}>{tmpl.icon}</span>
+                          <div style={{flex:1,fontSize:12,fontWeight:700,color:"#1a1d23",lineHeight:1.3}}>{ar?tmpl.labelAr:tmpl.label}</div>
+                          <span style={{fontSize:9,padding:"2px 6px",borderRadius:8,background:tmpl.isBuilding?"#dbeafe":"#fef3c7",color:tmpl.isBuilding?"#2563eb":"#92400e",fontWeight:600,flexShrink:0}}>{tmpl.isBuilding?(ar?"مبنى":"Bldg"):(ar?"أرض":"Land")}</span>
+                        </div>
+                        <div style={{fontSize:10,color:"#9ca3af",lineHeight:1.4}}>{ar?tmpl.descAr:tmpl.description}</div>
+                        {tmpl.gfa>0&&<div style={{fontSize:10,color:"#6b7080",marginTop:2}}>{ar?"GFA:":"GFA:"} {(tmpl.gfa/1000).toFixed(0)}k m² · {ar?"تكلفة:":"Cost:"} {(tmpl.costPerSqm||0).toLocaleString()} /m²</div>}
+                        {!tmpl.gfa&&tmpl.plotArea>0&&<div style={{fontSize:10,color:"#6b7080",marginTop:2}}>{ar?"مساحة:":"Area:"} {(tmpl.plotArea/1000).toFixed(0)}k m²</div>}
+                        <div style={{fontSize:10,color:"#6b7080"}}>{ar?"الإيراد:":"Rev:"} {tmpl.revType}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>;
+              })}
             </div>
           </div>
         </>)}
