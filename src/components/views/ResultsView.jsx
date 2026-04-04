@@ -13,7 +13,13 @@ import { getMetricColor } from "../../utils/metricColor.js";
 
 function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase }) {
   const ar = lang === "ar";
-  if (!project || !results) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"أضف أصول لرؤية النتائج":"Add assets to see results"}</div>;
+  if (!project || !results) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📊</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{ar?"أضف أصول لرؤية النتائج":"Add Assets to See Results"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{ar?"بمجرد إضافة أصول سترى IRR وNPV والتدفقات النقدية التفصيلية":"Once you add assets, you'll see IRR, NPV, and detailed cash flow analysis"}</div>
+    </div>
+  );
 
   const mode = project.finMode || financing?.mode || "self";
 

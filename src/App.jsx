@@ -5238,7 +5238,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
     { key:"#", en:"#", ar:"#", w:32 },
     { key:"phase", en:"Phase", ar:"المرحلة", w:85 },
     { key:"name", en:"Asset Name", ar:"اسم الأصل", w:150 },
-    { key:"category", en:"Category", ar:"الفئة", w:100 },
+    { key:"category", en:"Asset Type", ar:"نوع الأصل", w:135 },
     { key:"code", en:"Code", ar:"الرمز", w:48 },
     { key:"gfa", en:"GFA", ar:"المساحة الإجمالية المبنية (GFA)", w:72 },
     { key:"eff", en:"Eff%", ar:"الكفاءة %", w:52 },
@@ -5684,12 +5684,13 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             <FieldGroup icon="📝" title={ar?"أساسي":"Basic Info"}>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:10}}>
               <F2 label={ar?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></F2>
-              <F2 label={ar?"التصنيف":"Category"}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></F2>
+              <F2 label={ar?"نوع الأصل":"Asset Type"}>{(()=>{const atGroups={};Object.entries(ASSET_TYPES).forEach(([k,v])=>{const g=v.group;if(!atGroups[g])atGroups[g]=[];atGroups[g].push({value:k,label:ar?v.labelAr:v.label});});const curType=a.assetType||migrateCategory(a.category,a);return <select value={curType} onChange={e=>{const t=e.target.value;upAsset(i,{assetType:t,category:getCategoryFromType(t),isBuilding:ASSET_TYPES[t]?.isBuilding??true});}} style={{width:"100%",padding:"7px 8px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)",color:"var(--text-primary)",fontSize:12}}>{Object.entries(atGroups).map(([g,ts])=><optgroup key={g} label={g}>{ts.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</optgroup>)}</select>;})()}</F2>
               <F2 label={ar?"نوع الإيراد":"Rev Type"}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
               <F2 label={ar?"الاسم":"Name"}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"اسم الأصل":"Name"} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
               <F2 label={ar?"الرمز":"Code"}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
+              <F2 label={ar?"الأولوية":"Priority"}><select value={a.assetPriority||"standard"} onChange={e=>upAsset(i,{assetPriority:e.target.value})} style={{width:"100%",padding:"7px 8px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)",color:"var(--text-primary)",fontSize:12}}><option value="anchor">{ar?"رئيسي (Anchor)":"Anchor"}</option><option value="quickWin">{ar?"سريع (Quick Win)":"Quick Win"}</option><option value="standard">{ar?"عادي (Standard)":"Standard"}</option><option value="optional">{ar?"اختياري (Optional)":"Optional"}</option></select></F2>
             </div>
 </FieldGroup>
             {/* ── Group 2: Areas & Dimensions ── */}
@@ -5775,14 +5776,24 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                     <tr key={a.id||i} style={{background:bg}}>
                       <td style={{...tdSt,color:"var(--text-tertiary)",fontWeight:500,width:28,...hd("#")}}>{i+1}</td>
                       <td style={{...tdSt,...hd("phase")}}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={{...tdSt,...hd("name")}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><FieldAlertDot alerts={(smartAlerts||[]).filter(al=>al.assetIndex===i)} lang={lang} /></td>
-                      <td style={{...tdSt,...hd("category")}}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
+                      <td style={{...tdSt,...hd("name")}}><div style={{display:"flex",flexDirection:"column",gap:2}}><div style={{display:"flex",alignItems:"center"}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><FieldAlertDot alerts={(smartAlerts||[]).filter(al=>al.assetIndex===i)} lang={lang} /></div>{a.assetPriority&&a.assetPriority!=="standard"&&<select value={a.assetPriority||"standard"} onChange={e=>upAsset(i,{assetPriority:e.target.value})} style={{fontSize:9,padding:"1px 3px",border:"none",borderRadius:3,cursor:"pointer",fontWeight:600,...(a.assetPriority==="anchor"?{background:"#dc262620",color:"#dc2626"}:a.assetPriority==="quickWin"?{background:"#16a34a20",color:"#16a34a"}:a.assetPriority==="optional"?{background:"#8b5cf620",color:"#8b5cf6"}:{background:"#6b728020",color:"#6b7280"})}}><option value="anchor">{ar?"رئيسي":"Anchor"}</option><option value="quickWin">{ar?"سريع":"Quick Win"}</option><option value="standard">{ar?"عادي":"Standard"}</option><option value="optional">{ar?"اختياري":"Optional"}</option></select>}</div></td>
+                      <td style={{...tdSt,...hd("category")}}>{(()=>{
+                        const atGroups = {};
+                        Object.entries(ASSET_TYPES).forEach(([k,v])=>{const g=v.group;if(!atGroups[g])atGroups[g]=[];atGroups[g].push({value:k,label:ar?v.labelAr:v.label});});
+                        const curType = a.assetType || migrateCategory(a.category, a);
+                        return <div style={{display:"flex",alignItems:"center",gap:3}}>
+                          <select value={curType} onChange={e=>{const t=e.target.value;upAsset(i,{assetType:t,category:getCategoryFromType(t),isBuilding:ASSET_TYPES[t]?.isBuilding??true});}} style={{fontSize:11,padding:"2px 4px",minWidth:110,maxWidth:130,border:"0.5px solid var(--border-default)",borderRadius:4,background:"var(--surface-hover)",color:"var(--text-primary)"}}>
+                            {Object.entries(atGroups).map(([g,ts])=><optgroup key={g} label={g}>{ts.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</optgroup>)}
+                          </select>
+                          {a.isBuilding===false&&<span style={{fontSize:9,padding:"1px 4px",borderRadius:3,background:"#f59e0b20",color:"#d97706",whiteSpace:"nowrap"}}>{ar?"غير مبني":"Non-Bldg"}</span>}
+                        </div>;
+                      })()}</td>
                       <td style={{...tdSt,...hd("code")}}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:40}} /></td>
-                      <td style={{...tdSt,...hd("gfa")}}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} /></td>
+                      <td style={{...tdSt,...hd("gfa")}}>{a.isBuilding!==false?<EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} />:<span style={{color:"#9ca3af",fontSize:10}}>—</span>}</td>
                       <td style={{...tdSt,...hd("eff")}}>{(()=>{const bc=benchmarkColor("efficiency",a.efficiency,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip}%`:undefined}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,color:"var(--text-secondary)",textAlign:"right",fontSize:11,...hd("leasable")}}>{fmt(comp?.leasableArea||(a.gfa||0)*(a.efficiency||0)/100)}</td>
                       <td style={{...tdSt,...hd("plotArea")}}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
-                      <td style={{...tdSt,...hd("footprint")}}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
+                      <td style={{...tdSt,...hd("footprint")}}>{a.isBuilding!==false?<EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} />:<span style={{color:"#9ca3af",fontSize:10}}>—</span>}</td>
                       <td style={{...tdSt,...hd("revType")}}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></td>
                       <td style={{...tdSt,background:isOp?"#f5f5f5":undefined,...hd("rate")}}>{(()=>{const bc=benchmarkColor("leaseRate",a.leaseRate,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{opacity:isOp?0.3:1,...(bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:{})}} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("opEbitda")}}>

@@ -134,10 +134,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [showHybridCF, setShowHybridCF] = useState(false); // hybrid separate CF table
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand,devTotal:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
 
-  if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>
-    <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
-    <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' أو 'تمويل مختلط' من لوحة التحكم":"Select 'Bank Debt', 'Fund Structure', or 'Hybrid' from the control panel"}</div>
-  </div>;
+  if (!project || !results || !waterfall) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>💧</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"يتطلب هيكل تمويل غير ذاتي":"Requires Non-Self Financing"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:400,lineHeight:1.6}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' أو 'تمويل مختلط' من الإعدادات لعرض شلال التوزيعات":"Select 'Bank Debt', 'Fund Structure', or 'Hybrid' from settings to view the distribution waterfall"}</div>
+    </div>
+  );
 
   // ── Phase filter (multi-select) ──
   const allPhaseNames = Object.keys(results.phaseResults || {});

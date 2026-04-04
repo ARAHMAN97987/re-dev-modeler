@@ -50,7 +50,13 @@ const PERSONALITY_EN = `You are "Haseef" — a senior Saudi real estate financia
 - Never say "Based on the available data" — everything is based on data
 - Never exceed 300 words unless the user asks for detail`;
 
-const SYSTEM_PROMPT_BASE = ` (SAR/sqm - ALL-IN including soft costs):
+const SYSTEM_PROMPT_BASE = `
+
+## ROLE 1: PROJECT SETUP ASSISTANT
+
+When the user describes a project (verbally or uploads a file), parse it and output a JSON matching the PROJECT STATE SCHEMA below. Follow the rules and examples strictly.
+
+### SAUDI CONSTRUCTION COST BENCHMARKS (SAR/sqm - ALL-IN including soft costs):
    
    RESIDENTIAL:
    - Low-rise apartments/townhouse: 4,500 - 6,000 (mid: 5,250)
@@ -835,57 +841,41 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
 
     // Build context: current project + model results + other saved projects
     const projectContext = project
-      ? `\nCurrent project context: ${JSON.stringify({
-          name: project.name,
-          location: project.location,
-          landType: project.landType,
-          landArea: project.landArea,
-          landRentAnnual: project.landRentAnnual,
-          landPurchasePrice: project.landPurchasePrice,
-          phases: project.phases,
-          assetsCount: (project.assets || []).length,
-          existingAssets: (project.assets || []).map(a => ({ name: a.name, category: a.category, phase: a.phase, gfa: a.gfa, costPerSqm: a.costPerSqm, leaseRate: a.leaseRate, revType: a.revType })),
-          finMode: project.finMode,
-          debtAllowed: project.debtAllowed,
-          maxLtvPct: project.maxLtvPct,
-          financeRate: project.financeRate,
-          exitStrategy: project.exitStrategy,
-          exitYear: project.exitYear,
-          prefReturnPct: project.prefReturnPct,
-          carryPct: project.carryPct,
-          incentives: project.incentives,
-        })}` +
-        (results?.consolidated ? `\n\nMODEL RESULTS (use these for analysis):\n${JSON.stringify({
-          totalCAPEX: results.consolidated.totalCapex,
-          totalRevenue50yr: results.consolidated.totalIncome,
-          consolidatedIRR: results.consolidated.irr,
-          consolidatedNPV: results.consolidated.npv10,
-          phaseResults: results.phaseResults ? Object.entries(results.phaseResults).map(([name, p]) => ({
-            phase: name,
-            capex: p.totalCapex,
-            irr: p.irr,
-            npv: p.npv10,
-          })) : [],
-        })}` : "") +
-        (financing ? `\n\nFINANCING RESULTS:\n${JSON.stringify({
-          totalEquity: financing.totalEquity,
-          totalDebt: financing.totalDebt,
-          ltvActual: financing.ltvActual,
-          avgDSCR: financing.avgDSCR,
-          minDSCR: financing.minDSCR,
-          totalInterest: financing.totalInterest,
-          leveredIRR: financing.leveredIRR,
-        })}` : "") +
-        (waterfall ? `\n\nWATERFALL RESULTS:\n${JSON.stringify({
-          lpIRR: waterfall.lpIRR,
-          gpIRR: waterfall.gpIRR,
-          lpMOIC: waterfall.lpMOIC,
-          gpMOIC: waterfall.gpMOIC,
-          totalDistributions: waterfall.totalDistributions,
-        })}` : "") +
-        (smartAlerts && smartAlerts.length > 0
-          ? `\n\nSMART REVIEWER ALERTS (${smartAlerts.length} issues found by automated validation):\n${smartAlerts.filter(a=>a.severity==='critical'||a.severity==='error'||a.severity==='warning').map(a=>`- [${a.severity.toUpperCase()}] ${a.id}: ${a.en}${a.assetName?' ('+a.assetName+')':''}`).join('\n')}\n\nWhen analyzing this project, address these alerts specifically. For each critical/error alert, explain the risk and suggest a concrete fix with numbers.`
-          : "")
+      ? (() => {
+          const c = results?.consolidated;
+          const irr = c?.irr != null ? (c.irr * 100).toFixed(1) + "%" : "—";
+          const capex = c?.totalCapex != null ? (c.totalCapex / 1e6).toFixed(1) + "M SAR" : "—";
+          const npv = c?.npv10 != null ? (c.npv10 / 1e6).toFixed(1) + "M SAR" : "—";
+          const levIRR = financing?.leveredIRR != null ? (financing.leveredIRR * 100).toFixed(1) + "%" : null;
+          const summary = `\n\n═══════════════════════════════════════\nACTIVE PROJECT SUMMARY\nName: ${project.name || "Untitled"} | Location: ${project.location || "—"}\nMode: ${project.finMode || "self"} | Assets: ${(project.assets || []).length} | Exit: ${project.exitStrategy || "hold"}\nCAPEX: ${capex} | IRR: ${irr}${levIRR ? ` (Levered: ${levIRR})` : ""} | NPV@10%: ${npv}\n═══════════════════════════════════════`;
+          return summary + `\n\nFULL PROJECT DATA:\n${JSON.stringify({
+            name: project.name, location: project.location,
+            landType: project.landType, landArea: project.landArea,
+            landRentAnnual: project.landRentAnnual, landPurchasePrice: project.landPurchasePrice,
+            softCostPct: project.softCostPct, contingencyPct: project.contingencyPct,
+            phases: project.phases,
+            assetsCount: (project.assets || []).length,
+            assets: (project.assets || []).map(a => ({
+              name: a.name, category: a.category, phase: a.phase,
+              gfa: a.gfa, costPerSqm: a.costPerSqm, totalCost: a.gfa * a.costPerSqm,
+              leaseRate: a.leaseRate, revType: a.revType, stabilizedOcc: a.stabilizedOcc,
+              efficiency: a.efficiency, rampUpYears: a.rampUpYears,
+            })),
+            finMode: project.finMode, debtAllowed: project.debtAllowed,
+            maxLtvPct: project.maxLtvPct, financeRate: project.financeRate,
+            loanTenor: project.loanTenor, debtGrace: project.debtGrace,
+            exitStrategy: project.exitStrategy, exitYear: project.exitYear,
+            prefReturnPct: project.prefReturnPct, carryPct: project.carryPct,
+            lpProfitSplitPct: project.lpProfitSplitPct,
+            incentives: project.incentives,
+          })}` +
+          (c ? `\n\nMODEL RESULTS:\nTotal CAPEX: ${c.totalCapex?.toLocaleString()} SAR\nTotal Revenue (50yr): ${c.totalIncome?.toLocaleString()} SAR\nIRR (Unlevered): ${c.irr != null ? (c.irr*100).toFixed(2)+"%" : "—"}\nNPV@10%: ${c.npv10?.toLocaleString()} SAR\nPayback Year: ${c.payback || "—"}\nPhase Breakdown: ${JSON.stringify((results.phaseResults ? Object.entries(results.phaseResults).map(([name, p]) => ({ phase: name, capex: p.totalCapex, irr: p.irr != null ? (p.irr*100).toFixed(2)+"%" : "—", npv: p.npv10 })) : []))}` : "") +
+          (financing ? `\n\nFINANCING RESULTS:\nTotal Equity: ${financing.totalEquity?.toLocaleString()} SAR\nTotal Debt: ${financing.totalDebt?.toLocaleString()} SAR\nLTV: ${financing.ltvActual?.toFixed(1)}%\nAvg DSCR: ${financing.avgDSCR?.toFixed(2)}x\nMin DSCR: ${financing.minDSCR?.toFixed(2)}x\nLevered IRR: ${financing.leveredIRR != null ? (financing.leveredIRR*100).toFixed(2)+"%" : "—"}\nTotal Interest: ${financing.totalInterest?.toLocaleString()} SAR` : "") +
+          (waterfall ? `\n\nWATERFALL:\nLP IRR: ${waterfall.lpIRR != null ? (waterfall.lpIRR*100).toFixed(2)+"%" : "—"}\nGP IRR: ${waterfall.gpIRR != null ? (waterfall.gpIRR*100).toFixed(2)+"%" : "—"}\nLP MOIC: ${waterfall.lpMOIC?.toFixed(2)}x\nGP MOIC: ${waterfall.gpMOIC?.toFixed(2)}x\nTotal Distributions: ${waterfall.totalDistributions?.toLocaleString()} SAR` : "") +
+          (smartAlerts && smartAlerts.length > 0
+            ? `\n\nSMART REVIEWER ALERTS (${smartAlerts.length} issues):\n${smartAlerts.filter(a=>a.severity==='critical'||a.severity==='error'||a.severity==='warning').map(a=>`- [${a.severity.toUpperCase()}] ${a.id}: ${a.en}${a.assetName?' ('+a.assetName+')':''}`).join('\n')}\nAddress these alerts when analyzing. For each critical/error, explain the risk and suggest a fix with specific numbers.`
+            : "");
+        })()
       : "";
 
     // Include other saved projects as reference

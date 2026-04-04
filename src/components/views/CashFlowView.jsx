@@ -30,7 +30,13 @@ export function KPI({label,value,sub,color,tip}) {
 }
 
 function CashFlowView({ project, results, t, incentivesResult }) {
-  if (!project||!results) return <div style={{color:"#9ca3af"}}>Add assets to see projections.</div>;
+  if (!project||!results) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📈</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{ar?"أضف أصول لرؤية التدفقات":"Add Assets to See Projections"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{ar?"أضف أصول من تبويب 'برنامج الأصول' لعرض التدفقات النقدية السنوية":"Add assets from the Asset Program tab to view annual cash flow projections"}</div>
+    </div>
+  );
   const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
   const [selectedPhases, setSelectedPhases] = useState([]);

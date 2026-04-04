@@ -2,10 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dev",
-      "runtimeExecutable": "/Users/abdulrahman/.nvm/versions/node/v22.22.2/bin/npx",
-      "runtimeArgs": ["vite", "--port", "5175"],
-      "port": 5175
+      "name": "haseef-dev",
+      "runtimeExecutable": "/Users/abdulrahman/.nvm/versions/node/v22.22.2/bin/npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5174"],
+      "cwd": "/Users/abdulrahman/Desktop/السليمان /زان/00 Data Room ZAN/re-dev-modeler",
+      "port": 5174
     }
   ]
 }
