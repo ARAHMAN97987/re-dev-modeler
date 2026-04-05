@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // ── System prompt that teaches Claude the project state structure ──
 const PERSONALITY_AR = `أنت "حصيف" — مستشار مالي عقاري سعودي محترف.
@@ -51,6 +52,62 @@ const PERSONALITY_EN = `You are "Haseef" — a senior Saudi real estate financia
 - Never exceed 300 words unless the user asks for detail`;
 
 const SYSTEM_PROMPT_BASE = `
+
+## SAUDI REAL ESTATE MARKET KNOWLEDGE
+
+### VISION 2030 MEGA-PROJECTS & CONTEXT
+- NEOM: $500B+ project, The Line, Sindalah island, Oxagon industrial city
+- ROSHN: PIF-owned developer, Sedra/Warefa/Alarous communities, large residential supply
+- Red Sea Project (البحر الأحمر): luxury tourism, ~50 islands, ~100km² project area
+- Qiddiya: Entertainment city near Riyadh, ~334km²
+- Diriyah: Heritage/culture, UNESCO site, luxury hospitality
+- AMAALA: Ultra-luxury wellness tourism on Red Sea coast
+- Market reality: Vision 2030 projects drive demand but also increase land/labor costs; supply pipeline is large
+
+### FINANCING STRUCTURES (SAUDI/ISLAMIC)
+- **مرابحة (Murabaha)**: Cost-plus sale, most common Islamic financing for RE; bank buys asset then sells to client at markup
+- **إجارة (Ijara)**: Islamic lease/leaseback; suitable for income-producing assets; rental payments = loan service
+- **Sukuk**: Islamic bonds; used for large RE funds and REITs
+- **صناديق استثمار عقاري (REITs)**: Listed on Tadawul; CMA-regulated; min 90% income distribution
+- **Conventional debt**: Available via foreign banks and some local; typically higher rate than Islamic
+- **PIF direct investment**: Available for mega-projects; concessional terms but requires strategic alignment
+- **قرض حسن**: Zero-interest government loan; REDF for affordable housing
+- **Typical Saudi bank terms**: 6-7.5% Murabaha rate, 7-10yr tenor, 60-70% max LTV, DSCR ≥ 1.25x minimum
+
+### SAUDI LAND TYPES
+- **صك (Sukuk/Title Deed)**: Freehold ownership; strongest title; required by banks for financing
+- **منحة (Government Grant)**: Granted land; often in development zones; may have use restrictions
+- **إيجار حكومي (Government Lease)**: Via بوابة إيجار; typically 25-99yr; used in mega-project zones
+- **BOT**: Build-Operate-Transfer; used for utilities, parking, stadiums
+
+### SAUDI MARKET BENCHMARKS
+- Residential lease yields (Riyadh): 6-8% gross, 5-6.5% net
+- Office yields (Riyadh Grade A): 7-9%
+- Retail yields (regional mall): 6-8%
+- Hotel cap rates: 7-10% (branded managed)
+- Target IRR (equity): 12-18% for institutional, 15-20%+ for opportunistic
+- Target MOIC: 1.5x-2.5x over 7-10yr
+- DSCR minimum (Saudi banks): 1.25x; comfortable: 1.5x+
+- LTV max: 60-70% for commercial RE, 70-80% for residential
+- Cap rate (exit): 6-8% for Riyadh Grade A, 7-10% for secondary
+- NOI margin: 60-75% for stabilized commercial assets
+
+### INCENTIVES & GOVERNMENT SUPPORT
+- REDF (صندوق التنمية العقارية): Loans for residential at 0-1%; for Saudi nationals
+- Municipal fee exemptions: Available in SEZs (special economic zones)
+- Land support: Some government-affiliated projects get land at below-market cost
+- MOMRA (وزارة البلديات): Development incentives for affordable housing
+- FIPCO / NHC: Government entities that may co-invest or guarantee in housing projects
+
+### PERFORMANCE INDICATORS (SAUDI STANDARD)
+- IRR (unlevered): Preferred metric; benchmark 10-14% for core, 15-20%+ for opportunistic
+- ROE (simple): Less common than IRR in institutional settings; used for quick benchmarking
+- DSCR: Primary debt metric; annualized NOI ÷ annual debt service
+- NOI: Net Operating Income = Revenue - Direct Operating Expenses (before debt service/depreciation)
+- Cap Rate: NOI ÷ Asset Value; used for exit pricing
+- MOIC: Multiple on Invested Capital; total distributions ÷ total equity invested
+- Pref Return: Preferred return to LPs before GP carry; typically 8-15% in Saudi RE funds
+- CMA (هيئة السوق المالية): Regulates REITs and real estate funds; requires audited financials, min distribution rules
 
 ## ROLE 1: PROJECT SETUP ASSISTANT
 
@@ -455,7 +512,7 @@ function fixTables(text) {
 
 function renderMarkdown(text) {
   if (!text) return null;
-  return <Markdown components={mdComponents}>{fixTables(text)}</Markdown>;
+  return <Markdown remarkPlugins={[remarkGfm]} components={mdComponents}>{fixTables(text)}</Markdown>;
 }
 
 // ── Component ──
@@ -847,9 +904,13 @@ export default function AiAssistant({ open, onClose, project, onApply, lang, pro
           const capex = c?.totalCapex != null ? (c.totalCapex / 1e6).toFixed(1) + "M SAR" : "—";
           const npv = c?.npv10 != null ? (c.npv10 / 1e6).toFixed(1) + "M SAR" : "—";
           const levIRR = financing?.leveredIRR != null ? (financing.leveredIRR * 100).toFixed(1) + "%" : null;
-          const summary = `\n\n═══════════════════════════════════════\nACTIVE PROJECT SUMMARY\nName: ${project.name || "Untitled"} | Location: ${project.location || "—"}\nMode: ${project.finMode || "self"} | Assets: ${(project.assets || []).length} | Exit: ${project.exitStrategy || "hold"}\nCAPEX: ${capex} | IRR: ${irr}${levIRR ? ` (Levered: ${levIRR})` : ""} | NPV@10%: ${npv}\n═══════════════════════════════════════`;
+          const totalGFA = (project.assets || []).reduce((sum, a) => sum + (a.gfa || 0), 0);
+          const totalGFAStr = totalGFA > 0 ? totalGFA.toLocaleString() + " sqm" : "—";
+          const phaseNames = project.phases ? project.phases.map(p => p.name || p).join(", ") : "—";
+          const summary = `\n\n═══════════════════════════════════════\nACTIVE PROJECT SUMMARY\nName: ${project.name || "Untitled"} | Location: ${project.location || "—"} | Currency: SAR\nMode: ${project.finMode || "self"} | Assets: ${(project.assets || []).length} | GFA: ${totalGFAStr} | Horizon: ${project.horizon || 50}yr\nPhases: ${phaseNames} | Exit: ${project.exitStrategy || "hold"} (Year ${project.exitYear || "—"})\nCAPEX: ${capex} | IRR: ${irr}${levIRR ? ` (Levered: ${levIRR})` : ""} | NPV@10%: ${npv}\n═══════════════════════════════════════`;
           return summary + `\n\nFULL PROJECT DATA:\n${JSON.stringify({
-            name: project.name, location: project.location,
+            name: project.name, location: project.location, currency: "SAR",
+            horizon: project.horizon || 50, startYear: project.startYear,
             landType: project.landType, landArea: project.landArea,
             landRentAnnual: project.landRentAnnual, landPurchasePrice: project.landPurchasePrice,
             softCostPct: project.softCostPct, contingencyPct: project.contingencyPct,
