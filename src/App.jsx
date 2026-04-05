@@ -25,6 +25,7 @@ import SmartReviewerPanel, { SmartReviewerBadge } from "./components/shared/Smar
 import AdvisoryReport from "./components/shared/AdvisoryReport";
 import FieldAlertDot from "./components/shared/FieldAlertDot";
 import { runAllRules } from "./smartReviewer.js";
+import AssetDetailPanel from "./components/AssetDetailPanel.jsx";
 
 // ═══════════════════════════════════════════════════════════════
 // Haseef Financial Modeler — Project Engine v3 (Stable)
@@ -5101,6 +5102,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [landEduModal, setLandEduModal] = useState(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [landOpen, setLandOpen] = useState(false);
+  const [selectedAssetIndex, setSelectedAssetIndex] = useState(null);
   const fileRef = useRef(null);
   const assets = project.assets || [];
   const phaseNames = project.phases.map(p => p.name);
@@ -5638,6 +5640,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"var(--text-tertiary)"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
+                <button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",cursor:"pointer",color:"#0f766e",fontSize:11,padding:"4px 8px",lineHeight:1,borderRadius:6,flexShrink:0,fontWeight:600}}>{ar?"تفاصيل ↗":"Details ↗"}</button>
                 <span style={{fontSize:11,padding:"3px 8px",borderRadius:10,background:cc+"15",color:cc,fontWeight:600}}>{catL(a.category,ar)}</span>
               </div>
               <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
@@ -5776,7 +5779,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                     <tr key={a.id||i} style={{background:bg}}>
                       <td style={{...tdSt,color:"var(--text-tertiary)",fontWeight:500,width:28,...hd("#")}}>{i+1}</td>
                       <td style={{...tdSt,...hd("phase")}}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={{...tdSt,...hd("name")}}><div style={{display:"flex",flexDirection:"column",gap:2}}><div style={{display:"flex",alignItems:"center"}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><FieldAlertDot alerts={(smartAlerts||[]).filter(al=>al.assetIndex===i)} lang={lang} /></div>{a.assetPriority&&a.assetPriority!=="standard"&&<select value={a.assetPriority||"standard"} onChange={e=>upAsset(i,{assetPriority:e.target.value})} style={{fontSize:9,padding:"1px 3px",border:"none",borderRadius:3,cursor:"pointer",fontWeight:600,...(a.assetPriority==="anchor"?{background:"#dc262620",color:"#dc2626"}:a.assetPriority==="quickWin"?{background:"#16a34a20",color:"#16a34a"}:a.assetPriority==="optional"?{background:"#8b5cf620",color:"#8b5cf6"}:{background:"#6b728020",color:"#6b7280"})}}><option value="anchor">{ar?"رئيسي":"Anchor"}</option><option value="quickWin">{ar?"سريع":"Quick Win"}</option><option value="standard">{ar?"عادي":"Standard"}</option><option value="optional">{ar?"اختياري":"Optional"}</option></select>}</div></td>
+                      <td style={{...tdSt,...hd("name")}}><div style={{display:"flex",flexDirection:"column",gap:2}}><div style={{display:"flex",alignItems:"center"}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",cursor:"pointer",color:"#0f766e",fontSize:10,padding:"3px 6px",lineHeight:1,borderRadius:4,flexShrink:0,fontWeight:600}}>↗</button><FieldAlertDot alerts={(smartAlerts||[]).filter(al=>al.assetIndex===i)} lang={lang} /></div>{a.assetPriority&&a.assetPriority!=="standard"&&<select value={a.assetPriority||"standard"} onChange={e=>upAsset(i,{assetPriority:e.target.value})} style={{fontSize:9,padding:"1px 3px",border:"none",borderRadius:3,cursor:"pointer",fontWeight:600,...(a.assetPriority==="anchor"?{background:"#dc262620",color:"#dc2626"}:a.assetPriority==="quickWin"?{background:"#16a34a20",color:"#16a34a"}:a.assetPriority==="optional"?{background:"#8b5cf620",color:"#8b5cf6"}:{background:"#6b728020",color:"#6b7280"})}}><option value="anchor">{ar?"رئيسي":"Anchor"}</option><option value="quickWin">{ar?"سريع":"Quick Win"}</option><option value="standard">{ar?"عادي":"Standard"}</option><option value="optional">{ar?"اختياري":"Optional"}</option></select>}</div></td>
                       <td style={{...tdSt,...hd("category")}}>{(()=>{
                         const atGroups = {};
                         Object.entries(ASSET_TYPES).forEach(([k,v])=>{const g=v.group;if(!atGroups[g])atGroups[g]=[];atGroups[g].push({value:k,label:ar?v.labelAr:v.label});});
@@ -5985,6 +5988,19 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         onSave={(m,ebitda)=>upAsset(modal.idx,{marinaPL:m,opEbitda:ebitda})}
         onClose={()=>setModal(null)} t={t} lang={lang}
       />}
+      {selectedAssetIndex !== null && assets[selectedAssetIndex] && (
+        <AssetDetailPanel
+          asset={assets[selectedAssetIndex]}
+          index={selectedAssetIndex}
+          upAsset={upAsset}
+          results={results}
+          phases={project.phases}
+          lang={lang}
+          t={t}
+          onClose={() => setSelectedAssetIndex(null)}
+          isMobile={isMobile}
+        />
+      )}
     </div>
   );
 }
