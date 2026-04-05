@@ -6775,6 +6775,52 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
     };
   }, [isFiltered, selectedPhases, results, horizon]);
 
+  // ── OPEX / GOP / Reserves (display-only, derived from asset P&L params) ──
+  const opexData = useMemo(() => {
+    const assetArr = Array.isArray(results.assetSchedules) ? results.assetSchedules : Object.values(results.assetSchedules || {});
+    const projAssets = project.assets || [];
+    const emptyArr = () => new Array(horizon).fill(0);
+    const phaseData = {};
+    allPhaseNames.forEach(pn => { phaseData[pn] = { grossRev: emptyArr(), opex: emptyArr(), gop: emptyArr(), reserves: emptyArr() }; });
+    const cons = { grossRev: emptyArr(), opex: emptyArr(), gop: emptyArr(), reserves: emptyArr() };
+    let hasOpexData = false;
+    assetArr.forEach((sched, i) => {
+      const a = projAssets[i];
+      if (!a || a.revType !== 'Operating') return;
+      let ebitdaM = 1, gopM = 1, resRate = 0;
+      if (a.hotelPL) {
+        const pl = calcHotelEBITDA(a.hotelPL);
+        if (pl.totalRev > 0 && pl.ebitda > 0) {
+          ebitdaM = pl.ebitda / pl.totalRev;
+          gopM = (pl.ebitda + (pl.fixed || 0)) / pl.totalRev;
+          resRate = 0.04;
+          hasOpexData = true;
+        }
+      } else if (a.marinaPL) {
+        const pl = calcMarinaEBITDA(a.marinaPL);
+        if (pl.totalRev > 0 && pl.ebitda > 0) {
+          ebitdaM = pl.ebitda / pl.totalRev;
+          gopM = ebitdaM;
+          resRate = 0.02;
+          hasOpexData = true;
+        }
+      } else return;
+      const pn = a.phase || 'Unphased';
+      const pd = phaseData[pn] || phaseData[allPhaseNames[0]];
+      for (let y = 0; y < horizon; y++) {
+        const ebitdaY = (sched.revenueSchedule || [])[y] || 0;
+        if (ebitdaY === 0) continue;
+        const gr = ebitdaM > 0 ? ebitdaY / ebitdaM : 0;
+        const gop = gr * gopM;
+        const opex = gr - gop;
+        const res = gr * resRate;
+        if (pd) { pd.grossRev[y] += gr; pd.opex[y] += opex; pd.gop[y] += gop; pd.reserves[y] += res; }
+        cons.grossRev[y] += gr; cons.opex[y] += opex; cons.gop[y] += gop; cons.reserves[y] += res;
+      }
+    });
+    return { phaseData, cons, hasOpexData };
+  }, [results.assetSchedules, project.assets, horizon, allPhaseNames]);
+
   // Hooks-safe: early return AFTER all hooks
   if (!project || !results || !(project.assets?.length)) return <EmptyState
     icon="💰"
@@ -6913,7 +6959,27 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
         </tr></thead><tbody>
           <PeriodHeaderRow />
           <SectionRow label={ar?"الإيرادات والتشغيل":"REVENUE & OPERATIONS"} color="#16a34a" bg="#f0fdf4" />
-          <CFRow label={t.income} values={pr.income} total={pr.totalIncome} color="#16a34a" />
+          {opexData.hasOpexData && (() => {
+            const pd = opexData.phaseData[name];
+            if (!pd) return null;
+            const grTotal = pd.grossRev.reduce((a,b)=>a+b,0);
+            if (grTotal === 0) return null;
+            const opexTotal = pd.opex.reduce((a,b)=>a+b,0);
+            const gopTotal = pd.gop.reduce((a,b)=>a+b,0);
+            return <>
+              <CFRow label={ar?"إجمالي الإيرادات":"Gross Revenue"} values={pd.grossRev} total={grTotal} color="#16a34a" sub />
+              <CFRow label={ar?"(-) المصاريف التشغيلية (OPEX)":"(-) Operating Expenses (OPEX)"} values={pd.opex} total={opexTotal} color="#ef4444" negate sub />
+              <CFRow label={ar?"= إجمالي الربح التشغيلي (GOP)":"= Gross Operating Profit (GOP)"} values={pd.gop} total={gopTotal} bold />
+            </>;
+          })()}
+          <CFRow label={opexData.hasOpexData ? "EBITDA" : t.income} values={pr.income} total={pr.totalIncome} color="#16a34a" />
+          {opexData.hasOpexData && (() => {
+            const pd = opexData.phaseData[name];
+            if (!pd) return null;
+            const resTotal = pd.reserves.reduce((a,b)=>a+b,0);
+            if (resTotal === 0) return null;
+            return <CFRow label={ar?"(-) الاحتياطيات (FF&E 4%)":"(-) FF&E Reserves (4%)"} values={pd.reserves} total={resTotal} color="#f59e0b" negate sub />;
+          })()}
           <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate sub />
           <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={pr.noi} total={pr.totalNOI} bold />
           <CFRow label={ar?"هامش NOI %":"NOI Margin %"} pct values={years.map(y=>pr.income[y]>0?(pr.noi[y]/pr.income[y])*100:null)} total={pr.totalIncome>0?(pr.totalNOI/pr.totalIncome)*100:null} />
@@ -6936,7 +7002,25 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
       </tr></thead><tbody>
         <PeriodHeaderRow />
         <SectionRow label={ar?"الإيرادات والتشغيل":"REVENUE & OPERATIONS"} color="#16a34a" bg="#f0fdf4" />
-        <CFRow label={t.income} values={c.income} total={c.totalIncome} color="#16a34a" />
+        {opexData.hasOpexData && (() => {
+          const cd = opexData.cons;
+          const grTotal = cd.grossRev.reduce((a,b)=>a+b,0);
+          if (grTotal === 0) return null;
+          const opexTotal = cd.opex.reduce((a,b)=>a+b,0);
+          const gopTotal = cd.gop.reduce((a,b)=>a+b,0);
+          return <>
+            <CFRow label={ar?"إجمالي الإيرادات":"Gross Revenue"} values={cd.grossRev} total={grTotal} color="#16a34a" sub />
+            <CFRow label={ar?"(-) المصاريف التشغيلية (OPEX)":"(-) Operating Expenses (OPEX)"} values={cd.opex} total={opexTotal} color="#ef4444" negate sub />
+            <CFRow label={ar?"= إجمالي الربح التشغيلي (GOP)":"= Gross Operating Profit (GOP)"} values={cd.gop} total={gopTotal} bold />
+          </>;
+        })()}
+        <CFRow label={opexData.hasOpexData ? "EBITDA" : t.income} values={c.income} total={c.totalIncome} color="#16a34a" />
+        {opexData.hasOpexData && (() => {
+          const cd = opexData.cons;
+          const resTotal = cd.reserves.reduce((a,b)=>a+b,0);
+          if (resTotal === 0) return null;
+          return <CFRow label={ar?"(-) الاحتياطيات (FF&E 4%)":"(-) FF&E Reserves (4%)"} values={cd.reserves} total={resTotal} color="#f59e0b" negate sub />;
+        })()}
         <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate sub />
         <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noiArr} total={totalNOI} bold />
         <CFRow label={ar?"هامش NOI %":"NOI Margin %"} pct values={years.map(y=>c.income[y]>0?(noiArr[y]/c.income[y])*100:null)} total={c.totalIncome>0?(totalNOI/c.totalIncome)*100:null} />
