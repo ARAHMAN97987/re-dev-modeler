@@ -712,7 +712,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:10,color:"#9ca3af"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
-                <button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"none",border:"none",cursor:"pointer",color:"#2EC4B6",fontSize:14,padding:"2px 4px",lineHeight:1,borderRadius:4,flexShrink:0}}>↗</button>
+                <button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",cursor:"pointer",color:"#0f766e",fontSize:11,padding:"4px 8px",lineHeight:1,borderRadius:6,flexShrink:0,fontWeight:600}}>{ar?"تفاصيل ↗":"Details ↗"}</button>
                 <span style={{fontSize:9,padding:"3px 8px",borderRadius:10,background:cc+"15",color:cc,fontWeight:600}}>{catL(a.category,ar)}</span>
               </div>
               <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
@@ -876,7 +876,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <td style={{...tdSt,color:"#9ca3af",fontWeight:500,width:30,...hd("#")}}>{i+1}</td>
                       <td style={{...tdSt,...hd("phase")}}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
                       <td style={{...tdSt,...hd("category")}}><EditableCell options={CATEGORIES} labelMap={ar?CAT_AR:null} value={a.category} onChange={v=>handleCategoryChange(i,v)} /></td>
-                      <td style={{...tdSt,...hd("name")}}><div style={{display:"flex",alignItems:"center",gap:3}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"none",border:"none",cursor:"pointer",color:"#2EC4B6",fontSize:12,padding:"1px 3px",lineHeight:1,borderRadius:3,flexShrink:0}}>↗</button></div></td>
+                      <td style={{...tdSt,...hd("name")}}><div style={{display:"flex",alignItems:"center",gap:3}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",cursor:"pointer",color:"#0f766e",fontSize:10,padding:"3px 6px",lineHeight:1,borderRadius:4,flexShrink:0,fontWeight:600}}>↗</button></div></td>
                       <td style={{...tdSt,...hd("code")}}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{width:45}} /></td>
                       <td style={{...tdSt,...hd("plotArea")}}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} /></td>
                       <td style={{...tdSt,...hd("footprint")}}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} /></td>
