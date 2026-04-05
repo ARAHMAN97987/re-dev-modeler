@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "haseef-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "name": "re-dev-modeler",
+      "runtimeExecutable": "/Users/abdulrahman/.nvm/versions/node/v22.22.2/bin/npm",
+      "runtimeArgs": ["run", "dev", "--", "--host", "127.0.0.1", "--port", "5173"],
       "port": 5173
     }
   ]

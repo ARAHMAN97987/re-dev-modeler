@@ -22,9 +22,78 @@ export function getScenarioMults(p) {
   return {cm,rm,dm,ea};
 }
 
-export function computeAssetCapex(asset, project) {
+/**
+ * Detailed CAPEX breakdown for an asset (used by UI and summary).
+ * Returns { hardCost, basementPremium, parkingCost, softCost, contingency, total }.
+ * Backward-compatible: if basement/parking/overrides are undefined, result equals legacy formula.
+ */
+export function computeAssetCapexBreakdown(asset, project) {
   const {cm} = getScenarioMults(project);
-  return (asset.gfa||0) * (asset.costPerSqm||0) * (1+(project.softCostPct||0)/100) * (1+(project.contingencyPct||0)/100) * cm;
+  const gfa = asset.gfa || 0;
+  const cps = asset.costPerSqm || 0;
+
+  // Above-ground GFA (default: full GFA if basement fields not used)
+  const basementArea = (asset.basementArea != null) ? (asset.basementArea || 0)
+                    : ((asset.basementLevels || 0) * (asset.footprint || 0));
+  const aboveGroundGfa = Math.max(0, gfa - basementArea);
+
+  // Basement typically costs 1.4–1.8× above-ground (excavation, waterproofing, structure).
+  // Default multiplier 1.6 = +60% premium. Can be overridden per asset.
+  const basementMult = asset.basementCostMultiplier ?? 1.6;
+
+  // Hard cost split: above-ground at base rate, basement at premium
+  const hardCostAbove = aboveGroundGfa * cps;
+  const hardCostBasement = basementArea * cps * basementMult;
+  const hardCostStructure = hardCostAbove + hardCostBasement;
+
+  // Parking cost (surface or structured). parkingArea × parkingCostPerSqm.
+  // If parkingCostPerSqm not set, treat parking as already in GFA (no extra charge).
+  const parkingArea = asset.parkingArea || 0;
+  const parkingCps = asset.parkingCostPerSqm || 0;
+  const parkingCost = parkingArea * parkingCps;
+
+  const hardCost = hardCostStructure + parkingCost;
+
+  // Soft cost & contingency — allow per-asset overrides (opt-in)
+  const softPct = (asset.softCostPctOverride != null ? asset.softCostPctOverride : (project.softCostPct || 0)) / 100;
+  const contPct = (asset.contingencyPctOverride != null ? asset.contingencyPctOverride : (project.contingencyPct || 0)) / 100;
+
+  const softCost = hardCost * softPct;
+  const contingency = (hardCost + softCost) * contPct;
+
+  const subtotal = hardCost + softCost + contingency;
+  const total = subtotal * cm;
+
+  return {
+    hardCostAbove,
+    hardCostBasement,
+    parkingCost,
+    hardCost,
+    softCost,
+    contingency,
+    subtotal,
+    total,
+    // Legacy field for backward compatibility
+    scenarioMult: cm,
+  };
+}
+
+export function computeAssetCapex(asset, project) {
+  // Legacy path: if asset has no basement/parking/override fields, match the old formula exactly
+  // to preserve existing project results and tests.
+  const hasNewFields = (asset.basementLevels || 0) > 0
+    || (asset.basementArea || 0) > 0
+    || (asset.parkingCostPerSqm || 0) > 0
+    || asset.softCostPctOverride != null
+    || asset.contingencyPctOverride != null
+    || asset.basementCostMultiplier != null;
+
+  if (!hasNewFields) {
+    const {cm} = getScenarioMults(project);
+    return (asset.gfa||0) * (asset.costPerSqm||0) * (1+(project.softCostPct||0)/100) * (1+(project.contingencyPct||0)/100) * cm;
+  }
+
+  return computeAssetCapexBreakdown(asset, project).total;
 }
 
 export function computeProjectCashFlows(project) {

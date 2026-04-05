@@ -6037,6 +6037,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           upAsset={upAsset}
           results={results}
           phases={project.phases}
+          project={project}
           lang={lang}
           t={t}
           onClose={() => setSelectedAssetIndex(null)}

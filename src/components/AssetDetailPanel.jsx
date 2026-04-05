@@ -1,6 +1,22 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { ASSET_TYPES } from "../data/assetTypes.js";
 import { deriveAreas, getBenchmarkEfficiency, getAreaLabel } from "../data/areaBenchmarks.js";
+import { computeAssetCapexBreakdown } from "../engine/cashflow.js";
+
+// Coverage & FAR benchmarks (Saudi market — typical)
+const ZONING_BENCHMARKS = {
+  retail_lifestyle: { maxCoverage: 60, maxFar: 2.5 },
+  mall:             { maxCoverage: 60, maxFar: 2.0 },
+  office:           { maxCoverage: 50, maxFar: 5.0 },
+  residential_villas:      { maxCoverage: 50, maxFar: 1.5 },
+  residential_multifamily: { maxCoverage: 60, maxFar: 4.0 },
+  serviced_apartments:     { maxCoverage: 55, maxFar: 5.0 },
+  hotel:            { maxCoverage: 55, maxFar: 6.0 },
+  resort:           { maxCoverage: 30, maxFar: 1.0 },
+  marina:           { maxCoverage: 100, maxFar: 1.0 },
+  yacht_club:       { maxCoverage: 40, maxFar: 1.5 },
+  parking_structure: { maxCoverage: 90, maxFar: 4.0 },
+};
 
 export default function AssetDetailPanel({
   asset,
@@ -12,6 +28,7 @@ export default function AssetDetailPanel({
   t,
   onClose,
   isMobile,
+  project,
 }) {
   if (!asset) return null;
 
@@ -20,6 +37,19 @@ export default function AssetDetailPanel({
 
   const assetResult = results?.assetSchedules?.find(a => a.id === asset.id)
     || results?.assetSchedules?.[index];
+
+  // Live CAPEX breakdown — recomputed on every field change
+  const capexBreakdown = useMemo(() => {
+    try {
+      return computeAssetCapexBreakdown(asset, project || {});
+    } catch { return null; }
+  }, [asset, project]);
+
+  // Zoning validation
+  const zoning = ZONING_BENCHMARKS[asset.assetType] || {};
+  const derivedNow = deriveAreas(asset);
+  const coverageExceeds = zoning.maxCoverage && derivedNow.coveragePct > zoning.maxCoverage;
+  const farExceeds = zoning.maxFar && derivedNow.far > zoning.maxFar;
 
   // Escape key support
   useEffect(() => {
@@ -182,8 +212,56 @@ export default function AssetDetailPanel({
             {field("Floors Above Ground", "أدوار فوق الأرض", asset.floorsAboveGround, (v) => up("floorsAboveGround", v), { type: "number" })}
             {field("Basement Levels", "أدوار بيسمنت", asset.basementLevels, (v) => up("basementLevels", v), { type: "number" })}
             {field("GFA", "المساحة الإجمالية", asset.gfa, (v) => up("gfa", v), { type: "number", suffix: "m²" })}
+            {/* Auto-derive GFA buttons */}
+            {((asset.footprint || 0) > 0 && (asset.floorsAboveGround || 0) > 0) && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 8, marginTop: -2, paddingInlineStart: 128 }}>
+                <button
+                  onClick={() => {
+                    const above = (asset.footprint || 0) * (asset.floorsAboveGround || 0);
+                    const below = (asset.footprint || 0) * (asset.basementLevels || 0);
+                    upAsset(index, { gfa: above + below });
+                  }}
+                  style={{ fontSize: 10, padding: "3px 8px", background: "#f0f9ff", color: "#0369a1", border: "1px solid #bae6fd", borderRadius: 4, cursor: "pointer" }}
+                  title={lang === "ar" ? "GFA = البصمة × (الأدوار + البيسمنت)" : "GFA = Footprint × (Floors + Basement)"}
+                >
+                  {lang === "ar" ? "⚡ اشتق من الأدوار" : "⚡ Derive from floors"}
+                </button>
+                {(asset.plotArea || 0) > 0 && (asset.far || 0) > 0 && (
+                  <button
+                    onClick={() => upAsset(index, { gfa: Math.round((asset.plotArea || 0) * (asset.far || 0)) })}
+                    style={{ fontSize: 10, padding: "3px 8px", background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", borderRadius: 4, cursor: "pointer" }}
+                    title={lang === "ar" ? "GFA = الأرض × معامل البناء" : "GFA = Plot × FAR"}
+                  >
+                    {lang === "ar" ? "⚡ اشتق من FAR" : "⚡ Derive from FAR"}
+                  </button>
+                )}
+              </div>
+            )}
+            {/* Auto-derive footprint from plot × coverage */}
+            {((asset.plotArea || 0) > 0 && (asset.coveragePct || 0) > 0 && (asset.footprint || 0) === 0) && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 8, marginTop: -2, paddingInlineStart: 128 }}>
+                <button
+                  onClick={() => upAsset(index, { footprint: Math.round((asset.plotArea || 0) * (asset.coveragePct || 0) / 100) })}
+                  style={{ fontSize: 10, padding: "3px 8px", background: "#f0f9ff", color: "#0369a1", border: "1px solid #bae6fd", borderRadius: 4, cursor: "pointer" }}
+                >
+                  {lang === "ar" ? "⚡ اشتق البصمة من التغطية" : "⚡ Derive footprint from coverage"}
+                </button>
+              </div>
+            )}
             {field("Coverage %", "نسبة التغطية", asset.coveragePct, (v) => up("coveragePct", v), { type: "number", suffix: "%" })}
             {field("FAR", "معامل البناء", asset.far, (v) => up("far", v), { type: "number" })}
+            {/* Zoning warnings */}
+            {(coverageExceeds || farExceeds) && (
+              <div style={{ padding: "8px 12px", background: "#fef3c7", border: "1px solid #fbbf24", borderRadius: 6, marginBottom: 8, fontSize: 11, color: "#92400e" }}>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>⚠ {lang === "ar" ? "تحذيرات التخطيط" : "Zoning Warnings"}</div>
+                {coverageExceeds && (
+                  <div>• {lang === "ar" ? `التغطية ${derivedNow.coveragePct}% تتجاوز المرجع ${zoning.maxCoverage}%` : `Coverage ${derivedNow.coveragePct}% exceeds typical ${zoning.maxCoverage}%`}</div>
+                )}
+                {farExceeds && (
+                  <div>• {lang === "ar" ? `معامل البناء ${derivedNow.far} يتجاوز المرجع ${zoning.maxFar}` : `FAR ${derivedNow.far} exceeds typical ${zoning.maxFar}`}</div>
+                )}
+              </div>
+            )}
 
             <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "10px 0" }} />
             <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8, color: "#6b7280" }}>
@@ -285,6 +363,51 @@ export default function AssetDetailPanel({
             type: "number", suffix: "SAR",
             hidden: asset.revType !== "Operating"
           })}
+
+          <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "10px 0" }} />
+          <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8, color: "#6b7280" }}>
+            {lang === "ar" ? "تفاصيل التكلفة (اختياري)" : "Cost Details (optional)"}
+          </div>
+          {field("Basement Cost Multiplier", "مضاعف تكلفة البيسمنت", asset.basementCostMultiplier, (v) => up("basementCostMultiplier", v), {
+            type: "number", suffix: "×",
+            hidden: (asset.basementLevels || 0) === 0,
+          })}
+          {field("Parking Area", "مساحة المواقف", asset.parkingArea, (v) => up("parkingArea", v), { type: "number", suffix: "m²" })}
+          {field("Parking Cost / m²", "تكلفة مواقف / م²", asset.parkingCostPerSqm, (v) => up("parkingCostPerSqm", v), {
+            type: "number", suffix: "SAR",
+            hidden: (asset.parkingArea || 0) === 0,
+          })}
+          {field("Soft Cost % (override)", "تكلفة غير مباشرة % (تجاوز)", asset.softCostPctOverride, (v) => up("softCostPctOverride", v), { type: "number", suffix: "%" })}
+          {field("Contingency % (override)", "احتياطي % (تجاوز)", asset.contingencyPctOverride, (v) => up("contingencyPctOverride", v), { type: "number", suffix: "%" })}
+
+          {/* Live CAPEX breakdown */}
+          {capexBreakdown && (asset.gfa || 0) > 0 && (asset.costPerSqm || 0) > 0 && (
+            <div style={{ marginTop: 10, padding: "10px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 11 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6, color: "#0f172a" }}>
+                {lang === "ar" ? "📊 تفصيل التكلفة الرأسمالية (حي)" : "📊 Live CAPEX Breakdown"}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "3px 10px", fontFamily: "monospace", fontSize: 10 }}>
+                <span>{lang === "ar" ? "فوق الأرض" : "Above Ground"}</span>
+                <span>{(capexBreakdown.hardCostAbove / 1e6).toFixed(2)}M</span>
+                {capexBreakdown.hardCostBasement > 0 && (<>
+                  <span>{lang === "ar" ? "بيسمنت (مع علاوة)" : "Basement (with premium)"}</span>
+                  <span>{(capexBreakdown.hardCostBasement / 1e6).toFixed(2)}M</span>
+                </>)}
+                {capexBreakdown.parkingCost > 0 && (<>
+                  <span>{lang === "ar" ? "مواقف" : "Parking"}</span>
+                  <span>{(capexBreakdown.parkingCost / 1e6).toFixed(2)}M</span>
+                </>)}
+                <span style={{ borderTop: "1px solid #cbd5e1", paddingTop: 3, fontWeight: 600 }}>{lang === "ar" ? "تكلفة صلبة" : "Hard Cost"}</span>
+                <span style={{ borderTop: "1px solid #cbd5e1", paddingTop: 3, fontWeight: 600 }}>{(capexBreakdown.hardCost / 1e6).toFixed(2)}M</span>
+                <span>{lang === "ar" ? "غير مباشرة" : "Soft Cost"}</span>
+                <span>{(capexBreakdown.softCost / 1e6).toFixed(2)}M</span>
+                <span>{lang === "ar" ? "احتياطي" : "Contingency"}</span>
+                <span>{(capexBreakdown.contingency / 1e6).toFixed(2)}M</span>
+                <span style={{ borderTop: "2px solid #0f172a", paddingTop: 3, fontWeight: 700, color: "#0f172a" }}>{lang === "ar" ? "الإجمالي" : "Total CAPEX"}</span>
+                <span style={{ borderTop: "2px solid #0f172a", paddingTop: 3, fontWeight: 700, color: "#0f172a" }}>{(capexBreakdown.total / 1e6).toFixed(2)}M</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
