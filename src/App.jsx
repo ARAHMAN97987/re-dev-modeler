@@ -4294,7 +4294,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} financing={financing} onAddAsset={()=>setActiveTab("assets")} />],
             ["checks", <ChecksView key="checks" checks={checks} t={t} lang={lang} onFix={(tab)=>{setActiveTab(tab);window.scrollTo(0,0);}} />],
           ].map(([tabKey, tabContent]) => (
-            <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",overflow:"auto",height:"100%",padding:isMobile?10:18,paddingBottom:isMobile?70:80}} className={activeTab===tabKey?"zan-tab-content":undefined}>
+            <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",padding:isMobile?10:18,paddingBottom:isMobile?70:80}} className={activeTab===tabKey?"zan-tab-content":undefined}>
               {tabContent}
             </div>
           ))}
