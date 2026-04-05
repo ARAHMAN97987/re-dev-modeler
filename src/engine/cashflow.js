@@ -174,7 +174,10 @@ export function computeProjectCashFlows(project) {
     } else if (asset.revType === "Sale") {
       // H1: Unit sale revenue - absorption over N years after construction
       const salePriceSqm = (asset.salePricePerSqm || 0) * rm;
-      const sellableArea = (asset.gfa || 0) * ((asset.efficiency ?? 100) / 100);
+      // For Sale: if efficiency is 0 or undefined, treat as 100% (sell full GFA).
+      // This prevents silent 0-revenue when user switches Operating → Sale.
+      const saleEff = (asset.efficiency && asset.efficiency > 0) ? asset.efficiency : 100;
+      const sellableArea = (asset.gfa || 0) * (saleEff / 100);
       const totalSaleValue = sellableArea * salePriceSqm;
       const absorptionYears = Math.max(1, asset.absorptionYears || 3);
       const commissionPct = Math.min(1, Math.max(0, (asset.commissionPct || 0) / 100));
