@@ -384,7 +384,29 @@ async function saveProject(project) {
 }
 async function deleteProjectStorage(id) { await storage.delete(PROJECT_PREFIX + id); const index = await loadProjectIndex(); await saveProjectIndex(index.filter(p => p.id !== id)); }
 
-function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase }) {
+// ═══════════════════════════════════════════════════════════════
+// EMPTY STATE COMPONENT — bilingual, used across all views
+// ═══════════════════════════════════════════════════════════════
+function EmptyState({ icon, title, subtitle, actionLabel, onAction }) {
+  return (
+    <div style={{
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      minHeight:300, padding:40, textAlign:'center', color:'var(--text-secondary, #6b7280)'
+    }}>
+      <div style={{fontSize:48, marginBottom:16, opacity:0.4}}>{icon || '📊'}</div>
+      <div style={{fontSize:18, fontWeight:600, marginBottom:8, color:'var(--text-primary, #1a1d23)'}}>{title}</div>
+      <div style={{fontSize:14, marginBottom:20, maxWidth:400, lineHeight:1.6}}>{subtitle}</div>
+      {actionLabel && onAction && (
+        <button onClick={onAction} style={{
+          padding:'10px 24px', borderRadius:8, border:'none', cursor:'pointer',
+          background:'var(--btn-primary-bg, #0C1829)', color:'#fff', fontSize:14, fontWeight:600
+        }}>{actionLabel}</button>
+      )}
+    </div>
+  );
+}
+
+function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase, onAddAsset }) {
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [showYrs, setShowYrs] = useState(15);
@@ -505,10 +527,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h]);
 
   // ── Early return AFTER all hooks (React hooks rules: hooks must always run in same order) ──
-  if (!project || !results || !waterfall) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>
-    <div style={{fontSize:14,marginBottom:8}}>{lang==="ar"?"يتطلب اختيار هيكل تمويل غير ذاتي":"Requires non-self financing mode"}</div>
-    <div style={{fontSize:12}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' من لوحة التحكم":"Select 'Bank Debt' or 'Fund Structure' from the control panel"}</div>
-  </div>;
+  if (!project || !results || !waterfall || !(project.assets?.length)) return <EmptyState
+    icon="🏗️"
+    title={ar ? "أضف أصولاً لعرض الشلال" : "Add Assets to See Waterfall"}
+    subtitle={ar ? "أضف أصولاً واختر وضع الصندوق أو الدين لعرض توزيع العوائد" : "Add assets and select Fund or Debt mode to see the return waterfall"}
+    onAction={onAddAsset}
+    actionLabel={ar ? "أضف أصلاً" : "Add Asset"}
+  />;
 
   // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
   const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0, wasNeg = false; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum < -1) wasNeg = true; if (wasNeg && cum >= 0) return y + 1; } return null; })();
@@ -1426,9 +1451,15 @@ function IncentivesImpact({ project, results, financing, incentivesResult, lang,
 // ═══════════════════════════════════════════════════════════════
 // RESULTS VIEW - Dynamic smart results page based on financing mode
 // ═══════════════════════════════════════════════════════════════
-function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase }) {
+function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, t, lang, up, globalExpand, kpiPhase, setKpiPhase, onAddAsset }) {
   const ar = lang === "ar";
-  if (!project || !results) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>{ar?"أضف أصول لرؤية النتائج":"Add assets to see results"}</div>;
+  if (!project || !results || !(project.assets?.length)) return <EmptyState
+    icon="📊"
+    title={ar ? "لا توجد نتائج بعد" : "No Results Yet"}
+    subtitle={ar ? "أضف أصولاً وشغّل النموذج لعرض النتائج" : "Add assets and run the model to see results"}
+    actionLabel={ar ? "أضف أصلاً" : "Add Asset"}
+    onAction={onAddAsset}
+  />;
 
   const mode = project.finMode || financing?.mode || "self";
 
@@ -1439,7 +1470,7 @@ function ResultsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   // ── FUND MODE: WaterfallView (incentives injected inside) ──
   if (mode === "fund" || mode === "hybrid") {
-    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} />;
+    return <WaterfallView project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} onAddAsset={onAddAsset} />;
   }
 
   // ── BANK DEBT / BANK 100%: Full bank results ──
@@ -2426,7 +2457,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
 // FieldGroup, FL, Inp, Drp — imported from ./components/shared/FormWidgets.jsx
 
-function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, incentivesResult, t, up, lang, globalExpand }) {
+function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, incentivesResult, t, up, lang, globalExpand, onAddAsset }) {
   const isMobile = useIsMobile();
   const [showYrs, setShowYrs] = useState(15);
   const [selectedPhases, setSelectedPhases] = useState([]);
@@ -2542,11 +2573,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h, c]);
 
   // Hooks-safe: early return AFTER all hooks
-  if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"var(--text-tertiary)"}}>
-    <div style={{fontSize:32,marginBottom:12}}>📊</div>
-    <div style={{fontSize:14,fontWeight:500,color:"var(--text-secondary)",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
-    <div style={{fontSize:12}}>{ar?"أضف أصول في تاب 'برنامج الأصول' ثم ارجع هنا":"Add assets in the 'Asset Program' tab, then return here"}</div>
-  </div>;
+  if (!project || !results || !(project.assets?.length)) return <EmptyState
+    icon="🏦"
+    title={ar ? "لا توجد أصول بعد" : "No Assets Yet"}
+    subtitle={ar ? "أضف أصولاً أولاً لإعداد هيكل التمويل" : "Add assets first to configure financing"}
+    actionLabel={ar ? "أضف أصلاً" : "Add Asset"}
+    onAction={onAddAsset}
+  />;
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"var(--surface-table-header)"}:{};
@@ -4251,13 +4284,13 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           {[
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} smartAlerts={smartAlerts.alerts} />],
-            ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} />],
-            ["results", <><div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} onAskAI={(alert) => { setPendingChatMsg(lang==='ar' ? `تنبيه المراجع الذكي [${alert.id}]: ${alert.ar}\n${alert.assetName?'الأصل: '+alert.assetName+'\n':''}ايش تقترح أعدل عشان أحل هالمشكلة؟ اعطني رقم محدد ووضح الأثر على IRR/NPV.` : `Smart Reviewer alert [${alert.id}]: ${alert.en}\n${alert.assetName?'Asset: '+alert.assetName+'\n':''}What do you suggest I change to fix this? Give me a specific number and explain the impact on IRR/NPV.`); setAiOpen(true); }} /></div><div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}><button onClick={()=>setShowReport(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:8,border:"1px solid #2EC4B6",background:"linear-gradient(135deg,#f0fdfa,#ecfdf5)",color:"#0d9488",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#ccfbf1"} onMouseLeave={e=>e.currentTarget.style.background="linear-gradient(135deg,#f0fdfa,#ecfdf5)"}><span style={{fontSize:16}}>📄</span>{lang==="ar"?"توليد تقرير استشاري":"Generate Advisory Report"}</button></div><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} /></>],
+            ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} onAddAsset={()=>setActiveTab("assets")} />],
+            ["results", <><div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} onAskAI={(alert) => { setPendingChatMsg(lang==='ar' ? `تنبيه المراجع الذكي [${alert.id}]: ${alert.ar}\n${alert.assetName?'الأصل: '+alert.assetName+'\n':''}ايش تقترح أعدل عشان أحل هالمشكلة؟ اعطني رقم محدد ووضح الأثر على IRR/NPV.` : `Smart Reviewer alert [${alert.id}]: ${alert.en}\n${alert.assetName?'Asset: '+alert.assetName+'\n':''}What do you suggest I change to fix this? Give me a specific number and explain the impact on IRR/NPV.`); setAiOpen(true); }} /></div><div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}><button onClick={()=>setShowReport(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:8,border:"1px solid #2EC4B6",background:"linear-gradient(135deg,#f0fdfa,#ecfdf5)",color:"#0d9488",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#ccfbf1"} onMouseLeave={e=>e.currentTarget.style.background="linear-gradient(135deg,#f0fdfa,#ecfdf5)"}><span style={{fontSize:16}}>📄</span>{lang==="ar"?"توليد تقرير استشاري":"Generate Advisory Report"}</button></div><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} onAddAsset={()=>setActiveTab("assets")} /></>],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} up={up} />],
             ["market", <MarketView key="market" project={project} results={results} lang={lang} up={up} />],
             ["incentives", <IncentivesView key="incentives" project={project} results={results} incentivesResult={incentivesResult} financing={financing} lang={lang} up={up} />],
-            ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} financing={financing} />],
+            ["cashflow", <CashFlowView key="cashflow" project={project} results={results} t={t} incentivesResult={incentivesResult} financing={financing} onAddAsset={()=>setActiveTab("assets")} />],
             ["checks", <ChecksView key="checks" checks={checks} t={t} lang={lang} onFix={(tab)=>{setActiveTab(tab);window.scrollTo(0,0);}} />],
           ].map(([tabKey, tabContent]) => (
             <div key={tabKey} style={{display:activeTab===tabKey?"block":"none",overflow:"auto",height:"100%",padding:isMobile?10:18,paddingBottom:isMobile?70:80}} className={activeTab===tabKey?"zan-tab-content":undefined}>
@@ -6694,7 +6727,7 @@ function KPI({label,value,sub,color,tip}) {
 // ═══════════════════════════════════════════════════════════════
 // CASH FLOW VIEW
 // ═══════════════════════════════════════════════════════════════
-function CashFlowView({ project, results, t, incentivesResult, financing }) {
+function CashFlowView({ project, results, t, incentivesResult, financing, onAddAsset }) {
   const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
   const [selectedPhases, setSelectedPhases] = useState([]);
@@ -6743,7 +6776,13 @@ function CashFlowView({ project, results, t, incentivesResult, financing }) {
   }, [isFiltered, selectedPhases, results, horizon]);
 
   // Hooks-safe: early return AFTER all hooks
-  if (!project||!results) return <div style={{color:"var(--text-tertiary)"}}>Add assets to see projections.</div>;
+  if (!project || !results || !(project.assets?.length)) return <EmptyState
+    icon="💰"
+    title={ar ? "لا توجد بيانات بعد" : "No Data Yet"}
+    subtitle={ar ? "سيظهر التدفق النقدي هنا بعد إضافة الأصول" : "Your cash flow will appear here after adding assets"}
+    actionLabel={ar ? "أضف أصلاً" : "Add Asset"}
+    onAction={onAddAsset}
+  />;
 
   // ── Period detection: construction vs operating years ──
   let constrEnd = 0;

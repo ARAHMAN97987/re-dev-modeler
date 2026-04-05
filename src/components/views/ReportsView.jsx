@@ -293,11 +293,11 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const reportRef = useRef(null);
   const [activeReport, setActiveReport] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
-  if (!project || !results) return (
+  if (!project || !results || !(project.assets?.length)) return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>{"\uD83D\uDCC4"}</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"\u0623\u0636\u0641 \u0623\u0635\u0648\u0644 \u0623\u0648\u0644\u0627\u064B":"Add Assets First"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631 \u062a\u062d\u062a\u0627\u062c \u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0645\u0634\u0631\u0648\u0639. \u0623\u0636\u0641 \u0623\u0635\u0648\u0644 \u0645\u0646 \u062a\u0628\u0648\u064a\u0628 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062c.":"Reports need project data. Add assets from the Program tab."}</div>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📄</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أكمل نموذجك أولاً":"Complete Your Model First"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أكمل نموذجك أولاً لتوليد التقارير. أضف أصولاً من تبويب البرنامج.":"Complete your model first to generate reports. Add assets from the Program tab."}</div>
     </div>
   );
 

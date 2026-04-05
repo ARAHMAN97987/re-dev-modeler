@@ -3,10 +3,9 @@
   "configurations": [
     {
       "name": "haseef-dev",
-      "runtimeExecutable": "/Users/abdulrahman/.nvm/versions/node/v22.22.2/bin/npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5174"],
-      "cwd": "/Users/abdulrahman/Desktop/السليمان /زان/00 Data Room ZAN/re-dev-modeler",
-      "port": 5174
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
     }
   ]
 }
