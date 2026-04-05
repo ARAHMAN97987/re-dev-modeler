@@ -5979,11 +5979,13 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               const assetNetCF = a.revenueSchedule.map((v, y) => v - (lr[y]||0) - (a.capexSchedule[y]||0));
               const totalNCF = totalRev - totalLR - totalCap;
               const assetIRR = calcIRR(assetNetCF);
-              // Simple payback: first year cumulative CF turns positive
-              let cumCF = 0, paybackYr = null;
+              // Simple payback: first year cumulative CF turns positive AFTER an outflow has occurred.
+              // Guards the edge case of delayed construction (cumCF=0 at year 0 should NOT trigger payback).
+              let cumCF = 0, paybackYr = null, hasStartedSpending = false;
               for (let y = 0; y < assetNetCF.length; y++) {
                 cumCF += assetNetCF[y];
-                if (cumCF >= 0 && paybackYr === null) { paybackYr = y + 1; break; }
+                if (assetNetCF[y] < 0) hasStartedSpending = true;
+                if (hasStartedSpending && cumCF >= 0 && paybackYr === null) { paybackYr = y + 1; break; }
               }
               // Color coding for IRR
               const irrPct = assetIRR != null ? assetIRR * 100 : null;
@@ -6004,7 +6006,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <span style={{fontSize:10,color:"#9ca3af",marginInlineStart:4}}>{ar?"صافي":"NCF"}</span>
                       <span style={{fontSize:11,color:ncfColor,fontWeight:700,minWidth:48,textAlign:"right"}}>{fmtM(totalNCF)}</span>
                       <span
-                        title={ar?"معدل العائد الداخلي غير المرفوع":"Unlevered IRR for this asset"}
+                        title={ar?`معدل العائد الداخلي غير المرفوع للأصل. يشمل نصيب الأصل من إيجار الأرض (موزّع بحسب نسبة البصمة داخل المرحلة). تغيير البصمة لأصول أخرى في نفس المرحلة يغيّر هذه القيمة.`:`Unlevered IRR for this asset, including its share of land rent (allocated by footprint ratio within its phase). Changing footprints of other assets in the same phase will affect this value.`}
                         style={{fontSize:11,fontWeight:700,color:irrColor,background:irrBg,borderRadius:10,padding:"2px 10px",minWidth:58,textAlign:"center",marginInlineStart:4,border:`1px solid ${irrColor}33`}}
                       >
                         IRR {irrPct == null ? "—" : `${irrPct.toFixed(1)}%`}

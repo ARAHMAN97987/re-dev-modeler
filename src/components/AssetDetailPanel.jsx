@@ -159,14 +159,18 @@ export default function AssetDetailPanel({
   }, [asset, project]);
 
   // Derived financial metrics (per-asset KPIs)
+  // Independent logic: each metric computed from first principles with documented formula
   const kpis = useMemo(() => {
     const totalCapex = assetResult?.totalCapex || capexBreakdown?.total || 0;
-    const totalRev = assetResult?.totalRevenue || 0;
+    const totalRev = assetResult?.totalRevenue || 0;   // from engine (includes commission/pre-sale for Sale)
     const gfa = asset.gfa || 0;
     const eff = (asset.efficiency || 0) / 100;
     const leasable = gfa * eff;
 
-    // Annual stabilized revenue
+    // ── Annual stabilized revenue ──
+    // Lease: leasable × rate × occupancy (at 100% ramp)
+    // Operating: EBITDA directly
+    // Sale: totalRevenue / absorption (amortized — uses engine's computed total incl. commission)
     let annualRev = 0;
     if (asset.revType === "Lease") {
       const occ = (asset.stabilizedOcc ?? 100) / 100;
@@ -174,37 +178,51 @@ export default function AssetDetailPanel({
     } else if (asset.revType === "Operating") {
       annualRev = asset.opEbitda || 0;
     } else if (asset.revType === "Sale") {
-      const saleEff = (asset.efficiency && asset.efficiency > 0) ? asset.efficiency : 100;
-      const sellable = gfa * (saleEff / 100);
-      annualRev = sellable * (asset.salePricePerSqm || 0) / Math.max(1, asset.absorptionYears || 3);
+      // For Sale, use engine's totalRevenue (which includes commission reduction + pre-sale timing)
+      // spread over absorption period
+      const absYrs = Math.max(1, asset.absorptionYears || 3);
+      annualRev = totalRev > 0 ? totalRev / absYrs : 0;
     }
 
-    // Yield on Cost = annual stabilized rev / total cost
+    // ── Yield on Cost (YoC) ──
+    // Formula: Annual stabilized NOI ÷ Total development cost
+    // Industry benchmark: > 8% strong, 6-8% marginal, < 6% weak
     const yoc = totalCapex > 0 ? (annualRev / totalCapex) * 100 : 0;
 
-    // Cap rate from market (for exit value)
+    // ── Market cap rate for this asset type (Saudi market typical) ──
     const capRate = CAP_RATES[asset.assetType] || 8.5;
 
-    // Exit value = stabilized NOI / cap rate (only for Lease / Operating)
-    const exitValue = (asset.revType !== "Sale" && annualRev > 0)
-      ? (annualRev / (capRate / 100))
-      : (asset.revType === "Sale" ? (gfa * ((asset.efficiency || 100) / 100) * (asset.salePricePerSqm || 0)) : 0);
+    // ── Exit Value ──
+    // Lease/Operating: capitalized value = stabilized NOI ÷ cap rate
+    // Sale: total lifetime sale revenue (already net of commission via engine)
+    let exitValue = 0;
+    if (asset.revType === "Sale") {
+      exitValue = totalRev;  // sale proceeds (net of commission) — engine-computed
+    } else if (annualRev > 0) {
+      exitValue = annualRev / (capRate / 100);
+    }
 
-    // Development profit
+    // ── Development Profit ──
+    // = Exit Value - Total Cost
+    // For Sale: = totalRev - totalCapex (true dev profit)
+    // For Lease/Op: = capitalized value - dev cost (value creation)
     const devProfit = exitValue - totalCapex;
     const devMargin = totalCapex > 0 ? (devProfit / totalCapex) * 100 : 0;
 
-    // Simple payback (years)
+    // ── Simple Payback (years) ──
+    // = Total cost ÷ annual revenue (naive, ignores ramp-up & time value)
+    // Returns null when annualRev is 0 or negative (meaningless)
     const payback = annualRev > 0 ? totalCapex / annualRev : null;
 
-    // Break-even lease rate (covers CAPEX in reasonable time — 10yr hurdle)
-    const breakEvenRate = (asset.revType === "Lease" && leasable > 0)
-      ? (totalCapex / 10) / leasable  // lease rate that pays back CAPEX in 10 years at 100% occ
+    // ── Break-even Lease Rate ──
+    // The rate at which lease revenue recovers total CAPEX in 10 years at 100% occupancy
+    // Formula: (totalCapex / 10yr) / leasable area
+    const breakEvenRate = (asset.revType === "Lease" && leasable > 0 && totalCapex > 0)
+      ? (totalCapex / 10) / leasable
       : null;
 
-    // Revenue per m² (stabilized)
+    // ── Unit economics ──
     const revPerSqm = gfa > 0 ? annualRev / gfa : 0;
-    // Cost per m² (total incl. soft+contingency)
     const costPerSqmTotal = gfa > 0 ? totalCapex / gfa : 0;
 
     return {
