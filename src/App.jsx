@@ -201,7 +201,7 @@ const PROJECT_TEMPLATES = [
 // ── Engine imports (extracted from this file — single source of truth) ──
 import { calcIRR, calcNPV } from './engine/math.js';
 import { calcHotelEBITDA, calcMarinaEBITDA } from './engine/hospitality.js';
-import { getScenarioMults, computeAssetCapex, computeProjectCashFlows } from './engine/cashflow.js';
+import { getScenarioMults, computeAssetCapex, computeAssetCapexBreakdown, computeProjectCashFlows } from './engine/cashflow.js';
 import { computeIncentives, applyInterestSubsidy } from './engine/incentives.js';
 import { computeFinancing } from './engine/financing.js';
 import { computeWaterfall } from './engine/waterfall.js';
@@ -5858,10 +5858,11 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       <td style={{...tdSt,...hd("ramp")}}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} /></td>
                       <td style={{...tdSt,...hd("cost")}}>{(()=>{const bc=benchmarkColor("costPerSqm",a.costPerSqm,a.category);return <span title={bc.tip?`Benchmark: ${bc.tip} SAR/sqm`:undefined}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={bc.color?{borderLeft:`3px solid ${bc.color}`,paddingLeft:4}:undefined} /></span>;})()}</td>
                       <td style={{...tdSt,...hd("dur")}}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} /></td>
-                      {/* Hard Cost = GFA × Cost/m² (before soft cost & contingency) */}
-                      <td style={{...tdSt,textAlign:"right",fontSize:11,color:"var(--text-secondary)",...hd("hardCost")}}>{fmt((a.gfa||0)*(a.costPerSqm||0))}</td>
-                      {/* Soft Cost + Contingency addon amount */}
-                      <td style={{...tdSt,textAlign:"right",fontSize:11,color:"#7c3aed",background:"#faf5ff",...hd("addons")}} title={`${ar?"غير مباشرة":"Soft"}: ${project.softCostPct||0}% + ${ar?"احتياطي":"Cont"}: ${project.contingencyPct||0}%`}>{fmt((comp?.totalCapex||computeAssetCapex(a,project)) - (a.gfa||0)*(a.costPerSqm||0))}</td>
+                      {/* Hard Cost = structure (with basement premium) + parking — accurate breakdown */}
+                      {(()=>{const bd=computeAssetCapexBreakdown(a,project);const hasExtras=bd.hardCostBasement>0||bd.parkingCost>0;return <>
+                        <td style={{...tdSt,textAlign:"right",fontSize:11,color:"var(--text-secondary)",...hd("hardCost")}} title={hasExtras?`${ar?"فوق":"Above"}: ${fmt(bd.hardCostAbove)}${bd.hardCostBasement>0?` + ${ar?"بيسمنت":"Basement"}: ${fmt(bd.hardCostBasement)}`:""}${bd.parkingCost>0?` + ${ar?"مواقف":"Parking"}: ${fmt(bd.parkingCost)}`:""}`:undefined}>{fmt(bd.hardCost)}{hasExtras&&<span style={{fontSize:8,color:"#0369a1",marginInlineStart:3}}>*</span>}</td>
+                        <td style={{...tdSt,textAlign:"right",fontSize:11,color:"#7c3aed",background:"#faf5ff",...hd("addons")}} title={`${ar?"غير مباشرة":"Soft"}: ${(a.softCostPctOverride!=null?a.softCostPctOverride:project.softCostPct||0)}% + ${ar?"احتياطي":"Cont"}: ${(a.contingencyPctOverride!=null?a.contingencyPctOverride:project.contingencyPct||0)}%`}>{fmt(bd.softCost+bd.contingency)}</td>
+                      </>;})()}
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,background:"#f5f7ff",fontSize:11,...hd("totalCapex")}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</td>
                       <td style={{...tdSt,textAlign:"right",fontWeight:600,color:"#16a34a",background:"#f0fdf4",fontSize:11,...hd("totalInc")}}>{fmt(comp?.totalRevenue||0)}</td>
                       <td style={{...tdSt,background:"#fffdf5",overflow:"visible",position:"relative",...hd("score")}}>{(()=>{
@@ -5973,14 +5974,50 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               const isOpen = cfOpen[i] || false;
               const totalRev = a.revenueSchedule.reduce((s,v)=>s+v,0);
               const totalCap = a.totalCapex||0;
+              const totalLR = lr.reduce((s,v)=>s+v,0);
+              // Per-asset unlevered Net Cash Flow (full horizon) and IRR
+              const assetNetCF = a.revenueSchedule.map((v, y) => v - (lr[y]||0) - (a.capexSchedule[y]||0));
+              const totalNCF = totalRev - totalLR - totalCap;
+              const assetIRR = calcIRR(assetNetCF);
+              // Simple payback: first year cumulative CF turns positive
+              let cumCF = 0, paybackYr = null;
+              for (let y = 0; y < assetNetCF.length; y++) {
+                cumCF += assetNetCF[y];
+                if (cumCF >= 0 && paybackYr === null) { paybackYr = y + 1; break; }
+              }
+              // Color coding for IRR
+              const irrPct = assetIRR != null ? assetIRR * 100 : null;
+              const irrColor = irrPct == null ? "#9ca3af" : irrPct >= 12 ? "#16a34a" : irrPct >= 8 ? "#f59e0b" : "#ef4444";
+              const irrBg = irrPct == null ? "#f3f4f6" : irrPct >= 12 ? "#dcfce7" : irrPct >= 8 ? "#fef3c7" : "#fee2e2";
+              const ncfColor = totalNCF >= 0 ? "#16a34a" : "#ef4444";
               return (
                 <div key={i} style={{marginBottom:6,border:"0.5px solid var(--border-default)",borderRadius:8,overflow:"hidden",background:"var(--surface-card)"}}>
-                  <div onClick={()=>setCfOpen(p=>({...p,[i]:!p[i]}))} style={{padding:"6px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:isOpen?"#f0f4ff":"#fafbfc",userSelect:"none"}}>
+                  <div onClick={()=>setCfOpen(p=>({...p,[i]:!p[i]}))} style={{padding:"8px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:isOpen?"#f0f4ff":"#fafbfc",userSelect:"none",flexWrap:"wrap"}}>
                     <span style={{fontSize:11,color:"var(--text-tertiary)"}}>{isOpen?"▼":"▶"}</span>
-                    <span style={{fontSize:11,fontWeight:600,color:"var(--text-primary)",flex:1}}>{asset?.name||`Asset ${i+1}`}</span>
-                    <span style={{fontSize:11,color:"var(--text-secondary)",background:"#e5e7ec",borderRadius:8,padding:"1px 6px"}}>{asset?.phase}</span>
-                    <span style={{fontSize:11,color:"#16a34a"}}>{fmtM(totalRev)}</span>
-                    <span style={{fontSize:11,color:"#ef4444"}}>{fmtM(totalCap)}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"var(--text-primary)",flex:1,minWidth:120}}>{asset?.name||`Asset ${i+1}`}</span>
+                    <span style={{fontSize:10,color:"var(--text-secondary)",background:"#e5e7ec",borderRadius:10,padding:"2px 8px",fontWeight:600}}>{asset?.phase}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      <span style={{fontSize:10,color:"#9ca3af"}}>{ar?"إيراد":"Rev"}</span>
+                      <span style={{fontSize:11,color:"#16a34a",fontWeight:600,minWidth:44,textAlign:"right"}}>{fmtM(totalRev)}</span>
+                      <span style={{fontSize:10,color:"#9ca3af",marginInlineStart:4}}>{ar?"كلفة":"Cost"}</span>
+                      <span style={{fontSize:11,color:"#ef4444",fontWeight:600,minWidth:44,textAlign:"right"}}>{fmtM(totalCap)}</span>
+                      <span style={{fontSize:10,color:"#9ca3af",marginInlineStart:4}}>{ar?"صافي":"NCF"}</span>
+                      <span style={{fontSize:11,color:ncfColor,fontWeight:700,minWidth:48,textAlign:"right"}}>{fmtM(totalNCF)}</span>
+                      <span
+                        title={ar?"معدل العائد الداخلي غير المرفوع":"Unlevered IRR for this asset"}
+                        style={{fontSize:11,fontWeight:700,color:irrColor,background:irrBg,borderRadius:10,padding:"2px 10px",minWidth:58,textAlign:"center",marginInlineStart:4,border:`1px solid ${irrColor}33`}}
+                      >
+                        IRR {irrPct == null ? "—" : `${irrPct.toFixed(1)}%`}
+                      </span>
+                      {paybackYr && (
+                        <span
+                          title={ar?"سنوات الاسترداد (أول سنة يصبح التدفق التراكمي موجب)":"Simple payback period"}
+                          style={{fontSize:10,color:"var(--text-secondary)",background:"#f3f4f6",borderRadius:10,padding:"2px 8px",fontWeight:600}}
+                        >
+                          ⏱ {paybackYr}y
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {isOpen && (
                     <div style={{overflowX:"auto"}}>
@@ -5998,12 +6035,35 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             })}
 
             {/* ── Aggregated Totals ── */}
+            {(() => {
+              const aggNetCF = aggRev.map((v, y) => v - (aggLR[y]||0) - (aggCap[y]||0));
+              const aggTotalRev = aggRev.reduce((s,v)=>s+v,0);
+              const aggTotalCap = aggCap.reduce((s,v)=>s+v,0);
+              const aggTotalLR = aggLR.reduce((s,v)=>s+v,0);
+              const aggTotalNCF = aggTotalRev - aggTotalLR - aggTotalCap;
+              const aggIRR = calcIRR(aggNetCF);
+              const aggIrrPct = aggIRR != null ? aggIRR * 100 : null;
+              const aggIrrColor = aggIrrPct == null ? "#9ca3af" : aggIrrPct >= 12 ? "#16a34a" : aggIrrPct >= 8 ? "#f59e0b" : "#ef4444";
+              const aggIrrBg = aggIrrPct == null ? "#f3f4f6" : aggIrrPct >= 12 ? "#dcfce7" : aggIrrPct >= 8 ? "#fef3c7" : "#fee2e2";
+              const aggNcfColor = aggTotalNCF >= 0 ? "#16a34a" : "#ef4444";
+              return (
             <div style={{marginTop:8,border:"2px solid #2563eb",borderRadius:8,overflow:"hidden",background:"var(--surface-card)"}}>
-              <div style={{padding:"6px 12px",background:"#eff6ff",display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:11,fontWeight:700,color:"#1e40af"}}>{ar?`إجمالي (${filteredIndices.length} أصل)`:`Total (${filteredIndices.length} assets)`}</span>
-                <div style={{flex:1}}/>
-                <span style={{fontSize:11,color:"#16a34a",fontWeight:600}}>{fmtM(aggRev.reduce((s,v)=>s+v,0))}</span>
-                <span style={{fontSize:11,color:"#ef4444",fontWeight:600}}>{fmtM(aggCap.reduce((s,v)=>s+v,0))}</span>
+              <div style={{padding:"8px 12px",background:"#eff6ff",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,fontWeight:700,color:"#1e40af",flex:1,minWidth:120}}>{ar?`إجمالي (${filteredIndices.length} أصل)`:`Total (${filteredIndices.length} assets)`}</span>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,color:"#6b7280"}}>{ar?"إيراد":"Rev"}</span>
+                  <span style={{fontSize:11,color:"#16a34a",fontWeight:700,minWidth:44,textAlign:"right"}}>{fmtM(aggTotalRev)}</span>
+                  <span style={{fontSize:10,color:"#6b7280",marginInlineStart:4}}>{ar?"كلفة":"Cost"}</span>
+                  <span style={{fontSize:11,color:"#ef4444",fontWeight:700,minWidth:44,textAlign:"right"}}>{fmtM(aggTotalCap)}</span>
+                  <span style={{fontSize:10,color:"#6b7280",marginInlineStart:4}}>{ar?"صافي":"NCF"}</span>
+                  <span style={{fontSize:11,color:aggNcfColor,fontWeight:800,minWidth:48,textAlign:"right"}}>{fmtM(aggTotalNCF)}</span>
+                  <span
+                    title={ar?"معدل العائد الداخلي للمحفظة (غير مرفوع)":"Portfolio unlevered IRR"}
+                    style={{fontSize:11,fontWeight:800,color:aggIrrColor,background:aggIrrBg,borderRadius:10,padding:"2px 10px",minWidth:58,textAlign:"center",marginInlineStart:4,border:`1px solid ${aggIrrColor}55`}}
+                  >
+                    IRR {aggIrrPct == null ? "—" : `${aggIrrPct.toFixed(1)}%`}
+                  </span>
+                </div>
               </div>
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -6015,6 +6075,8 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                 </table>
               </div>
             </div>
+              );
+            })()}
           </div>
         );
       })()}
