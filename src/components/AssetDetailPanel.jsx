@@ -130,14 +130,13 @@ export default function AssetDetailPanel({
   isMobile,
   project,
 }) {
-  if (!asset) return null;
-
+  // ALL hooks must be called unconditionally (React rules of hooks)
   const isRtl = lang === "ar";
   const ar = isRtl;
-  const typeInfo = ASSET_TYPES[asset.assetType] || {};
+  const typeInfo = (asset && ASSET_TYPES[asset?.assetType]) || {};
 
-  const assetResult = results?.assetSchedules?.find(a => a.id === asset.id)
-    || results?.assetSchedules?.[index];
+  const assetResult = asset ? (results?.assetSchedules?.find(a => a.id === asset.id)
+    || results?.assetSchedules?.[index]) : null;
 
   // Save indicator state
   const [saveFlash, setSaveFlash] = useState(false);
@@ -161,6 +160,7 @@ export default function AssetDetailPanel({
   // Derived financial metrics (per-asset KPIs)
   // Independent logic: each metric computed from first principles with documented formula
   const kpis = useMemo(() => {
+    if (!asset) return { totalCapex:0, totalRev:0, annualRev:0, leasable:0, yoc:0, capRate:8.5, exitValue:0, devProfit:0, devMargin:0, payback:null, breakEvenRate:null, revPerSqm:0, costPerSqmTotal:0 };
     const totalCapex = assetResult?.totalCapex || capexBreakdown?.total || 0;
     const totalRev = assetResult?.totalRevenue || 0;   // from engine (includes commission/pre-sale for Sale)
     const gfa = asset.gfa || 0;
@@ -232,15 +232,15 @@ export default function AssetDetailPanel({
     };
   }, [asset, assetResult, capexBreakdown]);
 
-  // Zoning validation
-  const zoning = ZONING_BENCHMARKS[asset.assetType] || {};
-  const derivedNow = deriveAreas(asset);
+  // Zoning validation (safe when asset is null — guards with optional chaining)
+  const zoning = ZONING_BENCHMARKS[asset?.assetType] || {};
+  const derivedNow = asset ? deriveAreas(asset) : { coveragePct: 0, far: 0, netArea: 0, leasableArea: 0 };
   const coverageExceeds = zoning.maxCoverage && derivedNow.coveragePct > zoning.maxCoverage;
   const farExceeds = zoning.maxFar && derivedNow.far > zoning.maxFar;
 
   // GFA sanity check (vs floors × footprint)
-  const expectedGfa = (asset.footprint || 0) * ((asset.floorsAboveGround || 0) + (asset.basementLevels || 0));
-  const gfaMismatch = expectedGfa > 0 && asset.gfa > 0 && Math.abs(asset.gfa - expectedGfa) / expectedGfa > 0.2;
+  const expectedGfa = (asset?.footprint || 0) * ((asset?.floorsAboveGround || 0) + (asset?.basementLevels || 0));
+  const gfaMismatch = expectedGfa > 0 && (asset?.gfa || 0) > 0 && Math.abs((asset?.gfa || 0) - expectedGfa) / expectedGfa > 0.2;
 
   // Escape key support
   useEffect(() => {
@@ -248,6 +248,9 @@ export default function AssetDetailPanel({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
+
+  // Early return AFTER all hooks (React rules of hooks)
+  if (!asset) return null;
 
   const panelStyle = {
     position: "fixed",
