@@ -13,22 +13,22 @@ import { calcIRR, calcNPV } from "../../engine/math";
 import { getMetricColor } from "../../utils/metricColor.js";
 
 function ProjectDash({ project, results, checks, t, financing, phaseFinancings, onGoToAssets, lang, incentivesResult, setActiveTab }) {
-  if (!project || !results) return null;
+  const _isEmpty = !project || !results;
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
-  const rawC = results.consolidated;
-  const cur = project.currency || "SAR";
-  const allPhases = Object.entries(results.phaseResults);
-  const phaseNames = Object.keys(results.phaseResults || {});
+  const rawC = results?.consolidated;
+  const cur = project?.currency || "SAR";
+  const allPhases = Object.entries(results?.phaseResults || {});
+  const phaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
   const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
-  const failedChecks = checks.filter(ch => !ch.pass).length;
+  const failedChecks = (checks || []).filter(ch => !ch.pass).length;
 
   // ── Filtered consolidated: aggregate selected phases only ──
   const c = useMemo(() => {
-    if (!isFiltered) return rawC;
+    if (!results || !isFiltered) return rawC;
     const hLen = results.horizon;
     const income = new Array(hLen).fill(0), capex = new Array(hLen).fill(0), landRent = new Array(hLen).fill(0), netCF = new Array(hLen).fill(0);
     activePh.forEach(pName => {
@@ -76,6 +76,8 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
       interestSubsidyTotal: pfs.reduce((s,pf) => s + (pf.interestSubsidyTotal||0), 0),
     };
   }, [isFiltered, selectedPhases, financing, phaseFinancings, results]);
+
+  if (_isEmpty) return null;
 
   const h = results.horizon;
   const ar = lang === "ar";

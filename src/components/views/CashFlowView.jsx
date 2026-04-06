@@ -30,36 +30,23 @@ export function KPI({label,value,sub,color,tip}) {
 }
 
 function CashFlowView({ project, results, t, incentivesResult }) {
-  if (!project||!results) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📈</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{ar?"أضف أصول لرؤية التدفقات":"Add Assets to See Projections"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{ar?"أضف أصول من تبويب 'برنامج الأصول' لعرض التدفقات النقدية السنوية":"Add assets from the Asset Program tab to view annual cash flow projections"}</div>
-    </div>
-  );
+  const _isEmpty = !project || !results;
   const isMobile = useIsMobile();
   const [showYrs,setShowYrs]=useState(15);
   const [selectedPhases, setSelectedPhases] = useState([]);
-  const {horizon,startYear}=results;
-  const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
   const ar = t.dashboard === "\u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645";
+  const horizon = results?.horizon || 0;
+  const startYear = results?.startYear || 2026;
 
   // ── Phase filter ──
-  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const allPhaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
 
-  // ── Read from engine results, filtered by selected phases ──
-  const phases = allPhaseNames.filter(pName => activePh.includes(pName)).map(pName => {
-    const pr = results.phaseResults[pName];
-    const noi = new Array(horizon).fill(0);
-    for (let y = 0; y < horizon; y++) noi[y] = (pr.income[y]||0) - (pr.landRent[y]||0);
-    return [pName, { ...pr, noi, totalNOI: noi.reduce((a,b)=>a+b,0) }];
-  });
-
   // ── Filtered consolidated ──
   const c = useMemo(() => {
+    if (!results) return { income:[], capex:[], landRent:[], netCF:[], noi:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null, npv10:0, npv12:0, npv14:0, paybackYear:null, peakNegative:0, peakNegativeYear:null };
     if (!isFiltered) {
       const raw = { ...results.consolidated, noi: new Array(horizon).fill(0) };
       for (let y = 0; y < horizon; y++) raw.noi[y] = (raw.income[y]||0) - (raw.landRent[y]||0);
@@ -83,6 +70,24 @@ function CashFlowView({ project, results, t, incentivesResult }) {
       paybackYear: pbYr, peakNegative: peakNeg, peakNegativeYear: peakNegY,
     };
   }, [isFiltered, selectedPhases, results, horizon]);
+
+  if (_isEmpty) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📈</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{ar?"أضف أصول لرؤية التدفقات":"Add Assets to See Projections"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{ar?"أضف أصول من تبويب 'برنامج الأصول' لعرض التدفقات النقدية السنوية":"Add assets from the Asset Program tab to view annual cash flow projections"}</div>
+    </div>
+  );
+
+  const years=Array.from({length:Math.min(showYrs,horizon)},(_,i)=>i);
+
+  // ── Read from engine results, filtered by selected phases ──
+  const phases = allPhaseNames.filter(pName => activePh.includes(pName)).map(pName => {
+    const pr = results.phaseResults[pName];
+    const noi = new Array(horizon).fill(0);
+    for (let y = 0; y < horizon; y++) noi[y] = (pr.income[y]||0) - (pr.landRent[y]||0);
+    return [pName, { ...pr, noi, totalNOI: noi.reduce((a,b)=>a+b,0) }];
+  });
 
   // ── Period detection: construction vs operating years ──
   let constrEnd = 0;

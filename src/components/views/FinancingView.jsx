@@ -261,19 +261,15 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           : p)
       }));
 
+  const _isEmpty = !project || !results;
   const copyFromPhase = (sourceName) => {
+    if (!project) return;
     const source = getPhaseFinancing(project, sourceName);
     upCfg({ ...source });
   };
 
-  if (!project || !results) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
-    <div style={{fontSize:32,marginBottom:12}}>📊</div>
-    <div style={{fontSize:14,fontWeight:500,color:"#6b7080",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
-    <div style={{fontSize:12}}>{ar?"أضف أصول في تاب 'برنامج الأصول' ثم ارجع هنا":"Add assets in the 'Asset Program' tab, then return here"}</div>
-  </div>;
-
-  const h = results.horizon;
-  const sy = results.startYear;
+  const h = results?.horizon || 0;
+  const sy = results?.startYear || 2026;
   const ir = incentivesResult;
   // Fee auto-default hints — shown under field as part of hint text
   const _FD = { subscriptionFeePct:2, annualMgmtFeePct:1.5, mgmtFeeCapAnnual:2000000, custodyFeeAnnual:100000, developerFeePct:10, structuringFeePct:1, structuringFeeCap:300000, preEstablishmentFee:200000, spvFee:20000, auditorFeeAnnual:50000, operatorFeePct:0.15, operatorFeeCap:600000, miscExpensePct:0.5, upfrontFeePct:0.5, maxLtvPct:70, financeRate:6.5, loanTenor:7, debtGrace:3, exitMultiple:10, exitCapRate:9, exitCostPct:2, landCapRate:1000, prefReturnPct:15, carryPct:30, lpProfitSplitPct:70 };
@@ -315,14 +311,21 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
     };
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h, results]);
 
-  const c = results.consolidated;
+  const c = results?.consolidated;
   const pc = useMemo(() => {
+    if (!results) return { income:[], capex:[], landRent:[], netCF:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null };
     if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
     if (!isFiltered) return c;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; for (let y=0;y<h;y++) { income[y]+=pr.income[y]||0; capex[y]+=pr.capex[y]||0; landRent[y]+=pr.landRent[y]||0; netCF[y]+=pr.netCF[y]||0; }});
     return { income, capex, landRent, netCF, totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0), totalLandRent: landRent.reduce((a,b)=>a+b,0), totalNetCF: netCF.reduce((a,b)=>a+b,0), irr: calcIRR(netCF) };
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h, c]);
+
+  if (_isEmpty) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
+    <div style={{fontSize:32,marginBottom:12}}>📊</div>
+    <div style={{fontSize:14,fontWeight:500,color:"#6b7080",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
+    <div style={{fontSize:12}}>{ar?"أضف أصول في تاب 'برنامج الأصول' ثم ارجع هنا":"Add assets in the 'Asset Program' tab, then return here"}</div>
+  </div>;
 
   const CFRow=({label,values,total,bold,color,negate})=>{
     const st=bold?{fontWeight:700,background:"#f8f9fb"}:{};

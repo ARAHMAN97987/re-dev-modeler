@@ -479,9 +479,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true,s4:true,s5:true});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
+  const _bankEmpty = !financing;
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true,s4:true,s5:true}); }}, [globalExpand]);
-
-  if (!financing) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
 
   // ── Phase filter (multi-select) ──
   const allPhaseNames = Object.keys(results.phaseResults || {});
@@ -529,6 +528,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
   // ── Filtered financing ──
   const pf = useMemo(() => {
+    if (!financing) return {};
     if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
     if (!isFiltered) return financing;
     const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean);
@@ -624,6 +624,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     }
     return data;
   }, [pc, pf, showYrs, h, sy, cumLevCF]);
+
+  if (_bankEmpty) return <div style={{padding:32,textAlign:"center",color:"#9ca3af"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
 
   // Chart data
   const chartData = years.map(y => ({

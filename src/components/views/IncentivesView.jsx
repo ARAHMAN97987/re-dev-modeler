@@ -57,20 +57,14 @@ function EducationalModal({ contentKey, lang, onClose }) {
 }
 
 function IncentivesView({ project, results, incentivesResult, financing, lang, up }) {
+  const _isEmpty = !project || !results;
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
-  if (!project || !results) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏛</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Incentives need project data. Add assets from the Program tab."}</div>
-    </div>
-  );
 
   // ── Phase filter ──
   const ar = lang === "ar";
-  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const allPhaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
@@ -78,7 +72,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
 
   // ── Phase share for proportional display ──
   const phaseShare = useMemo(() => {
-    if (!isFiltered) return { capex: 1, land: 1 };
+    if (!results || !isFiltered) return { capex: 1, land: 1 };
     const rawC = results.consolidated;
     let capexSum = 0, landSum = 0;
     activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; capexSum += pr.totalCapex || 0; landSum += pr.totalLandRent || 0; });
@@ -104,6 +98,14 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
       feeRebateTotal: (ir.feeRebateTotal || 0) * phaseShare.capex,
     };
   }, [ir, isFiltered, phaseShare, selectedPhases]);
+
+  if (_isEmpty) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏛</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Incentives need project data. Add assets from the Program tab."}</div>
+    </div>
+  );
 
   const upInc = (key, updates) => {
     const newInc = { ...project.incentives, [key]: { ...project.incentives[key], ...updates } };

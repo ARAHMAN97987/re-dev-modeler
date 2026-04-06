@@ -132,18 +132,11 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const [kpiOpen, setKpiOpen] = useState({gp:false,lp:false,fund:false,devTotal:false}); // expandable KPI cards
   const [eduModal, setEduModal] = useState(null);
   const [showHybridCF, setShowHybridCF] = useState(false); // hybrid separate CF table
+  const _isEmpty = !project || !results || !waterfall;
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({gp:expand,lp:expand,fund:expand,devTotal:expand}); setWSec(expand?{chart:true}:{}); }}, [globalExpand]);
 
-  if (!project || !results || !waterfall) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>💧</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"يتطلب هيكل تمويل غير ذاتي":"Requires Non-Self Financing"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:400,lineHeight:1.6}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' أو 'تمويل مختلط' من الإعدادات لعرض شلال التوزيعات":"Select 'Bank Debt', 'Fund Structure', or 'Hybrid' from settings to view the distribution waterfall"}</div>
-    </div>
-  );
-
   // ── Phase filter (multi-select) ──
-  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const allPhaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
@@ -162,7 +155,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
   }, [kpiPhase]);
 
-  const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
+  const cfg = !project ? {} : isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
     : (isFiltered && activePh.length > 0) ? getPhaseFinancing(project, activePh[0])
     : project;
   const upCfg = up ? (isSinglePhase
@@ -178,16 +171,16 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           : p)
       }))) : null;
 
-  const h = results.horizon;
-  const sy = results.startYear;
-  const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
+  const h = results?.horizon || 0;
+  const sy = results?.startYear || 2026;
   const phaseNames = allPhaseNames;
   const hasPhases = phaseNames.length > 1 && phaseWaterfalls && Object.keys(phaseWaterfalls).length > 0;
   const h0 = new Array(h).fill(0);
-  const cur = project.currency || "SAR";
+  const cur = project?.currency || "SAR";
 
   // ── Filtered waterfall ──
   const w = useMemo(() => {
+    if (!waterfall) return null;
     if (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) {
       const _pw = phaseWaterfalls[singlePhaseName];
       return { ..._pw,
@@ -240,6 +233,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
 
   // Phase-aware data sources for table §7 and §8
   const pc = useMemo(() => {
+    if (!results) return { income:[], capex:[], landRent:[], netCF:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null };
     if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
     if (!isFiltered) return results.consolidated;
     const income=new Array(h).fill(0),capex=new Array(h).fill(0),landRent=new Array(h).fill(0),netCF=new Array(h).fill(0);
@@ -258,6 +252,16 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       devCostInclLand:pfs.reduce((s,p2)=>s+(p2.devCostInclLand||0),0), totalInterest:pfs.reduce((s,p2)=>s+(p2.totalInterest||0),0),
     };
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h]);
+
+  if (_isEmpty) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>💧</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"يتطلب هيكل تمويل غير ذاتي":"Requires Non-Self Financing"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:400,lineHeight:1.6}}>{lang==="ar"?"اختر 'دين بنكي' أو 'صندوق استثماري' أو 'تمويل مختلط' من الإعدادات لعرض شلال التوزيعات":"Select 'Bank Debt', 'Fund Structure', or 'Hybrid' from settings to view the distribution waterfall"}</div>
+    </div>
+  );
+
+  const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
 
   // ── Derived metrics: Payback, Cash Yield, Exit, Attribution ──
   const lpPayback = (() => { if ((w.lpTotalInvested||0) <= 0) return null; let cum = 0, wasNeg = false; for (let y = 0; y < h; y++) { cum += w.lpNetCF[y] || 0; if (cum < -1) wasNeg = true; if (wasNeg && cum >= 0) return y + 1; } return null; })();

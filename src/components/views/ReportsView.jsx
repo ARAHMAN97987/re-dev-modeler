@@ -289,32 +289,26 @@ function generateFallbackCSV(project, results, financing, waterfall) {
 }
 
 function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, phaseFinancings, incentivesResult, checks, lang }) {
+  const _isEmpty = !project || !results || !(project?.assets?.length);
   const isMobile = useIsMobile();
   const reportRef = useRef(null);
   const [activeReport, setActiveReport] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
-  if (!project || !results || !(project.assets?.length)) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📄</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أكمل نموذجك أولاً":"Complete Your Model First"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أكمل نموذجك أولاً لتوليد التقارير. أضف أصولاً من تبويب البرنامج.":"Complete your model first to generate reports. Add assets from the Program tab."}</div>
-    </div>
-  );
 
   const ar = lang === "ar";
-  const c = results.consolidated;
+  const c = results?.consolidated;
   const f = financing;
   const w = waterfall;
-  const cur = project.currency || "SAR";
-  const sy = results.startYear;
-  const h = results.horizon;
+  const cur = project?.currency || "SAR";
+  const sy = results?.startYear || 2026;
+  const h = results?.horizon || 0;
   const failCount = (checks||[]).filter(ch => !ch.pass).length;
-  const phaseNames = Object.keys(results.phaseResults || {});
+  const phaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
 
   const fc = useMemo(() => {
-    if (!isFiltered) return c;
+    if (!results || !isFiltered) return c;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => {
       const pr = results.phaseResults[pName];
@@ -329,7 +323,7 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
     };
   }, [isFiltered, selectedPhases, results, h]);
 
-  const filteredAssets = isFiltered ? results.assetSchedules.filter(a => activePh.includes(a.phase)) : results.assetSchedules;
+  const filteredAssets = isFiltered ? (results?.assetSchedules || []).filter(a => activePh.includes(a.phase)) : (results?.assetSchedules || []);
 
   const fw = useMemo(() => {
     if (!isFiltered || !waterfall) return waterfall;
@@ -360,6 +354,14 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
       totalFees: pwList.reduce((s,pw)=>s+(pw.fees||0),0),
     };
   }, [isFiltered, selectedPhases, waterfall, phaseWaterfalls, h]);
+
+  if (_isEmpty) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>📄</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أكمل نموذجك أولاً":"Complete Your Model First"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أكمل نموذجك أولاً لتوليد التقارير. أضف أصولاً من تبويب البرنامج.":"Complete your model first to generate reports. Add assets from the Program tab."}</div>
+    </div>
+  );
 
   const togglePhase = (p) => {
     setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
