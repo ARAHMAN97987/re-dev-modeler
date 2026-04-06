@@ -116,8 +116,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
     });
   };
   // Sync from KPI bar dropdown to local phase selection
-  useEffect(() => {
-    if (!kpiPhase || allPhaseNames.length <= 1) return;
+  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return;
     if (kpiPhase === "all") { setSelectedPhases([]); }
     else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
   }, [kpiPhase]);
@@ -128,12 +127,10 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
 
   // ── Filtered consolidated ──
-  const c = useMemo(() => {
-    if (!isFiltered) return results.consolidated;
+  const c = useMemo(() => { if (!isFiltered) return results.consolidated;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => {
-      const pr = results.phaseResults?.[pName];
-      if (!pr) return;
+      const pr = results.phaseResults?.[pName]; if (!pr) return;
       for (let y = 0; y < h; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
     });
     return { ...results.consolidated, income, capex, landRent, netCF,
@@ -144,8 +141,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   }, [isFiltered, selectedPhases, results, h]);
 
   // ── Filtered financing ──
-  const f = useMemo(() => {
-    if (!isFiltered || !phaseFinancings) return financing;
+  const f = useMemo(() => { if (!isFiltered || !phaseFinancings) return financing;
     const pfs = activePh.map(p => phaseFinancings[p]).filter(Boolean);
     if (pfs.length === 0) return financing;
     const leveredCF = new Array(h).fill(0);
@@ -496,8 +492,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     });
   };
   // Sync from KPI bar dropdown
-  useEffect(() => {
-    if (!kpiPhase || allPhaseNames.length <= 1) return;
+  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return;
     if (kpiPhase === "all") { setSelectedPhases([]); }
     else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
   }, [kpiPhase]);
@@ -527,12 +522,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const isBank100 = cfg.finMode === "bank100";
 
   // ── Filtered financing ──
-  const pf = useMemo(() => {
-    if (!financing) return {};
-    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
-    if (!isFiltered) return financing;
-    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean);
-    if (pfs.length === 0) return financing;
+  const pf = useMemo(() => { if (!financing) return {}; if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName]; if (!isFiltered) return financing;
+    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean); if (pfs.length === 0) return financing;
     const leveredCF = new Array(h).fill(0), debtService = new Array(h).fill(0), debtBalClose = new Array(h).fill(0);
     const interest = new Array(h).fill(0), repayment = new Array(h).fill(0), exitProceeds = new Array(h).fill(0);
     pfs.forEach(pf2 => { for (let y=0;y<h;y++) {
@@ -551,9 +542,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h, results]);
 
   // ── Filtered cashflow ──
-  const pc = useMemo(() => {
-    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
-    if (!isFiltered) return results.consolidated;
+  const pc = useMemo(() => { if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName]; if (!isFiltered) return results.consolidated;
     const income=new Array(h).fill(0), capex=new Array(h).fill(0), landRent=new Array(h).fill(0), netCF=new Array(h).fill(0);
     activePh.forEach(pName=>{const pr=results.phaseResults?.[pName];if(!pr)return;for(let y=0;y<h;y++){income[y]+=pr.income[y]||0;capex[y]+=pr.capex[y]||0;landRent[y]+=pr.landRent[y]||0;netCF[y]+=pr.netCF[y]||0;}});
     return { income, capex, landRent, netCF, totalCapex:capex.reduce((a,b)=>a+b,0), totalIncome:income.reduce((a,b)=>a+b,0), totalLandRent:landRent.reduce((a,b)=>a+b,0), totalNetCF:netCF.reduce((a,b)=>a+b,0), irr:calcIRR(netCF) };
@@ -593,8 +582,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const isLongHold = isHoldMode && bankInvestYears > 20;
 
   // ── Developer Feasibility Metrics ──
-  const cumLevCF = useMemo(() => {
-    if (!pf.leveredCF) return [];
+  const cumLevCF = useMemo(() => { if (!pf.leveredCF) return [];
     let cum = 0;
     return pf.leveredCF.map(v => { cum += v; return cum; });
   }, [pf.leveredCF]);

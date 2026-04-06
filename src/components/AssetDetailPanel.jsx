@@ -159,8 +159,7 @@ export default function AssetDetailPanel({
 
   // Derived financial metrics (per-asset KPIs)
   // Independent logic: each metric computed from first principles with documented formula
-  const kpis = useMemo(() => {
-    if (!asset) return { totalCapex:0, totalRev:0, annualRev:0, leasable:0, yoc:0, capRate:8.5, exitValue:0, devProfit:0, devMargin:0, payback:null, breakEvenRate:null, revPerSqm:0, costPerSqmTotal:0 };
+  const kpis = useMemo(() => { if (!asset) return { totalCapex:0, totalRev:0, annualRev:0, leasable:0, yoc:0, capRate:8.5, exitValue:0, devProfit:0, devMargin:0, payback:null, breakEvenRate:null, revPerSqm:0, costPerSqmTotal:0 };
     const totalCapex = assetResult?.totalCapex || capexBreakdown?.total || 0;
     const totalRev = assetResult?.totalRevenue || 0;   // from engine (includes commission/pre-sale for Sale)
     const gfa = asset.gfa || 0;

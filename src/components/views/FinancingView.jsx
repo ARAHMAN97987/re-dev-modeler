@@ -262,8 +262,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
       }));
 
   const _isEmpty = !project || !results;
-  const copyFromPhase = (sourceName) => {
-    if (!project) return;
+  const copyFromPhase = (sourceName) => { if (!project) return;
     const source = getPhaseFinancing(project, sourceName);
     upCfg({ ...source });
   };
@@ -280,11 +279,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const phaseNames = allPhaseNames;
 
   // ── Filtered financing & cashflow ──
-  const f = useMemo(() => {
-    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
-    if (!isFiltered) return financing;
-    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean);
-    if (pfs.length === 0) return financing;
+  const f = useMemo(() => { if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName]; if (!isFiltered) return financing;
+    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean); if (pfs.length === 0) return financing;
     const leveredCF = new Array(h).fill(0), debtService = new Array(h).fill(0), debtBalClose = new Array(h).fill(0);
     const interest = new Array(h).fill(0), repayment = new Array(h).fill(0), exitProceeds = new Array(h).fill(0);
     pfs.forEach(pf => { for (let y=0;y<h;y++) {
@@ -312,16 +308,11 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h, results]);
 
   const c = results?.consolidated;
-  const pc = useMemo(() => {
-    if (!results) return { income:[], capex:[], landRent:[], netCF:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null };
-    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
-    if (!isFiltered) return c;
+  const pc = useMemo(() => { if (_finEmpty) return; if (!results) return { income:[], capex:[], landRent:[], netCF:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null }; if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName]; if (!isFiltered) return c;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; for (let y=0;y<h;y++) { income[y]+=pr.income[y]||0; capex[y]+=pr.capex[y]||0; landRent[y]+=pr.landRent[y]||0; netCF[y]+=pr.netCF[y]||0; }});
     return { income, capex, landRent, netCF, totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0), totalLandRent: landRent.reduce((a,b)=>a+b,0), totalNetCF: netCF.reduce((a,b)=>a+b,0), irr: calcIRR(netCF) };
-  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h, c]);
-
-  if (_isEmpty) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
+  }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h, c]); if (_isEmpty) return <div style={{padding:40,textAlign:"center",color:"#9ca3af"}}>
     <div style={{fontSize:32,marginBottom:12}}>📊</div>
     <div style={{fontSize:14,fontWeight:500,color:"#6b7080",marginBottom:6}}>{ar?"أكمل برنامج الأصول أولاً":"Complete Asset Program First"}</div>
     <div style={{fontSize:12}}>{ar?"أضف أصول في تاب 'برنامج الأصول' ثم ارجع هنا":"Add assets in the 'Asset Program' tab, then return here"}</div>
@@ -414,8 +405,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         const isFundMode = cfg.finMode === "fund" || isHybridMode || isIncomeFund;
         const notHold = !isIncomeFund && (cfg.exitStrategy||"sale") !== "hold";
         // Accordion section header helper
-        const AH = ({id, color, label, summary, visible}) => {
-          if (visible === false) return null;
+        const AH = ({id, color, label, summary, visible}) => { if (visible === false) return null;
           const open = cfgOpen(id);
           return <div onClick={()=>cfgToggle(id)} style={{padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:open?"#fff":"#fafbfc",userSelect:"none",transition:"all 0.2s"}}>
             <span style={{fontSize:12,fontWeight:600,color:open?color:"#1a1d23",flex:1,transition:"color 0.2s"}}>{label}</span>
@@ -423,15 +413,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             <span style={{fontSize:10,color:"#9ca3af",transition:"transform 0.25s ease",transform:open?"rotate(0)":"rotate(-90deg)",display:"inline-block"}}>{open?"▼":"▶"}</span>
           </div>;
         };
-        const AB = ({id, children, visible}) => {
-          if (visible === false || !cfgOpen(id)) return null;
+        const AB = ({id, children, visible}) => { if (visible === false || !cfgOpen(id)) return null;
           return <div style={{padding:"8px 14px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6,background:"#fff",borderTop:"1px solid #f0f1f5",animation:"zanSlide 0.15s ease"}}>{children}</div>;
         };
         const g2 = {display:"contents"};
         const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
         // Section card wrapper with color accent
-        const SecWrap = ({children, visible, color}) => {
-          if (visible === false) return null;
+        const SecWrap = ({children, visible, color}) => { if (visible === false) return null;
           return <div style={{borderRadius:8,border:`1px solid ${color||"#e5e7ec"}40`,borderTop:`3px solid ${color||"#e5e7ec"}`,overflow:"hidden",background:"#fafbfc",transition:"border-color 0.2s"}}>{children}</div>;
         };
         return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:18}}>
@@ -761,8 +749,7 @@ When to use:
         </SecWrap>
         <SecWrap visible={true} color="#f59e0b">
         <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : `${ar?"رسوم المطور":"Developer Fee"} ${cfg.developerFeePct||10}%`} visible={true} />
-        <AB id="fees" visible={true}>{(() => {
-          if (isFundMode && cfg.vehicleType==="fund") return <>
+        <AB id="fees" visible={true}>{(() => { if (isFundMode && cfg.vehicleType==="fund") return <>
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم لمرة واحدة":"One-time"}</div>
             <div style={g3}>
               <FL label={ar?"اكتتاب %":"Subscription %"} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر\nOne-time entry fee at subscription. Usually 1-2% of invested capital" hint={autoHint("subscriptionFeePct",ar?"مرة واحدة · عند الاكتتاب":"One-time · at subscription")}><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
@@ -792,8 +779,7 @@ When to use:
             <div style={{fontSize:10,fontWeight:600,color:"#9ca3af",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
             <FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
             <FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون الأرض: رسوم التطوير تُحسب على تكلفة البناء فقط\nمع الأرض: تُحسب على تكلفة البناء + قيمة الأرض":"Excl. Land: dev fee on construction cost only\nIncl. Land: dev fee on construction + land value"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL>
-          </>;
-          if (isFundMode) return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
+          </>; if (isFundMode) return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية (عقد المقاول). تُدفع متزامنة مع مستخلصات المقاول\nDeveloper fee as % of construction costs. Paid with contractor draws" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء":"With construction draws")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
           <FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون الأرض: رسوم التطوير تُحسب على تكلفة البناء فقط\nمع الأرض: تُحسب على تكلفة البناء + قيمة الأرض":"Excl. Land: dev fee on construction cost only\nIncl. Land: dev fee on construction + land value"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
           // Debt + Equity mode (not fund)
           return <FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من CAPEX. عادة 3-7%\nDeveloper fee as % of CAPEX. Usually 3-7%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>;

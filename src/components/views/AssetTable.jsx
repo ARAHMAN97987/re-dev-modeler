@@ -223,9 +223,9 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [landOpen, setLandOpen] = useState(false);
   const [selectedAssetIndex, setSelectedAssetIndex] = useState(null);
   const fileRef = useRef(null);
-  if (!project) return null;
-  const assets = project.assets || [];
-  const phaseNames = project.phases.map(p => p.name);
+  const _isEmpty = !project;
+  const assets = project?.assets || [];
+  const phaseNames = project?.phases?.map(p => p.name) || [];
 
   // ── Asset Templates (from src/data/assetTemplates.js) ──
   const _ar = lang === "ar";
@@ -263,7 +263,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) { return; }
     e.target.value = '';
     setImportMsg({ type: 'loading', text: lang === 'ar' ? 'جاري الاستيراد...' : 'Importing...' });
     try {
@@ -373,6 +373,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [cfDetail, setCfDetail] = useState(false); // show detail rows
   const [cfYrs, setCfYrs] = useState(15);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCfAllOpen(expand); setCfDetail(expand); setLandOpen(expand); setShowLandRentDetail(expand); const obj = {}; (project?.assets||[]).forEach((_, i) => { obj[i] = expand; }); setCfOpen(obj); }}, [globalExpand]);
+  if (_isEmpty) return null;
   const ar = lang === "ar";
   const toggleCol = (key) => { setHiddenCols(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; }); };
   const visibleCols = cols.filter(c => !hiddenCols.has(c.key));

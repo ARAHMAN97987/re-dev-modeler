@@ -452,8 +452,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const cur = project.currency || "SAR";
 
   // ── Filtered waterfall ──
-  const w = useMemo(() => {
-    if (!waterfall) return null;
+  const w = useMemo(() => { if (!waterfall) return null;
     if (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) {
       const _pw = phaseWaterfalls[singlePhaseName];
       return { ..._pw,
@@ -466,11 +465,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         unreturnedClose:_pw.unreturnedClose||h0, unreturnedOpen:_pw.unreturnedOpen||h0,
         prefAccrual:_pw.prefAccrual||h0, prefAccumulated:_pw.prefAccumulated||h0, exitProceeds:_pw.exitProceeds||h0,
       };
-    }
-    if (!isFiltered) return waterfall;
+    } if (!isFiltered) return waterfall;
     // Multi-phase: aggregate selected phase waterfalls
-    const pws = activePh.map(p => phaseWaterfalls?.[p]).filter(Boolean);
-    if (pws.length === 0) return waterfall;
+    const pws = activePh.map(p => phaseWaterfalls?.[p]).filter(Boolean); if (pws.length === 0) return waterfall;
     const sumArr = (field) => { const arr = new Array(h).fill(0); pws.forEach(pw => { const a = pw[field]; if (a) for(let y=0;y<h;y++) arr[y]+=(a[y]||0); }); return arr; };
     const sum = (field) => pws.reduce((s,pw) => s + (pw[field]||0), 0);
     const lpNetCF = sumArr('lpNetCF'), gpNetCF = sumArr('gpNetCF');
@@ -505,19 +502,13 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, waterfall, phaseWaterfalls, phaseFinancings, h]);
 
   // Phase-aware data sources for table §7 and §8
-  const pc = useMemo(() => {
-    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
-    if (!isFiltered) return results.consolidated;
+  const pc = useMemo(() => { if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName]; if (!isFiltered) return results.consolidated;
     const income=new Array(h).fill(0),capex=new Array(h).fill(0),landRent=new Array(h).fill(0),netCF=new Array(h).fill(0);
     activePh.forEach(pName=>{const pr=results.phaseResults?.[pName];if(!pr)return;for(let y=0;y<h;y++){income[y]+=pr.income[y]||0;capex[y]+=pr.capex[y]||0;landRent[y]+=pr.landRent[y]||0;netCF[y]+=pr.netCF[y]||0;}});
     return {income,capex,landRent,netCF,totalCapex:capex.reduce((a,b)=>a+b,0),totalIncome:income.reduce((a,b)=>a+b,0),totalLandRent:landRent.reduce((a,b)=>a+b,0),totalNetCF:netCF.reduce((a,b)=>a+b,0),irr:calcIRR(netCF)};
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h]);
-  const f = useMemo(() => {
-    if (!financing) return null;
-    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
-    if (!isFiltered) return financing;
-    const pfs = activePh.map(p=>phaseFinancings?.[p]).filter(Boolean);
-    if (pfs.length===0) return financing;
+  const f = useMemo(() => { if (!financing) return null; if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName]; if (!isFiltered) return financing;
+    const pfs = activePh.map(p=>phaseFinancings?.[p]).filter(Boolean); if (pfs.length===0) return financing;
     const leveredCF = new Array(h).fill(0);
     pfs.forEach(pf2=>{if(pf2.leveredCF)for(let y=0;y<h;y++)leveredCF[y]+=pf2.leveredCF[y]||0;});
     return {...financing, leveredCF, leveredIRR:calcIRR(leveredCF),
@@ -527,7 +518,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h]);
 
   // ── Early return AFTER all hooks (React hooks rules: hooks must always run in same order) ──
-  if (!project || !results || !waterfall || !(project.assets?.length)) return <EmptyState
+  const _wfEmpty = !project || !results || !waterfall || !(project.assets?.length); if (_wfEmpty) return <EmptyState
     icon="🏗️"
     title={ar ? "أضف أصولاً لعرض الشلال" : "Add Assets to See Waterfall"}
     subtitle={ar ? "أضف أصولاً واختر وضع الصندوق أو الدين لعرض توزيع العوائد" : "Add assets and select Fund or Debt mode to see the return waterfall"}
@@ -1509,12 +1500,10 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
 
   // ── Filtered consolidated ──
-  const c = useMemo(() => {
-    if (!isFiltered) return results.consolidated;
+  const c = useMemo(() => { if (!isFiltered) return results.consolidated;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => {
-      const pr = results.phaseResults?.[pName];
-      if (!pr) return;
+      const pr = results.phaseResults?.[pName]; if (!pr) return;
       for (let y = 0; y < h; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
     });
     return { ...results.consolidated, income, capex, landRent, netCF,
@@ -1859,9 +1848,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true,s4:true,s5:true});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true,s4:true,s5:true}); }}, [globalExpand]);
-
-  if (!financing) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true,s4:true,s5:true}); }}, [globalExpand]); if (!financing) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
 
   // ── Phase filter (multi-select) ──
   const allPhaseNames = Object.keys(results.phaseResults || {});
@@ -1897,11 +1884,8 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const isBank100 = cfg.finMode === "bank100";
 
   // ── Filtered financing ──
-  const pf = useMemo(() => {
-    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
-    if (!isFiltered) return financing;
-    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean);
-    if (pfs.length === 0) return financing;
+  const pf = useMemo(() => { if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName]; if (!isFiltered) return financing;
+    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean); if (pfs.length === 0) return financing;
     const leveredCF = new Array(h).fill(0), debtService = new Array(h).fill(0), debtBalClose = new Array(h).fill(0);
     const interest = new Array(h).fill(0), repayment = new Array(h).fill(0), exitProceeds = new Array(h).fill(0);
     pfs.forEach(pf2 => { for (let y=0;y<h;y++) {
@@ -2532,11 +2516,8 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   const phaseNames = allPhaseNames;
 
   // ── Filtered financing & cashflow ──
-  const f = useMemo(() => {
-    if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName];
-    if (!isFiltered) return financing;
-    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean);
-    if (pfs.length === 0) return financing;
+  const f = useMemo(() => { if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName]; if (!isFiltered) return financing;
+    const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean); if (pfs.length === 0) return financing;
     const leveredCF = new Array(h).fill(0), debtService = new Array(h).fill(0), debtBalClose = new Array(h).fill(0);
     const interest = new Array(h).fill(0), repayment = new Array(h).fill(0), exitProceeds = new Array(h).fill(0);
     pfs.forEach(pf => { for (let y=0;y<h;y++) {
@@ -2564,16 +2545,14 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, financing, phaseFinancings, h, results]);
 
   const c = results.consolidated;
-  const pc = useMemo(() => {
-    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
-    if (!isFiltered) return c;
+  const pc = useMemo(() => { if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName]; if (!isFiltered) return c;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; for (let y=0;y<h;y++) { income[y]+=pr.income[y]||0; capex[y]+=pr.capex[y]||0; landRent[y]+=pr.landRent[y]||0; netCF[y]+=pr.netCF[y]||0; }});
     return { income, capex, landRent, netCF, totalCapex: capex.reduce((a,b)=>a+b,0), totalIncome: income.reduce((a,b)=>a+b,0), totalLandRent: landRent.reduce((a,b)=>a+b,0), totalNetCF: netCF.reduce((a,b)=>a+b,0), irr: calcIRR(netCF) };
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, results, h, c]);
 
   // Hooks-safe: early return AFTER all hooks
-  if (!project || !results || !(project.assets?.length)) return <EmptyState
+  const _finViewEmpty = !project || !results || !(project.assets?.length); if (_finViewEmpty) return <EmptyState
     icon="🏦"
     title={ar ? "لا توجد أصول بعد" : "No Assets Yet"}
     subtitle={ar ? "أضف أصولاً أولاً لإعداد هيكل التمويل" : "Add assets first to configure financing"}
@@ -2669,8 +2648,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         const isFundMode = cfg.finMode === "fund" || isHybridMode || isIncomeFund;
         const notHold = !isIncomeFund && (cfg.exitStrategy||"sale") !== "hold";
         // Accordion section header helper
-        const AH = ({id, color, label, summary, visible}) => {
-          if (visible === false) return null;
+        const AH = ({id, color, label, summary, visible}) => { if (visible === false) return null;
           const open = cfgOpen(id);
           return <div onClick={()=>cfgToggle(id)} style={{padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:open?"#fff":"#fafbfc",userSelect:"none",transition:"all 0.2s"}}>
             <span style={{fontSize:12,fontWeight:600,color:open?color:"var(--text-primary)",flex:1,transition:"color 0.2s"}}>{label}</span>
@@ -2678,15 +2656,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             <span style={{fontSize:11,color:"var(--text-tertiary)",transition:"transform 0.25s ease",transform:open?"rotate(0)":"rotate(-90deg)",display:"inline-block"}}>{open?"▼":"▶"}</span>
           </div>;
         };
-        const AB = ({id, children, visible}) => {
-          if (visible === false || !cfgOpen(id)) return null;
+        const AB = ({id, children, visible}) => { if (visible === false || !cfgOpen(id)) return null;
           return <div style={{padding:"8px 14px 14px",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:6,background:"var(--surface-card)",borderTop:"1px solid #f0f1f5",animation:"zanSlide 0.15s ease"}}>{children}</div>;
         };
         const g2 = {display:"contents"};
         const g3 = {display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:6,gridColumn:"1/-1"};
         // Section card wrapper with color accent
-        const SecWrap = ({children, visible, color}) => {
-          if (visible === false) return null;
+        const SecWrap = ({children, visible, color}) => { if (visible === false) return null;
           return <div style={{borderRadius:"var(--radius-lg)",border:`0.5px solid ${color||"var(--border-default)"}40`,borderTop:`3px solid ${color||"var(--border-default)"}`,overflow:"hidden",background:"var(--surface-hover)",transition:"border-color 0.2s"}}>{children}</div>;
         };
         return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:18}}>
@@ -3018,8 +2994,7 @@ When to use:
         {/* ── SECTION 4: FEES ── */}
         <SecWrap visible={true} color="#f59e0b">
         <AH id="fees" color="#f59e0b" label={ar?"الرسوم":"Fees"} summary={isFundMode && cfg.vehicleType==="fund" ? (ar?"11 رسم":"11 fees") : `${ar?"رسوم المطور":"Developer Fee"} ${cfg.developerFeePct||12}%`} visible={true} />
-        <AB id="fees" visible={true}>{(() => {
-          if (isFundMode && cfg.vehicleType==="fund") return <>
+        <AB id="fees" visible={true}>{(() => { if (isFundMode && cfg.vehicleType==="fund") return <>
             <div style={{fontSize:11,fontWeight:600,color:"var(--text-tertiary)",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"رسوم لمرة واحدة":"One-time"}</div>
             <div style={g3}>
               <FL label={ar?"اكتتاب %":"Subscription %"} tip="رسوم دخول لمرة واحدة عند اكتتاب المستثمر. عادة 1-2% من المبلغ المستثمر\nOne-time entry fee at subscription. Usually 1-2% of invested capital" hint={autoHint("subscriptionFeePct",ar?"مرة واحدة · عند الاكتتاب":"One-time · at subscription")}><Inp type="number" value={cfg.subscriptionFeePct} onChange={v=>upCfg({subscriptionFeePct:v})} /></FL>
@@ -3049,8 +3024,7 @@ When to use:
             <div style={{fontSize:11,fontWeight:600,color:"var(--text-tertiary)",letterSpacing:0.3,textTransform:"uppercase",marginBottom:8,gridColumn:"1/-1"}}>{ar?"مرتبطة بالبناء":"Construction-linked"}</div>
             <FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية. المدى السوقي: 7%-15% (الوسيط 12%)\nDeveloper fee as % of construction costs. Market range: 7%-15% (median 12%)" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء · السوق 7%-15%":"With construction draws · Market 7%-15%")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL>
             <FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL>
-          </>;
-          if (isFundMode) return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية. المدى السوقي: 7%-15% (الوسيط 12%)\nDeveloper fee as % of construction costs. Market range: 7%-15% (median 12%)" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء · السوق 7%-15%":"With construction draws · Market 7%-15%")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
+          </>; if (isFundMode) return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من التكاليف الإنشائية. المدى السوقي: 7%-15% (الوسيط 12%)\nDeveloper fee as % of construction costs. Market range: 7%-15% (median 12%)" hint={autoHint("developerFeePct",ar?"مع مستخلصات البناء · السوق 7%-15%":"With construction draws · Market 7%-15%")}><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
           return <><FL label={ar?"رسوم المطور %":"Developer Fee %"} tip="أتعاب المطور كنسبة من CAPEX. المدى السوقي: 7%-15%\nDeveloper fee as % of CAPEX. Market range: 7%-15%"><Inp type="number" value={cfg.developerFeePct} onChange={v=>upCfg({developerFeePct:v})} /></FL><FL label={ar?"أساس احتساب رسوم المطور":"Developer Fee Basis"} tip={ar?"بدون أرض: رسوم التطوير على تكلفة البناء فقط\nمع الأرض: رسوم التطوير على تكلفة البناء + الأرض":"Excl. Land: fee on construction cost only\nIncl. Land: fee on construction + land cost"}><Drp lang={lang} value={cfg.developerFeeBasis||"exclLand"} onChange={v=>upCfg({developerFeeBasis:v})} options={[{value:"exclLand",en:"Development Costs excluding land",ar:"تكاليف التطوير بدون الأرض"},{value:"inclLand",en:"Development Costs including land",ar:"تكاليف التطوير مع الأرض"}]} /></FL></>;
         })()}</AB>
         </SecWrap>
@@ -3617,10 +3591,8 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const [publicLang, setPublicLang] = useState("ar");
   // NOTE: publicAcademy early return moved AFTER all hooks (line ~3674) to avoid React hooks violation
   // ── Initialize navigation from URL hash (unless share link is pending) ──
-  const _initNav = useMemo(() => {
-    if (typeof window === "undefined") return { view: "dashboard", projectId: null, tab: "dashboard" };
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("s") && params.get("o")) return { view: "dashboard", projectId: null, tab: "dashboard" }; // share link takes priority
+  const _initNav = useMemo(() => { if (typeof window === "undefined") return { view: "dashboard", projectId: null, tab: "dashboard" };
+    const params = new URLSearchParams(window.location.search); if (params.get("s") && params.get("o")) return { view: "dashboard", projectId: null, tab: "dashboard" }; // share link takes priority
     return parseNavHash();
   }, []);
   const _initProjectId = useRef(_initNav.view === "editor" ? _initNav.projectId : null);
@@ -3679,11 +3651,9 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     }, duration);
   }, []);
   // ── Share Link Detection ──
-  const [pendingShare, setPendingShare] = useState(() => {
-    if (typeof window === "undefined") return null;
+  const [pendingShare, setPendingShare] = useState(() => { if (typeof window === "undefined") return null;
     const params = new URLSearchParams(window.location.search);
-    const s = params.get("s"), o = params.get("o");
-    if (s && o) return { projectId: s, ownerId: o };
+    const s = params.get("s"), o = params.get("o"); if (s && o) return { projectId: s, ownerId: o };
     return null;
   });
   // ── Presentation Mode (Sprint 2) ──
@@ -3733,8 +3703,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     }
   })(); }, [user]);
 
-  useEffect(() => {
-    if (!project || view !== "editor" || project._permission === "view") return;
+  useEffect(() => { if (!project || view !== "editor" || project._permission === "view") return;
     setSaveStatus("unsaved");
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(async () => {
@@ -3745,8 +3714,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   }, [project, view]);
 
   // ── Redirect if active tab becomes hidden (e.g. switching to self mode) ──
-  useEffect(() => {
-    if (!project || view !== "editor") return;
+  useEffect(() => { if (!project || view !== "editor") return;
     const fm = project.finMode || "self";
     const hidden = new Set();
     if (fm === "self") hidden.add("financing");
@@ -3781,8 +3749,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   // Recalculating indicator — briefly shows "updating" badge when engine reruns
   const [isRecalculating, setIsRecalculating] = useState(false);
   const recalcTimerRef = useRef(null);
-  useEffect(() => {
-    if (!project) return;
+  useEffect(() => { if (!project) return;
     setIsRecalculating(true);
     if (recalcTimerRef.current) clearTimeout(recalcTimerRef.current);
     recalcTimerRef.current = setTimeout(() => setIsRecalculating(false), 400);
@@ -3807,13 +3774,11 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
 
   // ── Undo History (last 30 states) ──
   const undoStack = useRef([]);
-  const pushUndo = useCallback((state) => {
-    if (!state) return;
+  const pushUndo = useCallback((state) => { if (!state) return;
     undoStack.current.push(JSON.stringify(state));
     if (undoStack.current.length > 30) undoStack.current.shift();
   }, []);
-  const undo = useCallback(() => {
-    if (undoStack.current.length === 0) return;
+  const undo = useCallback(() => { if (undoStack.current.length === 0) return;
     const prev = JSON.parse(undoStack.current.pop());
     setProject(prev);
   }, []);
@@ -3823,8 +3788,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     const handler = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         // Don't undo if user is typing in an input
-        const tag = document.activeElement?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        const tag = document.activeElement?.tagName; if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         e.preventDefault();
         undo();
       }
@@ -3833,8 +3797,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     return () => window.removeEventListener('keydown', handler);
   }, [undo]);
 
-  const up = useCallback((u) => {
-    if (readOnly) return; // Admin read-only mode — block all edits
+  const up = useCallback((u) => { if (readOnly) return; // Admin read-only mode — block all edits
     const scrollTop = sidebarRef.current?.scrollTop;
     setProject(prev => { pushUndo(prev); return {...prev,...(typeof u === 'function' ? u(prev) : u)}; });
     if (scrollTop != null) {
@@ -3843,8 +3806,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       });
     }
   }, [pushUndo, readOnly]);
-  const upAsset = useCallback((i, u) => {
-    if (readOnly) return;
+  const upAsset = useCallback((i, u) => { if (readOnly) return;
     const scrollTop = sidebarRef.current?.scrollTop;
     setProject(prev => {
       pushUndo(prev);
@@ -5216,8 +5178,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   };
 
   const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     e.target.value = '';
     setImportMsg({ type: 'loading', text: lang === 'ar' ? 'جاري الاستيراد...' : 'Importing...' });
     try {
@@ -6129,13 +6090,11 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
   const failedChecks = checks.filter(ch => !ch.pass).length;
 
   // ── Filtered consolidated: aggregate selected phases only ──
-  const c = useMemo(() => {
-    if (!isFiltered) return rawC;
+  const c = useMemo(() => { if (!isFiltered) return rawC;
     const hLen = results.horizon;
     const income = new Array(hLen).fill(0), capex = new Array(hLen).fill(0), landRent = new Array(hLen).fill(0), netCF = new Array(hLen).fill(0);
     activePh.forEach(pName => {
-      const pr = results.phaseResults?.[pName];
-      if (!pr) return;
+      const pr = results.phaseResults?.[pName]; if (!pr) return;
       for (let y = 0; y < hLen; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
     });
     const totalCapex = capex.reduce((a,b)=>a+b,0);
@@ -6832,8 +6791,7 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
     }
     const income = new Array(horizon).fill(0), capex = new Array(horizon).fill(0), landRent = new Array(horizon).fill(0), netCF = new Array(horizon).fill(0), noi = new Array(horizon).fill(0);
     activePh.forEach(pName => {
-      const pr = results.phaseResults?.[pName];
-      if (!pr) return;
+      const pr = results.phaseResults?.[pName]; if (!pr) return;
       for (let y = 0; y < horizon; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
     });
     for (let y = 0; y < horizon; y++) noi[y] = income[y] - landRent[y];
@@ -7433,8 +7391,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
 
   // ── Real Engine Recalculation when sliders change ──
   const slidersDefault = liveSliders.capex === 100 && liveSliders.rent === 100 && liveSliders.exitMult === (project.exitMultiple || 10);
-  const liveProject = useMemo(() => {
-    if (slidersDefault) return project;
+  const liveProject = useMemo(() => { if (slidersDefault) return project;
     return { ...project, activeScenario: "Custom", customCapexMult: liveSliders.capex, customRentMult: liveSliders.rent, exitMultiple: liveSliders.exitMult };
   }, [project, liveSliders, slidersDefault]);
   const liveResults = useMemo(() => { try { return computeProjectCashFlows(liveProject); } catch(e) { console.error("PresentationView liveResults error:", e); return results; } }, [liveProject]);

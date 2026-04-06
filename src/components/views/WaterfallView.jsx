@@ -149,8 +149,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
     });
   };
   // Sync from KPI bar dropdown
-  useEffect(() => {
-    if (!kpiPhase || allPhaseNames.length <= 1) return;
+  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return;
     if (kpiPhase === "all") { setSelectedPhases([]); }
     else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
   }, [kpiPhase]);
@@ -179,8 +178,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const cur = project?.currency || "SAR";
 
   // ── Filtered waterfall ──
-  const w = useMemo(() => {
-    if (!waterfall) return null;
+  const w = useMemo(() => { if (!waterfall) return null;
     if (isSinglePhase && phaseWaterfalls?.[singlePhaseName]) {
       const _pw = phaseWaterfalls[singlePhaseName];
       return { ..._pw,
@@ -193,11 +191,9 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         unreturnedClose:_pw.unreturnedClose||h0, unreturnedOpen:_pw.unreturnedOpen||h0,
         prefAccrual:_pw.prefAccrual||h0, prefAccumulated:_pw.prefAccumulated||h0, exitProceeds:_pw.exitProceeds||h0,
       };
-    }
-    if (!isFiltered) return waterfall;
+    } if (!isFiltered) return waterfall;
     // Multi-phase: aggregate selected phase waterfalls
-    const pws = activePh.map(p => phaseWaterfalls?.[p]).filter(Boolean);
-    if (pws.length === 0) return waterfall;
+    const pws = activePh.map(p => phaseWaterfalls?.[p]).filter(Boolean); if (pws.length === 0) return waterfall;
     const sumArr = (field) => { const arr = new Array(h).fill(0); pws.forEach(pw => { const a = pw[field]; if (a) for(let y=0;y<h;y++) arr[y]+=(a[y]||0); }); return arr; };
     const sum = (field) => pws.reduce((s,pw) => s + (pw[field]||0), 0);
     const lpNetCF = sumArr('lpNetCF'), gpNetCF = sumArr('gpNetCF');
@@ -232,10 +228,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   }, [isSinglePhase, singlePhaseName, isFiltered, selectedPhases, waterfall, phaseWaterfalls, phaseFinancings, h]);
 
   // Phase-aware data sources for table §7 and §8
-  const pc = useMemo(() => {
-    if (!results) return { income:[], capex:[], landRent:[], netCF:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null };
-    if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
-    if (!isFiltered) return results.consolidated;
+  const pc = useMemo(() => { if (!results) return { income:[], capex:[], landRent:[], netCF:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null }; if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName]; if (!isFiltered) return results.consolidated;
     const income=new Array(h).fill(0),capex=new Array(h).fill(0),landRent=new Array(h).fill(0),netCF=new Array(h).fill(0);
     activePh.forEach(pName=>{const pr=results.phaseResults?.[pName];if(!pr)return;for(let y=0;y<h;y++){income[y]+=pr.income[y]||0;capex[y]+=pr.capex[y]||0;landRent[y]+=pr.landRent[y]||0;netCF[y]+=pr.netCF[y]||0;}});
     return {income,capex,landRent,netCF,totalCapex:capex.reduce((a,b)=>a+b,0),totalIncome:income.reduce((a,b)=>a+b,0),totalLandRent:landRent.reduce((a,b)=>a+b,0),totalNetCF:netCF.reduce((a,b)=>a+b,0),irr:calcIRR(netCF)};

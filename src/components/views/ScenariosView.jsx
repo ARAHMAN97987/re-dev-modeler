@@ -229,12 +229,10 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   };
 
   // Helper: extract phase-level consolidated from scenario result
-  const getScenarioData = (s) => {
-    if (!isFiltered) return s.results.consolidated;
+  const getScenarioData = (s) => { if (!isFiltered) return s.results.consolidated;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => {
-      const pr = s.results.phaseResults?.[pName];
-      if (!pr) return;
+      const pr = s.results.phaseResults?.[pName]; if (!pr) return;
       for (let y = 0; y < h; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
     });
     return {
@@ -257,8 +255,7 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
     { name: ar?"تصاعد -0.5%":"Esc -0.5%", overrides: { activeScenario: "Escalation -0.5%" } },
   ];
 
-  const scenarioResults = useMemo(() => {
-    if (_isEmpty) return [];
+  const scenarioResults = useMemo(() => { if (_isEmpty) return [];
     return scenarioDefs.map(sd => {
       const s = runScenario(project, sd.overrides);
       return { name: sd.name, ...s };
@@ -283,8 +280,7 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   const rowParam = sensParams.find(p => p.key === sensRow) || sensParams[0];
   const colParam = sensParams.find(p => p.key === sensCol) || sensParams[1];
 
-  const sensTable = useMemo(() => {
-    if (_isEmpty) return [];
+  const sensTable = useMemo(() => { if (_isEmpty) return [];
     const table = [];
     for (const rStep of rowParam.steps) {
       const row = [];
@@ -316,8 +312,7 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   }, [project, sensRow, sensCol, selectedPhases]);
 
   // ── Section 3: Break-even ──
-  const getFilteredNPV = (r) => {
-    if (!isFiltered) return r.consolidated.npv10;
+  const getFilteredNPV = (r) => { if (!isFiltered) return r.consolidated.npv10;
     const netCF = new Array(h).fill(0);
     activePh.forEach(pName => { const pr = r.phaseResults?.[pName]; if (!pr) return; for (let y=0;y<h;y++) netCF[y]+=pr.netCF[y]||0; });
     return calcNPV(netCF, 0.10);

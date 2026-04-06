@@ -71,8 +71,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   const hasPhases = allPhaseNames.length > 1;
 
   // ── Phase share for proportional display ──
-  const phaseShare = useMemo(() => {
-    if (!results || !isFiltered) return { capex: 1, land: 1 };
+  const phaseShare = useMemo(() => { if (!results || !isFiltered) return { capex: 1, land: 1 };
     const rawC = results.consolidated;
     let capexSum = 0, landSum = 0;
     activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; capexSum += pr.totalCapex || 0; landSum += pr.totalLandRent || 0; });

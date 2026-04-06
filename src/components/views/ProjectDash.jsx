@@ -27,13 +27,11 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
   const failedChecks = (checks || []).filter(ch => !ch.pass).length;
 
   // ── Filtered consolidated: aggregate selected phases only ──
-  const c = useMemo(() => {
-    if (!results || !isFiltered) return rawC;
+  const c = useMemo(() => { if (!results || !isFiltered) return rawC;
     const hLen = results.horizon;
     const income = new Array(hLen).fill(0), capex = new Array(hLen).fill(0), landRent = new Array(hLen).fill(0), netCF = new Array(hLen).fill(0);
     activePh.forEach(pName => {
-      const pr = results.phaseResults?.[pName];
-      if (!pr) return;
+      const pr = results.phaseResults?.[pName]; if (!pr) return;
       for (let y = 0; y < hLen; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
     });
     const totalCapex = capex.reduce((a,b)=>a+b,0);

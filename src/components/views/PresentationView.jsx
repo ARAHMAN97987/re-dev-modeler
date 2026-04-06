@@ -21,12 +21,11 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
   const isMobile = useIsMobile();
   const ar = lang === "ar";
   const [activePhase, setActivePhase] = useState("consolidated"); // "consolidated" or phase name
-  if (!results || !project) return <div style={{textAlign:"center",padding:60,color:"#6b7080",fontSize:14}}>{ar?"لا توجد بيانات للعرض":"No data to present"}</div>;
+  const _presEmpty = !results || !project;
 
   // ── Real Engine Recalculation when sliders change ──
   const slidersDefault = liveSliders.capex === 100 && liveSliders.rent === 100 && liveSliders.exitMult === (project.exitMultiple || 10);
-  const liveProject = useMemo(() => {
-    if (slidersDefault) return project;
+  const liveProject = useMemo(() => { if (slidersDefault) return project;
     return { ...project, activeScenario: "Custom", customCapexMult: liveSliders.capex, customRentMult: liveSliders.rent, exitMultiple: liveSliders.exitMult };
   }, [project, liveSliders, slidersDefault]);
   const liveResults = useMemo(() => { try { return computeProjectCashFlows(liveProject); } catch(e) { console.error("PresentationView liveResults error:", e); return results; } }, [liveProject]);
@@ -88,6 +87,8 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
     </div>
   );
 
+
+  if (_presEmpty) return <div style={{textAlign:"center",padding:60,color:"#6b7080",fontSize:14}}>{ar?"لا توجد بيانات للعرض":"No data to present"}</div>;
   return (
     <div style={{maxWidth:1100,margin:"0 auto",paddingBottom:120}}>
       {/* ── Executive Summary Card ── */}

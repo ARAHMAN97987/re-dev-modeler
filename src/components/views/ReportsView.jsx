@@ -307,12 +307,10 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
   const activePh = selectedPhases.length > 0 ? selectedPhases : phaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < phaseNames.length;
 
-  const fc = useMemo(() => {
-    if (!results || !isFiltered) return c;
+  const fc = useMemo(() => { if (!results || !isFiltered) return c;
     const income = new Array(h).fill(0), capex = new Array(h).fill(0), landRent = new Array(h).fill(0), netCF = new Array(h).fill(0);
     activePh.forEach(pName => {
-      const pr = results.phaseResults[pName];
-      if (!pr) return;
+      const pr = results.phaseResults[pName]; if (!pr) return;
       for (let y = 0; y < h; y++) { income[y] += pr.income[y]||0; capex[y] += pr.capex[y]||0; landRent[y] += pr.landRent[y]||0; netCF[y] += pr.netCF[y]||0; }
     });
     return {
