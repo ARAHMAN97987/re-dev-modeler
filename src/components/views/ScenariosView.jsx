@@ -212,15 +212,11 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   // Ranking
   const [rankMetric, setRankMetric] = useState("irr");
   const [showRanking, setShowRanking] = useState(false);
-  if (!project || !results || !(project.assets?.length)) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🔀</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"لا توجد سيناريوهات بعد":"No Scenarios Yet"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أنشئ سيناريوهات لمقارنة افتراضات مختلفة. أضف أصولاً من تبويب البرنامج أولاً.":"Create scenarios to compare different assumptions. Add assets from the Program tab first."}</div>
-    </div>
-  );
 
-  const cur = project.currency || "SAR";
+  // Empty state flag — used for conditional rendering AFTER all hooks
+  const _isEmpty = !project || !results || !(project?.assets?.length);
+
+  const cur = _isEmpty ? "SAR" : (project.currency || "SAR");
   const ar = lang === "ar";
   const c = results.consolidated;
   const h = results.horizon;
@@ -262,14 +258,15 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   ];
 
   const scenarioResults = useMemo(() => {
+    if (_isEmpty) return [];
     return scenarioDefs.map(sd => {
       const s = runScenario(project, sd.overrides);
       return { name: sd.name, ...s };
     });
-  }, [project]);
+  }, [project, _isEmpty]);
 
   // ── Section 2: Sensitivity Table ──
-  const avgOcc = Math.round((project.assets||[]).reduce((s,a)=>s+(a.stabilizedOcc||100),0)/Math.max(1,(project.assets||[]).length));
+  const avgOcc = _isEmpty ? 100 : Math.round((project.assets||[]).reduce((s,a)=>s+(a.stabilizedOcc||100),0)/Math.max(1,(project.assets||[]).length));
   const sensParams = [
     { key: "rentEscalation", label: ar?"زيادة الإيجار %":"Rent Escalation %", base: project.rentEscalation, steps: [-0.5, -0.25, 0, 0.25, 0.5], unit: "%" },
     { key: "softCostPct", label: ar?"تكاليف غير مباشرة %":"Soft Cost %", base: project.softCostPct, steps: [-3, -1.5, 0, 1.5, 3], unit: "%" },
@@ -287,6 +284,7 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   const colParam = sensParams.find(p => p.key === sensCol) || sensParams[1];
 
   const sensTable = useMemo(() => {
+    if (_isEmpty) return [];
     const table = [];
     for (const rStep of rowParam.steps) {
       const row = [];
@@ -326,6 +324,7 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   };
 
   const breakeven = useMemo(() => {
+    if (_isEmpty) return {};
     const results = {};
     const filteredAssetPhases = isFiltered ? activePh : null;
     for (let occ = 100; occ >= 0; occ -= 2) {
@@ -389,6 +388,15 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
     { key: "goalseek", label: ar?"🎯 البحث عن الهدف":"🎯 Goal Seeker" },
     { key: "optimizer", label: ar?"المحسّن":"Optimizer" },
   ];
+
+  // Empty state — rendered AFTER all hooks (React rules of hooks)
+  if (_isEmpty) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🔀</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"لا توجد سيناريوهات بعد":"No Scenarios Yet"}</div>
+      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أنشئ سيناريوهات لمقارنة افتراضات مختلفة. أضف أصولاً من تبويب البرنامج أولاً.":"Create scenarios to compare different assumptions. Add assets from the Program tab first."}</div>
+    </div>
+  );
 
   return (<div>
     {/* Sub-nav */}
