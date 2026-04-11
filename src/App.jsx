@@ -425,7 +425,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
   const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
-  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase]);
+  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase, allPhaseNames]);
 
   const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
     : (isFiltered && activePh.length > 0) ? getPhaseFinancing(project, activePh[0])
@@ -1488,15 +1488,15 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowChart(expand); setKpiOpen({proj:expand,cap:expand,ret:expand}); setSecOpen(expand?{}:{s1:true,s2:true,s3:true}); }}, [globalExpand]);
 
   // ── Phase filter ──
-  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const allPhaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
-  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase]);
+  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase, allPhaseNames]);
 
-  const h = results.horizon;
-  const sy = results.startYear;
-  const cur = project.currency || "SAR";
+  const h = results?.horizon || 50;
+  const sy = results?.startYear || 2026;
+  const cur = project?.currency || "SAR";
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
 
   // ── Filtered consolidated ──
@@ -1848,16 +1848,17 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true,s4:true,s5:true});
   const [kpiOpen, setKpiOpen] = useState({bank:false,dev:false,proj:false});
   const [showChart, setShowChart] = useState(false);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true,s4:true,s5:true}); }}, [globalExpand]); if (!financing) return <div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>;
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowTerms(expand); setKpiOpen({bank:expand,dev:expand,proj:expand}); setShowChart(expand); setSecOpen(expand?{}:{s1:true,s2:true,s3:true,s4:true,s5:true}); }}, [globalExpand]);
 
   // ── Phase filter (multi-select) ──
-  const allPhaseNames = Object.keys(results.phaseResults || {});
+  const _bankEmpty = !financing || !results;
+  const allPhaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
   const togglePhase = (p) => setSelectedPhases(prev => { const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]; if (typeof setKpiPhase === 'function') setKpiPhase(next.length === 1 ? next[0] : "all"); return next; });
-  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase]);
+  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return; if (kpiPhase === "all") { setSelectedPhases([]); } else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); } }, [kpiPhase, allPhaseNames]);
   const hasPhases = allPhaseNames.length > 1 && phaseFinancings && Object.keys(phaseFinancings).length > 0;
 
   const cfg = isSinglePhase ? getPhaseFinancing(project, singlePhaseName)
@@ -1876,15 +1877,15 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
           : p)
       }))) : null;
 
-  const h = results.horizon;
-  const sy = results.startYear;
+  const h = results?.horizon || 50;
+  const sy = results?.startYear || 2026;
   const years = Array.from({length:Math.min(showYrs,h)},(_,i)=>i);
   const phaseNames = allPhaseNames;
-  const cur = project.currency || "SAR";
-  const isBank100 = cfg.finMode === "bank100";
+  const cur = project?.currency || "SAR";
+  const isBank100 = cfg?.finMode === "bank100";
 
   // ── Filtered financing ──
-  const pf = useMemo(() => { if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName]; if (!isFiltered) return financing;
+  const pf = useMemo(() => { if (_bankEmpty) return null; if (isSinglePhase && phaseFinancings?.[singlePhaseName]) return phaseFinancings[singlePhaseName]; if (!isFiltered) return financing;
     const pfs = activePh.map(p => phaseFinancings?.[p]).filter(Boolean); if (pfs.length === 0) return financing;
     const leveredCF = new Array(h).fill(0), debtService = new Array(h).fill(0), debtBalClose = new Array(h).fill(0);
     const interest = new Array(h).fill(0), repayment = new Array(h).fill(0), exitProceeds = new Array(h).fill(0);
@@ -1905,6 +1906,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
 
   // ── Filtered cashflow ──
   const pc = useMemo(() => {
+    if (_bankEmpty) return { income:[], capex:[], landRent:[], netCF:[], totalCapex:0, totalIncome:0, totalLandRent:0, totalNetCF:0, irr:null };
     if (isSinglePhase && results.phaseResults?.[singlePhaseName]) return results.phaseResults[singlePhaseName];
     if (!isFiltered) return results.consolidated;
     const income=new Array(h).fill(0), capex=new Array(h).fill(0), landRent=new Array(h).fill(0), netCF=new Array(h).fill(0);
@@ -1967,6 +1969,9 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const KR = ({l,v,c,bold:b}) => <><span style={{color:"var(--text-secondary)",fontSize:11}}>{l}</span><span style={{textAlign:"right",fontWeight:b?700:500,fontSize:11,color:c||"#1a1d23"}}>{v}</span></>;
   const SecHd = ({text}) => <div style={{gridColumn:"1/-1",fontSize:11,fontWeight:700,letterSpacing:0.8,textTransform:"uppercase",color:"var(--text-tertiary)",paddingTop:6,borderTop:"1px solid #f0f1f5",marginTop:2}}>{text}</div>;
   const cardHd = {cursor:"pointer",display:"flex",alignItems:"center",gap:8,userSelect:"none"};
+
+  // Empty state — rendered AFTER all hooks (React rules of hooks)
+  if (_bankEmpty) return (<div style={{padding:32,textAlign:"center",color:"var(--text-tertiary)"}}>{ar?"اضبط إعدادات التمويل":"Configure financing settings"}</div>);
 
   return (<div>
     {/* ═══ Phase Selector (multi-select) ═══ */}

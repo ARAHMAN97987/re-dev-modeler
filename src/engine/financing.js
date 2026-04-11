@@ -668,7 +668,15 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // For lender-grade models, replace with actual NOI after opex deduction per asset.
   const dscr = new Array(h).fill(null);
   for (let y = 0; y < h; y++) {
-    if (adjustedDebtService[y] > 0) { dscr[y] = (c.income[y] - adjustedLandRent[y]) / adjustedDebtService[y]; }
+    if (adjustedDebtService[y] > 0) {
+      const inc = c.income[y] || 0;
+      const lr  = adjustedLandRent[y] || 0;
+      const noi = inc - lr;
+      const ds  = adjustedDebtService[y];
+      // Guard against NaN/Infinity; ensure finite number or null
+      const val = noi / ds;
+      dscr[y] = Number.isFinite(val) ? val : null;
+    }
   }
 
   // ── Hybrid: Separate cash flows (financing portion + fund portion) ──
