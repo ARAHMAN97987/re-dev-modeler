@@ -15,6 +15,12 @@ export default function MarinaPLModal({ data, onSave, onClose, t, lang }) {
   const upM = (u) => setM(prev => ({...prev, ...u}));
   const calc = calcMarinaEBITDA(m);
 
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   const Row = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"var(--text-secondary)"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
   const NumIn = ({value, onChange}) => {
     const [loc, setLoc] = useState(String(value ?? ""));

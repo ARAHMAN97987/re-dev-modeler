@@ -547,9 +547,9 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                       {isManual ? (ar?"⚙ يدوي":"⚙ Manual") : (ar?"تلقائي":"Auto")}
                     </button>
                   </div>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                  <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                     <thead><tr style={{borderBottom:"2px solid #d1fae5"}}>
-                      <th style={{textAlign:"start",padding:"2px 4px",color:"#6b7080",fontWeight:600}}>{ar?"المرحلة":"Phase"}</th>
+                      <th style={{textAlign:"start",padding:"2px 4px",color:"#6b7080",fontWeight:600,position:"sticky",left:0,background:"#fff"}}>{ar?"المرحلة":"Phase"}</th>
                       <th style={{textAlign:"right",padding:"2px 4px",color:"#6b7080",fontWeight:600}}>{ar?"المساحة":"Area"}</th>
                       <th style={{textAlign:"right",padding:"2px 4px",color:"#6b7080",fontWeight:600}}>{ar?"الحصة":"Share"}</th>
                     </tr></thead>
@@ -566,7 +566,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                         <td style={{padding:"2px 4px",textAlign:"right",color:Math.abs(manualSum-100)>0.1?"#ef4444":"#059669"}}>{manualSum}%</td>
                       </tr>}
                     </tbody>
-                  </table>
+                  </table></div>
                   {isManual && Math.abs(manualSum-100)>0.1 && <div style={{marginTop:6,padding:"4px 8px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,fontSize:10,color:"#dc2626",fontWeight:500}}>
                     ⚠ {ar?"المجموع = "+manualSum+"% (يجب 100%)":"Total = "+manualSum+"% (should be 100%)"}
                   </div>}

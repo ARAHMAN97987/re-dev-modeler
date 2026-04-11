@@ -1,5 +1,5 @@
 // Extracted from App.jsx lines 4319-4453
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useIsMobile } from "./hooks";
 import { btnS, btnSm } from "./styles";
 
@@ -10,6 +10,12 @@ function ShareModal({ project, up, lang, user, onClose }) {
   const [perm, setPerm] = useState("view");
   const [copied, setCopied] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
   const shared = (project?.sharedWith || []).map(e => typeof e === "string" ? { email: e, permission: "edit" } : e);
 
   const shareUrl = typeof window !== "undefined"

@@ -273,19 +273,24 @@ export default function AssetDetailPanel({
     const displayValue = type === "number" && value != null && value !== ""
       ? (typeof value === "number" && value >= 1000 ? fmtNum(value) : value)
       : (value || "");
+    // Distinguish warning (⚑ prefix) from error for styling
+    const isWarn = error && typeof error === "string" && error.startsWith("⚑");
+    const borderColor = error ? (isWarn ? "#f59e0b" : "#ef4444") : "#d1d5db";
+    const msgColor = isWarn ? "#b45309" : "#ef4444";
     return (
       <div style={{ marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <label style={{ fontSize: 11, color: "#6b7280", minWidth: 130, flexShrink: 0, fontWeight: 500 }}>
             {tip ? <Tip label={tip}>{lang === "ar" ? labelAr : labelEn}</Tip> : (lang === "ar" ? labelAr : labelEn)}
             {derived && <span style={{ fontSize: 9, color: "#2EC4B6", marginInlineStart: 4, fontWeight: 600 }}>⚡{ar ? "مشتق" : "auto"}</span>}
+            {isWarn && <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#f59e0b", marginInlineStart: 4, verticalAlign: "middle" }} title={ar ? "قيمة غير افتراضية" : "Non-default value"} />}
           </label>
           {options ? (
             <select
               value={value || ""}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
-              style={{ flex: 1, fontSize: 12, padding: "6px 10px", borderRadius: 6, border: error ? "1.5px solid #ef4444" : "1px solid #d1d5db", background: "#fff", fontFamily: "inherit" }}
+              style={{ flex: 1, fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `${error ? "1.5px" : "1px"} solid ${borderColor}`, background: "#fff", fontFamily: "inherit" }}
             >
               {options.map(o => (
                 <option key={o.value} value={o.value}>
@@ -312,9 +317,9 @@ export default function AssetDetailPanel({
                 disabled={disabled}
                 style={{
                   flex: 1, fontSize: 12, padding: "6px 10px", borderRadius: 6,
-                  border: error ? "1.5px solid #ef4444" : "1px solid #d1d5db",
+                  border: `${error ? "1.5px" : "1px"} solid ${borderColor}`,
                   textAlign: type === "number" ? (isRtl ? "left" : "right") : (isRtl ? "right" : "left"),
-                  background: disabled ? "#f3f4f6" : "#fff",
+                  background: disabled ? "#f3f4f6" : (isWarn ? "#fffbeb" : "#fff"),
                   fontFamily: "inherit",
                   direction: type === "number" ? "ltr" : undefined,
                 }}
@@ -323,7 +328,7 @@ export default function AssetDetailPanel({
             </div>
           )}
         </div>
-        {error && <div style={{ fontSize: 10, color: "#ef4444", marginTop: 2, paddingInlineStart: 138 }}>{error}</div>}
+        {error && <div style={{ fontSize: 10, color: msgColor, marginTop: 2, paddingInlineStart: 138 }}>{error}</div>}
       </div>
     );
   };
@@ -573,7 +578,11 @@ export default function AssetDetailPanel({
                 type: "number",
                 tip: ar ? "عدد أدوار البيسمنت (يُحسب بتكلفة أعلى بسبب الحفريات والعزل)" : "Basement floors (costs more due to excavation & waterproofing)",
               })}
-              {field("GFA", "المساحة الإجمالية", asset.gfa, (v) => up("gfa", v), {
+              {field("GFA", "المساحة الإجمالية", asset.gfa, (v) => {
+                // When GFA changes, recalculate GLA = GFA × efficiency
+                const newGla = v > 0 ? Math.round(v * ((asset.efficiency || 85) / 100)) : (asset.gla || 0);
+                upAsset(index, { gfa: v, gla: newGla });
+              }, {
                 type: "number", suffix: "m²",
                 tip: ar ? "المساحة الإجمالية للبناء (Gross Floor Area) = مجموع كل الأدوار" : "Gross Floor Area = sum of all floor plates",
                 error: gfaMismatch ? (ar ? `⚠ متوقع ~${fmtNum(expectedGfa)} م² من ${asset.floorsAboveGround + (asset.basementLevels || 0)} أدوار × ${fmtNum(asset.footprint)} م²` : `⚠ Expected ~${fmtNum(expectedGfa)} m² from ${asset.floorsAboveGround + (asset.basementLevels || 0)} floors × ${fmtNum(asset.footprint)} m²`) : null,
@@ -604,25 +613,38 @@ export default function AssetDetailPanel({
               <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8, color: "#6b7280" }}>
                 {lang === "ar" ? "تفصيل المساحات" : "Area Breakdown"}
               </div>
-              {field("Efficiency %", "الكفاءة", asset.efficiency, (v) => up("efficiency", v), {
+              {field("Efficiency %", "الكفاءة", asset.efficiency, (v) => {
+                // Cross-field: clamp to 0-100 and recalculate GLA
+                const clamped = Math.min(100, Math.max(0, v));
+                const newGla = (asset.gfa || 0) > 0 ? Math.round((asset.gfa || 0) * clamped / 100) : (asset.gla || 0);
+                upAsset(index, { efficiency: clamped, gla: newGla });
+              }, {
                 type: "number", suffix: "%",
                 tip: ar ? `نسبة المساحة القابلة للتأجير/الاستخدام من GFA. المرجع لهذا النوع: ${getBenchmarkEfficiency(asset.assetType)}%` : `Leasable/usable ratio of GFA. Benchmark for this type: ${getBenchmarkEfficiency(asset.assetType)}%`,
+                error: (asset.efficiency || 0) > 100 ? (ar ? "الكفاءة لا يمكن أن تتجاوز 100%" : "Efficiency cannot exceed 100%") : null,
               })}
-              {field("GLA", "المساحة القابلة للتأجير",
-                asset.gla || Math.round((asset.gfa || 0) * ((asset.efficiency || 85) / 100)),
-                (v) => {
-                  if (asset.gfa > 0) {
-                    const newEff = Math.min(100, Math.round((v / asset.gfa) * 100));
-                    upAsset(index, { gla: v, efficiency: newEff });
-                  } else {
-                    up("gla", v);
+              {(() => {
+                const glaVal = asset.gla || Math.round((asset.gfa || 0) * ((asset.efficiency || 85) / 100));
+                const glaExceedsGfa = (asset.gfa || 0) > 0 && glaVal > (asset.gfa || 0);
+                return field("GLA", "المساحة القابلة للتأجير",
+                  glaVal,
+                  (v) => {
+                    if ((asset.gfa || 0) > 0) {
+                      // Clamp GLA to max GFA
+                      const clamped = Math.min(asset.gfa, Math.max(0, v));
+                      const newEff = Math.round((clamped / asset.gfa) * 100);
+                      upAsset(index, { gla: clamped, efficiency: newEff });
+                    } else {
+                      up("gla", v);
+                    }
+                  },
+                  {
+                    type: "number", suffix: "m²", derived: !asset.gla,
+                    tip: ar ? "المساحة القابلة للتأجير = GFA × الكفاءة. التعديل يحدّث الكفاءة تلقائياً" : "Gross Leasable Area = GFA × efficiency. Editing this updates efficiency",
+                    error: glaExceedsGfa ? (ar ? `⚠ GLA (${fmtNum(glaVal)} م²) يتجاوز GFA (${fmtNum(asset.gfa)} م²)` : `⚠ GLA (${fmtNum(glaVal)} m²) exceeds GFA (${fmtNum(asset.gfa)} m²)`) : null,
                   }
-                },
-                {
-                  type: "number", suffix: "m²", derived: !asset.gla,
-                  tip: ar ? "المساحة القابلة للتأجير = GFA × الكفاءة. التعديل يحدّث الكفاءة تلقائياً" : "Gross Leasable Area = GFA × efficiency. Editing this updates efficiency",
-                }
-              )}
+                );
+              })()}
 
               {/* Derived Values Box */}
               {(() => {
@@ -711,17 +733,23 @@ export default function AssetDetailPanel({
             {/* Lease fields */}
             {asset.revType === "Lease" && (
               <>
-                {field("Lease Rate / m²", "إيجار / م²", asset.leaseRate, (v) => up("leaseRate", v), {
+                {field("Lease Rate / m²", "إيجار / م²", asset.leaseRate, (v) => {
+                  if (v < 0) return; // no negative rates
+                  up("leaseRate", v);
+                }, {
                   type: "number", suffix: "SAR",
                   tip: ar ? "الإيجار السنوي لكل متر مربع قابل للتأجير" : "Annual rent per leasable m²",
+                  error: (asset.leaseRate || 0) < 0 ? (ar ? "لا يمكن أن تكون القيمة سالبة" : "Value cannot be negative") : null,
                 })}
                 {field("Stabilized Occupancy %", "إشغال مستقر %", asset.stabilizedOcc, (v) => up("stabilizedOcc", v), {
                   type: "number", suffix: "%",
-                  tip: ar ? "نسبة الإشغال المستهدفة بعد فترة النمو" : "Target occupancy after ramp-up",
+                  tip: ar ? "نسبة الإشغال المستهدفة بعد فترة النمو (الافتراضي: 95%)" : "Target occupancy after ramp-up (default: 95%)",
+                  error: asset.stabilizedOcc != null && asset.stabilizedOcc !== 95 ? (ar ? `⚑ قيمة غير افتراضية (الافتراضي: 95%)` : `⚑ Non-default value (default: 95%)`) : null,
                 })}
                 {field("Ramp-Up Years", "سنوات النمو", asset.rampUpYears, (v) => up("rampUpYears", v), {
                   type: "number",
-                  tip: ar ? "عدد السنوات للوصول للإشغال المستقر" : "Years to reach stabilized occupancy",
+                  tip: ar ? "عدد السنوات للوصول للإشغال المستقر (الافتراضي: 1)" : "Years to reach stabilized occupancy (default: 1)",
+                  error: asset.rampUpYears != null && asset.rampUpYears !== 1 ? (ar ? `⚑ قيمة غير افتراضية (الافتراضي: 1)` : `⚑ Non-default value (default: 1)`) : null,
                 })}
                 {field("Escalation %/year", "زيادة سنوية %", asset.escalation, (v) => up("escalation", v), {
                   type: "number", suffix: "%",
@@ -735,11 +763,18 @@ export default function AssetDetailPanel({
                 {field("Annual EBITDA", "EBITDA سنوي", asset.opEbitda, (v) => up("opEbitda", v), {
                   type: "number", suffix: "SAR",
                   tip: ar ? "الأرباح التشغيلية السنوية قبل الفوائد والضرائب والإهلاك" : "Annual Earnings Before Interest, Taxes, Depreciation, Amortization",
+                  error: (asset.opEbitda || 0) < 0 ? (ar ? "لا يمكن أن تكون القيمة سالبة" : "Value cannot be negative") : null,
                 })}
                 {field("Stabilized Occupancy %", "إشغال مستقر %", asset.stabilizedOcc, (v) => up("stabilizedOcc", v), {
                   type: "number", suffix: "%",
+                  tip: ar ? "نسبة الإشغال المستهدفة (الافتراضي: 95%)" : "Target occupancy (default: 95%)",
+                  error: asset.stabilizedOcc != null && asset.stabilizedOcc !== 95 ? (ar ? `⚑ قيمة غير افتراضية (الافتراضي: 95%)` : `⚑ Non-default value (default: 95%)`) : null,
                 })}
-                {field("Ramp-Up Years", "سنوات النمو", asset.rampUpYears, (v) => up("rampUpYears", v), { type: "number" })}
+                {field("Ramp-Up Years", "سنوات النمو", asset.rampUpYears, (v) => up("rampUpYears", v), {
+                  type: "number",
+                  tip: ar ? "عدد السنوات للوصول للتشغيل الكامل (الافتراضي: 1)" : "Years to full operation (default: 1)",
+                  error: asset.rampUpYears != null && asset.rampUpYears !== 1 ? (ar ? `⚑ قيمة غير افتراضية (الافتراضي: 1)` : `⚑ Non-default value (default: 1)`) : null,
+                })}
               </>
             )}
             {/* Sale fields */}
@@ -748,18 +783,22 @@ export default function AssetDetailPanel({
                 {field("Sale Price / m²", "سعر البيع / م²", asset.salePricePerSqm, (v) => up("salePricePerSqm", v), {
                   type: "number", suffix: "SAR",
                   tip: ar ? "سعر البيع للمتر المربع القابل للبيع" : "Sale price per sellable m²",
+                  error: (asset.salePricePerSqm || 0) < 0 ? (ar ? "لا يمكن أن تكون القيمة سالبة" : "Value cannot be negative") : null,
                 })}
                 {field("Absorption Years", "سنوات الاستيعاب", asset.absorptionYears, (v) => up("absorptionYears", v), {
                   type: "number",
-                  tip: ar ? "عدد السنوات لبيع كل الوحدات" : "Years to sell all units",
+                  tip: ar ? "عدد السنوات لبيع كل الوحدات (الافتراضي: 2)" : "Years to sell all units (default: 2)",
+                  error: asset.absorptionYears != null && asset.absorptionYears !== 2 ? (ar ? `⚑ قيمة غير افتراضية (الافتراضي: 2)` : `⚑ Non-default value (default: 2)`) : null,
                 })}
                 {field("Pre-Sale %", "نسبة البيع المسبق %", asset.preSalePct, (v) => up("preSalePct", v), {
                   type: "number", suffix: "%",
                   tip: ar ? "نسبة الوحدات المباعة قبل انتهاء البناء" : "% sold before construction completes",
+                  error: (asset.preSalePct || 0) < 0 ? (ar ? "لا يمكن أن تكون القيمة سالبة" : "Value cannot be negative") : null,
                 })}
                 {field("Commission %", "نسبة العمولة %", asset.commissionPct, (v) => up("commissionPct", v), {
                   type: "number", suffix: "%",
                   tip: ar ? "نسبة عمولة التسويق والمبيعات" : "Marketing & sales commission",
+                  error: (asset.commissionPct || 0) < 0 ? (ar ? "لا يمكن أن تكون القيمة سالبة" : "Value cannot be negative") : null,
                 })}
               </>
             )}
@@ -770,6 +809,7 @@ export default function AssetDetailPanel({
             {field("Cost / m²", "تكلفة / م²", asset.costPerSqm, (v) => up("costPerSqm", v), {
               type: "number", suffix: "SAR",
               tip: ar ? "تكلفة البناء الصلبة لكل متر مربع (قبل غير المباشرة والاحتياطي)" : "Hard construction cost per m² (before soft & contingency)",
+              error: (asset.costPerSqm || 0) < 0 ? (ar ? "لا يمكن أن تكون التكلفة سالبة" : "Cost cannot be negative") : null,
             })}
             <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "10px 0" }} />
             <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8, color: "#6b7280" }}>
