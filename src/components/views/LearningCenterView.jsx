@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { EDUCATIONAL_CONTENT } from "../../data/educational-content";
 import { useIsMobile } from "../shared/hooks";
+import EmptyState from "../shared/EmptyState.jsx";
 
 function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
   const ar = lang === "ar";
@@ -637,7 +638,11 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
           </div>
         )}
         {searchResults && searchResults.length === 0 && (
-          <div style={{ textAlign: "center", padding: 32, color: "#9ca3af", fontSize: 13 }}>{ar ? "لا توجد نتائج. جرّب كلمات مختلفة." : "No results. Try different keywords."}</div>
+          <EmptyState
+            icon="🔍"
+            title={ar ? "لا توجد نتائج" : "No Results"}
+            subtitle={ar ? "لا توجد نتائج. جرّب كلمات مختلفة." : "No results. Try different keywords."}
+          />
         )}
 
         {/* Learning Paths */}

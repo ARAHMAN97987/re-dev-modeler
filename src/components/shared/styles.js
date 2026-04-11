@@ -10,3 +10,6 @@ export const tblStyle = { width: "100%", borderCollapse: "collapse" };
 export const thSt = { padding: "7px 8px", textAlign: "start", fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", background: "var(--surface-table-header)", borderBottom: "0.5px solid var(--border-default)", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: 0.3 };
 export const tdSt = { padding: "5px 8px", borderBottom: "0.5px solid var(--surface-separator)", fontSize: 12, whiteSpace: "nowrap" };
 export const tdN = { ...tdSt, textAlign: "right", fontVariantNumeric: "tabular-nums" };
+
+/** 4-point spacing scale — use in new code to keep padding/gap consistent */
+export const SP = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 };

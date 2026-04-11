@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useIsMobile } from "../shared/hooks";
 import { btnS, btnPrim, btnSm } from "../shared/styles";
+import LoadingSkeleton from "../shared/LoadingSkeleton";
 
 const PROJECT_TEMPLATES = [
   { id:"waterfront", icon:"🌊", en:"Waterfront Mixed-Use", ar:"واجهة بحرية متعددة الاستخدامات",
@@ -73,11 +74,12 @@ function FeaturesGrid({ lang }) {
   );
 }
 
-function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut, onOpenAcademy }) {
+function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLang, t, user, signOut, onOpenAcademy, loading = false }) {
   const [confirmDel, setConfirmDel] = useState(null);
   const [showFeatures, setShowFeatures] = useState(false);
   const [search, setSearch] = useState("");
   const isMobile = useIsMobile();
+  if (loading) return <div style={{maxWidth:900,margin:"48px auto",padding:"0 24px"}}><LoadingSkeleton variant="dashboard" /></div>;
   const ar = lang === "ar";
   const filtered = index.filter(p => !search || (p.name||"").toLowerCase().includes(search.toLowerCase()) || (p.location||"").toLowerCase().includes(search.toLowerCase()));
   const sorted = [...filtered].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));

@@ -3,11 +3,10 @@ import { useState } from "react";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
 import { catL } from "../../data/translations.js";
 import { useIsMobile } from "../shared/hooks.js";
+import { btnS, btnPrim } from "../shared/styles.js";
 
-const btnS = { border: "none", borderRadius: 5, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" };
-const btnPrim = { ...btnS, background: "#2563eb", color: "#fff", fontWeight: 600 };
 const tblStyle = { width: "100%", borderCollapse: "collapse" };
-const thSt = { padding: "7px 8px", textAlign: "start", fontSize: 10, fontWeight: 600, color: "#6b7080", background: "#f8f9fb", borderBottom: "1px solid #e5e7ec", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: 0.3 };
+const thSt = { padding: "7px 8px", textAlign: "start", fontSize: 11, fontWeight: 600, color: "#6b7080", background: "#f8f9fb", borderBottom: "1px solid #e5e7ec", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: 0.3 };
 const tdSt = { padding: "5px 8px", borderBottom: "1px solid #f0f1f5", fontSize: 12, whiteSpace: "nowrap" };
 const mktInputStyle = { padding: "6px 10px", border: "1px solid #e5e7ec", borderRadius: 6, fontSize: 12, fontFamily: "inherit", width: "100%", boxSizing: "border-box", background: "#fafbfc" };
 
@@ -118,7 +117,7 @@ function MarketView({ project, results, lang, up }) {
         <div style={{ fontSize: 10, color: "#6b7080", marginBottom: 12 }}>{ar ? "أدخل الفجوة المتوقعة لكل قطاع حسب سنة الأفق" : "Enter expected gap per sector at horizon year"}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 11, color: "#6b7080", fontWeight: 500 }}>{ar ? "سنة الأفق:" : "Horizon Year:"}</span>
-          <NI value={m.horizonYear || 2033} onChange={v => upM({ horizonYear: v })} style={{ width: 80 }} />
+          <NI value={m.horizonYear || 2033} onChange={v => upM({ horizonYear: v })} style={{ maxWidth: 80, width: "100%" }} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
           {SECTORS.map(sector => (
@@ -153,8 +152,8 @@ function MarketView({ project, results, lang, up }) {
                 return (
                   <tr key={sector}>
                     <td style={{ ...tdSt, fontWeight: 500 }}>{catL(sector, ar)}</td>
-                    <td style={{ ...tdSt, textAlign: "center" }}><NI value={th2.low} onChange={v => upThreshold(sector, "low", v)} style={{ width: 60, textAlign: "center" }} /> %</td>
-                    <td style={{ ...tdSt, textAlign: "center" }}><NI value={th2.med} onChange={v => upThreshold(sector, "med", v)} style={{ width: 60, textAlign: "center" }} /> %</td>
+                    <td style={{ ...tdSt, textAlign: "center" }}><NI value={th2.low} onChange={v => upThreshold(sector, "low", v)} style={{ maxWidth: 60, width: "100%", textAlign: "center" }} /> %</td>
+                    <td style={{ ...tdSt, textAlign: "center" }}><NI value={th2.med} onChange={v => upThreshold(sector, "med", v)} style={{ maxWidth: 60, width: "100%", textAlign: "center" }} /> %</td>
                     <td style={{ ...tdSt, textAlign: "center", color: "#ef4444", fontWeight: 600 }}>{`> ${th2.med}%`}</td>
                   </tr>
                 );

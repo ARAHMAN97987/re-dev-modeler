@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
 import { useIsMobile } from "../shared/hooks.js";
+import EmptyState from "../shared/EmptyState.jsx";
 
 const btnS = { border: "none", borderRadius: 5, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" };
 const btnSm = { ...btnS, padding: "4px 8px", fontSize: 11, fontWeight: 500, borderRadius: 4 };
@@ -28,9 +29,9 @@ function Tip({ text }) {
 function KPI({ label, value, sub, color, tip }) {
   return (
     <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #e5e7ec", padding: "12px 14px" }}>
-      <div style={{ fontSize: 10, color: "#6b7080", marginBottom: 4 }}>{label}{tip && <Tip text={tip} />}</div>
+      <div style={{ fontSize: 11, color: "#6b7080", marginBottom: 4 }}>{label}{tip && <Tip text={tip} />}</div>
       <div style={{ fontSize: 18, fontWeight: 700, color: color || "#1a1d23" }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "#6b7080", marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -99,11 +100,11 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   }, [ir, isFiltered, phaseShare, selectedPhases]);
 
   if (_isEmpty) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏛</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"أضف أصول أولاً":"Add Assets First"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج.":"Incentives need project data. Add assets from the Program tab."}</div>
-    </div>
+    <EmptyState
+      icon="🏛"
+      title={lang === "ar" ? "أضف أصول أولاً" : "Add Assets First"}
+      subtitle={lang === "ar" ? "الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج." : "Incentives need project data. Add assets from the Program tab."}
+    />
   );
 
   const upInc = (key, updates) => {
@@ -144,7 +145,7 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
     </div>
   );
 
-  const F = ({ label, children, hint }) => <div style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: "#6b7080", marginBottom: 3 }}>{label}</div>{children}{hint && <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{hint}</div>}</div>;
+  const F = ({ label, children, hint }) => <div style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: "#6b7080", marginBottom: 3 }}>{label}</div>{children}{hint && <div style={{ fontSize: 11, color: "#6b7080", marginTop: 2 }}>{hint}</div>}</div>;
 
   return (<div>
     {/* ═══ PHASE FILTER ═══ */}

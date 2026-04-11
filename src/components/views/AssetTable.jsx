@@ -12,6 +12,7 @@ import { calcHotelEBITDA, calcMarinaEBITDA } from "../../engine/hospitality";
 import { defaultHotelPL, defaultMarinaPL } from "../../data/defaults";
 import { getMetricColor } from "../../utils/metricColor.js";
 import AssetDetailPanel from "../AssetDetailPanel.jsx";
+import LoadingSkeleton from "../shared/LoadingSkeleton";
 import { ASSET_TEMPLATES, TEMPLATE_GROUPS } from "../../data/assetTemplates.js";
 import { deriveAreas } from "../../data/areaBenchmarks.js";
 
@@ -919,6 +920,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
       </>)}
 
       {/* ═══ ASSET CASH FLOW TABLE ═══ */}
+      {assets?.length > 0 && !results && <div style={{padding:"16px 0"}}><LoadingSkeleton variant="table" rows={assets.length + 1} /></div>}
       {results?.assetSchedules?.length > 0 && (() => {
         const h = results.horizon;
         const sy = results.startYear;
@@ -1016,7 +1018,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                 <div key={i} style={{marginBottom:6,border:"1px solid #e5e7ec",borderRadius:8,overflow:"hidden",background:"#fff"}}>
                   <div onClick={()=>setCfOpen(p=>({...p,[i]:!p[i]}))} style={{padding:"6px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:isOpen?"#f0f4ff":"#fafbfc",userSelect:"none"}}>
                     <span style={{fontSize:10,color:"#9ca3af"}}>{isOpen?"▼":"▶"}</span>
-                    <span style={{fontSize:11,fontWeight:600,color:"#1a1d23",flex:1}}>{asset?.name||`Asset ${i+1}`}</span>
+                    <span style={{fontSize:11,fontWeight:600,color:"#1a1d23",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}} title={asset?.name||`Asset ${i+1}`}>{asset?.name||`Asset ${i+1}`}</span>
                     <span style={{fontSize:9,color:"#6b7080",background:"#e5e7ec",borderRadius:8,padding:"1px 6px"}}>{asset?.phase}</span>
                     <span style={{fontSize:10,color:"#16a34a"}}>{fmtM(totalRev)}</span>
                     <span style={{fontSize:10,color:"#ef4444"}}>{fmtM(totalCap)}</span>

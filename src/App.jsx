@@ -1618,7 +1618,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
           </button>
           {allPhaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} title={p} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
               {p}
             </button>;
           })}
@@ -4063,7 +4063,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
           {project?._shared && <span className={project._permission==="view"?"z-badge z-badge-warning":"z-badge z-badge-info"} style={{fontSize:11,flexShrink:0}}>{project._permission==="view"?(lang==="ar"?"🔒 قراءة":"🔒 View"):(lang==="ar"?"✏️ مشارك":"✏️ Edit")}</span>}
           {!isMobile && <StatusBadge status={project?.status} onChange={s=>up({status:s})} />}
           {/* Undo - desktop only */}
-          {!isMobile && <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" style={{...btnS,background:"transparent",color:undoStack.current.length>0?"var(--nav-btn-text)":"var(--nav-tab-border)",padding:"5px 8px",fontSize:14,flexShrink:0,border:"none",cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>}
+          {!isMobile && <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" aria-label={lang==="ar"?"تراجع (Ctrl+Z)":"Undo (Ctrl+Z)"} style={{...btnS,background:"transparent",color:undoStack.current.length>0?"var(--nav-btn-text)":"var(--nav-tab-border)",padding:"5px 8px",fontSize:14,flexShrink:0,border:"none",cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>}
           {/* Present - desktop only */}
           {!isMobile && <button onClick={()=>{setPresentMode(!presentMode);if(!presentMode){setSidebarOpen(false);setActiveTab("dashboard");setLiveSliders({capex:100,rent:100,exitMult:project?.exitMultiple||10});}else{setSidebarOpen(true);}}} style={{...btnS,background:presentMode?"var(--color-success)":"var(--nav-btn-bg)",color:presentMode?"#fff":"var(--zan-teal-300)",padding:"5px 10px",fontSize:11,fontWeight:600,border:presentMode?"none":"0.5px solid var(--nav-btn-border)",flexShrink:0,borderRadius:6}}>{presentMode?(lang==="ar"?"✏️ تعديل":"✏️ Edit"):(lang==="ar"?"🎯 عرض":"🎯 Present")}</button>}
           {/* Dropdown menu */}
@@ -4071,7 +4071,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             const [menuOpen, setMenuOpen] = [headerMenuOpen, setHeaderMenuOpen];
             return (
               <div style={{position:"relative",flexShrink:0}}>
-                <button onClick={()=>setMenuOpen(!menuOpen)} style={{...btnS,background:menuOpen?"var(--nav-btn-hover)":"transparent",color:"var(--nav-btn-text)",padding:isMobile?"4px 6px":"5px 8px",fontSize:isMobile?14:16,fontWeight:500,border:"none",borderRadius:6}}>⋮</button>
+                <button onClick={()=>setMenuOpen(!menuOpen)} aria-label={lang==="ar"?"القائمة":"Menu"} aria-expanded={menuOpen} style={{...btnS,background:menuOpen?"var(--nav-btn-hover)":"transparent",color:"var(--nav-btn-text)",padding:isMobile?"4px 6px":"5px 8px",fontSize:isMobile?14:16,fontWeight:500,border:"none",borderRadius:6}}>⋮</button>
                 {menuOpen && <>
                   <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:998}} />
                   <div style={{position:"absolute",top:"100%",marginTop:4,background:"var(--surface-card)",border:"0.5px solid var(--border-default)",borderRadius:"var(--radius-xl)",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:999,minWidth:isMobile?120:200,padding:"6px 0",...(lang==="ar"?{left:0}:{right:0})}}>
@@ -4243,7 +4243,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                 <div style={{flex:1}} />
                 {isRecalculating && <span style={{fontSize:9,padding:"2px 7px",borderRadius:3,background:"rgba(46,196,182,0.12)",color:"#0f766e",fontWeight:600,animation:"zanShimmer 1s infinite",backgroundSize:"200% 100%"}}>{ar?"جاري الحساب...":"Updating..."}</span>}
                 <SmartReviewerBadge alerts={smartAlerts.alerts} onClick={()=>{setActiveTab("results");}} />
-                <button onClick={()=>setGlobalExpand(p=>p+1)} className="z-btn z-btn-secondary z-btn-sm" style={{fontSize:11,flexShrink:0,background:globalExpand%2===1?"var(--color-info-bg)":"var(--surface-card)",color:globalExpand%2===1?"var(--zan-teal-500)":"var(--text-secondary)"}}>
+                <button onClick={()=>setGlobalExpand(p=>p+1)} className="z-btn z-btn-secondary z-btn-sm" aria-label={globalExpand%2===1?(ar?"طي جميع الأقسام":"Collapse all sections"):(ar?"توسيع جميع الأقسام":"Expand all sections")} style={{fontSize:11,flexShrink:0,background:globalExpand%2===1?"var(--color-info-bg)":"var(--surface-card)",color:globalExpand%2===1?"var(--zan-teal-500)":"var(--text-secondary)"}}>
                   {globalExpand%2===1?(ar?"▲ طي":"▲ Collapse"):(ar?"▼ توسيع":"▼ Expand")}
                 </button>
               </div>
@@ -6258,7 +6258,7 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
           </button>
           {phaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} title={p} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
               {p}
             </button>;
           })}
@@ -6936,7 +6936,7 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
           </button>
           {allPhaseNames.map(p => {
             const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
+            return <button key={p} onClick={()=>togglePhase(p)} title={p} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
               {p}
             </button>;
           })}

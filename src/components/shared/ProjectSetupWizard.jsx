@@ -72,21 +72,21 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
 
   return (<>
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
-      <div style={{background:"#fff",borderRadius:isMobile?14:20,width:520,maxWidth:"94vw",padding:0,boxShadow:"0 24px 80px rgba(0,0,0,0.2)",overflow:"hidden"}}>
+      <div style={{background:"#fff",borderRadius:isMobile?14:20,width:520,maxWidth:"94vw",maxHeight:"85vh",padding:0,boxShadow:"0 24px 80px rgba(0,0,0,0.2)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
         {/* Progress */}
         <div style={{padding:isMobile?"14px 16px 0":"20px 28px 0",display:"flex",gap:6}}>
           {activeSteps.map((_,i)=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?"#2563eb":"#e5e7ec",transition:"background 0.3s"}} />)}
         </div>
         {/* Header */}
         <div style={{padding:isMobile?"14px 16px 6px":"20px 28px 8px"}}>
-          <div style={{fontSize:10,color:"#6b7080",textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:6}}>
+          <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:6}}>
             {t?"الخطوة":"Step"} {step+1} {t?"من":"of"} {activeSteps.length}
           </div>
           <div style={{fontSize:isMobile?17:20,fontWeight:700,color:"#1a1d23"}}>{current.title}</div>
           {current.subtitle&&<div style={{fontSize:12,color:"#6b7080",marginTop:4}}>{current.subtitle}</div>}
         </div>
-        {/* Content */}
-        <div style={{padding:isMobile?"10px 16px 18px":"12px 28px 24px",minHeight:isMobile?160:200}}>{current.content}</div>
+        {/* Content — scrollable if step content is tall */}
+        <div style={{padding:isMobile?"10px 16px 18px":"12px 28px 24px",minHeight:isMobile?160:200,flex:1,overflowY:"auto"}}>{current.content}</div>
         {/* Footer */}
         <div style={{padding:isMobile?"12px 16px":"16px 28px",borderTop:"1px solid #f0f1f5",display:"flex",gap:10,justifyContent:"space-between",background:"#fafbfc"}}>
           <button onClick={()=>step>0?setStep(step-1):onDone()} style={{padding:"10px 20px",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff",color:"#6b7080",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>

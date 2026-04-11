@@ -155,6 +155,12 @@ export function computeProjectCashFlows(project) {
       // Each year gets: CAPEX × MIN(12, durMonths - yearOffset×12) / durMonths
       // This correctly handles durations not divisible by 12 (e.g. 30mo = 40%+40%+20%)
       const durMonths = asset.constrDuration || (durYears * 12);
+      // Consistency check: if constrDuration is supplied, durYears must equal
+      // Math.ceil(constrDuration / 12). A mismatch (e.g. 30-month duration but
+      // durYears=2) means the last partial year is silently dropped.
+      if (asset.constrDuration && Math.ceil(asset.constrDuration / 12) !== durYears) {
+        console.warn(`[cashflow] Asset "${asset.name}": constrDuration ${asset.constrDuration}mo implies ${Math.ceil(asset.constrDuration/12)} years but durYears=${durYears}. CAPEX schedule may be incomplete.`);
+      }
       for (let y = cStart; y < cStart + durYears && y < horizon; y++) {
         if (y >= 0) {
           const yearOffset = y - cStart;
@@ -191,7 +197,10 @@ export function computeProjectCashFlows(project) {
       const absorptionYears = Math.max(1, asset.absorptionYears || 3);
       const commissionPct = Math.min(1, Math.max(0, (asset.commissionPct || 0) / 100));
       const preSalePct = Math.min(1, Math.max(0, (asset.preSalePct || 0) / 100));
-      // Pre-sales during construction (last year of construction)
+      // Pre-sales during construction (last year of construction).
+      // Index = cStart + durYears - 1 is the final construction year (0-based).
+      // Using the last construction year (not revStart) is intentional: it models
+      // deposits collected during the final build phase before handover begins.
       if (preSalePct > 0 && cStart + durYears - 1 >= 0 && cStart + durYears - 1 < horizon) {
         const preSaleAmt = totalSaleValue * preSalePct * (1 - commissionPct);
         revSch[cStart + durYears - 1] += preSaleAmt;
@@ -285,6 +294,10 @@ export function computeProjectCashFlows(project) {
     for (let y = 0; y < term; y++) {
       if (y < rentStartYear) continue;
       const yrsFromStart = y - rentStartYear;
+      // Step escalation: rent holds constant for eN years, then jumps to the next
+      // power of (1+eP). This is NOT compound-per-year — it is a staircase where
+      // Math.floor(yrsFromStart / eN) gives the step index (0, 1, 2, …).
+      // Example: eP=5%, eN=3 → years 0-2: base, years 3-5: base×1.05, years 6-8: base×1.10...
       const rent = base * Math.pow(1 + eP, Math.floor(yrsFromStart / eN));
       landSch[y] = rent;
 

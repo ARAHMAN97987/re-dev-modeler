@@ -539,7 +539,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
         if (y === bulletYear && bal > 0) repay[y] = bal;
       }
       debtBalClose[y] = bal - repay[y];
-      // ZAN interest: average of opening and closing balance × rate + per-draw upfront fee
+      // ZAN interest: average of opening and closing balance × rate + per-draw upfront fee.
+      // In per-draw mode the fee is charged each year proportional to that year's drawdown,
+      // so the total fee across all draw years sums to totalDebt × upfrontFeePct.
+      // This differs from a single upfront charge on the full facility at close — each
+      // tranche bears its own fee only when drawn (matches ZAN Excel parity).
       interest[y] = (debtBalOpen[y] + debtBalClose[y]) / 2 * rate + drawdown[y] * upfrontFeePct;
       if (interest[y] < 0) interest[y] = 0;
       debtService[y] = repay[y] + interest[y];

@@ -12,14 +12,38 @@ const SEV = {
   info:     { icon: "ℹ️", bg: "#eff6ff", border: "#60a5fa", text: "#1e40af", label_ar: "معلومة", label_en: "Info" },
 };
 
-export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI }) {
+/** Scan results object for NaN/Infinity in key financial metrics and return extra alerts */
+function detectCalcErrors(results, ar) {
+  if (!results) return [];
+  const checks = [
+    { key: "irr", field: results.irr, label_ar: "IRR المشروع", label_en: "Project IRR" },
+    { key: "npv", field: results.npv, label_ar: "NPV", label_en: "NPV" },
+    { key: "moic", field: results.moic, label_ar: "MOIC", label_en: "MOIC" },
+    { key: "dscr", field: results.minDSCR, label_ar: "الحد الأدنى DSCR", label_en: "Min DSCR" },
+    { key: "totalRev", field: results.totalRevenue, label_ar: "إجمالي الإيرادات", label_en: "Total Revenue" },
+  ];
+  return checks
+    .filter(c => !Number.isFinite(c.field))
+    .map(c => ({
+      id: `calc-err-${c.key}`,
+      severity: "error",
+      ar: `خطأ حساب: ${c.label_ar} = ${c.field}`,
+      en: `Calculation error: ${c.label_en} = ${c.field}`,
+      source: "Engine",
+    }));
+}
+
+export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI, results }) {
   const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(new Set());
   const ar = lang === "ar";
 
-  if (!alerts || alerts.length === 0) return null;
+  const calcErrAlerts = detectCalcErrors(results, ar);
+  const allAlerts = [...calcErrAlerts, ...(alerts || [])];
 
-  const visible = alerts.filter(a => !dismissed.has(a.id + (a.assetIndex !== undefined ? '-' + a.assetIndex : '')));
+  if (allAlerts.length === 0) return null;
+
+  const visible = allAlerts.filter(a => !dismissed.has(a.id + (a.assetIndex !== undefined ? '-' + a.assetIndex : '')));
   if (visible.length === 0) return null;
 
   const critCount = visible.filter(a => a.severity === "critical").length;
@@ -88,21 +112,22 @@ export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI }) {
                   padding: "8px 16px", borderBottom: "0.5px solid #f0f1f5",
                   fontSize: 12, lineHeight: 1.5,
                 }}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                     {alert.assetName && (
                       <span style={{
                         display: "inline-block", fontSize: 9, fontWeight: 600,
                         background: "#e5e7eb", color: "#374151", borderRadius: 3,
                         padding: "1px 6px", marginBottom: 2, marginInlineEnd: 6,
-                      }}>
+                        maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }} title={alert.assetName}>
                         {alert.assetName}
                       </span>
                     )}
-                    <span style={{ fontWeight: 600, color: "#1a1d23" }}>{alert.ar}</span>
+                    <span style={{ fontWeight: 600, color: "#1a1d23", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={alert.ar || alert.en}>{alert.ar}</span>
                     <br />
                     <span style={{ color: "#6b7080", fontSize: 11 }}>{alert.en}</span>
                     {alert.source && (
-                      <span style={{ display: "block", fontSize: 9, color: "#9ca3af", marginTop: 2 }}>
+                      <span style={{ display: "block", fontSize: 10, color: "#6b7080", marginTop: 2 }}>
                         📚 {alert.source}
                       </span>
                     )}
@@ -127,6 +152,7 @@ export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI }) {
                         fontSize: 14, color: "#9ca3af", padding: 2, alignSelf: "center",
                       }}
                       title={ar ? "إخفاء" : "Dismiss"}
+                      aria-label={ar ? "إخفاء التنبيه" : "Dismiss alert"}
                     >
                       ✕
                     </button>

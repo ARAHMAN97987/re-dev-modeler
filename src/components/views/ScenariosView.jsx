@@ -1,5 +1,6 @@
 // Extracted from App.jsx lines 10690-11237
 import { useState, useMemo, useRef, useEffect } from "react";
+import EmptyState from "../shared/EmptyState.jsx";
 import { computeProjectCashFlows } from "../../engine/cashflow.js";
 import { computeIncentives } from "../../engine/incentives.js";
 import { computeFinancing } from "../../engine/financing.js";
@@ -386,11 +387,11 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
 
   // Empty state — rendered AFTER all hooks (React rules of hooks)
   if (_isEmpty) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 24px",background:"rgba(46,196,182,0.03)",border:"1px dashed rgba(46,196,182,0.2)",borderRadius:12,textAlign:"center"}}>
-      <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🔀</div>
-      <div style={{fontSize:16,fontWeight:700,color:"#1a1d23",marginBottom:6}}>{lang==="ar"?"لا توجد سيناريوهات بعد":"No Scenarios Yet"}</div>
-      <div style={{fontSize:12,color:"#6b7080",maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أنشئ سيناريوهات لمقارنة افتراضات مختلفة. أضف أصولاً من تبويب البرنامج أولاً.":"Create scenarios to compare different assumptions. Add assets from the Program tab first."}</div>
-    </div>
+    <EmptyState
+      icon="🔀"
+      title={lang === "ar" ? "لا توجد سيناريوهات بعد" : "No Scenarios Yet"}
+      subtitle={lang === "ar" ? "أنشئ سيناريوهات لمقارنة افتراضات مختلفة. أضف أصولاً من تبويب البرنامج أولاً." : "Create scenarios to compare different assumptions. Add assets from the Program tab first."}
+    />
   );
 
   return (<div>

@@ -532,6 +532,13 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     // Hybrid-GP: developer pays debt service from their distributions
     const gpDebtObligation = isHybridGP ? (f.debtService[y] || 0) : 0;
     gpNetCF[y] = -gpCalls[y] + gpDist[y] - gpLandRentObligation[y] - gpDebtObligation;
+    // Guard: deeply negative GP net cash-flow usually signals that debt service
+    // exceeds GP distributions in a given year (under-distributed hybrid structure).
+    // This is not an engine error but an economically stressed scenario — warn so
+    // the caller can surface it in the UI rather than silently passing a large negative.
+    if (gpNetCF[y] < -1e6) {
+      console.warn(`[waterfall] Year ${y}: gpNetCF=${gpNetCF[y].toFixed(0)} — GP distributions insufficient to cover obligations (debt service + land rent). Review leverage or GP equity split.`);
+    }
   }
 
   const lpIRR = calcIRR(lpNetCF);
