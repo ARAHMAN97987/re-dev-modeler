@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { useIsMobile } from "../shared/hooks";
 import { fmt, fmtPct, fmtM } from "../../utils/format";
-import { btnS, btnPrim, btnSm, cellInputStyle, tblStyle, thSt, tdSt, tdN } from "../shared/styles";
+import { btnS, btnPrim, btnSm, cellInputStyle, tblStyle, thSt, tdSt, tdN, sideInputStyle } from "../shared/styles";
 import { csvEscape, csvParse, generateTemplate, parseAssetFile, mapRowsToAssets, exportAssetsToExcel, TEMPLATE_COLS } from "../../utils/csv";
 import { getBenchmark, benchmarkColor, getAutoFillDefaults, BENCHMARKS } from "../../data/benchmarks";
 import { CAT_AR, REV_AR, catL, revL } from "../../data/translations";
@@ -28,6 +28,15 @@ function StatusBadge({status,onChange}) {
   </div>);
 }
 
+// Module-level numeric input used by HotelPLModal and MarinaPLModal.
+// Must live outside the modal components so React hooks rules aren't violated.
+function NumIn({ value, onChange }) {
+  const [loc, setLoc] = useState(String(value ?? ""));
+  const ref = useRef(null);
+  useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
+  return <input ref={ref} value={loc} onChange={e => setLoc(e.target.value)} onBlur={() => { const n = parseFloat(loc); onChange(isNaN(n) ? 0 : n); }} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec", textAlign: "right", width: "100%" }} />;
+}
+
 function HotelPLModal({ data, onSave, onClose, t, lang }) {
   const ar = lang === "ar";
   const [h, setH] = useState(data || defaultHotelPL());
@@ -37,12 +46,6 @@ function HotelPLModal({ data, onSave, onClose, t, lang }) {
   const applyPreset = (key) => { const p = HOTEL_PRESETS[key]; if (p) setH(prev => ({...prev, ...p})); };
 
   const Row = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"#6b7080"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
-  const NumIn = ({value, onChange}) => {
-    const [loc, setLoc] = useState(String(value ?? ""));
-    const ref = useRef(null);
-    useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
-    return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec",textAlign:"right",width:"100%"}} />;
-  };
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={onClose}>
@@ -115,12 +118,6 @@ function MarinaPLModal({ data, onSave, onClose, t, lang }) {
   const calc = calcMarinaEBITDA(m);
 
   const Row = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"#6b7080"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
-  const NumIn = ({value, onChange}) => {
-    const [loc, setLoc] = useState(String(value ?? ""));
-    const ref = useRef(null);
-    useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
-    return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"#fff",color:"#1a1d23",border:"1px solid #e5e7ec",textAlign:"right",width:"100%"}} />;
-  };
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={onClose}>

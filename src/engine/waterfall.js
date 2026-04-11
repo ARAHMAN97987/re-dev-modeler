@@ -491,11 +491,14 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
         }
       } else {
         // ═══ Mode 2: Compounded Return / IRR (Binary Search) ═══
-        // Find max clawback that keeps Investor IRR = hurdleRate exactly
+        // Find max clawback that keeps Investor IRR = hurdleRate exactly.
+        // Binary search converges when bracket < $0.01 OR IRR is within 0.001% of hurdle.
+        // Hard cap at 200 iterations to prevent infinite loops on degenerate cash flows.
         perfIncentiveRequired = lpTotalCalled_pre * Math.pow(1 + hurdleRate, perfIncentiveYears);
         if (lpIRR_preIncentive !== null && lpIRR_preIncentive > hurdleRate) {
+          const IRR_EPS = 0.00001; // 0.001% IRR tolerance
           let lo = 0, hi = maxClawback;
-          for (let iter = 0; iter < 60; iter++) {
+          for (let iter = 0; iter < 200; iter++) {
             const mid = (lo + hi) / 2;
             const tmpCF = [..._preCF];
             tmpCF[sy_] -= mid;
@@ -505,7 +508,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
             } else {
               lo = mid;
             }
-            if (hi - lo < 1) break;
+            // Converge when bracket < $0.01 or IRR is close enough to hurdle
+            if (hi - lo < 0.01) break;
+            if (tmpIRR !== null && Math.abs(tmpIRR - hurdleRate) < IRR_EPS) break;
           }
           perfIncentiveExcess = lo;
           perfIncentiveAmount = Math.min(perfIncentiveExcess * incPct, maxClawback);

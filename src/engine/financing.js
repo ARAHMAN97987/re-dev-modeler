@@ -462,11 +462,12 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   if (trancheMode === "perDraw" && repayYears > 0) {
     // ═══ PER-DRAW TRANCHE MODE ═══
-    // ZAN Excel convention: all tranches share the SAME repayStart (firstDraw + grace).
-    // Excel template rows 130-139 each use the SAME grace period countdown from fund start,
-    // not from individual draw date. repayStart was already computed above.
-    // Excel formula: Tranche N repays when year >= fundStart + N + grace
-    // Row 130 (N=0): year >= fundStart+0+grace, Row 131 (N=1): year >= fundStart+1+grace
+    // ZAN Excel convention: repayStart is anchored to fund start, NOT to each draw date.
+    // Excel template rows 130-139: Tranche N repays at (fundStart + N + grace).
+    // This means later tranches repay later — INTENTIONAL per ZAN model design.
+    // It mirrors construction draw timing: each tranche draws one year after the previous,
+    // so its repayment also shifts by one year (giving it the same effective grace from draw date).
+    // Do NOT "fix" this to use (drawYear + grace) — that would break ZAN Excel parity.
     let trancheIndex = 0;
     tranches = [];
     for (let y = 0; y < h; y++) {

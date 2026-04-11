@@ -11,6 +11,12 @@
 
 import { calcIRR, calcNPV } from './math.js';
 
+// Default efficiency (% of GFA that is leasable/sellable) by revenue type.
+// Lease/Operating: 0 means "user hasn't set it yet" — revenue will be 0 until the user enters a value.
+// Sale: 100 means "sell full GFA" — prevents silent zero revenue when user switches from Operating to Sale.
+// This asymmetry is intentional: for Sale assets, efficiency is rarely set explicitly so we default to 100%.
+export const DEFAULT_EFFICIENCY_BY_REV_TYPE = { Lease: 0, Operating: 0, Sale: 100 };
+
 export function getScenarioMults(p) {
   let cm=1,rm=1,dm=0,ea=0;
   const s = p.activeScenario;
@@ -163,20 +169,23 @@ export function computeProjectCashFlows(project) {
     const revEnd = Math.min(revStart + botYrs, horizon);
     if (asset.revType === "Lease" && leasableArea > 0 && leaseRate > 0) {
       for (let y = revStart; y < revEnd; y++) {
-        const yrs = y - revStart;
+        const yrs = y - revStart; // 0-based year offset from opening
+        // Ramp factor: (yrs+1)/ramp so year-0 (opening year) starts at 1/ramp, not 0.
+        // Reaches full occupancy at yrs = ramp-1 (i.e., year ramp is first full year).
+        // Capped at 1 via Math.min for post-ramp years.
         revSch[y] = leasableArea * leaseRate * occ * Math.min(1, (yrs+1)/ramp) * Math.pow(1+effEsc, yrs);
       }
     } else if (asset.revType === "Operating" && opEbitda > 0) {
       for (let y = revStart; y < revEnd; y++) {
-        const yrs = y - revStart;
+        const yrs = y - revStart; // 0-based year offset from opening
         revSch[y] = opEbitda * Math.min(1, (yrs+1)/ramp) * Math.pow(1+effEsc, yrs);
       }
     } else if (asset.revType === "Sale") {
       // H1: Unit sale revenue - absorption over N years after construction
       const salePriceSqm = (asset.salePricePerSqm || 0) * rm;
-      // For Sale: if efficiency is 0 or undefined, treat as 100% (sell full GFA).
-      // This prevents silent 0-revenue when user switches Operating → Sale.
-      const saleEff = (asset.efficiency && asset.efficiency > 0) ? asset.efficiency : 100;
+      // Use DEFAULT_EFFICIENCY_BY_REV_TYPE["Sale"] = 100 when efficiency is unset.
+      // This prevents silent 0-revenue when user switches Operating → Sale without re-entering efficiency.
+      const saleEff = (asset.efficiency && asset.efficiency > 0) ? asset.efficiency : DEFAULT_EFFICIENCY_BY_REV_TYPE["Sale"];
       const sellableArea = (asset.gfa || 0) * (saleEff / 100);
       const totalSaleValue = sellableArea * salePriceSqm;
       const absorptionYears = Math.max(1, asset.absorptionYears || 3);
