@@ -333,7 +333,14 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   if ((project.carryPct ?? 30) > 99) {
     console.warn(`[waterfall] carryPct ${project.carryPct}% capped at 99% to prevent division-by-zero in catch-up calculation.`);
   }
-  const lpSplitPct = Math.max(0, Math.min(1, (project.lpProfitSplitPct ?? 70) / 100));
+  // Profit split (tier4): when lpProfitSplitPct is null/undefined, default to equity-proportional
+  // (LP gets the same % of profits as their % of equity ownership).
+  // This ensures the developer-as-investor earns proportional profits on their capital contribution.
+  // When explicitly configured (e.g. 70 for a promote structure), that value is used instead.
+  const _lpSplitRaw = project.lpProfitSplitPct;
+  const lpSplitPct = (_lpSplitRaw != null)
+    ? Math.max(0, Math.min(1, _lpSplitRaw / 100))
+    : lpPct; // equity-proportional default: LP profit share = LP equity share
   const gpSplitPct = 1 - lpSplitPct;
 
   const tier1 = new Array(h).fill(0); // Return of Capital

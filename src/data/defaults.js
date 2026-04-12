@@ -97,7 +97,7 @@ export const defaultProject = () => ({
   prefReturnPct: 0, // HIDDEN: no separate pref tier (Performance Incentive replaces it)
   gpCatchup: false, // HIDDEN: disabled
   carryPct: 0, // HIDDEN: no carry (Performance Incentive replaces it)
-  lpProfitSplitPct: 100, // HIDDEN: all profits to investor first
+  lpProfitSplitPct: null, // null = auto (equity-proportional: LP gets lpPct% of profits)
   prefAllocation: "lpOnly", // HIDDEN: always Investor Only
   catchupMethod: "perYear", // HIDDEN: backward compat
   // حافز حسن الأداء — Performance Incentive (IRR-based, compound)
