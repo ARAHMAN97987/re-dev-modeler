@@ -4058,9 +4058,11 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             );
           })()}
           <div style={{flex:1,minWidth:0}}>
-            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:isMobile?13:15,fontWeight:600,color:"var(--nav-logo-text)",background:"transparent",width:"100%",padding:"4px 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} placeholder="Project Name" />
+            <EditableCell value={project?.name||""} onChange={v=>up({name:v})} style={{border:"none",fontSize:isMobile?13:15,fontWeight:600,color:"var(--nav-logo-text)",background:"transparent",width:"100%",padding:"4px 0",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} placeholder={ar?"اسم المشروع":"Project Name"} />
           </div>
           {project?._shared && <span className={project._permission==="view"?"z-badge z-badge-warning":"z-badge z-badge-info"} style={{fontSize:11,flexShrink:0}}>{project._permission==="view"?(lang==="ar"?"🔒 قراءة":"🔒 View"):(lang==="ar"?"✏️ مشارك":"✏️ Edit")}</span>}
+          {/* Persistent save indicator in main header — visible even when sidebar is closed */}
+          {!isMobile && <span title={saveStatus==="saved"?(lang==="ar"?"تم الحفظ":"Saved"):saveStatus==="error"?(lang==="ar"?"فشل الحفظ":"Save error"):(lang==="ar"?"جاري الحفظ...":"Saving...")} style={{fontSize:10,padding:"2px 6px",borderRadius:3,flexShrink:0,background:saveStatus==="saved"?"transparent":saveStatus==="error"?"#2a0a0a":"#2a2a0a",color:saveStatus==="saved"?"var(--color-success)":saveStatus==="error"?"#f87171":"#fbbf24",transition:"all 0.3s ease",border:saveStatus==="saved"?"none":"0.5px solid currentColor"}}>{saveStatus==="saved"?"✓":saveStatus==="error"?"✕":"…"}</span>}
           {!isMobile && <StatusBadge status={project?.status} onChange={s=>up({status:s})} />}
           {/* Undo - desktop only */}
           {!isMobile && <button onClick={undo} disabled={undoStack.current.length===0} title="Ctrl+Z" aria-label={lang==="ar"?"تراجع (Ctrl+Z)":"Undo (Ctrl+Z)"} style={{...btnS,background:"transparent",color:undoStack.current.length>0?"var(--nav-btn-text)":"var(--nav-tab-border)",padding:"5px 8px",fontSize:14,flexShrink:0,border:"none",cursor:undoStack.current.length>0?"pointer":"default"}}>↩</button>}

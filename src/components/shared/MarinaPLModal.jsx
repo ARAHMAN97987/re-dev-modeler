@@ -9,6 +9,16 @@ import { calcMarinaEBITDA } from '../../engine/hospitality.js';
 import { fmt, fmtPct } from '../../utils/format.js';
 import { btnS, btnPrim, btnSm, sideInputStyle } from './styles.js';
 
+// Module-level numeric input — must be outside MarinaPLModal to satisfy React hooks rules.
+function MarinaNumIn({value, onChange}) {
+  const [loc, setLoc] = useState(String(value ?? ""));
+  const ref = useRef(null);
+  useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
+  return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"var(--surface-card)",color:"var(--text-primary)",border:"0.5px solid var(--border-default)",textAlign:"right",width:"100%"}} />;
+}
+
+const MarinaRow = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"var(--text-secondary)"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
+
 export default function MarinaPLModal({ data, onSave, onClose, t, lang }) {
   const ar = lang === "ar";
   const [m, setM] = useState(data || defaultMarinaPL());
@@ -21,13 +31,8 @@ export default function MarinaPLModal({ data, onSave, onClose, t, lang }) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const Row = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"var(--text-secondary)"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
-  const NumIn = ({value, onChange}) => {
-    const [loc, setLoc] = useState(String(value ?? ""));
-    const ref = useRef(null);
-    useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
-    return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"var(--surface-card)",color:"var(--text-primary)",border:"0.5px solid var(--border-default)",textAlign:"right",width:"100%"}} />;
-  };
+  const Row = MarinaRow;
+  const NumIn = MarinaNumIn;
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={onClose}>
@@ -50,11 +55,11 @@ export default function MarinaPLModal({ data, onSave, onClose, t, lang }) {
 
           <div style={{marginTop:16,padding:14,background:"var(--surface-table-header)",borderRadius:8}}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:12}}>
-              <span style={{color:"var(--text-secondary)"}}>Berthing Rev</span><span style={{textAlign:"right"}}>{fmt(calc.berthingRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>Fuel Rev</span><span style={{textAlign:"right"}}>{fmt(calc.fuelRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>Other Rev</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
-              <span style={{fontWeight:600}}>Total Revenue</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
-              <span style={{color:"#ef4444"}}>Total OPEX</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
+              <span style={{color:"var(--text-secondary)"}}>{t.berthingRevLabel||"Berthing Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.berthingRev)}</span>
+              <span style={{color:"var(--text-secondary)"}}>{t.fuelRevLabel||"Fuel Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.fuelRev)}</span>
+              <span style={{color:"var(--text-secondary)"}}>{t.otherRevLabel||"Other Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
+              <span style={{fontWeight:600}}>{t.totalRevenueLabel||"Total Revenue"}</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
+              <span style={{color:"#ef4444"}}>{t.totalOpexLabel||"Total OPEX"}</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
               <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"#16a34a"}}>{fmt(calc.ebitda)}</span>
               <span style={{color:"var(--text-secondary)"}}>{t.ebitdaMargin}</span><span style={{textAlign:"right"}}>{fmtPct(calc.margin*100)}</span>
             </div>

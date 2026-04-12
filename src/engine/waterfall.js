@@ -17,6 +17,15 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // Waterfall only applies to fund and jv modes (GP/LP distribution)
   const h = project.horizon || 50;
   const sy = project.startYear || 2026;
+
+  // Fund life vs horizon validation: for income funds, the fund life should match (or exceed)
+  // the project horizon so that income distributions are fully captured.
+  // If fundLife < horizon, distributions in the tail years [fundLife..horizon] are silently lost.
+  const isIncomeFundMode = project.finMode === "incomeFund";
+  const fundLife = project.fundLife || 0; // explicit fund life (0 = not set)
+  if (isIncomeFundMode && fundLife > 0 && fundLife < h) {
+    console.warn(`[waterfall] incomeFund: fundLife=${fundLife} < project.horizon=${h}. Distributions in years ${fundLife}–${h-1} may be excluded from LP/GP cash flows. Consider increasing fundLife to match the horizon.`);
+  }
   const c = projectResults.consolidated;
   const f = financing;
 
@@ -316,7 +325,14 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
   // 4-tier waterfall (skipped for income fund — uses simplified path)
   const prefRate = isIncomeFundDist ? 0 : Math.max(0, Math.min(0.5, (project.prefReturnPct ?? 15) / 100));
-  const carryPct = Math.min(0.9999, Math.max(0, (project.carryPct ?? 30) / 100));
+  // carryPct cap: hard cap at 99% (0.99) to prevent numerical explosion in catch-up formula.
+  // At 100% carry: tier3 = tier2 * 1 / (1 - 1) = Infinity → division-by-zero.
+  // At 99%: tier3 = tier2 * 0.99 / 0.01 = 99× tier2 (economically extreme but finite).
+  // ZAN market convention: carry > 30% is unusual; 99% cap is a safety rail.
+  const carryPct = Math.min(0.99, Math.max(0, (project.carryPct ?? 30) / 100));
+  if ((project.carryPct ?? 30) > 99) {
+    console.warn(`[waterfall] carryPct ${project.carryPct}% capped at 99% to prevent division-by-zero in catch-up calculation.`);
+  }
   const lpSplitPct = Math.max(0, Math.min(1, (project.lpProfitSplitPct ?? 70) / 100));
   const gpSplitPct = 1 - lpSplitPct;
 

@@ -290,6 +290,12 @@ export function computeProjectCashFlows(project) {
     const manualAlloc = project.landRentManualAlloc; // e.g. {"Phase 1":60,"Phase 2":40}
     const useManual = manualAlloc && typeof manualAlloc === 'object' && Object.keys(manualAlloc).length > 0;
     const manualSum = useManual ? Object.values(manualAlloc).reduce((s,v) => s + (Number(v)||0), 0) : 0;
+    // Normalization warning: if manual allocations don't sum to 100%, phase-level land rent
+    // rows will be under/over-stated. The CONSOLIDATED schedule always uses the full landSch
+    // (see "FIX: Consolidated land rent" comment below), but phase IRRs will be distorted.
+    if (useManual && Math.abs(manualSum - 100) > 0.5) {
+      console.warn(`[cashflow] landRentManualAlloc sums to ${manualSum.toFixed(1)}% (expected 100%). Phase-level land rent allocations will not match the consolidated schedule. Adjust allocations to sum to 100%.`);
+    }
 
     for (let y = 0; y < term; y++) {
       if (y < rentStartYear) continue;

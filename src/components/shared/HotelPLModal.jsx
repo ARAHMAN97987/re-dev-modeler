@@ -9,6 +9,18 @@ import { calcHotelEBITDA } from '../../engine/hospitality.js';
 import { fmt, fmtPct } from '../../utils/format.js';
 import { btnS, btnPrim, btnSm, sideInputStyle } from './styles.js';
 
+// Module-level numeric input — must be outside HotelPLModal to satisfy React hooks rules.
+// Defining a component with useState/useEffect inside another function component's body
+// causes hook identity instability across re-renders.
+function HotelNumIn({value, onChange}) {
+  const [loc, setLoc] = useState(String(value ?? ""));
+  const ref = useRef(null);
+  useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
+  return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"var(--surface-card)",color:"var(--text-primary)",border:"0.5px solid var(--border-default)",textAlign:"right",width:"100%"}} />;
+}
+
+const HotelRow = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"var(--text-secondary)"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
+
 export default function HotelPLModal({ data, onSave, onClose, t, lang }) {
   const ar = lang === "ar";
   const [h, setH] = useState(data || defaultHotelPL());
@@ -23,13 +35,8 @@ export default function HotelPLModal({ data, onSave, onClose, t, lang }) {
 
   const applyPreset = (key) => { const p = HOTEL_PRESETS[key]; if (p) setH(prev => ({...prev, ...p})); };
 
-  const Row = ({label, children}) => <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontSize:12,color:"var(--text-secondary)"}}>{label}</span><div style={{width:120}}>{children}</div></div>;
-  const NumIn = ({value, onChange}) => {
-    const [loc, setLoc] = useState(String(value ?? ""));
-    const ref = useRef(null);
-    useEffect(() => { if (document.activeElement !== ref.current) setLoc(String(value ?? "")); }, [value]);
-    return <input ref={ref} value={loc} onChange={e=>setLoc(e.target.value)} onBlur={()=>{const n=parseFloat(loc);onChange(isNaN(n)?0:n);}} style={{...sideInputStyle,background:"var(--surface-card)",color:"var(--text-primary)",border:"0.5px solid var(--border-default)",textAlign:"right",width:"100%"}} />;
-  };
+  const Row = HotelRow;
+  const NumIn = HotelNumIn;
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={onClose}>
@@ -68,15 +75,15 @@ export default function HotelPLModal({ data, onSave, onClose, t, lang }) {
           <div style={{marginTop:16,padding:14,background:"var(--surface-table-header)",borderRadius:8}}>
             <div style={{fontSize:11,fontWeight:600,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{t.stabRevenue}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:12}}>
-              <span style={{color:"var(--text-secondary)"}}>Rooms Rev</span><span style={{textAlign:"right"}}>{fmt(calc.roomsRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>F&B Rev</span><span style={{textAlign:"right"}}>{fmt(calc.fbRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>MICE Rev</span><span style={{textAlign:"right"}}>{fmt(calc.miceRev)}</span>
-              <span style={{color:"var(--text-secondary)"}}>Other Rev</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
-              <span style={{fontWeight:600}}>Total Revenue</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
+              <span style={{color:"var(--text-secondary)"}}>{t.roomsRev||"Rooms Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.roomsRev)}</span>
+              <span style={{color:"var(--text-secondary)"}}>{t.fbRev||"F&B Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.fbRev)}</span>
+              <span style={{color:"var(--text-secondary)"}}>{t.miceRev||"MICE Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.miceRev)}</span>
+              <span style={{color:"var(--text-secondary)"}}>{t.otherRevLabel||"Other Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
+              <span style={{fontWeight:600}}>{t.totalRevenueLabel||"Total Revenue"}</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
             </div>
             <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:12}}>
-                <span style={{color:"#ef4444"}}>Total OPEX</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
+                <span style={{color:"#ef4444"}}>{t.totalOpexLabel||"Total OPEX"}</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
                 <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"#16a34a"}}>{fmt(calc.ebitda)}</span>
                 <span style={{color:"var(--text-secondary)"}}>{t.ebitdaMargin}</span><span style={{textAlign:"right"}}>{fmtPct(calc.margin*100)}</span>
               </div>

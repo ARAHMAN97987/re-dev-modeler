@@ -120,7 +120,7 @@ export function ControlPanel({ project, up, t, lang, results, globalExpand, Educ
   return (<>
     {/* ── 1. GENERAL ── */}
     <Sec title={t.general} def={false} globalExpand={globalExpand} filled={!!(project.location && project.startYear)} summary={project.location ? `${project.startYear} | ${project.horizon}yr` : ""}>
-      <Fld label={t.location} tip="موقع المشروع. للعرض والتقارير فقط\nProject location. For display and reports only"><SidebarInput value={project.location} onChange={v => up({ location: v })} placeholder="e.g. Jazan, Saudi Arabia" /></Fld>
+      <Fld label={t.location} tip="موقع المشروع. للعرض والتقارير فقط\nProject location. For display and reports only"><SidebarInput value={project.location} onChange={v => up({ location: v })} placeholder={ar ? "مثال: جازان، المملكة العربية السعودية" : "e.g. Jazan, Saudi Arabia"} /></Fld>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <Fld label={t.startYear} tip="سنة بداية المشروع. تُحدد توقيت CAPEX والإيرادات\nProject start year. Sets the timing for CAPEX and revenue"><SidebarInput type="number" value={project.startYear} onChange={v => up({ startYear: v })} /></Fld>
         <Fld label={t.horizon} tip="أفق النموذج بالسنوات (5-99). يحدد مدى حساب التدفقات النقدية\nModel horizon in years (5-99). Determines cash flow projection length" error={project.horizon < 1 ? (lang === "ar" ? "المدة يجب أن تكون 1 على الأقل" : "Horizon must be at least 1") : project.horizon > 99 ? (lang === "ar" ? "الحد الأقصى 99 سنة" : "Max 99 years") : null}><SidebarInput type="number" value={project.horizon} onChange={v => up({ horizon: v })} /></Fld>
