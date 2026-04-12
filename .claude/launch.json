@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "re-dev-modeler",
+      "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5180"],
-      "port": 5180
+      "runtimeArgs": ["run", "dev"],
+      "port": 5176
     }
   ]
 }

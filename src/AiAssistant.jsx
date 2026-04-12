@@ -324,6 +324,75 @@ IMPORTANT JSON ACTIONS:
   \`\`\`
 - No "_action" → full/initial project setup (replace all fields provided)
 
+### INFRASTRUCTURE DEVELOPMENT FUND TEMPLATE
+
+When the user describes a land/infrastructure development fund (keywords: صندوق تطوير بنية تحتية, تطوير أراضي, بيع قطع أراضي مخدومة, تقسيم أراضي, land subdivision, infrastructure fund, serviced plots), use this pattern:
+
+**Structure:** Land owner (GP) contributes usufruct valued at X; investors (LP) contribute cash for infrastructure CAPEX.
+**Revenue:** Sell serviced plots via revType: "Sale" (NOT terminal exit).
+**Exit:** Use exitStrategy: "hold" (revenue comes from Sale asset absorption, NOT cap rate exit).
+
+**CRITICAL FIELD MAPPING:**
+- landType: "partner" + landValuation: [land value SAR]
+- partnerEquityPct: [GP ownership %] (drives GP/LP equity split)
+- finMode: "fund" + vehicleType: "fund"
+- exitStrategy: "hold" (NOT "sale" — would double-count revenue!)
+- prefReturnPct: 0, gpCatchup: false, carryPct: 0 (for flat profit split)
+- lpProfitSplitPct: [LP% — e.g. 25 for 75/25 GP/LP split]
+- performanceIncentive: false
+- debtAllowed: false (if no debt)
+- softCostPct: 0, contingencyPct: 0 (infra cost is all-in)
+- All fees: 0 (or set actual fund fees)
+- horizon: 10 (short fund life)
+
+**Assets pattern — TWO assets:**
+1. Infrastructure (CAPEX-only): revType: "Lease", gfa: [land area], costPerSqm: [infra cost / land area], efficiency: 0, leaseRate: 0
+2. Plot Sales (revenue-only): revType: "Sale", gfa: [land area], costPerSqm: 0, efficiency: [net developable %], salePricePerSqm: [target price], absorptionYears: [1-3]
+
+**Infrastructure cost benchmarks (SAR/m²):**
+- Roads + utilities only: 250-400
+- Roads + utilities + grading: 350-600
+- Full infrastructure (roads + utilities + grading + landscaping + parking): 500-800
+- Partial coverage (~35% of land): divide total cost by TOTAL land area
+
+**Serviced plot sale price benchmarks (SAR/m² net developable):**
+- Secondary cities (Jazan, Tabuk): 800-1,500
+- Riyadh suburbs: 1,500-3,000
+- Jeddah waterfront: 2,000-4,000
+- Prime Riyadh: 3,000-6,000
+
+**Net developable ratio:** Typically 65-75% after roads, setbacks, and public spaces.
+
+**Example JSON for infrastructure fund:**
+\`\`\`json
+{
+  "name": "صندوق تطوير البنية التحتية",
+  "landType": "partner",
+  "landValuation": 150000000,
+  "partnerEquityPct": 75,
+  "finMode": "fund",
+  "vehicleType": "fund",
+  "exitStrategy": "hold",
+  "horizon": 10,
+  "softCostPct": 0,
+  "contingencyPct": 0,
+  "prefReturnPct": 0,
+  "gpCatchup": false,
+  "carryPct": 0,
+  "lpProfitSplitPct": 25,
+  "performanceIncentive": false,
+  "debtAllowed": false,
+  "subscriptionFeePct": 0,
+  "annualMgmtFeePct": 0,
+  "developerFeePct": 0,
+  "phases": [{ "name": "Phase 1", "startYearOffset": 0, "footprint": 302000 }],
+  "assets": [
+    { "name": "البنية التحتية", "phase": "Phase 1", "category": "Infrastructure", "revType": "Lease", "gfa": 302000, "costPerSqm": 166, "efficiency": 0, "leaseRate": 0, "constrDuration": 24 },
+    { "name": "بيع الأراضي المخدومة", "phase": "Phase 1", "category": "Retail", "revType": "Sale", "gfa": 302000, "costPerSqm": 0, "efficiency": 70, "salePricePerSqm": 1420, "absorptionYears": 2, "constrDuration": 24 }
+  ]
+}
+\`\`\`
+
 CRITICAL RULES FOR SUGGESTIONS:
 - When suggesting a fix for an asset, use "_action": "update_assets" with ONLY the changed fields.
 - NEVER replace all assets when fixing one asset. NEVER send a full assets array for a single fix.
