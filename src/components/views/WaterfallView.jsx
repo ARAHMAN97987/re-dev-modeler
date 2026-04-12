@@ -941,8 +941,38 @@ function ExitAnalysisPanel({ project, results, financing, waterfall, lang, globa
   const exitYrIdx = exitYearAbs > 0 ? exitYearAbs - sy : 0;
   const exitProc = f.exitProceeds ? f.exitProceeds.reduce((a,b)=>a+b,0) : 0;
 
-  // If hold and no exit proceeds, still show but with hold info
+  // If hold and no exit proceeds, check for Sale-based exit first
   if (isHold && exitProc <= 0) {
+    const saleAssets = (project.assets||[]).filter(a=>a.revType==="Sale");
+    const saleRev = results?.assetSchedules?.filter(a=>a.revType==="Sale").reduce((s,a)=>s+(a.totalRevenue||0),0)||0;
+    if (saleAssets.length > 0 && saleRev > 0) {
+      // Show Sale-based exit info instead of "Hold for Income"
+      return (
+        <div style={{background:"#fff",borderRadius:10,border:"1px solid #16a34a22",marginBottom:16,overflow:"hidden"}}>
+          <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#16a34a08"}}>
+            <span style={{fontSize:14}}>🏷️</span>
+            <span style={{fontSize:13,fontWeight:700,color:"#1a1d23",flex:1}}>{ar?"التخارج عبر بيع الأصول":"Exit via Asset Sales"}</span>
+            <span style={{fontSize:12,fontWeight:700,color:"#16a34a",background:"#16a34a18",padding:"3px 10px",borderRadius:10}}>{fmtM(saleRev)}</span>
+          </div>
+          <div style={{padding:"12px 16px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"6px 12px",fontSize:11}}>
+              {saleAssets.map((a,i)=>{
+                const rev = results?.assetSchedules?.find(s=>s.id===a.id||s.name===a.name)?.totalRevenue||0;
+                return <React.Fragment key={i}>
+                  <span style={{color:"#6b7080"}}>{a.name||`Asset ${i+1}`}</span>
+                  <span style={{fontWeight:600,color:"#15803d",textAlign:"right"}}>{fmtM(rev)}</span>
+                </React.Fragment>;
+              })}
+              <span style={{fontWeight:700,borderTop:"1px solid #e5e7eb",paddingTop:6}}>{ar?"إجمالي البيع":"Total Sales"}</span>
+              <span style={{fontWeight:700,color:"#15803d",textAlign:"right",borderTop:"1px solid #e5e7eb",paddingTop:6}}>{fmtM(saleRev)}</span>
+            </div>
+            <div style={{fontSize:10,color:"#6b7080",marginTop:8,padding:"6px 10px",background:"#f9fafb",borderRadius:6}}>
+              {ar?"💡 التخارج يتم عبر بيع القطع/الأصول خلال فترة الاستيعاب. العوائد توزّع تلقائياً من خلال الشلال.":"💡 Exit via plot/asset sales during absorption period. Proceeds automatically distributed through the waterfall."}
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div style={{background:"#fff",borderRadius:10,border:"1px solid #f59e0b22",marginBottom:16,overflow:"hidden"}}>
         <div style={{padding:"10px 16px",display:"flex",alignItems:"center",gap:10,background:"#f59e0b08"}}>

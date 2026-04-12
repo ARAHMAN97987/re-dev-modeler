@@ -558,6 +558,33 @@ When to use:
             <Drp lang={lang} value={cfg.exitStrategy||"sale"} onChange={v=>upCfg({exitStrategy:v})} options={[{value:"sale",en:"Sale - Multiple (default)",ar:"بيع - مضاعف (تلقائي)"},{value:"caprate",en:"Sale - Cap Rate",ar:"بيع - رسملة"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
           </FL>
           <div style={{gridColumn:"1/-1",marginTop:-6,marginBottom:4}}><HelpLink contentKey="exitStrategy" lang={lang} onOpen={setEduModal} /></div>
+          {/* Sale-based exit info: show when "hold" but project has Sale assets */}
+          {!notHold && (()=>{
+            const saleAssets = (project.assets||[]).filter(a=>a.revType==="Sale");
+            const saleRev = results?.assetSchedules?.filter(a=>a.revType==="Sale").reduce((s,a)=>s+(a.totalRevenue||0),0)||0;
+            if (saleAssets.length > 0 && saleRev > 0) {
+              return <div style={{gridColumn:"1/-1",padding:"12px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,marginBottom:8}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#15803d",marginBottom:6}}>{ar?"📊 تخارج عبر بيع الأصول":"📊 Exit via Asset Sales"}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11}}>
+                  <div><span style={{color:"#6b7280"}}>{ar?"إجمالي البيع":"Total Sales"}</span></div>
+                  <div style={{fontWeight:700,color:"#15803d",textAlign:"right"}}>{fmtM(saleRev)}</div>
+                  {saleAssets.map((a,i)=>{
+                    const rev = results?.assetSchedules?.find(s=>s.id===a.id||s.name===a.name)?.totalRevenue||0;
+                    return [
+                      <div key={`n${i}`} style={{color:"#6b7280",paddingInlineStart:8}}>└ {a.name||`Asset ${i+1}`}</div>,
+                      <div key={`v${i}`} style={{textAlign:"right",fontWeight:500}}>{fmtM(rev)}</div>
+                    ];
+                  })}
+                  <div><span style={{color:"#6b7280"}}>{ar?"آلية التخارج":"Exit Mechanism"}</span></div>
+                  <div style={{textAlign:"right",fontWeight:600,color:"#0369a1"}}>{ar?"استيعاب على":"Absorption over"} {saleAssets[0]?.absorptionYears||2} {ar?"سنوات":"years"}</div>
+                </div>
+                <div style={{fontSize:10,color:"#6b7280",marginTop:6,borderTop:"1px solid #d1fae5",paddingTop:6}}>
+                  {ar?"💡 الإيرادات تتدفق عبر بيع القطع/الأصول وتوزّع من خلال الشلال تلقائياً. لا حاجة لتحديد سنة تخارج منفصلة.":"💡 Revenue flows through asset/plot sales and is distributed via the waterfall automatically. No separate exit year needed."}
+                </div>
+              </div>;
+            }
+            return null;
+          })()}
           {notHold&&<>
             <div style={g2}>
               <div>

@@ -875,11 +875,27 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             {pf.landCapValue>0 && <KR l={ar?"أرض":"Land"} v={fmtM(pf.landCapValue)} />}
             <KR l={ar?"الإجمالي":"Total"} v={fmtM(pf.devCostInclLand)} bold />
             <SecHd text={ar?"التخارج":"EXIT"} />
-            <KR l={ar?"الاستراتيجية":"Strategy"} v={cfg.exitStrategy==="hold"?(ar?"احتفاظ":"Hold"):cfg.exitStrategy==="caprate"?"Cap Rate":(ar?"بيع":"Sale")} />
-            <KR l={ar?"السنة":"Year"} v={pf.exitYear?`${pf.exitYear}`:"—"} />
-            <KR l={ar?"المضاعف":"Multiple"} v={exitMult>0?exitMult+"x":"—"} />
-            <KR l={ar?"العائد":"Proceeds"} v={exitProc>0?fmtM(exitProc):"—"} c="#16a34a" />
-            <KR l={ar?"تكلفة التخارج":"Exit Cost"} v={exitCostPct>0?exitCostPct+"%":"—"} />
+            {(()=>{
+              // Detect Sale-based exit: if project has Sale assets, show their total revenue as exit
+              const saleAssets = (project.assets||[]).filter(a=>a.revType==="Sale");
+              const saleRevenue = results?.assetSchedules?.filter(a=>a.revType==="Sale").reduce((s,a)=>s+(a.totalRevenue||0),0) || 0;
+              const hasSaleExit = saleAssets.length > 0 && saleRevenue > 0;
+              if (hasSaleExit) {
+                return <>
+                  <KR l={ar?"الآلية":"Mechanism"} v={ar?"بيع أصول/قطع":"Asset/Plot Sales"} c="#16a34a" />
+                  <KR l={ar?"إجمالي البيع":"Total Sales"} v={fmtM(saleRevenue)} c="#16a34a" bold />
+                  <KR l={ar?"عدد الأصول":"Assets"} v={`${saleAssets.length} ${ar?"أصل":"assets"}`} />
+                  {saleAssets.map((a,i)=><KR key={i} l={a.name||`Asset ${i+1}`} v={fmtM(results?.assetSchedules?.find(s=>s.id===a.id||s.name===a.name)?.totalRevenue||0)} />)}
+                </>;
+              }
+              return <>
+                <KR l={ar?"الاستراتيجية":"Strategy"} v={cfg.exitStrategy==="hold"?(ar?"احتفاظ":"Hold"):cfg.exitStrategy==="caprate"?"Cap Rate":(ar?"بيع":"Sale")} />
+                <KR l={ar?"السنة":"Year"} v={pf.exitYear?`${pf.exitYear}`:"—"} />
+                <KR l={ar?"المضاعف":"Multiple"} v={exitMult>0?exitMult+"x":"—"} />
+                <KR l={ar?"العائد":"Proceeds"} v={exitProc>0?fmtM(exitProc):"—"} c="#16a34a" />
+                <KR l={ar?"تكلفة التخارج":"Exit Cost"} v={exitCostPct>0?exitCostPct+"%":"—"} />
+              </>;
+            })()}
             <SecHd text={ar?"امتثال بنكي":"BANK COMPLIANCE"} />
             <KR l="Min DSCR ≥ 1.25x" v={dscrMin>=1.25?"✅":"❌"} c={getMetricColor("DSCR",dscrMin)} bold />
             <KR l="Avg DSCR ≥ 1.50x" v={dscrAvg>=1.5?"✅":"❌"} c={dscrAvg>=1.5?"#16a34a":"#ef4444"} bold />
