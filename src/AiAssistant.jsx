@@ -332,17 +332,21 @@ When the user describes a land/infrastructure development fund (keywords: صند
 **Revenue:** Sell serviced plots via revType: "Sale" (NOT terminal exit).
 **Exit:** Use exitStrategy: "hold" (revenue comes from Sale asset absorption, NOT cap rate exit).
 
-**CRITICAL FIELD MAPPING:**
+**⚠️ CRITICAL — YOU MUST SET ALL THESE FIELDS (do NOT use defaults):**
 - landType: "partner" + landValuation: [land value SAR]
 - partnerEquityPct: [GP ownership %] (drives GP/LP equity split)
 - finMode: "fund" + vehicleType: "fund"
 - exitStrategy: "hold" (NOT "sale" — would double-count revenue!)
-- prefReturnPct: 0, gpCatchup: false, carryPct: 0 (for flat profit split)
-- lpProfitSplitPct: [LP% — e.g. 25 for 75/25 GP/LP split]
-- performanceIncentive: false
-- debtAllowed: false (if no debt)
-- softCostPct: 0, contingencyPct: 0 (infra cost is all-in)
-- All fees: 0 (or set actual fund fees)
+- lpProfitSplitPct: [LP% — e.g. 25 for 75/25 GP/LP split] ← THIS IS THE PROFIT SPLIT
+- prefReturnPct: 0 ← MUST BE 0 for flat profit split (NOT the default 15!)
+- gpCatchup: false ← MUST disable
+- carryPct: 0 ← MUST BE 0 (NOT the default 30!)
+- performanceIncentive: false ← MUST disable (NOT the default true!)
+- hurdleIRR: 0, incentivePct: 0
+- debtAllowed: false, maxLtvPct: 0 ← NO DEBT for this fund type
+- softCostPct: 0, contingencyPct: 0 (infra cost is all-in per the benchmarks)
+- ALL FEES MUST BE 0: subscriptionFeePct: 0, annualMgmtFeePct: 0, developerFeePct: 0, structuringFeePct: 0, custodyFeeAnnual: 0, auditorFeeAnnual: 0, operatorFeePct: 0, preEstablishmentFee: 0, spvFee: 0, miscExpensePct: 0, upfrontFeePct: 0
+- gpInvestDevFee: false, gpCashInvest: false
 - horizon: 10 (short fund life)
 
 **Assets pattern — TWO assets:**
@@ -363,17 +367,21 @@ When the user describes a land/infrastructure development fund (keywords: صند
 
 **Net developable ratio:** Typically 65-75% after roads, setbacks, and public spaces.
 
-**Example JSON for infrastructure fund:**
+**Example JSON for infrastructure fund (EVERY field must be set explicitly):**
 \`\`\`json
 {
   "name": "صندوق تطوير البنية التحتية",
+  "location": "جازان",
+  "startYear": 2026,
+  "horizon": 10,
+  "currency": "SAR",
   "landType": "partner",
   "landValuation": 150000000,
+  "landArea": 302000,
   "partnerEquityPct": 75,
   "finMode": "fund",
   "vehicleType": "fund",
   "exitStrategy": "hold",
-  "horizon": 10,
   "softCostPct": 0,
   "contingencyPct": 0,
   "prefReturnPct": 0,
@@ -381,14 +389,27 @@ When the user describes a land/infrastructure development fund (keywords: صند
   "carryPct": 0,
   "lpProfitSplitPct": 25,
   "performanceIncentive": false,
+  "hurdleIRR": 0,
+  "incentivePct": 0,
   "debtAllowed": false,
+  "maxLtvPct": 0,
   "subscriptionFeePct": 0,
   "annualMgmtFeePct": 0,
   "developerFeePct": 0,
+  "structuringFeePct": 0,
+  "custodyFeeAnnual": 0,
+  "auditorFeeAnnual": 0,
+  "operatorFeePct": 0,
+  "preEstablishmentFee": 0,
+  "spvFee": 0,
+  "miscExpensePct": 0,
+  "upfrontFeePct": 0,
+  "gpInvestDevFee": false,
+  "gpCashInvest": false,
   "phases": [{ "name": "Phase 1", "startYearOffset": 0, "footprint": 302000 }],
   "assets": [
-    { "name": "البنية التحتية", "phase": "Phase 1", "category": "Infrastructure", "revType": "Lease", "gfa": 302000, "costPerSqm": 166, "efficiency": 0, "leaseRate": 0, "constrDuration": 24 },
-    { "name": "بيع الأراضي المخدومة", "phase": "Phase 1", "category": "Retail", "revType": "Sale", "gfa": 302000, "costPerSqm": 0, "efficiency": 70, "salePricePerSqm": 1420, "absorptionYears": 2, "constrDuration": 24 }
+    { "name": "البنية التحتية", "phase": "Phase 1", "category": "Infrastructure", "revType": "Lease", "gfa": 302000, "costPerSqm": 166, "efficiency": 0, "leaseRate": 0, "constrStart": 0, "constrDuration": 24, "stabilizedOcc": 0, "escalation": 0, "rampUpYears": 1 },
+    { "name": "بيع الأراضي المخدومة", "phase": "Phase 1", "category": "Retail", "revType": "Sale", "gfa": 302000, "costPerSqm": 0, "efficiency": 70, "salePricePerSqm": 1420, "absorptionYears": 2, "preSalePct": 0, "commissionPct": 0, "constrStart": 0, "constrDuration": 24, "stabilizedOcc": 100, "escalation": 0, "rampUpYears": 1 }
   ]
 }
 \`\`\`
