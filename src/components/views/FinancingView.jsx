@@ -436,7 +436,12 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             )}
             {showDebtFields && <>
               <div style={g2}>
-                {cfg.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip="نسبة القرض إلى قيمة المشروع. في السعودية 50-70%\nLoan-to-Value ratio. Saudi: 50-70%" hint={dh("maxLtvPct")} error={cfg.maxLtvPct>100?(ar?"الحد الأقصى 100%":"Max 100%"):cfg.maxLtvPct<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><Inp type="number" value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} /></FL>}
+                {cfg.finMode!=="bank100"&&<FL label={ar?"نسبة التمويل %":"LTV %"} tip={ar?"نسبة القرض إلى قيمة المشروع. في السعودية 50-70%.\nأساس LTV: شامل الأرض = القرض كنسبة من التكلفة الكلية.\nبدون الأرض = القرض كنسبة من تكلفة البناء فقط (مناسب لصناديق الشراكة حيث الأرض مساهمة عينية).":"LTV ratio. Basis: Incl Land = % of total cost. Excl Land = % of construction only (for partner/fund where land is in-kind equity)."} hint={dh("maxLtvPct")} error={cfg.maxLtvPct>100?(ar?"الحد الأقصى 100%":"Max 100%"):cfg.maxLtvPct<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <div style={{flex:1}}><Inp type="number" value={cfg.maxLtvPct} onChange={v=>upCfg({maxLtvPct:v})} /></div>
+                    {project.landType==="partner"&&<select value={cfg.ltvBasis||"inclLand"} onChange={e=>upCfg({ltvBasis:e.target.value})} style={{padding:"7px 6px",border:"1px solid #e5e7ec",borderRadius:6,fontSize:11,background:"#fff",minWidth:90}} title={ar?"أساس حساب LTV":"LTV calculation basis"}><option value="inclLand">{ar?"شامل الأرض":"Incl Land"}</option><option value="exclLand">{ar?"بدون الأرض":"Excl Land"}</option></select>}
+                  </div>
+                </FL>}
                 <FL label={ar?"معدل %":"Rate %"} tip="معدل تكلفة التمويل السنوي. في السعودية 5-8%\nAnnual financing cost rate. Saudi: 5-8%" hint={dh("financeRate")} error={cfg.financeRate>30?(ar?"الحد الأقصى 30%":"Max 30%"):cfg.financeRate<0?(ar?"لا يمكن أن يكون سالباً":"Cannot be negative"):null}><Inp type="number" value={cfg.financeRate} onChange={v=>upCfg({financeRate:v})} /></FL>
               </div>
               <div style={g3}>

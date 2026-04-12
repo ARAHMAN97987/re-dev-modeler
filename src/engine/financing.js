@@ -220,7 +220,11 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     tenor = project.loanTenor ?? 7;
     grace = project.debtGrace ?? 3;
     repayYears = Math.max(0, tenor - grace);
-    maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? devCostInclLand * (project.maxLtvPct ?? 70) / 100 : 0);
+    // LTV basis: "inclLand" (default, legacy) = % of total cost incl. land valuation
+    //            "exclLand" = % of construction cost only (correct for partner/fund structures
+    //                         where land is in-kind equity, not financeable by bank)
+    const ltvBase = project.ltvBasis === "exclLand" ? buildCostOnly : devCostInclLand;
+    maxDebt = isBank100 ? devCostInclLand : (project.debtAllowed ? ltvBase * (project.maxLtvPct ?? 70) / 100 : 0);
     upfrontFeePct = (project.upfrontFeePct || 0) / 100;
   }
 
