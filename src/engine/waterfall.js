@@ -339,14 +339,17 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   if ((project.carryPct ?? 30) > 99) {
     console.warn(`[waterfall] carryPct ${project.carryPct}% capped at 99% to prevent division-by-zero in catch-up calculation.`);
   }
-  // Profit split (tier4): when lpProfitSplitPct is null/undefined, default to equity-proportional
-  // (LP gets the same % of profits as their % of equity ownership).
-  // This ensures the developer-as-investor earns proportional profits on their capital contribution.
-  // When explicitly configured (e.g. 70 for a promote structure), that value is used instead.
+  // Profit split (tier4):
+  // For partner-land funds: ALWAYS equity-proportional (LP=lpPct%, GP=gpPct%).
+  //   The developer contributed land as equity and MUST receive proportional profits.
+  //   Their additional economics come from fees + performance incentive.
+  // For other fund modes: use explicit lpProfitSplitPct if configured (legacy promote structures),
+  //   otherwise default to equity-proportional.
+  const isPartnerLand = project.landType === "partner";
   const _lpSplitRaw = project.lpProfitSplitPct;
-  const lpSplitPct = (_lpSplitRaw != null)
-    ? Math.max(0, Math.min(1, _lpSplitRaw / 100))
-    : lpPct; // equity-proportional default: LP profit share = LP equity share
+  const lpSplitPct = isPartnerLand
+    ? lpPct  // Partner-land: ALWAYS equity-proportional (ignore any saved lpProfitSplitPct)
+    : (_lpSplitRaw != null ? Math.max(0, Math.min(1, _lpSplitRaw / 100)) : lpPct);
   const gpSplitPct = 1 - lpSplitPct;
 
   const tier1 = new Array(h).fill(0); // Return of Capital
