@@ -36,14 +36,18 @@ Return ONLY valid JSON with these sections (each is markdown text):
   "conclusion": "Final verdict: invest or not, key conditions, next steps"
 }
 
-IMPORTANT: Return ONLY valid JSON. No markdown fences. No preamble. No trailing text.`;
+IMPORTANT RULES:
+1. Return ONLY valid JSON. No markdown fences. No preamble. No trailing text.
+2. Keep TOTAL output under 3000 words. Be concise — use bullet points and tables.
+3. Each section should be 100-200 words max. Do NOT write long paragraphs.
+4. Always close the JSON properly with }. Never leave it open.`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6', // Sonnet for speed — report needs fast first token
-        max_tokens: 8192,
+        max_tokens: 4096, // Reduced from 8192 — prevents truncation/timeout at ~2000 words
         stream: true,
         system: systemPrompt,
         messages: [{ role: 'user', content: `Generate report:\n${JSON.stringify(reportData)}` }],
