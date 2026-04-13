@@ -190,3 +190,263 @@ Also exports `hasSaleOnlyAssets` in the return object.
 - `zan_benchmark.cjs`: **160/160 ✅**
 - `audit_round5_fees.cjs`: **18/18 ✅**
 - `audit_round6_dscr.cjs`: **8/8 ✅**
+
+---
+
+## Round 7: Multi-Phase Timing and Land Rent Allocation
+**Date:** 2026-04-13
+
+### Findings
+
+All phase timing and land rent allocation logic is working correctly. No bugs found.
+
+| Scenario | Result |
+|----------|--------|
+| Phase completionYear drives asset revStart | ✅ |
+| Phase CAPEX ends before revenue start | ✅ |
+| Land rent allocation by footprint ratio | ✅ |
+| Phase 2 with zero footprint (no crash) | ✅ |
+| All assets in one phase → 100% land rent | ✅ |
+| Legacy `constrStart` mode (no completionYear) | ✅ |
+| `landRentMeta` records correct footprint shares | ✅ |
+
+### Key Behaviors Verified
+
+**Asset timing (completionYear mode):**
+- Phase `completionYear=2028` (startYear=2026) → index 2
+- Asset `revStart = phaseOpenIdx + delayYears`
+- Asset `cStart = max(0, revStart - durYears)`
+- CAPEX fills `[cStart, revStart)`, revenue starts at `revStart`
+
+**Land rent footprint allocation:**
+- `phaseFP[pn] = Σ asset.footprint` per phase
+- `share = phaseFP[pn] / totalFootprint`
+- Verified: 3000/(3000+5000) = 37.5%, 5000/(3000+5000) = 62.5%
+- Fallback when zero footprint: other phases receive equal split
+
+**Edge case: Phase with zero footprint**
+- Phase 2 with no assets → totalCapex=0, but no crash
+- Phase 1 receives 100% of land rent (correct footprint math: 4000/4000)
+
+### Test Results: 31/31 ✅
+- `tests/audit_round7_phases.cjs`
+
+---
+
+## Round 8: Exit Valuation for Mixed RevType Projects
+**Date:** 2026-04-13
+
+### Findings
+
+Exit valuation correctly excludes Sale assets from capitalization. No bugs found.
+
+| Scenario | Result |
+|----------|--------|
+| Sale asset excluded from `exitStrategy="sale"` | ✅ |
+| Sale asset excluded from `exitStrategy="caprate"` | ✅ |
+| Sale-only project → exit proceeds = 0 | ✅ |
+| Lease-only → exit = income × multiple | ✅ |
+| `exitStrategy="hold"` → no exit proceeds | ✅ |
+| No double-counting of Sale revenue | ✅ |
+| Cap rate vs multiple give different values | ✅ |
+| Full `runFullModel` integration | ✅ |
+
+### Key Behaviors Verified
+
+**Exit valuation logic (financing.js):**
+```javascript
+for (const as of assetScheds) {
+  if (as.revType === "Sale") {
+    // Skip — already realized through sales cash flows
+  } else if (exitStrategy === "caprate") {
+    exitVal += assetIncome / (exitCapRate / 100);
+  } else {
+    // "sale" multiple
+    exitVal += assetIncome * exitMultiple;
+  }
+}
+```
+
+**Mixed project (Sale + Lease + Operating) at exit year 10:**
+- Sale absorption complete by year 10 (3-year absorption after year 3 completion)
+- Exit proceeds = (leaseIncome + opIncome) × 10 = 77,540,000
+- Cap rate exit = (leaseIncome + opIncome) / 9% = 86,155,556
+- Sale revenue (40M) already in years 3–5 cash flows — not double-counted
+
+**Sale-only project:**
+- All income is lump-sum at sale dates, not recurring NOI
+- Exit proceeds = 0 (correct — no income-producing assets to capitalize)
+
+### Test Results: 30/30 ✅
+- `tests/audit_round8_exit.cjs`
+
+---
+
+## All Tests After Rounds 7–8
+- `engine_audit.cjs`: **267/267 ✅**
+- `zan_benchmark.cjs`: **160/160 ✅**
+- `audit_round5_fees.cjs`: **18/18 ✅**
+- `audit_round6_dscr.cjs`: **8/8 ✅**
+- `audit_round7_phases.cjs`: **31/31 ✅**
+- `audit_round8_exit.cjs`: **30/30 ✅**
+
+---
+
+## Round 9: Performance Incentive / Hurdle IRR Accuracy
+**Date:** 2026-04-13
+
+### Findings
+
+No bugs found. Performance incentive engine is correct. Two modes verified.
+
+**Key configuration:** `prefReturnPct=14, performanceIncentive=true, hurdleIRR=14, incentivePct=15`
+
+| Test Scenario | Result |
+|---------------|--------|
+| Simple mode: incentive = 15% of LP excess above linear hurdle | ✅ |
+| Simple mode: `required = lpCalled × (1 + rate × years)` | ✅ |
+| Simple mode: `excess = max(0, lpDist_pre − required)` | ✅ |
+| Simple mode: `amount = incPct × excess` | ✅ |
+| IRR mode: binary search finds max clawback → LP IRR ≥ hurdle | ✅ |
+| IRR mode: incentive = 15% of excess (not full clawback) | ✅ |
+| IRR mode: LP IRR after incentive stays ≥ hurdle | ✅ |
+| Clawback cannot exceed LP's last distribution | ✅ |
+| Edge case: LP distributions < hurdle → incentive = 0 | ✅ |
+| `performanceIncentive=false` → amount = 0 | ✅ |
+| Conservation: LP loses exactly what GP gains | ✅ |
+
+### IRR Mode vs Simple Mode
+
+**Simple mode** (market convention):
+- `required = lpTotalCalled × (1 + hurdleRate × years)`
+- `excess = max(0, totalLPDist_pre − required)`
+- Triggered when *total LP distributions* exceed the linear hurdle amount.
+- Can produce 0 incentive even when LP IRR > hurdle (if distributions are front-loaded).
+
+**IRR mode** (compound/advanced):
+- Binary search finds `lo` = max clawback that keeps LP IRR ≥ hurdleRate.
+- `incentive = lo × incPct` (developer keeps 15% of IRR-excess value).
+- Triggered when LP IRR > hurdle (time-value aware).
+- Post-incentive LP IRR stays above hurdle (only 15% of excess is clawed back, not 100%).
+
+### Test Results: 20/20 ✅
+- `/tmp/audit_round9_incentive.cjs`
+
+---
+
+## Round 10: Full End-to-End Synthetic Project (Jazan Infra Fund)
+**Date:** 2026-04-13
+
+### Project Configuration
+
+Modelled after the Jazan infrastructure fund:
+
+| Parameter | Value |
+|-----------|-------|
+| Site area | 302,000 m² |
+| Partner land (GP in-kind) | 150M SAR |
+| partnerEquityPct | 75% (GP=75%, LP=25%) |
+| Asset 1 | Infrastructure (Lease): 10,000 m², 5,000 SAR/m² → 50M CAPEX |
+| Asset 2 | Plot Sales: 50,000 m², 6,000 SAR/m² → 300M revenue |
+| Fund mode | `fund`, exitYear=12, 10% LTV debt |
+| Pref return | 14% |
+| Performance incentive | 14% hurdle (IRR mode), 15% of excess |
+| Fees | 2% sub, 1% mgmt/yr, 1% struct, 5% dev fee |
+
+### All Pipeline Stages Verified
+
+**Stage 1: Cash Flow Engine**
+- totalCapex = 75M (infra 50M + plots 25M) ✅
+- totalIncome = 567M (300M sales + 267M lease) ✅
+- Infra: zero revenue during 3-year construction, then ramp ✅
+- Plots: zero revenue until Sales Phase completes (completionYear=2030) ✅
+
+**Stage 2: Financing Engine**
+- Debt = 7.5M (10% × 75M buildCostOnly) ✅
+- effectiveLandCap = 150M (landValuation) ✅
+- devCostInclLand = 225M (75M CAPEX + 150M land) ✅
+- totalEquity = 217.5M (225M − 7.5M debt) ✅
+- GP = 75%, LP = 25% ✅
+- Debt draws in construction only, no post-completion draws ✅
+- DSCR = 7.87× in revenue years (well covered) ✅
+
+**Stage 3: Waterfall Engine**
+- GP calls = 176M, LP calls = 59M (total = 235M = equity + 17.5M unfunded fees) ✅
+- Tier 1 (ROC) = 235M (all capital returned) ✅
+- Pref accrual = 14% × equityCalls (correct — fees in capital base) ✅
+- Tier 4 profit split: LP=25% as configured ✅
+- Performance incentive = 5.02M (IRR mode triggered: LP IRR=16.54% > 14%) ✅
+
+**Stage 4: Financial Ratios**
+| Metric | LP | GP |
+|--------|----|----|
+| IRR | 16.54% | 17.03% |
+| MOIC | 2.36× | 2.48× |
+| Cash IRR | — | 44.37% (cash-on-cash excl. in-kind land) |
+| Total dist | 139M | 437M |
+
+**Stage 5: Developer Economics (Two Hats)**
+- Hat 1 (Investor): 432M distributions from GP equity position
+- Hat 2 (Developer): 3.75M dev fees + 5.02M performance incentive = 8.77M
+- Total developer economics: 440M ✅
+
+**Stage 6: Conservation Laws**
+- Total LP + GP distributions = total cash available (no leakage) ✅
+- GP + LP equity calls = total waterfall equity calls ✅
+
+**Stage 7: Engine Checks**
+- 40 checks run: 0 errors, 0 warnings ✅
+
+### Key Findings
+
+1. **Equity calls include unfunded fees**: `totalCalls = totalEquity + unfundedFees` (17.5M fees funded from equity). This is correct and expected — fees drawn from equity, not from project CF.
+
+2. **Pref base includes fees** (feeTreatment="capital"): Max annual pref accrual = 14% × (totalEquity + unfundedFees), slightly larger than 14% × totalEquity.
+
+3. **Simple vs IRR incentive mode matters**: Simple mode would produce 0 incentive for this project (LP total dist=144M < required 166M). IRR mode correctly triggers incentive since LP IRR=16.54% > 14% hurdle.
+
+4. **GP CashIRR = 44%** vs GP IRR = 17%: The large gap confirms that the land in-kind contribution (150M) massively suppresses total-return IRR. CashIRR (excl. in-kind) is the more meaningful metric for the developer's actual cash return.
+
+### Test Results: 44/44 ✅
+- `/tmp/audit_round10_e2e.cjs`
+
+---
+
+## Final Audit Summary (Rounds 1–10)
+**Date:** 2026-04-13
+
+### Bugs Found and Fixed
+
+| Round | Issue | Status |
+|-------|-------|--------|
+| 2 | `lpProfitSplitPct: 100` default → LP gets all profits, developer gets no profit share | ✅ Fixed |
+| 5 | `"fundAssets"/"devCost"` mgmt fee base used `buildCostOnly` instead of `devCostInclLand` | ✅ Fixed |
+| 6 | DSCR shown for Sale-only projects (lump-sum ≠ NOI, misleading metric) | ✅ Fixed |
+
+### No Bugs Found (Engine Correct)
+
+| Round | Area Tested | Verdict |
+|-------|-------------|---------|
+| 1 | Initial audit (distribution routing) | ✅ Correct |
+| 3 | Sale revenue timing with `constrDuration` | ✅ Correct |
+| 4 | Waterfall distribution math | ✅ Correct |
+| 7 | Multi-phase timing and land rent allocation | ✅ Correct |
+| 8 | Exit valuation (Sale excluded, cap rate vs multiple) | ✅ Correct |
+| 9 | Performance incentive (simple & IRR modes) | ✅ Correct |
+| 10 | Full E2E Jazan fund pipeline | ✅ Correct |
+
+### Final Test Count
+
+| Test Suite | Results |
+|------------|---------|
+| `engine_audit.cjs` | 267/267 ✅ |
+| `zan_benchmark.cjs` | 160/160 ✅ |
+| `audit_round2_final.cjs` | 14/14 ✅ |
+| `audit_round3_final.cjs` | 20/20 ✅ |
+| `audit_round5_fees.cjs` | 18/18 ✅ |
+| `audit_round6_dscr.cjs` | 8/8 ✅ |
+| `audit_round7_phases.cjs` | 31/31 ✅ |
+| `audit_round8_exit.cjs` | 30/30 ✅ |
+| `audit_round9_incentive.cjs` | 20/20 ✅ |
+| `audit_round10_e2e.cjs` | 44/44 ✅ |
+| **Total** | **612/612 ✅** |
