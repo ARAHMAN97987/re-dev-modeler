@@ -141,7 +141,7 @@ const PROJECT_RULES = [
   // --- Soft Cost & Contingency ---
   { id:'SC-01', field:'softCostPct', scope:'project', condition:(v,ctx)=>v<5&&v>=0&&!(ctx.assets||[]).some(a=>a.category==='Infrastructure'), severity:'warning', ar:'تكاليف لينة < 5% منخفضة. المعتاد: 8-15%', en:'Soft costs < 5% low. Typical: 8-15%' },
   { id:'SC-02', field:'softCostPct', scope:'project', condition:v=>v>20, severity:'warning', ar:'تكاليف لينة > 20% مرتفعة', en:'Soft costs > 20% high' },
-  { id:'SC-03', field:'contingencyPct', scope:'project', condition:v=>v<3&&v>=0, severity:'warning', ar:'احتياطي < 3% محفوف بالمخاطر', en:'Contingency < 3% risky' },
+  { id:'SC-03', field:'contingencyPct', scope:'project', condition:(v,ctx)=>v<3&&v>=0&&!(ctx.assets||[]).some(a=>a.category==='Infrastructure'), severity:'warning', ar:'احتياطي < 3% محفوف بالمخاطر', en:'Contingency < 3% risky' },
   { id:'SC-04', field:'contingencyPct', scope:'project', condition:v=>v>15, severity:'info', ar:'احتياطي > 15% محافظ', en:'Contingency > 15% conservative' },
   { id:'SC-05', field:'softCostPct', scope:'project', condition:(v,p)=>(v+(p.contingencyPct||0))>30, severity:'warning', ar:'إجمالي التكاليف اللينة والطوارئ > 30%', en:'Total soft + contingency > 30%' },
   // --- Land ---
@@ -208,14 +208,14 @@ const FUND_STRUCT_RULES = [
   { id:'FUND-STRUCT-03', field:'maxLtvPct', scope:'fund', condition:(v,p)=>['fund','jv','hybrid'].includes(p.finMode)&&v>0&&v<40, severity:'info', ar:'تمويل < 40% محافظ. قد يحد من العوائد لكنه يقلل المخاطر', en:'LTV < 40% conservative. May limit returns but reduces risk' },
   { id:'FUND-STRUCT-04', field:'fundLife', scope:'fund', condition:v=>v>0&&v<2, severity:'warning', ar:'مدة صندوق < سنتين قصيرة جداً للتطوير', en:'Fund duration < 2 years very short' },
   { id:'FUND-STRUCT-05', field:'fundLife', scope:'fund', condition:v=>v>7, severity:'info', ar:'مدة صندوق > 7 سنوات طويلة. الأطول مرصود: 5+2 سنوات', en:'Fund duration > 7 years long. Longest observed: 5+2 years' },
-  { id:'FUND-STRUCT-06', field:'finMode', scope:'fund', condition:(v,p)=>v==='fund'&&(p.exitStrategy||'hold')==='hold', severity:'warning', ar:'هيكل صندوق بدون خطة تخارج محددة', en:'Fund structure with no defined exit strategy' },
+  { id:'FUND-STRUCT-06', field:'finMode', scope:'fund', condition:(v,p)=>v==='fund'&&(p.exitStrategy||'hold')==='hold'&&!(p.assets||[]).some(a=>a.revType==='Sale'), severity:'warning', ar:'هيكل صندوق بدون خطة تخارج محددة', en:'Fund structure with no defined exit strategy' },
 ];
 
 const FUND_RET_RULES = [
   { id:'FUND-RET-01', field:'lpIRR', scope:'output', condition:(v,p)=>v!==null&&(p.prefReturnPct||0)>0&&v<(p.prefReturnPct/100), severity:'warning', ar:'عائد المستثمر أقل من العائد المفضل', en:'LP IRR below preferred return' },
   { id:'FUND-RET-02', field:'gpMOIC', scope:'output', condition:v=>v!==null&&v<1.0, severity:'critical', ar:'المطور يخسر - MOIC < 1x', en:'GP losing money - MOIC < 1x' },
   { id:'FUND-RET-03', field:'lpMOIC', scope:'output', condition:v=>v!==null&&v<1.5&&v>0, severity:'warning', ar:'MOIC المستثمر < 1.5x - عائد ضعيف', en:'LP MOIC < 1.5x - weak return' },
-  { id:'FUND-RET-04', field:'simpleROE', scope:'output', condition:(v,ctx)=>v!==null&&v<0.08&&!(ctx.moic&&ctx.moic>2), severity:'warning', ar:'العائد البسيط < 8% - أقل من البدائل', en:'Simple ROE < 8% - below alternatives' },
+  { id:'FUND-RET-04', field:'simpleROE', scope:'output', condition:(v,ctx)=>v!==null&&v<0.08&&!((ctx._lpMOIC||ctx.moic)>2), severity:'warning', ar:'العائد البسيط < 8% - أقل من البدائل', en:'Simple ROE < 8% - below alternatives' },
   { id:'FUND-RET-05', field:'targetReturn', scope:'output', condition:(v,p)=>(p.prefReturnPct||0)>25, severity:'warning', ar:'عائد مستهدف > 25% متفائل. المدى المرصود: 14-20% سنوياً', en:'Target > 25% optimistic. Observed: 14-20% annually' },
 ];
 
@@ -336,6 +336,8 @@ export function runAllRules(project, results, financing, waterfall) {
     });
     // Fund return rules (from engine output)
     if (w) {
+      // Build enriched context for fund return rules (needs lpMOIC for ROE skip logic)
+      const fundRetCtx = { ...p, _lpMOIC: w.lpMOIC, moic: w.lpMOIC };
       FUND_RET_RULES.forEach(rule => {
         let v;
         if (rule.field === 'lpIRR') v = w.lpIRR;
@@ -343,7 +345,7 @@ export function runAllRules(project, results, financing, waterfall) {
         else if (rule.field === 'lpMOIC') v = w.lpMOIC;
         else if (rule.field === 'simpleROE') v = w.gpSimpleAnnual;
         else if (rule.field === 'targetReturn') v = p.prefReturnPct;
-        try { if (rule.condition(v, p)) alerts.push({ id: rule.id, severity: rule.severity, ar: rule.ar, en: rule.en, field: rule.field }); } catch(e) {}
+        try { if (rule.condition(v, fundRetCtx)) alerts.push({ id: rule.id, severity: rule.severity, ar: rule.ar, en: rule.en, field: rule.field }); } catch(e) {}
       });
     }
   }
@@ -367,6 +369,10 @@ export function runAllRules(project, results, financing, waterfall) {
       const maxStart = Math.max(0, ...phAssets.map(a => a.constrStart || 0));
       return maxStart > (p.horizon || 50) - 5;
     }).length,
+    // Added for infrastructure fund rules:
+    assets: assets,
+    horizon: p.horizon || 50,
+    moic: w?.lpMOIC ?? null,
   };
   CROSS_RULES.forEach(rule => {
     let v;
