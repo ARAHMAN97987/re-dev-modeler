@@ -675,16 +675,26 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // ── DSCR (using adjusted interest) ──
   // NOTE: DSCR uses (Income - Land Rent) as proxy for NOI/CFADS.
   // For lender-grade models, replace with actual NOI after opex deduction per asset.
+  //
+  // Sale assets generate lump-sum revenue (not recurring NOI), making DSCR meaningless:
+  //   - Sale year: DSCR = huge number (sale proceeds >> annual debt service) — misleading
+  //   - Non-sale years: DSCR = 0 (no recurring income) — misleading
+  // For Sale-only projects: set DSCR to null (not applicable).
+  // For mixed projects: DSCR is computed on total income (includes Sale spikes) — UI shows note.
+  const hasSaleOnlyAssets = (project.assets || []).length > 0 &&
+    (project.assets || []).every(a => a.revType === "Sale");
   const dscr = new Array(h).fill(null);
-  for (let y = 0; y < h; y++) {
-    if (adjustedDebtService[y] > 0) {
-      const inc = c.income[y] || 0;
-      const lr  = adjustedLandRent[y] || 0;
-      const noi = inc - lr;
-      const ds  = adjustedDebtService[y];
-      // Guard against NaN/Infinity; ensure finite number or null
-      const val = noi / ds;
-      dscr[y] = Number.isFinite(val) ? val : null;
+  if (!hasSaleOnlyAssets) {
+    for (let y = 0; y < h; y++) {
+      if (adjustedDebtService[y] > 0) {
+        const inc = c.income[y] || 0;
+        const lr  = adjustedLandRent[y] || 0;
+        const noi = inc - lr;
+        const ds  = adjustedDebtService[y];
+        // Guard against NaN/Infinity; ensure finite number or null
+        const val = noi / ds;
+        dscr[y] = Number.isFinite(val) ? val : null;
+      }
     }
   }
 
@@ -754,7 +764,7 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     isHybrid, govBeneficiary: isHybrid ? (project.govBeneficiary || "project") : null,
     govFinancingPct: isHybrid ? (project.govFinancingPct ?? 70) : null,
     govLoanAmount, govLoanRate: isHybrid ? (project.govFinanceRate ?? 3.0) / 100 : null,
-    gpPersonalDebt, fundPortionCost, buildCostOnly,
+    gpPersonalDebt, fundPortionCost, buildCostOnly, hasSaleOnlyAssets,
     // Separate cash flows for hybrid mode (two virtual projects)
     financingCF, fundCF, fullProjectExitVal,
     // Income fund fields

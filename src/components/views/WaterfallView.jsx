@@ -780,9 +780,20 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
         <CFRow label={ar?"إجمالي خدمة الدين":"Total Debt Service"} values={f.debtService} total={f.debtService?.reduce((a,b)=>a+b,0)||0} negate bold color="#ef4444" />
         {/* DSCR */}
         {f.dscr && <tr>
-          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:isMobile?120:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>DSCR</td>
+          <td style={{...tdSt,position:"sticky",left:0,background:"#fff",zIndex:1,fontWeight:500,minWidth:isMobile?120:200,fontSize:10,color:"#6b7080",paddingInlineStart:20}}>
+            DSCR
+            {f.hasSaleOnlyAssets && <span title={ar?"المشروع للبيع فقط — DSCR غير قابل للتطبيق (الإيراد دفعة واحدة وليس تشغيلياً)":"Sale-only project — DSCR not applicable (lump-sum revenue, not recurring NOI)"} style={{marginInlineStart:4,color:"#f59e0b",cursor:"help",fontSize:9}}>⚠</span>}
+          </td>
           <td style={tdN}></td>
-          {years.map(y=>{const v=f.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:getMetricColor("DSCR",v)}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})}
+          {f.hasSaleOnlyAssets
+            ? years.map(y => <td key={y} style={{...tdN,fontSize:10,color:"#9ca3af"}}>{ar?"غ.م.":"N/A"}</td>)
+            : years.map(y=>{const v=f.dscr?.[y];return <td key={y} style={{...tdN,fontSize:10,fontWeight:v&&v<1.2?700:500,color:getMetricColor("DSCR",v)}}>{v===null||v===undefined?"—":v.toFixed(2)+"x"}</td>;})
+          }
+        </tr>}
+        {f.hasSaleOnlyAssets && <tr>
+          <td colSpan={years.length+2} style={{padding:"2px 20px",fontSize:9,color:"#b45309",background:"#fffbeb"}}>
+            {ar?"⚠ DSCR لا ينطبق على مشاريع البيع — الإيراد دفعة واحدة عند البيع وليس دخلاً تشغيلياً متكرراً":"⚠ DSCR not applicable for Sale-only projects — revenue is a lump-sum at sale, not recurring operating income"}
+          </td>
         </tr>}
       </>}
 

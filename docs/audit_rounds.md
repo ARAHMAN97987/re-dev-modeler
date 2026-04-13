@@ -99,3 +99,94 @@ Key field: `asset.constrDuration` (months), NOT `asset.constrDurationYears`.
 - `zan_benchmark.cjs`: **160/160 ✅**
 - `audit_round2_final.cjs`: **14/14 ✅**
 - `audit_round3_final.cjs`: **20/20 ✅**
+
+---
+
+## Round 5: Fee Basis Calculation Audit
+**Date:** 2026-04-13
+
+### Findings
+
+| Fee Type | Base Used | Correct for Partner Land? |
+|----------|-----------|--------------------------|
+| Subscription fee | `fundEquityBasis` = totalEquity (incl. land) | ✅ |
+| Management fee — "equity" | `fundEquityBasis` = totalEquity | ✅ |
+| Management fee — "fundAssets"/"devCost" | **BUG: was `buildCostOnly` (CAPEX only)** | ❌ Fixed |
+| Management fee — "nav" | starts at `fundEquityBasis` = totalEquity | ✅ |
+| Management fee — "deployed" | cumulative CAPEX | ✅ (intentional) |
+| Structuring fee | `fundFeeBasis` = buildCostOnly (CAPEX) | ✅ (construction cost basis) |
+| Operator fee | `effectiveDevCost` = buildCostOnly (full project) | ✅ |
+| `mgmtFeeCap` | applied per year as annual cap | ✅ |
+| Double-counting | `fees[y] = sum(all schedules)` | ✅ None found |
+
+### Bug Fixed: "fundAssets"/"devCost" basis for partner land
+
+**Root cause**: Comments said `"fundAssets"` = `devCostInclLand` (total project cost including land equity contribution). Code used `buildCostOnly` (CAPEX only).
+
+For a 200M partner land + 65M CAPEX fund:
+- **Before**: `"fundAssets"` basis = 65M → mgmt fee 10× too low
+- **After**: `"fundAssets"` basis = 265M → correct per fund docs
+
+**Code change** (`src/engine/waterfall.js`):
+```javascript
+// Added fundTotalCostBasis (devCostInclLand, includes land equity)
+const fundTotalCostBasis = isHybridMode ? (f.fundPortionCost || f.devCostInclLand) : (f.devCostInclLand || effectiveDevCost);
+
+// Changed "devCost"/"fundAssets" case:
+// BEFORE: mgmtBase = fundFeeBasis;  // was buildCostOnly
+// AFTER:  mgmtBase = fundTotalCostBasis;  // devCostInclLand
+```
+
+### Partner Land Recommendation
+- Use `"equity"` or `"fundAssets"` for AUM-based management fee (both = totalEquity/devCostInclLand = 265M)
+- Use `"deployed"` for deployed-capital basis (cumulative CAPEX, max 65M)
+- Use `"nav"` for NAV-linked fee (starts at totalEquity, adjusts with income)
+
+### Test Results: 18/18 ✅
+- `tests/audit_round5_fees.cjs`
+
+---
+
+## Round 6: DSCR Calculation with Sale Assets
+**Date:** 2026-04-13
+
+### Findings
+
+**DSCR = NOI / Debt Service** is designed for income-producing (Lease/Rent) assets. For Sale assets, revenue is a one-time lump sum at sale date, not recurring NOI.
+
+| Project Type | Before Fix | After Fix |
+|-------------|------------|-----------|
+| Lease-only | DSCR = 2–3x (meaningful) ✅ | Unchanged ✅ |
+| Sale-only | DSCR = 13.9x in sale year (misleading ❌) | DSCR = null for all years ✅ |
+| Mixed (Sale + Lease) | DSCR spikes in sale year | DSCR computed (UI note added) |
+| No debt | DSCR = null everywhere ✅ | Unchanged ✅ |
+
+### Fix Applied
+
+**`src/engine/financing.js`**:
+```javascript
+// Detect Sale-only projects
+const hasSaleOnlyAssets = (project.assets || []).length > 0 &&
+  (project.assets || []).every(a => a.revType === "Sale");
+
+// Skip DSCR calculation for Sale-only (lump-sum ≠ NOI)
+if (!hasSaleOnlyAssets) {
+  // ... compute dscr normally
+}
+```
+Also exports `hasSaleOnlyAssets` in the return object.
+
+**`src/components/views/WaterfallView.jsx`**:
+- DSCR row shows `N/A` for Sale-only projects (with tooltip)
+- Warning row added: "DSCR not applicable for Sale-only projects — revenue is a lump-sum at sale, not recurring operating income"
+
+### Test Results: 8/8 ✅
+- `tests/audit_round6_dscr.cjs`
+
+---
+
+## All Tests After Rounds 5–6
+- `engine_audit.cjs`: **267/267 ✅**
+- `zan_benchmark.cjs`: **160/160 ✅**
+- `audit_round5_fees.cjs`: **18/18 ✅**
+- `audit_round6_dscr.cjs`: **8/8 ✅**

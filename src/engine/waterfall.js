@@ -44,7 +44,12 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // buildCostOnly = true construction cost (excludes land purchase from capex).
   // For non-hybrid: use buildCostOnly if available, else devCostExclLand (which may include land purchase).
   const effectiveDevCost = f.buildCostOnly != null ? f.buildCostOnly : f.devCostExclLand;
+  // fundFeeBasis: construction cost only (used for structuring fee, operator fee, "deployed" basis)
   const fundFeeBasis = isHybridMode ? (f.fundPortionCost || effectiveDevCost) : effectiveDevCost;
+  // fundTotalCostBasis: total project cost including land equity contribution (used for "fundAssets"/"devCost" mgmt fee)
+  //   "fundAssets" per fund docs = total fund assets (devCostInclLand = GP+LP+Debt) including partner land / land cap
+  //   For hybrid: fund portion only (gov-financed portion excluded)
+  const fundTotalCostBasis = isHybridMode ? (f.fundPortionCost || f.devCostInclLand) : (f.devCostInclLand || effectiveDevCost);
   // Fund equity basis: for hybrid, the fund's equity is only the fund portion (not gov-borrowed GP equity)
   const fundEquityBasis = isHybridMode ? (f.fundPortionCost || totalEquity) : totalEquity;
 
@@ -128,12 +133,12 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   }
   // Management + custody + auditor fees from fund start to fee period end
   // Fee basis options per fund document:
-  //   "fundAssets" = total fund assets (devCostInclLand = GP+LP+Debt) — CORRECT per fund docs
+  //   "fundAssets" = total fund assets (devCostInclLand = GP+LP+Debt, incl. land equity) — CORRECT per fund docs
   //                  Fixed annual amount. "0.50% of total fund assets" → rate × fundSize
   //   "nav"        = NAV proxy (equity + cumIncome - cumCapex, floor at equity)
   //   "equity"     = total equity commitment (GP+LP, fixed)
-  //   "devCost"    = development cost including land (same as fundAssets but explicit)
-  //   "deployed"   = cumulative CAPEX deployed (legacy, incorrect for mgmt fee)
+  //   "devCost"    = development cost including land (same as fundAssets — both use devCostInclLand)
+  //   "deployed"   = cumulative CAPEX deployed (legacy, for deployed-capital basis only)
   let cumCapex = 0, cumIncome = 0;
   for (let y = fundStartIdx; y <= feeEndYr && y < h; y++) {
     // For hybrid: fund's share of income/capex for accurate NAV tracking
@@ -144,8 +149,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
       if (mgmtFeeBase === "equity") {
         mgmtBase = fundEquityBasis;
       } else if (mgmtFeeBase === "devCost" || mgmtFeeBase === "fundAssets") {
-        // For hybrid: fund portion only. For standard fund: total project cost.
-        mgmtBase = fundFeeBasis;
+        // Total project cost including land equity contribution (partner land / land cap).
+        // For hybrid: fund portion only. For standard fund: devCostInclLand.
+        mgmtBase = fundTotalCostBasis;
       } else if (mgmtFeeBase === "nav") {
         // NAV proxy: equity + cumulative net income - cumulative capex (floor at equity)
         mgmtBase = Math.max(fundEquityBasis, fundEquityBasis + cumIncome - cumCapex);
