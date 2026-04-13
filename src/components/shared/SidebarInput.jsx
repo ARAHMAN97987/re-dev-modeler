@@ -32,8 +32,12 @@ const SidebarInput = memo(function SidebarInput({ value, onChange, type = "text"
     setLocal(String(value ?? ""));
   };
 
-  const displayValue = (!focused && type === "number" && value !== "" && value !== 0 && value != null)
-    ? Number(value).toLocaleString("en-US", { maximumFractionDigits: 4 })
+  // Format numbers with thousand separators, but NOT for years (2025-2099) or small values (<1000)
+  const numVal = Number(value);
+  const isYear = type === "number" && numVal >= 2000 && numVal <= 2099;
+  const isSmall = type === "number" && Math.abs(numVal) < 1000;
+  const displayValue = (!focused && type === "number" && value !== "" && value !== 0 && value != null && !isYear && !isSmall)
+    ? numVal.toLocaleString("en-US", { maximumFractionDigits: 4 })
     : local;
 
   return (
