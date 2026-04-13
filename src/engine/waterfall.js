@@ -348,9 +348,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // a significant equity share (from land capitalization or cash investment).
   const hasPromoteStructure = project.gpCatchup && (project.carryPct || 0) > 0;
   const _lpSplitRaw = project.lpProfitSplitPct;
-  const lpSplitPct = (hasPromoteStructure && _lpSplitRaw != null)
-    ? Math.max(0, Math.min(1, _lpSplitRaw / 100))  // Promote: use explicit split
-    : (_lpSplitRaw != null ? Math.max(0, Math.min(1, _lpSplitRaw / 100)) : lpPct);
+  const lpSplitPct = hasPromoteStructure
+    ? Math.max(0, Math.min(1, (_lpSplitRaw ?? 70) / 100))  // Promote: use explicit split (default 70%)
+    : lpPct;  // No promote: ALWAYS equity-proportional, ignore any saved lpProfitSplitPct
   const gpSplitPct = 1 - lpSplitPct;
 
   const tier1 = new Array(h).fill(0); // Return of Capital
