@@ -44,6 +44,7 @@ export const COST_BENCHMARKS = [
   { id:'COST-27', category:'Parking', subtype:'Basement', low:2900, high:4875, sources:'AECOM 2025, Compass 2024, JLL 2024' },
   { id:'COST-28', category:'Education', subtype:'Schools (Primary/Secondary)', low:5250, high:10000, sources:'AECOM 2025, Compass 2024, JLL 2024, C&B 2024' },
   { id:'COST-29', category:'Healthcare', subtype:'District Hospital', low:8625, high:13100, sources:'AECOM 2025, C&B 2024' },
+  { id:'COST-30', category:'Infrastructure', subtype:'Roads + Utilities + Grading', low:100, high:800, sources:'Saudi market estimates' },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -86,7 +87,8 @@ export function matchCostBenchmark(asset) {
     return 'COST-04';
   }
   if (cat === 'marina' || name.includes('marina') || name.includes('مارينا') || name.includes('yacht') || name.includes('يخت')) return 'COST-21';
-  if (cat === 'utilities' || cat === 'infrastructure' || name.includes('parking') || name.includes('مواقف')) return 'COST-26';
+  if (cat === 'infrastructure' || name.includes('بنية تحتية') || name.includes('infrastructure')) return 'COST-30';
+  if (cat === 'utilities' || name.includes('parking') || name.includes('مواقف')) return 'COST-26';
   if (cat === 'cultural' || cat === 'amenity') return 'COST-13';
   if (cat === 'industrial' || cat.includes('صناعي')) {
     if (name.includes('logistics') || name.includes('warehouse') || name.includes('مستودع')) return 'COST-24';
@@ -107,10 +109,10 @@ const ASSET_RULES = [
   // --- Occupancy ---
   { id:'OCC-01', field:'stabilizedOcc', scope:'asset', assetFilter:a=>['hospitality'].includes((a.category||'').toLowerCase())||a.revType==='Operating', condition:v=>v>85, severity:'warning', ar:'إشغال فندقي > 85% متفائل. المعدل في السعودية: 55-75%', en:'Hotel occupancy > 85% optimistic. Saudi avg: 55-75%' },
   { id:'OCC-02', field:'rampUpYears', scope:'asset', assetFilter:a=>(a.category||'').toLowerCase().includes('hospitality')||a.revType==='Operating', condition:v=>v<2, severity:'warning', ar:'فنادق جديدة تحتاج 2-4 سنوات للوصول للإشغال المستقر', en:'New hotels need 2-4 years to reach stabilized occupancy' },
-  { id:'OCC-03', field:'stabilizedOcc', scope:'asset', assetFilter:a=>(a.category||'').toLowerCase()==='retail', condition:v=>v>95, severity:'warning', ar:'إشغال تجاري > 95% غير واقعي. المعتاد: 80-92%', en:'Retail occupancy > 95% unrealistic. Typical: 80-92%' },
+  { id:'OCC-03', field:'stabilizedOcc', scope:'asset', assetFilter:a=>(a.category||'').toLowerCase()==='retail'&&a.revType!=='Sale', condition:v=>v>95, severity:'warning', ar:'إشغال تجاري > 95% غير واقعي. المعتاد: 80-92%', en:'Retail occupancy > 95% unrealistic. Typical: 80-92%' },
   { id:'OCC-04', field:'stabilizedOcc', scope:'asset', assetFilter:a=>(a.category||'').toLowerCase()==='office', condition:v=>v>92, severity:'warning', ar:'إشغال مكاتب > 92% متفائل. المعتاد: 75-90%', en:'Office occupancy > 92% optimistic. Typical: 75-90%' },
   { id:'OCC-05', field:'stabilizedOcc', scope:'asset', condition:v=>v>0&&v<50, severity:'warning', ar:'إشغال أقل من 50% - جدوى ضعيفة', en:'Occupancy below 50% - weak viability' },
-  { id:'OCC-06', field:'stabilizedOcc', scope:'asset', condition:v=>v<=0, severity:'error', ar:'الإشغال يجب أن يكون أكبر من صفر', en:'Occupancy must be > 0' },
+  { id:'OCC-06', field:'stabilizedOcc', scope:'asset', assetFilter:a=>a.category!=='Infrastructure'&&a.revType!=='Sale'&&(a.leaseRate||0)>0, condition:v=>v<=0, severity:'error', ar:'الإشغال يجب أن يكون أكبر من صفر', en:'Occupancy must be > 0' },
   { id:'OCC-07', field:'stabilizedOcc', scope:'asset', condition:v=>v>100, severity:'error', ar:'الإشغال لا يمكن أن يتجاوز 100%', en:'Occupancy cannot exceed 100%' },
   // --- Lease Rate ---
   { id:'RENT-01', field:'leaseRate', scope:'asset', assetFilter:a=>(a.category||'').toLowerCase()==='retail'&&a.revType==='Lease', condition:v=>v>0&&(v<500||v>4000), severity:'warning', ar:'إيجار تجاري خارج النطاق (500-4,000 ر.س/م²/سنة)', en:'Retail rate outside range (SAR 500-4,000/m²/yr)' },
@@ -137,7 +139,7 @@ const ASSET_RULES = [
 
 const PROJECT_RULES = [
   // --- Soft Cost & Contingency ---
-  { id:'SC-01', field:'softCostPct', scope:'project', condition:v=>v<5&&v>=0, severity:'warning', ar:'تكاليف لينة < 5% منخفضة. المعتاد: 8-15%', en:'Soft costs < 5% low. Typical: 8-15%' },
+  { id:'SC-01', field:'softCostPct', scope:'project', condition:(v,ctx)=>v<5&&v>=0&&!(ctx.assets||[]).some(a=>a.category==='Infrastructure'), severity:'warning', ar:'تكاليف لينة < 5% منخفضة. المعتاد: 8-15%', en:'Soft costs < 5% low. Typical: 8-15%' },
   { id:'SC-02', field:'softCostPct', scope:'project', condition:v=>v>20, severity:'warning', ar:'تكاليف لينة > 20% مرتفعة', en:'Soft costs > 20% high' },
   { id:'SC-03', field:'contingencyPct', scope:'project', condition:v=>v<3&&v>=0, severity:'warning', ar:'احتياطي < 3% محفوف بالمخاطر', en:'Contingency < 3% risky' },
   { id:'SC-04', field:'contingencyPct', scope:'project', condition:v=>v>15, severity:'info', ar:'احتياطي > 15% محافظ', en:'Contingency > 15% conservative' },
@@ -213,7 +215,7 @@ const FUND_RET_RULES = [
   { id:'FUND-RET-01', field:'lpIRR', scope:'output', condition:(v,p)=>v!==null&&(p.prefReturnPct||0)>0&&v<(p.prefReturnPct/100), severity:'warning', ar:'عائد المستثمر أقل من العائد المفضل', en:'LP IRR below preferred return' },
   { id:'FUND-RET-02', field:'gpMOIC', scope:'output', condition:v=>v!==null&&v<1.0, severity:'critical', ar:'المطور يخسر - MOIC < 1x', en:'GP losing money - MOIC < 1x' },
   { id:'FUND-RET-03', field:'lpMOIC', scope:'output', condition:v=>v!==null&&v<1.5&&v>0, severity:'warning', ar:'MOIC المستثمر < 1.5x - عائد ضعيف', en:'LP MOIC < 1.5x - weak return' },
-  { id:'FUND-RET-04', field:'simpleROE', scope:'output', condition:v=>v!==null&&v<0.08, severity:'warning', ar:'العائد البسيط < 8% - أقل من البدائل', en:'Simple ROE < 8% - below alternatives' },
+  { id:'FUND-RET-04', field:'simpleROE', scope:'output', condition:(v,ctx)=>v!==null&&v<0.08&&!(ctx.moic&&ctx.moic>2), severity:'warning', ar:'العائد البسيط < 8% - أقل من البدائل', en:'Simple ROE < 8% - below alternatives' },
   { id:'FUND-RET-05', field:'targetReturn', scope:'output', condition:(v,p)=>(p.prefReturnPct||0)>25, severity:'warning', ar:'عائد مستهدف > 25% متفائل. المدى المرصود: 14-20% سنوياً', en:'Target > 25% optimistic. Observed: 14-20% annually' },
 ];
 
@@ -225,12 +227,12 @@ const CROSS_RULES = [
   { id:'CROSS-05', field:'feesOverEquity', scope:'cross', condition:v=>v>0.30&&v<=0.50, severity:'warning', ar:'إجمالي الرسوم > 30% من الإكوتي - عبء مرتفع', en:'Total fees > 30% of equity - high burden' },
   { id:'STRUCT-01', field:'assetsCount', scope:'cross', condition:v=>v===0, severity:'error', ar:'لا توجد أصول - أضف أصل واحد على الأقل', en:'No assets - add at least one' },
   { id:'STRUCT-02', field:'emptyPhases', scope:'cross', condition:v=>v&&v.length>0, severity:'warning', ar:'مراحل فارغة', en:'Empty phases detected' },
-  { id:'STRUCT-03', field:'finMode', scope:'cross', condition:(v,ctx)=>(v==='fund'||v==='jv')&&ctx.exitStrategy==='hold', severity:'warning', ar:'هيكل صندوق بدون خطة تخارج', en:'Fund structure with no exit plan' },
+  { id:'STRUCT-03', field:'finMode', scope:'cross', condition:(v,ctx)=>(v==='fund'||v==='jv')&&ctx.exitStrategy==='hold'&&!(ctx.assets||[]).some(a=>a.revType==='Sale'), severity:'warning', ar:'هيكل صندوق بدون خطة تخارج', en:'Fund structure with no exit plan' },
   { id:'STRUCT-04', field:'finMode', scope:'cross', condition:(v,ctx)=>v==='self'&&(ctx.ltv||0)>0, severity:'info', ar:'وضع ذاتي مع نسبة تمويل - هل تقصد وضع البنك؟', en:'Self-funded with LTV - did you mean bank mode?' },
   { id:'FUND-GOV-01', field:'finMode', scope:'cross', condition:(v,ctx)=>(v==='fund'||v==='jv')&&!ctx.hasWaterfall, severity:'warning', ar:'صندوق بدون شلال توزيع', en:'Fund without distribution waterfall' },
   { id:'FUND-GOV-02', field:'year1Fees', scope:'cross', condition:(v,ctx)=>ctx.totalEquity>0&&v/ctx.totalEquity>0.20, severity:'warning', ar:'رسوم السنة الأولى > 20% من الإكوتي', en:'Year 1 fees > 20% of equity' },
   { id:'CROSS-06', field:'lpMOIC', scope:'cross', condition:(v)=>v!==null&&v>0&&v<1.5, severity:'warning', ar:'عائد ضعيف للمستثمر - MOIC < 1.5x', en:'Weak LP return - MOIC < 1.5x' },
-  { id:'CROSS-07', field:'latePhases', scope:'cross', condition:(v,ctx)=>v>0, severity:'warning', ar:'بعض المراحل تبدأ في آخر 5 سنوات', en:'Some phases start in last 5 years' },
+  { id:'CROSS-07', field:'latePhases', scope:'cross', condition:(v,ctx)=>v>0&&(ctx.horizon||50)>7, severity:'warning', ar:'بعض المراحل تبدأ في آخر 5 سنوات', en:'Some phases start in last 5 years' },
 ];
 
 export const RULES = [
