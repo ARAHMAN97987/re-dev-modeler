@@ -1824,16 +1824,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
       </tr>
       </>}
 
-      {/* ═══ § 4. DEVELOPER METRICS ═══ */}
-      <tr><td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11,background:"#e0e7ff",borderTop:"2px solid #1e3a5f"}}>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
-          <span>{ar?"عائد بسيط":"Simple"} <strong style={{color:"#f59e0b"}}>{selfSimpleROE?fmtPct(selfSimpleROE*100):"—"}</strong> <span style={{fontSize:11,color:"var(--text-secondary)"}}>({ar?"سنوي":"ann."} {selfSimpleAnnual?fmtPct(selfSimpleAnnual*100):"—"})</span></span>
-          <span>IRR <strong style={{color:getMetricColor("IRR",levIRR)}}>{levIRR!==null?fmtPct(levIRR*100):"N/A"}</strong></span>
-          <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
-          <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(levCF,0.12))}</strong></span>
-        </div>
-      </td></tr>
+      {/* § 4 Developer Metrics summary row removed — identical data already in the expandable Developer KPI card above (Simple Return, IRR, Payback, NPV@12%). */}
 
     </tbody></table></div>
     </div>
@@ -2431,21 +2422,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
         <td style={tdN}></td>
         {years.map(y=>{const inc=pc.income[y]||0;const eq=pf.totalEquity;const v=eq>0&&inc>0?inc/eq:0;return <td key={y} style={{...tdN,fontSize:11,fontWeight:v>0?600:400,color:v>=0.08?"#16a34a":v>0?"#ca8a04":"#d0d4dc"}}>{v>0?fmtPct(v*100):"—"}</td>;})}
       </tr>}
-      {/* IRR / NPV summary row */}
-      <tr style={{background:"#e0e7ff"}}>
-        <td colSpan={years.length+2} style={{padding:"8px 12px",fontSize:11}}>
-          <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontWeight:700,color:"#1e3a5f"}}>{ar?"مؤشرات المطور":"Developer Metrics"}:</span>
-            {isLongHold
-              ? <span>{ar?"عائد نقدي":"Cash Yield"} <strong style={{color:"#f59e0b"}}>{cashOnCash>0?fmtPct(cashOnCash*100):"—"}</strong></span>
-              : <span>{ar?"عائد بسيط":"Simple"} <strong style={{color:"#f59e0b"}}>{bankSimpleROE?fmtPct(bankSimpleROE*100):"—"}</strong> <span style={{fontSize:11,color:"var(--text-secondary)"}}>({ar?"سنوي":"ann."} {bankSimpleAnnual?fmtPct(bankSimpleAnnual*100):"—"})</span></span>
-            }
-            <span>IRR <strong style={{color:getMetricColor("IRR",pf.leveredIRR)}}>{pf.leveredIRR!==null?fmtPct(pf.leveredIRR*100):"N/A"}</strong></span>
-            <span>{ar?"استرداد":"Payback"} <strong style={{color:"#2563eb"}}>{paybackLev?`${paybackLev} ${ar?"سنة":"yr"}`:"N/A"}</strong></span>
-            <span>NPV@12% <strong style={{color:"#2563eb"}}>{fmtM(calcNPV(pf.leveredCF,0.12))}</strong></span>
-          </div>
-        </td>
-      </tr>
+      {/* IRR / NPV summary row removed — identical data already in the expandable Developer (Borrower) KPI card above. */}
       </>}
 
     </tbody></table></div>
