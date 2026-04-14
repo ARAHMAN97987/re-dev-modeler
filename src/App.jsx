@@ -1486,6 +1486,8 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   const [showChart, setShowChart] = useState(false);
   const [secOpen, setSecOpen] = useState({s1:true,s2:true,s3:true});
   const [kpiOpen, setKpiOpen] = useState({proj:false,cap:false,ret:false});
+  const [retMore, setRetMore] = useState(false); // "More details" toggle inside Returns card (hides Checks by default)
+  const [capMore, setCapMore] = useState(false); // "More details" toggle inside Capital card (hides Opportunity Cost by default)
   const [eduModal, setEduModal] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
   useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setShowChart(expand); setKpiOpen({proj:expand,cap:expand,ret:expand}); setSecOpen(expand?{}:{s1:true,s2:true,s3:true}); }}, [globalExpand]);
@@ -1687,9 +1689,16 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l={ar?"فترة الاسترداد":"Payback Period"} v={payback?`${payback} ${ar?"سنة":"yr"}`:"N/A"} c="#2563eb" bold />
             <KR l={ar?"صافي التدفق":"Total Net CF"} v={fmtM(totalLevCF)} c={totalLevCF>0?"#16a34a":"#ef4444"} />
             {exitProc > 0 && <KR l={ar?"عائد التخارج":"Exit Proceeds"} v={fmtM(exitProc)} c="#16a34a" />}
-            <SecHd text={ar?"تكلفة الفرصة البديلة":"OPPORTUNITY COST"} />
-            <KR l={ar?"لو استثمرت بـ 5% سنوي":"If invested @5%/yr"} v={fmtM(devCost * Math.pow(1.05, payback||10) - devCost)} c="#6b7080" />
-            <KR l={ar?"لو استثمرت بـ 8% سنوي":"If invested @8%/yr"} v={fmtM(devCost * Math.pow(1.08, payback||10) - devCost)} c="#6b7080" />
+            {capMore && <>
+              <SecHd text={ar?"تكلفة الفرصة البديلة":"OPPORTUNITY COST"} />
+              <KR l={ar?"لو استثمرت بـ 5% سنوي":"If invested @5%/yr"} v={fmtM(devCost * Math.pow(1.05, payback||10) - devCost)} c="#6b7080" />
+              <KR l={ar?"لو استثمرت بـ 8% سنوي":"If invested @8%/yr"} v={fmtM(devCost * Math.pow(1.08, payback||10) - devCost)} c="#6b7080" />
+            </>}
+            <div style={{gridColumn:"1/-1",marginTop:6,textAlign:"center"}}>
+              <button onClick={e=>{e.stopPropagation();setCapMore(m=>!m);}} style={{background:"transparent",border:"none",color:"#2563eb",fontSize:11,fontWeight:600,cursor:"pointer",padding:"4px 8px"}}>
+                {capMore ? (ar?"◂ تفاصيل أقل":"◂ Less Details") : (ar?"تفاصيل أكثر ▸":"More Details ▸")}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1722,11 +1731,18 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
             <KR l="@10%" v={fmtM(calcNPV(levCF,0.10))} />
             <KR l="@12%" v={fmtM(calcNPV(levCF,0.12))} c="#2563eb" bold />
             <KR l="@14%" v={fmtM(calcNPV(levCF,0.14))} />
-            <SecHd text={ar?"فحوصات":"CHECKS"} />
-            <KR l={ar?"IRR أكثر من 12%":"IRR > 12%"} v={levIRR>0.12?"✅":"❌"} c={levIRR>0.12?"#16a34a":"#ef4444"} />
-            <KR l={ar?"صافي القيمة @12% > 0":"NPV@12% > 0"} v={calcNPV(levCF,0.12)>0?"✅":"❌"} c={calcNPV(levCF,0.12)>0?"#16a34a":"#ef4444"} />
-            <KR l={ar?"صافي إيجابي":"Net CF > 0"} v={totalLevCF>0?"✅":"❌"} c={totalLevCF>0?"#16a34a":"#ef4444"} />
-            <KR l={ar?"عائد > 8%":"Yield > 8%"} v={yieldOnCost>0.08?"✅":"❌"} c={yieldOnCost>0.08?"#16a34a":"#ef4444"} />
+            {retMore && <>
+              <SecHd text={ar?"فحوصات":"CHECKS"} />
+              <KR l={ar?"IRR أكثر من 12%":"IRR > 12%"} v={levIRR>0.12?"✅":"❌"} c={levIRR>0.12?"#16a34a":"#ef4444"} />
+              <KR l={ar?"صافي القيمة @12% > 0":"NPV@12% > 0"} v={calcNPV(levCF,0.12)>0?"✅":"❌"} c={calcNPV(levCF,0.12)>0?"#16a34a":"#ef4444"} />
+              <KR l={ar?"صافي إيجابي":"Net CF > 0"} v={totalLevCF>0?"✅":"❌"} c={totalLevCF>0?"#16a34a":"#ef4444"} />
+              <KR l={ar?"عائد > 8%":"Yield > 8%"} v={yieldOnCost>0.08?"✅":"❌"} c={yieldOnCost>0.08?"#16a34a":"#ef4444"} />
+            </>}
+            <div style={{gridColumn:"1/-1",marginTop:6,textAlign:"center"}}>
+              <button onClick={e=>{e.stopPropagation();setRetMore(m=>!m);}} style={{background:"transparent",border:"none",color:"#2563eb",fontSize:11,fontWeight:600,cursor:"pointer",padding:"4px 8px"}}>
+                {retMore ? (ar?"◂ تفاصيل أقل":"◂ Less Details") : (ar?"تفاصيل أكثر ▸":"More Details ▸")}
+              </button>
+            </div>
           </div>
         )}
       </div>
