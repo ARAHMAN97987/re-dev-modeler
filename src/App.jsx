@@ -6458,16 +6458,12 @@ function ProjectDash({ project, results, checks, t, financing, phaseFinancings, 
             <div style={{fontSize:11,color:"var(--text-secondary)"}}>{ar?"صافي التدفق":"Net CF"}{hasIncentives&&!isFiltered?` (${ar?"+حوافز":"+inc."})`:""}</div>
             <div style={{fontSize:16,fontWeight:700,color:displayTotalNetCF>=0?"#16a34a":"#ef4444"}}>{fmtM(displayTotalNetCF)}</div>
           </div>
-          {f && f.mode !== "self" && <>
+          {f && f.mode !== "self" && totalDebt > 0 && (
             <div style={{background:"#fffbeb",borderRadius:8,padding:"10px 12px",border:"1px solid #fef3c7"}}>
               <div style={{fontSize:11,color:"var(--text-secondary)"}}>{ar?"إجمالي الدين":"Total Debt"}</div>
               <div style={{fontSize:16,fontWeight:700,color:"#f59e0b"}}>{fmtM(totalDebt)}</div>
             </div>
-            <div style={{background:"#f5f3ff",borderRadius:8,padding:"10px 12px",border:"1px solid #ede9fe"}}>
-              <div style={{fontSize:11,color:"var(--text-secondary)"}}>{ar?"إجمالي الفوائد":"Total Interest"}</div>
-              <div style={{fontSize:16,fontWeight:700,color:"#8b5cf6"}}>{fmtM(f.totalInterest)}</div>
-            </div>
-          </>}
+          )}
           {cashYield !== null && <div style={{background:"#eff6ff",borderRadius:8,padding:"10px 12px",border:"1px solid #dbeafe"}}>
             <div style={{fontSize:11,color:"var(--text-secondary)"}}>{ar?"العائد النقدي":"Cash Yield"}</div>
             <div style={{fontSize:16,fontWeight:700,color:"#2563eb"}}>{fmtPct(cashYield)}</div>
@@ -7041,18 +7037,13 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
       <span style={{fontSize:14}}>⚠</span>
       {ar ? "هذه المؤشرات قبل احتساب طريقة التمويل وآلية التخارج - ستتغير بعد تحديد التمويل" : "Pre-financing & pre-exit metrics — will change after financing mode and exit strategy are set"}
     </div>
-    {/* NPV/IRR Summary */}
+    {/* NPV/IRR Summary — focused on pre-financing analytical metrics unique to this view.
+        IRR / Total CAPEX / Total Income / Payback all live in Dashboard (intentionally removed here). */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit, minmax(130px, 1fr))",gap:10,marginBottom:16}}>
       {[
-        {label:ar?"IRR المشروع (قبل التمويل)":"Unlevered IRR",value:c.irr!==null?fmtPct(c.irr*100):"N/A",color:getMetricColor("IRR",c.irr)},
         {label:"NPV @10%",value:fmtM(c.npv10),color:c.npv10>0?"#2563eb":"#ef4444"},
-        {label:"NPV @12%",value:fmtM(c.npv12),color:c.npv12>0?"#2563eb":"#ef4444"},
-        {label:"NPV @14%",value:fmtM(c.npv14),color:c.npv14>0?"#2563eb":"#ef4444"},
-        {label:ar?"إجمالي التكاليف":"Total CAPEX",value:fmtM(c.totalCapex),color:"#ef4444"},
-        {label:ar?"إجمالي الإيرادات":"Total Income",value:fmtM(c.totalIncome),color:"#16a34a"},
         {label:ar?"صافي الدخل التشغيلي (NOI)":"Net Operating Income",value:fmtM(totalNOI),color:"#2563eb",tip:ar?"الإيرادات - إيجار الأرض (قبل CAPEX)":"Revenue minus Land Rent (before CAPEX)"},
         {label:ar?"عائد على التكلفة":"Yield on Cost",value:yieldOnCost>0?fmtPct(yieldOnCost*100):"—",color:yieldOnCost>0.08?"#16a34a":"#f59e0b",tip:ar?"NOI المستقر / CAPEX":"Stabilized NOI / Total CAPEX"},
-        {label:ar?"فترة الاسترداد":"Payback Period",value:c.paybackYear!=null?(c.paybackYear+(ar?" سنة":" yr")):"—",color:c.paybackYear&&c.paybackYear<=10?"#16a34a":c.paybackYear?"#f59e0b":"#9ca3af"},
         {label:ar?"أقصى سحب سلبي":"Peak Negative CF",value:fmtM(c.peakNegative||0),color:"#ef4444",tip:c.peakNegativeYear!=null?(ar?`السنة ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`:`Year ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`):""},
         ...(financing?.effectiveLandCap > 0 ? [{
           label: ar ? (project.landType==="partner" ? "مساهمة الشريك بالأرض (عينية)" : "رسملة حق الانتفاع") : (project.landType==="partner" ? "Partner Land (In-Kind)" : "Land Cap (In-Kind)"),
@@ -7068,6 +7059,22 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
         {k.tip && <div style={{fontSize:11,color:"var(--text-tertiary)",marginTop:2}}>{k.tip}</div>}
       </div>)}
     </div>
+
+    {/* Advanced NPV rates — collapsed by default */}
+    <details style={{marginBottom:16,fontSize:12}}>
+      <summary style={{cursor:"pointer",color:"var(--text-secondary)",padding:"6px 0",userSelect:"none"}}>
+        {ar?"▸ عرض NPV بنسب خصم إضافية (12% · 14%)":"▸ Show NPV at additional discount rates (12% · 14%)"}
+      </summary>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))",gap:10,marginTop:8}}>
+        {[
+          {label:"NPV @12%",value:fmtM(c.npv12),color:c.npv12>0?"#2563eb":"#ef4444"},
+          {label:"NPV @14%",value:fmtM(c.npv14),color:c.npv14>0?"#2563eb":"#ef4444"},
+        ].map((k,i) => <div key={i} style={{background:"var(--surface-card)",borderRadius:8,border:"0.5px solid var(--border-default)",padding:"8px 12px"}}>
+          <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:2}}>{k.label}</div>
+          <div style={{fontSize:16,fontWeight:700,color:k.color}}>{k.value}</div>
+        </div>)}
+      </div>
+    </details>
 
     {/* Period Legend */}
     <div style={{display:"flex",gap:14,marginBottom:8,fontSize:11,color:"var(--text-secondary)",flexWrap:"wrap",alignItems:"center"}}>
