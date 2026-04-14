@@ -11,7 +11,7 @@
 const path = require('path');
 
 // Use the same helper loader as other test suites
-const E = require(path.resolve('/Users/abdulrahman/Desktop/السليمان /زان/00 Data Room ZAN/re-dev-modeler/tests/helpers/engine.cjs'));
+const E = require(path.resolve(__dirname, 'helpers/engine.cjs'));
 
 const runFullModel = E.runFullModel;
 const computeProjectCashFlows = E.computeProjectCashFlows;
