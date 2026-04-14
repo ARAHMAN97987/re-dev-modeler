@@ -614,6 +614,19 @@ When to use:
           {(project.landType==="lease"||project.landType==="bot")&&<FL label={ar?"رسملة حق الانتفاع؟":"Capitalize Leasehold?"} tip={ar?"الأرض مؤجرة وليست مملوكة — لكن حق الانتفاع له قيمة مالية. رسملته تعني تحويل هذي القيمة إلى حصة Equity في الصندوق.\nمثال: أرض 50,000 م² × 800 ريال = 40 مليون تُحسب كمساهمة عينية لصاحب الأرض":"The land is leased, not owned — but the leasehold right has financial value. Capitalizing it converts this value into an equity stake in the fund.\nExample: 50,000 sqm × SAR 800 = SAR 40M counted as in-kind equity contribution"}>
             <Drp lang={lang} value={cfg.landCapitalize?"Y":"N"} onChange={v=>upCfg({landCapitalize:v==="Y"})} options={["Y","N"]} />
           </FL>}
+          {project.landType==="partner"&&<>
+            <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:11,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"مساهمة الشريك بالأرض (عينية)":"Partner Land (In-Kind)"}</div>
+            <div style={g2}>
+              <FL label={ar?"قيمة الأرض المساهم بها":"Partner Land Valuation"} tip={ar?"تقييم الأرض المقدّمة من الشريك كمساهمة عينية. تُضاف لإجمالي تكلفة المشروع، وتُحسب للمطور (GP) كمصدر Equity":"Valuation of the land contributed by the partner as an in-kind equity contribution. Added to total project cost and credited to the Developer (GP) as an equity source"}><Inp type="number" value={cfg.landValuation} onChange={v=>upCfg({landValuation:v})} /></FL>
+              <FL label={ar?"نسبة حصة الشريك من Equity %":"Partner Equity %"} tip={ar?"النسبة التي يأخذها المطور (GP) من إجمالي Equity مقابل مساهمته بالأرض":"Percentage of total Equity the Developer (GP) receives for the land contribution"}><Inp type="number" value={cfg.partnerEquityPct} onChange={v=>upCfg({partnerEquityPct:v})} /></FL>
+            </div>
+            <div style={{gridColumn:"1/-1",padding:"6px 10px",background:"#f3f0ff",borderRadius:6,border:"1px solid #ddd6fe",fontSize:11,color:"#6d28d9",marginTop:-2}}>
+              {ar
+                ? <>💡 <strong>لصالح من:</strong> مساهمة الأرض تُحسب دائماً للمطور (GP). القيمة المُرسملة = <strong>إجمالي Equity × {cfg.partnerEquityPct||0}%</strong> = <strong>{fmtM((f?.totalEquity||0) * ((cfg.partnerEquityPct||0)/100))}</strong></>
+                : <>💡 <strong>Credited To:</strong> Partner land always credits the Developer (GP). Capitalized Equity = <strong>Total Equity × {cfg.partnerEquityPct||0}%</strong> = <strong>{fmtM((f?.totalEquity||0) * ((cfg.partnerEquityPct||0)/100))}</strong></>}
+            </div>
+          </>}
+
           {cfg.landCapitalize&&(project.landType==="lease"||project.landType==="bot")&&<>
             <div style={g2}>
               <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها كـ Equity. يفضل أن يكون محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur} · ${dh("landCapRate")}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
@@ -656,7 +669,7 @@ When to use:
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.landCap)} {cur}</span>
               </div>}
               {f.gpEquityBreakdown?.partnerLand > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?"حصة الشريك":"Partner Land"}</span>
+                <span style={{color:"#6b7080",paddingInlineStart:8}}>↳ {ar?`مساهمة الشريك بالأرض (للمطور ${cfg.partnerEquityPct||0}%)`:`Partner Land (to Developer ${cfg.partnerEquityPct||0}%)`}</span>
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.partnerLand)} {cur}</span>
               </div>}
               {f.gpEquityBreakdown?.devFee > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>

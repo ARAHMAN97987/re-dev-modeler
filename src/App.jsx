@@ -2845,6 +2845,20 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer",ar:"المطور"},{value:"lp",en:"Investor",ar:"المستثمر"}]} /></FL>}
           </>}
 
+          {/* ── Partner Land (In-Kind Contribution) ── */}
+          {project.landType==="partner"&&<>
+            <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:11,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"مساهمة الشريك بالأرض (عينية)":"Partner Land (In-Kind)"}</div>
+            <div style={g2}>
+              <FL label={ar?"قيمة الأرض المساهم بها":"Partner Land Valuation"} tip={ar?"تقييم الأرض المقدّمة من الشريك كمساهمة عينية. تُضاف لإجمالي تكلفة المشروع، وتُحسب للمطور (GP) كمصدر Equity.\nمثال جازان: 150,000,000 ريال":"Valuation of the land contributed by the partner as an in-kind equity contribution. Added to total project cost and credited to the Developer (GP) as an equity source.\nJazan example: SAR 150,000,000"} hint={dh("landValuation")}><Inp type="number" value={cfg.landValuation} onChange={v=>upCfg({landValuation:v})} /></FL>
+              <FL label={ar?"نسبة حصة الشريك من Equity %":"Partner Equity %"} tip={ar?"النسبة التي يأخذها المطور (GP) من إجمالي Equity مقابل مساهمته بالأرض. مثلاً 75% = المطور يملك 75% من الصندوق، والمستثمرون (LPs) يملكون 25%":"Percentage of total Equity the Developer (GP) receives in exchange for the land contribution. e.g. 75% = GP owns 75% of the fund, LPs own the remaining 25%"} hint={dh("partnerEquityPct")}><Inp type="number" value={cfg.partnerEquityPct} onChange={v=>upCfg({partnerEquityPct:v})} /></FL>
+            </div>
+            <div style={{gridColumn:"1/-1",padding:"6px 10px",background:"#f3f0ff",borderRadius:6,border:"1px solid #ddd6fe",fontSize:11,color:"#6d28d9",marginTop:-2}}>
+              {ar
+                ? <>💡 <strong>لصالح من:</strong> مساهمة الأرض تُحسب دائماً للمطور (GP) في هذا الوضع. القيمة المُرسملة في Equity = <strong>إجمالي Equity × {cfg.partnerEquityPct||0}%</strong> = <strong>{fmtM((f?.totalEquity||0) * ((cfg.partnerEquityPct||0)/100))}</strong></>
+                : <>💡 <strong>Credited To:</strong> Partner land contribution always credits the Developer (GP) in this mode. Capitalized Equity value = <strong>Total Equity × {cfg.partnerEquityPct||0}%</strong> = <strong>{fmtM((f?.totalEquity||0) * ((cfg.partnerEquityPct||0)/100))}</strong></>}
+            </div>
+          </>}
+
           {/* ── GP Investment Sources ── */}
           {isFundMode && <>
             <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:11,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"استثمار المطور":"Developer Investment"}</div>
@@ -2883,7 +2897,7 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.landCap)} {cur}</span>
               </div>}
               {f.gpEquityBreakdown?.partnerLand > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:"var(--text-secondary)",paddingInlineStart:8}}>↳ {ar?"حصة الشريك":"Partner Land"}</span>
+                <span style={{color:"var(--text-secondary)",paddingInlineStart:8}}>↳ {ar?`مساهمة الشريك بالأرض (للمطور ${cfg.partnerEquityPct||0}%)`:`Partner Land (to Developer ${cfg.partnerEquityPct||0}%)`}</span>
                 <span style={{color:"#8b5cf6"}}>{fmt(f.gpEquityBreakdown.partnerLand)} {cur}</span>
               </div>}
               {f.gpEquityBreakdown?.devFee > 0 && <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -6973,7 +6987,14 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
         {label:ar?"عائد على التكلفة":"Yield on Cost",value:yieldOnCost>0?fmtPct(yieldOnCost*100):"—",color:yieldOnCost>0.08?"#16a34a":"#f59e0b",tip:ar?"NOI المستقر / CAPEX":"Stabilized NOI / Total CAPEX"},
         {label:ar?"فترة الاسترداد":"Payback Period",value:c.paybackYear!=null?(c.paybackYear+(ar?" سنة":" yr")):"—",color:c.paybackYear&&c.paybackYear<=10?"#16a34a":c.paybackYear?"#f59e0b":"#9ca3af"},
         {label:ar?"أقصى سحب سلبي":"Peak Negative CF",value:fmtM(c.peakNegative||0),color:"#ef4444",tip:c.peakNegativeYear!=null?(ar?`السنة ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`:`Year ${c.peakNegativeYear+1} (${startYear+c.peakNegativeYear})`):""},
-        ...(financing?.effectiveLandCap > 0 ? [{label:ar?"رسملة حق الانتفاع":"Land Cap (In-Kind)",value:fmtM(financing.effectiveLandCap),color:"#7c3aed",tip:`${project.landArea||0} m² × ${project.landCapRate||1000} SAR/m²`}] : []),
+        ...(financing?.effectiveLandCap > 0 ? [{
+          label: ar ? (project.landType==="partner" ? "مساهمة الشريك بالأرض (عينية)" : "رسملة حق الانتفاع") : (project.landType==="partner" ? "Partner Land (In-Kind)" : "Land Cap (In-Kind)"),
+          value: fmtM(financing.effectiveLandCap),
+          color: "#7c3aed",
+          tip: project.landType==="partner"
+            ? (ar ? `تقييم الأرض: ${fmtM(project.landValuation||0)} · حصة المطور ${project.partnerEquityPct||0}%` : `Land valuation: ${fmtM(project.landValuation||0)} · Dev share ${project.partnerEquityPct||0}%`)
+            : `${project.landArea||0} m² × ${project.landCapRate||1000} SAR/m²`
+        }] : []),
       ].map((k,i) => <div key={i} style={{background:"var(--surface-card)",borderRadius:8,border:"0.5px solid var(--border-default)",padding:"8px 12px"}}>
         <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:2}}>{k.label}</div>
         <div style={{fontSize:16,fontWeight:700,color:k.color}}>{k.value}</div>
@@ -7078,7 +7099,7 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
           const elc = financing.effectiveLandCap;
           const fsi = Math.max(0, (project.fundStartYear || project.startYear || 2026) - startYear);
           const lcArr = new Array(horizon).fill(0); lcArr[Math.min(fsi, horizon-1)] = elc;
-          return <CFRow label={ar?"رسملة حق الانتفاع":"Land Capitalization (In-Kind)"} values={lcArr} total={elc} color="#7c3aed" sub />;
+          return <CFRow label={ar ? (project.landType==="partner" ? "مساهمة الشريك بالأرض (عينية)" : "رسملة حق الانتفاع") : (project.landType==="partner" ? "Partner Land (In-Kind)" : "Land Capitalization (In-Kind)")} values={lcArr} total={elc} color="#7c3aed" sub />;
         })()}
         <SectionRow label={ar?"صافي التدفق النقدي":"NET CASH FLOW"} color="#1e3a5f" bg="#f0f4ff" />
         <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={c.netCF} total={c.totalNetCF} bold />
