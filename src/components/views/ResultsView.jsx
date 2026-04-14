@@ -107,16 +107,24 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
   const allPhaseNames = Object.keys(results.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
+  // Ref to suppress the sync-effect when kpiPhase change came from our own togglePhase
+  // (prevents race: multi-select → setKpiPhase("all") → effect wipes selection back to [])
+  const skipKpiSync = useRef(false);
   const togglePhase = (p) => {
     setSelectedPhases(prev => {
       const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p];
       // Sync KPI bar: single phase → show that phase, otherwise "all"
-      if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all");
+      if (setKpiPhase) {
+        skipKpiSync.current = true;
+        setKpiPhase(next.length === 1 ? next[0] : "all");
+      }
       return next;
     });
   };
-  // Sync from KPI bar dropdown to local phase selection
-  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return;
+  // Sync from KPI bar dropdown to local phase selection (external changes only)
+  useEffect(() => {
+    if (skipKpiSync.current) { skipKpiSync.current = false; return; }
+    if (!kpiPhase || allPhaseNames.length <= 1) return;
     if (kpiPhase === "all") { setSelectedPhases([]); }
     else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
   }, [kpiPhase]);
@@ -484,15 +492,23 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
   const isSinglePhase = selectedPhases.length === 1;
   const singlePhaseName = isSinglePhase ? selectedPhases[0] : null;
+  // Ref to suppress the sync-effect when kpiPhase change came from our own togglePhase
+  // (prevents race: multi-select → setKpiPhase("all") → effect wipes selection back to [])
+  const skipKpiSync = useRef(false);
   const togglePhase = (p) => {
     setSelectedPhases(prev => {
       const next = prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p];
-      if (setKpiPhase) setKpiPhase(next.length === 1 ? next[0] : "all");
+      if (setKpiPhase) {
+        skipKpiSync.current = true;
+        setKpiPhase(next.length === 1 ? next[0] : "all");
+      }
       return next;
     });
   };
-  // Sync from KPI bar dropdown
-  useEffect(() => { if (!kpiPhase || allPhaseNames.length <= 1) return;
+  // Sync from KPI bar dropdown (external changes only; ignore self-initiated)
+  useEffect(() => {
+    if (skipKpiSync.current) { skipKpiSync.current = false; return; }
+    if (!kpiPhase || allPhaseNames.length <= 1) return;
     if (kpiPhase === "all") { setSelectedPhases([]); }
     else if (allPhaseNames.includes(kpiPhase)) { setSelectedPhases([kpiPhase]); }
   }, [kpiPhase]);
