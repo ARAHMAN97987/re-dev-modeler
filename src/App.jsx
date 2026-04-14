@@ -7762,27 +7762,31 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
             </div>
           </Section>
         )}
-        {w && (
-          <Section title={ar?"اقتصاديات المطور":"Developer Economics"} color="#16a34a">
-            <div style={{background:"var(--surface-card)",borderRadius:12,border:"0.5px solid var(--border-default)",padding:"16px 18px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
-                {[
-                  { label: ar?"مساهمة المطور":"Developer Equity", value: fmtM(w.gpTotalInvested) },
-                  { label: ar?"توزيعات المطور":"Developer Distributions", value: fmtM(w.gpTotalDist) },
-                  { label: ar?"رسوم المطور":"Developer Fee", value: fmtM(w.developerFeeTotal||0) },
-                  { label: ar?"رسوم الإدارة":"Mgmt Fees", value: fmtM(w.mgmtFeeTotal||0) },
-                  { label: ar?"عائد المطور":"Developer IRR", value: w.gpIRR !== null ? (w.gpIRR*100).toFixed(1)+"%" : "—" },
-                  { label: ar?"مضاعف المطور":"Developer MOIC", value: w.gpMOIC ? w.gpMOIC.toFixed(2)+"x" : "—" },
-                ].map((item, i) => (
-                  <div key={i}>
-                    <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:2}}>{item.label}</div>
-                    <div style={{fontSize:14,fontWeight:600,color:"var(--text-primary)"}}>{item.value}</div>
-                  </div>
-                ))}
+        {w && (() => {
+          // Only show fee/equity details that are NOT already in "Investor Returns" above.
+          // Developer IRR & MOIC live there; this section focuses on cash flows & fees.
+          const items = [
+            { label: ar?"مساهمة المطور":"Developer Equity", value: fmtM(w.gpTotalInvested), show: (w.gpTotalInvested||0) > 0 },
+            { label: ar?"توزيعات المطور":"Developer Distributions", value: fmtM(w.gpTotalDist), show: (w.gpTotalDist||0) > 0 },
+            { label: ar?"رسوم المطور":"Developer Fee", value: fmtM(w.developerFeeTotal||0), show: (w.developerFeeTotal||0) > 0 },
+            { label: ar?"رسوم الإدارة":"Mgmt Fees", value: fmtM(w.mgmtFeeTotal||0), show: (w.mgmtFeeTotal||0) > 0 },
+          ].filter(it => it.show);
+          if (items.length === 0) return null;
+          return (
+            <Section title={ar?"اقتصاديات المطور":"Developer Economics"} color="#16a34a">
+              <div style={{background:"var(--surface-card)",borderRadius:12,border:"0.5px solid var(--border-default)",padding:"16px 18px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
+                  {items.map((item, i) => (
+                    <div key={i}>
+                      <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:2}}>{item.label}</div>
+                      <div style={{fontSize:14,fontWeight:600,color:"var(--text-primary)"}}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          </Section>
-        )}
+            </Section>
+          );
+        })()}
         {f && liveProject.exitStrategy !== "hold" && liveProject.exitStrategy !== "absorption" && (
           <Section title={ar?"تحليل التخارج":"Exit Analysis"} color="#f59e0b">
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
