@@ -1073,7 +1073,7 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
       <tr onClick={()=>setWSec(p=>({...p,s7:!p.s7}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:11,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",userSelect:"none"}}>{wSec.s7?"▶":"▼"} {ar?"7. تدفقات المشروع (غير ممول)":"7. PROJECT CASH FLOWS (Unlevered)"}</td></tr>
       {!wSec.s7 && <>
       <CFRow label={ar?"الإيرادات":"Rental Income"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
-      <CFRow label={ar?"إيجار الأرض":"Land Rent"} values={pc.landRent} total={pc.totalLandRent ?? pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
+      {(pc.totalLandRent ?? pc.landRent.reduce((a,b)=>a+b,0)) > 0 && <CFRow label={ar?"إيجار الأرض":"Land Rent"} values={pc.landRent} total={pc.totalLandRent ?? pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />}
       <CFRow label={ar?"تكلفة التطوير (CAPEX)":"Development CAPEX"} values={pc.capex} total={pc.totalCapex} negate color="#ef4444" />
       <CFRow label={ar?"صافي التدفق النقدي (غير ممول)":"Net Project CF (Unlevered)"} values={pc.netCF} total={pc.totalNetCF ?? pc.netCF.reduce((a,b)=>a+b,0)} bold />
       </>}
@@ -1652,7 +1652,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
             <SecHd text={ar?"التكاليف":"COSTS"} />
             <KR l={ar?"تكلفة التطوير":"Dev Cost"} v={fmtM(devCost)} bold />
             <KR l={ar?"إجمالي التكاليف الرأسمالية":"CAPEX"} v={fmtM(totalCapex)} />
-            <KR l={ar?"إيجار الأرض":"Land Rent"} v={fmtM(c.totalLandRent)} c="#ef4444" />
+            {(c.totalLandRent||0) > 0 && <KR l={ar?"إيجار الأرض":"Land Rent"} v={fmtM(c.totalLandRent)} c="#ef4444" />}
             {f?.landCapValue > 0 && <KR l={ar?"رسملة حق الانتفاع":"Leasehold Cap"} v={fmtM(f.landCapValue)} />}
             <SecHd text={ar?"الإيرادات":"REVENUE"} />
             <KR l={ar?"إجمالي الإيرادات":"Total Revenue"} v={fmtM(totalIncome)} c="#16a34a" bold />
@@ -1790,7 +1790,7 @@ function SelfResultsView({ project, results, financing, phaseFinancings, incenti
       <tr onClick={()=>setSecOpen(p=>({...p,s1:!p.s1}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:11,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",userSelect:"none"}}>{secOpen.s1?"▶":"▼"} {ar?"1. تدفقات المشروع":"1. PROJECT CASH FLOWS"}</td></tr>
       {!secOpen.s1 && <>
       <CFRow label={ar?"الإيرادات":"Revenue"} values={c.income} total={c.totalIncome} color="#16a34a" />
-      <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
+      {c.landRent.reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />}
       <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noiArr} total={totalNOI} bold />
       <CFRow label={ar?"(-) تكلفة التطوير (CAPEX)":"(-) Development CAPEX"} values={c.capex} total={c.totalCapex} negate color="#ef4444" />
       <CFRow label={ar?"= صافي التدفق النقدي":"= Net Cash Flow"} values={c.netCF} total={c.netCF.reduce((a,b)=>a+b,0)} bold />
@@ -2347,7 +2347,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
       <tr onClick={()=>setSecOpen(p=>({...p,s1:!p.s1}))} style={{cursor:"pointer"}}><td colSpan={years.length+2} style={{padding:"6px 12px",fontSize:11,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase",userSelect:"none"}}>{secOpen.s1?"▶":"▼"} {ar?"1. تدفقات المشروع (قبل التمويل)":"1. PROJECT CASH FLOWS (Unlevered)"}</td></tr>
       {!secOpen.s1 && <>
       <CFRow label={ar?"الإيرادات":"Rental Income"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
-      <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />
+      {pc.landRent.reduce((a,b)=>a+b,0) > 0 && <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.landRent.reduce((a,b)=>a+b,0)} negate color="#ef4444" />}
       {/* NOI */}
       {(() => { const noi=new Array(h).fill(0); for(let y=0;y<h;y++) noi[y]=(pc.income[y]||0)-(pc.landRent[y]||0); return <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noi} total={noi.reduce((a,b)=>a+b,0)} bold />; })()}
       <CFRow label={ar?"(-) تكلفة التطوير (CAPEX)":"(-) Development CAPEX"} values={pc.capex} total={pc.totalCapex} negate color="#ef4444" />
@@ -3470,7 +3470,7 @@ When to use:
             {/* ── Project CF ── */}
             <tr><td colSpan={years.length+2} style={{padding:"5px 10px",fontSize:11,fontWeight:700,color:"#16a34a",background:"#f0fdf4",letterSpacing:0.5,textTransform:"uppercase"}}>{ar?"التدفق التشغيلي":"PROJECT CASH FLOW"}{isFiltered ? ` — ${activePh.join(", ")}` : ""}</td></tr>
             <CFRow label={ar?"الإيرادات":"Revenue"} values={pc.income} total={pc.totalIncome} color="#16a34a" />
-            <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.totalLandRent} color="#ef4444" negate />
+            {(pc.totalLandRent||0) > 0 && <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pc.landRent} total={pc.totalLandRent} color="#ef4444" negate />}
             <CFRow label={ar?"(-) تكاليف التطوير":"(-) CAPEX"} values={pc.capex} total={pc.totalCapex} color="#ef4444" negate />
             {(() => { const unlev = new Array(h).fill(0); for(let y=0;y<h;y++) unlev[y]=(pc.income[y]||0)-(pc.landRent[y]||0)-(pc.capex[y]||0); return <CFRow label={ar?"= صافي التدفق (قبل التمويل)":"= Unlevered Net CF"} values={unlev} total={unlev.reduce((a,b)=>a+b,0)} bold />; })()}
 
@@ -7100,7 +7100,7 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
             if (resTotal === 0) return null;
             return <CFRow label={ar?"(-) الاحتياطيات (FF&E 4%)":"(-) FF&E Reserves (4%)"} values={pd.reserves} total={resTotal} color="#f59e0b" negate sub />;
           })()}
-          <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate sub />
+          {(pr.totalLandRent||0) > 0 && <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={pr.landRent} total={pr.totalLandRent} color="#ef4444" negate sub />}
           <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={pr.noi} total={pr.totalNOI} bold />
           <CFRow label={ar?"هامش NOI %":"NOI Margin %"} pct values={years.map(y=>pr.income[y]>0?(pr.noi[y]/pr.income[y])*100:null)} total={pr.totalIncome>0?(pr.totalNOI/pr.totalIncome)*100:null} />
           <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="#ef4444" bg="#fef2f2" />
@@ -7141,7 +7141,7 @@ function CashFlowView({ project, results, t, incentivesResult, financing, onAddA
           if (resTotal === 0) return null;
           return <CFRow label={ar?"(-) الاحتياطيات (FF&E 4%)":"(-) FF&E Reserves (4%)"} values={cd.reserves} total={resTotal} color="#f59e0b" negate sub />;
         })()}
-        <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate sub />
+        {(c.totalLandRent||0) > 0 && <CFRow label={ar?"(-) إيجار الأرض":"(-) Land Rent"} values={c.landRent} total={c.totalLandRent} color="#ef4444" negate sub />}
         <CFRow label={ar?"= صافي الدخل التشغيلي (NOI)":"= NOI (Net Operating Income)"} values={noiArr} total={totalNOI} bold />
         <CFRow label={ar?"هامش NOI %":"NOI Margin %"} pct values={years.map(y=>c.income[y]>0?(noiArr[y]/c.income[y])*100:null)} total={c.totalIncome>0?(totalNOI/c.totalIncome)*100:null} />
         <SectionRow label={ar?"التكاليف الرأسمالية":"CAPITAL EXPENDITURE"} color="#ef4444" bg="#fef2f2" />
