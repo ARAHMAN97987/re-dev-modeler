@@ -1951,7 +1951,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
     return Math.max(1, first >= 0 ? last - first + 1 : h);
   })();
   const bankSimpleAnnual = bankInvestYears > 0 ? bankSimpleROE / bankInvestYears : 0;
-  const isHoldMode = (cfg.exitStrategy || "sale") === "hold" || cfg.finMode === "incomeFund";
+  const isHoldMode = (cfg.exitStrategy || "sale") === "hold" || (cfg.exitStrategy || "sale") === "absorption" || cfg.finMode === "incomeFund";
   const isLongHold = isHoldMode && bankInvestYears > 20;
 
   // Chart data
@@ -2064,16 +2064,17 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:11,color:"var(--text-secondary)",minWidth:70}}>{ar?"الاستراتيجية":"Strategy"}</span>
               <select value={cfg.exitStrategy||"sale"} onChange={e=>upCfg({exitStrategy:e.target.value})} style={{padding:"5px 8px",border:"0.5px solid var(--border-default)",borderRadius:6,fontSize:12,background:"var(--surface-card)"}}>
-                <option value="sale">{ar?"بيع":"Sale"}</option>
-                <option value="hold">{ar?"احتفاظ":"Hold"}</option>
-                <option value="caprate">Cap Rate</option>
+                <option value="sale">{ar?"بيع نهائي":"Terminal Sale"}</option>
+                <option value="caprate">{ar?"بيع - رسملة":"Sale - Cap Rate"}</option>
+                <option value="absorption">{ar?"بيع تدريجي":"Sale Absorption"}</option>
+                <option value="hold">{ar?"احتفاظ بالدخل":"Hold for Income"}</option>
               </select>
             </div>
-            {(cfg.exitStrategy||"sale")!=="hold"&&<>
+            {(cfg.exitStrategy||"sale")!=="hold"&&(cfg.exitStrategy||"sale")!=="absorption"&&<>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"var(--text-secondary)",minWidth:60}}>{ar?"السنة":"Year"}</span>
                 <input type="number" value={cfg.exitYear||""} onChange={e=>upCfg({exitYear:parseFloat(e.target.value)||0})} placeholder="auto" style={{width:isMobile?80:60,padding:isMobile?"8px 10px":"5px 8px",border:"0.5px solid var(--border-default)",borderRadius:6,fontSize:12,textAlign:"center",background:"var(--surface-card)"}} />
-                {pf?.optimalExitYear > 0 && pf?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && <span style={{fontSize:11,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.optimalExitYear} ({(pf.optimalExitIRR*100).toFixed(1)}%)</span>}
+                {pf?.optimalExitYear > 0 && pf?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && (project.exitStrategy||"sale") !== "absorption" && <span style={{fontSize:11,color:"#92400e",background:"#fef9c3",padding:"2px 6px",borderRadius:4}}>💡 {ar?"يوصى:":"Rec:"} {pf.optimalExitYear} ({(pf.optimalExitIRR*100).toFixed(1)}%)</span>}
               </div>
               {(cfg.exitStrategy||"sale")==="sale"&&<div style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,color:"var(--text-secondary)",minWidth:60}}>{ar?"المضاعف":"Multiple"}</span>
@@ -2219,7 +2220,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
             {pf.landCapValue>0 && <KR l={ar?"أرض":"Land"} v={fmtM(pf.landCapValue)} />}
             <KR l={ar?"الإجمالي":"Total"} v={fmtM(pf.devCostInclLand)} bold />
             <SecHd text={ar?"التخارج":"EXIT"} />
-            <KR l={ar?"الاستراتيجية":"Strategy"} v={cfg.exitStrategy==="hold"?(ar?"احتفاظ":"Hold"):cfg.exitStrategy==="caprate"?"Cap Rate":(ar?"بيع":"Sale")} />
+            <KR l={ar?"الاستراتيجية":"Strategy"} v={cfg.exitStrategy==="hold"?(ar?"احتفاظ بالدخل":"Hold for Income"):cfg.exitStrategy==="absorption"?(ar?"بيع تدريجي":"Sale Absorption"):cfg.exitStrategy==="caprate"?"Cap Rate":(ar?"بيع":"Sale")} />
             <KR l={ar?"السنة":"Year"} v={pf.exitYear?`${pf.exitYear}`:"—"} />
             <KR l={ar?"المضاعف":"Multiple"} v={exitMult>0?exitMult+"x":"—"} />
             <KR l={ar?"العائد":"Proceeds"} v={exitProc>0?fmtM(exitProc):"—"} c="#16a34a" />
@@ -2660,7 +2661,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         const hasFundDebt = isHybridMode && cfg.debtAllowed;
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
         const isFundMode = cfg.finMode === "fund" || isHybridMode || isIncomeFund;
-        const notHold = !isIncomeFund && (cfg.exitStrategy||"sale") !== "hold";
+        const _rawExit = cfg.exitStrategy || "sale";
+        const _isHoldLike = _rawExit === "hold" || _rawExit === "absorption";
+        const notHold = !isIncomeFund && !_isHoldLike;
         // Accordion section header helper
         const AH = ({id, color, label, summary, visible}) => { if (visible === false) return null;
           const open = cfgOpen(id);
@@ -3095,17 +3098,80 @@ When to use:
 
         {/* ── SECTION 6: EXIT STRATEGY (visible for ALL modes) ── */}
         <SecWrap visible={true} color="#8b5cf6">
-        <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={`${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ":"Hold"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`} visible={true} />
+        <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={`${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ بالدخل":"Hold for Income",absorption:ar?"بيع تدريجي":"Sale Absorption"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`} visible={true} />
         <AB id="exit" visible={true}>
-          <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع\nAsset Sale = exit at a set year. Hold for Income = no sale event">
-            <Drp lang={lang} value={cfg.exitStrategy||"sale"} onChange={v=>upCfg({exitStrategy:v})} options={[{value:"sale",en:"Sale - Multiple (default)",ar:"بيع - مضاعف (تلقائي)"},{value:"caprate",en:"Sale - Cap Rate",ar:"بيع - رسملة"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
+          <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip={ar?"بيع نهائي = تخارج بمضاعف أو Cap Rate في سنة محددة\nبيع تدريجي = صندوق تطوير يبيع القطع/الأصول على مراحل (مثل جازان)\nاحتفاظ بالدخل = صندوق دخل دوري بدون بيع":"Terminal Sale = exit at multiple/cap rate in a specific year\nSale Absorption = dev fund selling plots/assets gradually (e.g. Jazan)\nHold for Income = income fund with no sale event"}>
+            <Drp lang={lang} value={cfg.exitStrategy||"sale"} onChange={v=>upCfg({exitStrategy:v})} options={[{value:"sale",en:"Terminal Sale - Multiple (default)",ar:"بيع نهائي - مضاعف (تلقائي)"},{value:"caprate",en:"Terminal Sale - Cap Rate",ar:"بيع نهائي - رسملة"},{value:"absorption",en:"Sale Absorption (asset-level)",ar:"بيع تدريجي (عبر الأصول)"},{value:"hold",en:"Hold for Income (no sale)",ar:"احتفاظ بالدخل (بدون بيع)"}]} />
           </FL>
           <div style={{gridColumn:"1/-1",marginTop:-6,marginBottom:4}}><HelpLink contentKey="exitStrategy" lang={lang} onOpen={setEduModal} /></div>
+
+          {/* Absorption info: shown when strategy = absorption OR (hold + has Sale assets) */}
+          {_isHoldLike && (()=>{
+            const saleAssets = (project.assets||[]).filter(a=>a.revType==="Sale");
+            const saleRev = projectResults?.assetSchedules?.filter(a=>a.revType==="Sale").reduce((s,a)=>s+(a.totalRevenue||0),0)||0;
+            const hasAbsorption = saleAssets.length > 0 && saleRev > 0;
+            const isAbsorptionPicked = _rawExit === "absorption";
+
+            // Suggest switching hold→absorption if Sale assets exist
+            if (_rawExit === "hold" && hasAbsorption) {
+              return <div style={{gridColumn:"1/-1",padding:"10px 14px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,marginBottom:8,display:"flex",alignItems:"flex-start",gap:8}}>
+                <span style={{fontSize:14}}>💡</span>
+                <div style={{flex:1,fontSize:11,color:"#92400e",lineHeight:1.5}}>
+                  <strong>{ar?"اقتراح:":"Suggestion:"}</strong>{" "}
+                  {ar
+                    ? <>المشروع يحتوي على أصول بيع (إجمالي {fmtM(saleRev)}). الحالة الحالية "احتفاظ" لكن فعلياً الصندوق يُخرج عبر بيع القطع تدريجياً. يفضّل اختيار <strong>"بيع تدريجي"</strong> لوصف أدق.</>
+                    : <>Project has Sale assets (total {fmtM(saleRev)}). Current setting is "Hold" but the fund effectively exits via gradual asset sales. Consider switching to <strong>"Sale Absorption"</strong> for accuracy.</>}
+                  <button onClick={()=>upCfg({exitStrategy:"absorption"})} style={{marginInlineStart:8,padding:"3px 10px",background:"#f59e0b",color:"#fff",border:"none",borderRadius:4,fontSize:10,fontWeight:600,cursor:"pointer"}}>{ar?"تحويل":"Switch"}</button>
+                </div>
+              </div>;
+            }
+
+            // Info box when absorption picked OR hold with sale assets (accurate display)
+            if (hasAbsorption) {
+              return <div style={{gridColumn:"1/-1",padding:"12px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,marginBottom:8}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#15803d",marginBottom:6}}>
+                  {isAbsorptionPicked
+                    ? (ar?"📊 بيع تدريجي عبر الأصول":"📊 Sale Absorption via Assets")
+                    : (ar?"📊 تخارج فعلي عبر بيع الأصول":"📊 Effective Exit via Asset Sales")}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11}}>
+                  <div><span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي البيع":"Total Sales"}</span></div>
+                  <div style={{fontWeight:700,color:"#15803d",textAlign:"right"}}>{fmtM(saleRev)}</div>
+                  {saleAssets.map((a,i)=>{
+                    const rev = projectResults?.assetSchedules?.find(s=>s.id===a.id||s.name===a.name)?.totalRevenue||0;
+                    return [
+                      <div key={`n${i}`} style={{color:"var(--text-secondary)",paddingInlineStart:8}}>└ {a.name||`Asset ${i+1}`}</div>,
+                      <div key={`v${i}`} style={{textAlign:"right",fontWeight:500}}>{fmtM(rev)}</div>
+                    ];
+                  })}
+                  <div><span style={{color:"var(--text-secondary)"}}>{ar?"مدة الاستيعاب":"Absorption Period"}</span></div>
+                  <div style={{textAlign:"right",fontWeight:600,color:"#0369a1"}}>{saleAssets[0]?.absorptionYears||2} {ar?"سنوات":"years"}</div>
+                  <div><span style={{color:"var(--text-secondary)"}}>{ar?"عمر الصندوق":"Fund Life"}</span></div>
+                  <div style={{textAlign:"right",fontWeight:600}}>{project.horizon||10} {ar?"سنوات":"years"}</div>
+                </div>
+                <div style={{fontSize:10,color:"var(--text-secondary)",marginTop:6,borderTop:"1px solid #d1fae5",paddingTop:6,lineHeight:1.5}}>
+                  {ar
+                    ? `💡 الإيرادات تتدفق عبر بيع القطع/الأصول وتوزّع عبر الشلال تلقائياً. الصندوق يستمر حياً حتى نهاية الأفق (${project.horizon||10} سنة) حتى لو انتهت المبيعات قبل ذلك. لا حاجة لسنة تخارج منفصلة.`
+                    : `💡 Revenue flows through asset/plot sales and is distributed via the waterfall automatically. The fund stays alive until horizon end (${project.horizon||10} yrs) even if sales finish earlier. No separate exit year needed.`}
+                </div>
+              </div>;
+            }
+
+            // Absorption picked but no Sale assets — warn
+            if (isAbsorptionPicked && !hasAbsorption) {
+              return <div style={{gridColumn:"1/-1",padding:"8px 12px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,marginBottom:8,fontSize:11,color:"#991b1b"}}>
+                ⚠ {ar?"وضع \"بيع تدريجي\" مُختار لكن المشروع لا يحتوي على أصول بيع (Sale). أضف أصل بنوع Sale أو اختر استراتيجية أخرى.":"\"Sale Absorption\" selected but project has no Sale-type assets. Add a Sale asset or pick another strategy."}
+              </div>;
+            }
+
+            return null;
+          })()}
+
           {notHold&&<>
             <div style={g2}>
               <div>
                 <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto" tip="سنة بيع الأصل. عادة 5-10 سنوات بعد الاستقرار التشغيلي. 0 = تلقائي\nYear of asset sale. Usually 5-10 years after stabilization. 0 = auto" error={(()=>{const ey=cfg.exitYear||0;if(ey<=0)return null;const endYear=(project?.startYear||2026)+(project?.horizon||50);const isCalendar=ey>2000;if(isCalendar&&ey>endYear)return ar?`سنة التخارج (${ey}) تتجاوز نهاية المشروع (${endYear})`:`Exit year (${ey}) exceeds project end (${endYear})`;if(!isCalendar&&ey>(project?.horizon||50))return ar?`سنة التخارج (${ey}) تتجاوز أفق المشروع (${project?.horizon})`:`Exit year (${ey}) exceeds horizon (${project?.horizon})`;return null;})()}><Inp type="number" value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} /></FL>
-                {f?.optimalExitYear > 0 && f?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && <div style={{marginTop:-6,marginBottom:4,padding:"4px 8px",background:"#fef9c3",borderRadius:5,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:4}}>
+                {f?.optimalExitYear > 0 && f?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && (project.exitStrategy||"sale") !== "absorption" && <div style={{marginTop:-6,marginBottom:4,padding:"4px 8px",background:"#fef9c3",borderRadius:5,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:4}}>
                   <span style={{fontSize:11}}>💡</span>
                   <span style={{fontSize:11,color:"#92400e"}}>{ar?`أعلى IRR غير ممول (${(f.optimalExitIRR*100).toFixed(1)}%) بسنة: ${f.optimalExitYear}`:`Best unlevered IRR (${(f.optimalExitIRR*100).toFixed(1)}%) at year: ${f.optimalExitYear}`}</span>
                 </div>}
@@ -3499,7 +3565,7 @@ When to use:
       const adjLR = ir?.adjustedLandRent || c.landRent;
       const isSelfMode = f.mode === "self";
       const exitYrIdx = f.exitYear ? f.exitYear - sy : -1;
-      const fSold = (cfg.exitStrategy || "sale") !== "hold" && exitYrIdx >= 0 && exitYrIdx < h;
+      const fSold = (cfg.exitStrategy || "sale") !== "hold" && (cfg.exitStrategy || "sale") !== "absorption" && exitYrIdx >= 0 && exitYrIdx < h;
       const tracerYears = Array.from({length:Math.min(15,h)},(_,i)=>i);
       const tdS = {padding:"3px 6px",fontSize:11,fontFamily:"monospace",textAlign:"right",borderBottom:"1px solid #f0f1f5",whiteSpace:"nowrap"};
       const tdH = {...tdS,fontWeight:700,background:"var(--surface-table-header)",textAlign:"center",fontSize:11,position:"sticky",top:0,zIndex:1};
@@ -4217,7 +4283,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             const hasDebt   = fm !== "self" && f?.totalDebt > 0;
             const hasFund   = (fm === "fund" || fm === "hybrid") && w;
             const hasInc    = !isPhase && incentivesResult?.totalIncentiveValue > 0;
-            const notHold   = (project?.exitStrategy || "sale") !== "hold";
+            const notHold   = (project?.exitStrategy || "sale") !== "hold" && (project?.exitStrategy || "sale") !== "absorption";
             const irr       = hasInc && incentivesResult.adjustedIRR != null ? incentivesResult.adjustedIRR : (hasDebt && f?.leveredIRR != null ? f.leveredIRR : pc.irr);
             const dscrArr   = f?.dscr?.filter(v => v != null && v > 0) || [];
             const minDscr   = dscrArr.length ? Math.min(...dscrArr) : null;
@@ -4373,7 +4439,8 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
     // Step 3: Exit strategy
     { title: t?"استراتيجية التخارج":"Exit Strategy", subtitle: t?"ماذا تخطط بعد الانتهاء؟":"What's your plan after completion?", content: (
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <Option icon="🏷" label={t?"بيع الأصل":"Sell the Asset"} desc={t?"بيع المشروع كاملاً بعد الاستقرار":"Sell entire project after stabilization"} selected={project.exitStrategy==="sale"||project.exitStrategy==="caprate"} onClick={()=>onUpdate({exitStrategy:"sale"})} />
+        <Option icon="🏷" label={t?"بيع نهائي للأصل":"Terminal Sale"} desc={t?"بيع المشروع كاملاً بعد الاستقرار بمضاعف أو Cap Rate":"Sell entire project at multiple or cap rate after stabilization"} selected={project.exitStrategy==="sale"||project.exitStrategy==="caprate"} onClick={()=>onUpdate({exitStrategy:"sale"})} />
+        <Option icon="🏗️" label={t?"بيع تدريجي (صندوق تطوير)":"Sale Absorption (Dev Fund)"} desc={t?"بيع القطع/الأصول على مراحل خلال فترة الاستيعاب — مناسب لصناديق التطوير":"Sell plots/assets gradually over absorption period — for development funds"} selected={project.exitStrategy==="absorption"} onClick={()=>onUpdate({exitStrategy:"absorption"})} />
         <Option icon="💎" label={t?"احتفاظ بالدخل (بدون بيع)":"Hold for Income (No Sale)"} desc={t?"الاستمرار بتحصيل الإيرادات":"Continue collecting income indefinitely"} selected={project.exitStrategy==="hold"} onClick={()=>onUpdate({exitStrategy:"hold"})} />
         <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="exitStrategy" lang={lang} onOpen={setEduModal} /></div>
       </div>
@@ -4824,7 +4891,7 @@ function SidebarAdvisor({ project, results, financing, waterfall, incentivesResu
       warnings.push({ icon: "⚠", text: ar ? `IRR < تكلفة الدين` : `IRR < debt cost`, tab: "dashboard", sev: "error" });
     if (project.debtAllowed && (project.loanTenor || 7) <= (project.debtGrace || 3))
       warnings.push({ icon: "⏰", text: ar ? "مدة القرض ≤ فترة السماح" : "Tenor ≤ grace period", tab: "financing", sev: "error" });
-    if (f && project.exitStrategy !== "hold") {
+    if (f && project.exitStrategy !== "hold" && project.exitStrategy !== "absorption") {
       const exitYr = f.exitYear ? f.exitYear - (project.startYear || 2026) : 0;
       const maxRamp = results?.assetSchedules ? Math.max(0, ...results.assetSchedules.map(a => a.capexSchedule.reduce((l,v,i)=>v>0?i+1:l,0) + (a.rampUpYears||3))) : 0;
       if (exitYr > 0 && exitYr < maxRamp) warnings.push({ icon: "🚪", text: ar ? "التخارج قبل استقرار الإشغال" : "Exit before stabilization", tab: "results", sev: "warn" });
@@ -7709,7 +7776,7 @@ function PresentationView({ project, results, financing, waterfall, incentivesRe
             </div>
           </Section>
         )}
-        {f && liveProject.exitStrategy !== "hold" && (
+        {f && liveProject.exitStrategy !== "hold" && liveProject.exitStrategy !== "absorption" && (
           <Section title={ar?"تحليل التخارج":"Exit Analysis"} color="#f59e0b">
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:12}}>
               {[

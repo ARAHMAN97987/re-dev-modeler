@@ -31,7 +31,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // يجرب كل سنة تخارج ممكنة ويحسب levered IRR لكل واحدة ويختار الأعلى
   // Uses a lightweight simulation: exit proceeds + balloon repay at each candidate year
   // Income fund always holds — optional exit at end of fundLife
-  const exitStrategy = project.finMode === "incomeFund" ? "hold" : (project.exitStrategy || "sale");
+  // "absorption" = Sale-asset absorption (development funds): functionally identical to "hold"
+  // (no terminal sale event), but a distinct UI label for accuracy in dev-fund scenarios.
+  const _rawExitStrat = project.exitStrategy || "sale";
+  const exitStrategy = (project.finMode === "incomeFund" || _rawExitStrat === "absorption") ? "hold" : _rawExitStrat;
   const assetScheds = projectResults.assetSchedules || [];
   let optimalExitIdx = null;
   let optimalExitIRR = null;
@@ -139,7 +142,9 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     let constrEndSelf = 0;
     for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEndSelf = y; break; } }
     const exitProceedsSelf = new Array(h).fill(0);
-    const exitStrategySelf = project.exitStrategy || "sale";
+    // "absorption" = treated as "hold" (no terminal sale event)
+    const _rawSelfExit = project.exitStrategy || "sale";
+    const exitStrategySelf = _rawSelfExit === "absorption" ? "hold" : _rawSelfExit;
     // Auto exit: optimal year for highest IRR (scanned above)
     const resolvedExitSelf = rawExitYear > 0 && rawExitYear < 100 ? rawExitYear : rawExitYear > 0 ? rawExitYear - startYear : 0;
     const exitYrSelf = exitStrategySelf === "hold" ? h - 1 : (resolvedExitSelf > 0 ? resolvedExitSelf : autoExitIdx);

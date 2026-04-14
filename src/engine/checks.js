@@ -87,7 +87,7 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T0","Horizon < Construction", false, "Horizon doesn't cover full construction period", `Constr ends Y${maxConstrEnd}, Horizon Y${project.horizon||50}`);
 
   // H11: Exit during ramp-up warning — enhanced with valuation impact
-  if (f && project.exitStrategy !== "hold") {
+  if (f && project.exitStrategy !== "hold" && project.exitStrategy !== "absorption") {
     const exitYrIdx = f.exitYear ? f.exitYear - (project.startYear||2026) : 0;
     const maxRamp = Math.max(...as.map(a => {
       const lastCapex = a.capexSchedule.reduce((last, v, i) => v > 0 ? i + 1 : last, 0);
@@ -270,7 +270,8 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
       levOk = true; // validated per-phase
     } else {
     // Determine if sold (post-exit CF should be zero)
-    const fExitStr=project.exitStrategy||"sale";
+    const _fExitRaw=project.exitStrategy||"sale";
+    const fExitStr=_fExitRaw==="absorption"?"hold":_fExitRaw;
     const fExitYrIdx=f.exitYear?(f.exitYear-(project.startYear||2026)):-1;
     const fSold=fExitStr!=="hold"&&fExitYrIdx>=0&&fExitYrIdx<h;
     for(let y=0;y<h;y++){

@@ -389,7 +389,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         const hasDbt = cfg.finMode !== "self" && !isHybridMode && !isIncomeFund;
         const hasEq = cfg.finMode !== "self" && cfg.finMode !== "bank100";
         const isFundMode = cfg.finMode === "fund" || isHybridMode || isIncomeFund;
-        const notHold = !isIncomeFund && (cfg.exitStrategy||"sale") !== "hold";
+        const _rawExit = cfg.exitStrategy || "sale";
+        const _isHoldLike = _rawExit === "hold" || _rawExit === "absorption";
+        const notHold = !isIncomeFund && !_isHoldLike;
         // Accordion section header helper
         const AH = ({id, color, label, summary, visible}) => { if (visible === false) return null;
           const open = cfgOpen(id);
@@ -557,10 +559,10 @@ When to use:
         {/* ── SECTION: EXIT STRATEGY (hidden for income fund, visible for all others) ── */}
         </SecWrap>
         <SecWrap visible={!isIncomeFund} color="#8b5cf6">
-        <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={`${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ":"Hold"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`} visible={true} />
+        <AH id="exit" color="#8b5cf6" label={ar?"التخارج":"Exit Strategy"} summary={`${({sale:ar?"بيع":"Sale",caprate:ar?"رسملة":"Cap Rate",hold:ar?"احتفاظ بالدخل":"Hold for Income",absorption:ar?"بيع تدريجي":"Sale Absorption"})[cfg.exitStrategy||"sale"]||""}${notHold?` · ${ar?"سنة":"Yr"} ${cfg.exitYear||"auto"}`:""}`} visible={true} />
         <AB id="exit" visible={true}>
           <FL label={ar?"استراتيجية التخارج":"Exit Strategy"} tip="بيع الأصل = تخارج في سنة محددة. احتفاظ بالدخل = بدون بيع\nAsset Sale = exit at a set year. Hold for Income = no sale event">
-            <Drp lang={lang} value={cfg.exitStrategy||"sale"} onChange={v=>upCfg({exitStrategy:v})} options={[{value:"sale",en:"Sale - Multiple (default)",ar:"بيع - مضاعف (تلقائي)"},{value:"caprate",en:"Sale - Cap Rate",ar:"بيع - رسملة"},{value:"hold",en:"Hold",ar:"احتفاظ"}]} />
+            <Drp lang={lang} value={cfg.exitStrategy||"sale"} onChange={v=>upCfg({exitStrategy:v})} options={[{value:"sale",en:"Terminal Sale - Multiple (default)",ar:"بيع نهائي - مضاعف (تلقائي)"},{value:"caprate",en:"Terminal Sale - Cap Rate",ar:"بيع نهائي - رسملة"},{value:"absorption",en:"Sale Absorption (asset-level)",ar:"بيع تدريجي (عبر الأصول)"},{value:"hold",en:"Hold for Income (no sale)",ar:"احتفاظ بالدخل (بدون بيع)"}]} />
           </FL>
           <div style={{gridColumn:"1/-1",marginTop:-6,marginBottom:4}}><HelpLink contentKey="exitStrategy" lang={lang} onOpen={setEduModal} /></div>
           {/* Sale-based exit info: show when "hold" but project has Sale assets */}
@@ -594,7 +596,7 @@ When to use:
             <div style={g2}>
               <div>
                 <FL label={ar?"سنة التخارج":"Exit Year"} hint="0 = auto" tip="سنة بيع الأصل. عادة 5-10 سنوات بعد الاستقرار التشغيلي. 0 = تلقائي\nYear of asset sale. Usually 5-10 years after stabilization. 0 = auto"><Inp type="number" value={cfg.exitYear} onChange={v=>upCfg({exitYear:v})} /></FL>
-                {f?.optimalExitYear > 0 && f?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && <div style={{marginTop:-6,marginBottom:4,padding:"4px 8px",background:"#fef9c3",borderRadius:5,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:4}}>
+                {f?.optimalExitYear > 0 && f?.optimalExitIRR > 0 && (project.exitStrategy||"sale") !== "hold" && (project.exitStrategy||"sale") !== "absorption" && <div style={{marginTop:-6,marginBottom:4,padding:"4px 8px",background:"#fef9c3",borderRadius:5,border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:4}}>
                   <span style={{fontSize:11}}>💡</span>
                   <span style={{fontSize:10,color:"#92400e"}}>{ar?`أعلى IRR غير ممول (${(f.optimalExitIRR*100).toFixed(1)}%) بسنة: ${f.optimalExitYear}`:`Best unlevered IRR (${(f.optimalExitIRR*100).toFixed(1)}%) at year: ${f.optimalExitYear}`}</span>
                 </div>}
@@ -1096,7 +1098,7 @@ When to use:
       const adjLR = ir?.adjustedLandRent || c.landRent;
       const isSelfMode = f.mode === "self";
       const exitYrIdx = f.exitYear ? f.exitYear - sy : -1;
-      const fSold = (cfg.exitStrategy || "sale") !== "hold" && exitYrIdx >= 0 && exitYrIdx < h;
+      const fSold = (cfg.exitStrategy || "sale") !== "hold" && (cfg.exitStrategy || "sale") !== "absorption" && exitYrIdx >= 0 && exitYrIdx < h;
       const tracerYears = Array.from({length:Math.min(15,h)},(_,i)=>i);
       const tdS = {padding:"3px 6px",fontSize:10,fontFamily:"monospace",textAlign:"right",borderBottom:"1px solid #f0f1f5",whiteSpace:"nowrap"};
       const tdH = {...tdS,fontWeight:700,background:"#f8f9fb",textAlign:"center",fontSize:9,position:"sticky",top:0,zIndex:1};
