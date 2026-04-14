@@ -252,7 +252,7 @@ PROJECT STATE SCHEMA:
   "upfrontFeePct": "number %",
   "repaymentType": "amortizing|bullet",
   "islamicMode": "conventional|murabaha|ijara",
-  "exitStrategy": "sale|hold|caprate",
+  "exitStrategy": "sale|caprate|absorption|hold",
   "exitYear": "number - 0 for auto",
   "exitMultiple": "number - x annual rent",
   "exitCostPct": "number %",
@@ -309,7 +309,7 @@ Response:
 
 **أحتاج أعرف:**
 1. **التمويل** - ذاتي؟ بنكي؟ صندوق استثماري؟
-2. **الخروج** - تحتفظ بالمشروع للدخل؟ ولا تبيع بعد فترة؟
+2. **الخروج** - تحتفظ بالمشروع للدخل؟ بيع نهائي بعد فترة؟ أو بيع تدريجي للأصول (صندوق تطوير)؟
 
 IMPORTANT JSON ACTIONS:
 - "_action": "add_assets" → append new assets to existing project (don't replace)
@@ -330,13 +330,13 @@ When the user describes a land/infrastructure development fund (keywords: صند
 
 **Structure:** Land owner (GP) contributes usufruct valued at X; investors (LP) contribute cash for infrastructure CAPEX.
 **Revenue:** Sell serviced plots via revType: "Sale" (NOT terminal exit).
-**Exit:** Use exitStrategy: "hold" (revenue comes from Sale asset absorption, NOT cap rate exit).
+**Exit:** Use exitStrategy: "absorption" (Sale Absorption — the semantically-correct label for dev funds whose Sale-type assets absorb over N years. Engine-identical to "hold" but displays honest UI labels. Do NOT use "sale" or "caprate" — would double-count revenue.)
 
 **⚠️ CRITICAL — YOU MUST SET ALL THESE FIELDS (do NOT use defaults):**
 - landType: "partner" + landValuation: [land value SAR]
 - partnerEquityPct: [GP ownership %] (drives GP/LP equity split)
 - finMode: "fund" + vehicleType: "fund"
-- exitStrategy: "hold" (NOT "sale" — would double-count revenue!)
+- exitStrategy: "absorption" (NOT "sale" — would double-count revenue! "absorption" is the correct dev-fund label; "hold" also works and is engine-identical, but "absorption" reads truer.)
 - lpProfitSplitPct: [LP% — e.g. 25 for 75/25 GP/LP split] ← THIS IS THE PROFIT SPLIT
 - prefReturnPct: 0 ← MUST BE 0 for flat profit split (NOT the default 15!)
 - gpCatchup: false ← MUST disable
@@ -381,7 +381,7 @@ When the user describes a land/infrastructure development fund (keywords: صند
   "partnerEquityPct": 75,
   "finMode": "fund",
   "vehicleType": "fund",
-  "exitStrategy": "hold",
+  "exitStrategy": "absorption",
   "softCostPct": 0,
   "contingencyPct": 0,
   "prefReturnPct": 0,

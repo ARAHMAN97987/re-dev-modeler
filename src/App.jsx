@@ -3108,7 +3108,7 @@ When to use:
           {/* Absorption info: shown when strategy = absorption OR (hold + has Sale assets) */}
           {_isHoldLike && (()=>{
             const saleAssets = (project.assets||[]).filter(a=>a.revType==="Sale");
-            const saleRev = projectResults?.assetSchedules?.filter(a=>a.revType==="Sale").reduce((s,a)=>s+(a.totalRevenue||0),0)||0;
+            const saleRev = results?.assetSchedules?.filter(a=>a.revType==="Sale").reduce((s,a)=>s+(a.totalRevenue||0),0)||0;
             const hasAbsorption = saleAssets.length > 0 && saleRev > 0;
             const isAbsorptionPicked = _rawExit === "absorption";
 
@@ -3138,7 +3138,7 @@ When to use:
                   <div><span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي البيع":"Total Sales"}</span></div>
                   <div style={{fontWeight:700,color:"#15803d",textAlign:"right"}}>{fmtM(saleRev)}</div>
                   {saleAssets.map((a,i)=>{
-                    const rev = projectResults?.assetSchedules?.find(s=>s.id===a.id||s.name===a.name)?.totalRevenue||0;
+                    const rev = results?.assetSchedules?.find(s=>s.id===a.id||s.name===a.name)?.totalRevenue||0;
                     return [
                       <div key={`n${i}`} style={{color:"var(--text-secondary)",paddingInlineStart:8}}>└ {a.name||`Asset ${i+1}`}</div>,
                       <div key={`v${i}`} style={{textAlign:"right",fontWeight:500}}>{fmtM(rev)}</div>
