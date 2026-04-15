@@ -5983,23 +5983,35 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           const netCF = rev.map((v, y) => v - (lr[y]||0) - (cap[y]||0));
           let cum = 0;
           const cumCF = netCF.map(v => { cum += v; return cum; });
+          const totalLR = lr.reduce((a,b)=>a+b,0);
+          // Hide Land Rent row when it's always zero (project on purchase/partner land).
+          // Keeps the expansion tidy for projects that don't pay annual land rent.
           const rows = [
             {l: ar?"إيرادات":"Revenue", d: rev, c:"#16a34a", show:true},
-            {l: ar?"(-) إيجار أرض":"(-) Land Rent", d: lr, c:"#f59e0b", neg:true, show:true},
+            {l: ar?"(-) إيجار أرض":"(-) Land Rent", d: lr, c:"#f59e0b", neg:true, show: totalLR > 0},
             {l: ar?"(-) تكاليف تطوير":"(-) CAPEX", d: cap, c:"#ef4444", neg:true, show:true},
             {l: ar?"= صافي التدفق":"= Net CF", d: netCF, c:"#1a1d23", bold:true, show:true},
             {l: ar?"صافي دخل":"Net Income", d: netInc, c:"#2563eb", show:cfDetail},
             {l: ar?"تراكمي":"Cumulative", d: cumCF, c:"#8b5cf6", show:cfDetail},
           ];
-          return rows.filter(r => r.show).map((r, ri) => (
-            <tr key={ri} style={r.bold?{background:"var(--surface-table-header)"}:undefined}>
-              <td style={{...lblS,color:r.c,fontWeight:r.bold?700:500,fontSize:r.bold?11:10}}>{r.l}</td>
-              {yrs.map(y => {
-                const v = r.d[y]||0;
-                return <td key={y} style={{...tdS,color:v<0?"#ef4444":v>0?r.c:"#d0d4dc",fontWeight:r.bold?600:400}}>{v===0?"—":r.neg?fmt(-v):fmt(v)}</td>;
-              })}
-            </tr>
-          ));
+          return rows.filter(r => r.show).map((r, ri) => {
+            // Per-row total: cumulative row already shows running-sum, so total == final value, not sum
+            const isCumRow = r.l.includes("تراكمي") || r.l === "Cumulative";
+            const rowTotal = isCumRow ? (r.d[r.d.length - 1] || 0) : r.d.reduce((s, v) => s + (v || 0), 0);
+            const displayTotal = r.neg ? -rowTotal : rowTotal;
+            return (
+              <tr key={ri} style={r.bold?{background:"var(--surface-table-header)"}:undefined}>
+                <td style={{...lblS,color:r.c,fontWeight:r.bold?700:500,fontSize:r.bold?11:10}}>{r.l}</td>
+                <td style={{...tdS,fontWeight:r.bold?700:600,color:displayTotal<0?"#ef4444":displayTotal>0?r.c:"#d0d4dc",borderInlineEnd:"1px solid #e5e7ec",background:r.bold?"var(--surface-table-header)":"#fafbfc"}}>
+                  {rowTotal===0?"—":r.neg?fmt(-rowTotal):fmt(rowTotal)}
+                </td>
+                {yrs.map(y => {
+                  const v = r.d[y]||0;
+                  return <td key={y} style={{...tdS,color:v<0?"#ef4444":v>0?r.c:"#d0d4dc",fontWeight:r.bold?600:400}}>{v===0?"—":r.neg?fmt(-v):fmt(v)}</td>;
+                })}
+              </tr>
+            );
+          });
         };
         return (
           <div style={{marginTop:16}}>
@@ -6073,15 +6085,27 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                     </div>
                   </div>
                   {isOpen && (
-                    <div style={{overflowX:"auto"}}>
-                      <table style={{width:"100%",borderCollapse:"collapse"}}>
-                        <thead><tr>
-                          <th style={{...hdS,textAlign:"left",minWidth:80}}>{ar?"البند":"Item"}</th>
-                          {yrs.map(y=><th key={y} style={hdS}>{sy+y}</th>)}
-                        </tr></thead>
-                        <tbody>{renderCFRows(a.revenueSchedule, a.capexSchedule, lr, asset?.name, "#1a1d23")}</tbody>
-                      </table>
-                    </div>
+                    <>
+                      <div style={{overflowX:"auto"}}>
+                        <table style={{width:"100%",borderCollapse:"collapse"}}>
+                          <thead><tr>
+                            <th style={{...hdS,textAlign:"left",minWidth:80}}>{ar?"البند":"Item"}</th>
+                            <th style={{...hdS,borderInlineEnd:"1px solid #e5e7ec",background:"#eef2ff",color:"#1e40af"}}>{ar?"الإجمالي":"Total"}</th>
+                            {yrs.map(y=><th key={y} style={hdS}>{sy+y}</th>)}
+                          </tr></thead>
+                          <tbody>{renderCFRows(a.revenueSchedule, a.capexSchedule, lr, asset?.name, "#1a1d23")}</tbody>
+                        </table>
+                      </div>
+                      <div style={{padding:"6px 12px",borderTop:"1px solid #f0f1f5",background:"#fafbfc",display:"flex",justifyContent:"flex-end"}}>
+                        <button
+                          onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}}
+                          style={{background:"transparent",border:"none",color:"#2563eb",fontSize:10.5,fontWeight:600,cursor:"pointer",padding:"2px 6px"}}
+                          title={ar?"فتح الإعدادات الكاملة للأصل":"Open full asset settings panel"}
+                        >
+                          {ar?"⚙ الإعدادات الكاملة للأصل ↗":"⚙ Full Asset Settings ↗"}
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               );
@@ -6122,6 +6146,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr>
                     <th style={{...hdS,textAlign:"left",minWidth:80}}>{ar?"البند":"Item"}</th>
+                    <th style={{...hdS,borderInlineEnd:"1px solid #e5e7ec",background:"#eef2ff",color:"#1e40af"}}>{ar?"الإجمالي":"Total"}</th>
                     {yrs.map(y=><th key={y} style={hdS}>{sy+y}</th>)}
                   </tr></thead>
                   <tbody>{renderCFRows(aggRev, aggCap, aggLR, "Total", "#1e40af")}</tbody>
