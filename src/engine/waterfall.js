@@ -733,6 +733,9 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,
     gpLandRentObligation, gpLandRentTotal, lpLandRentObligation, lpLandRentTotal,
     gpPaysLandRent, lpPaysLandRent, resolvedLandRentPayer,
+    // Hybrid-GP debt obligation (deducted from gpNetDist in per-phase MOIC;
+    // must also be subtracted when phases.js aggregates MOIC across phases)
+    gpDebtServiceTotal, gpAdjNetDist,
     lpNPV10, lpNPV12, lpNPV14, gpNPV10, gpNPV12, gpNPV14,
     projNPV10, projNPV12, projNPV14, isFund,
     prefAllocation: prefAlloc, catchupMethod: catchMethod,

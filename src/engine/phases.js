@@ -269,12 +269,15 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     lpTotalInvested: sumArr('lpCalls').reduce((a,b)=>a+b,0),
     gpTotalInvested: sumArr('gpCalls').reduce((a,b)=>a+b,0),
     // MOIC = NetDist / TotalCalled (paid-in basis)
+    // Hybrid-GP: subtract gpDebtServiceTotal (developer's personal loan obligation).
+    // DPI (cash-on-cash) stays on the raw gpNetDist basis — debt obligation is a
+    // separate phenomenon handled in the risk-adjusted gpMOIC above.
     lpMOIC: (() => { const c = sumArr('lpCalls').reduce((a,b)=>a+b,0); const nd = sum('lpNetDist') || sum('lpTotalDist'); return c > 0 ? nd / c : 0; })(),
-    gpMOIC: (() => { const c = sumArr('gpCalls').reduce((a,b)=>a+b,0); const nd = sum('gpNetDist') || sum('gpTotalDist'); return c > 0 ? nd / c : 0; })(),
+    gpMOIC: (() => { const c = sumArr('gpCalls').reduce((a,b)=>a+b,0); const ndRaw = sum('gpNetDist') || sum('gpTotalDist'); const nd = ndRaw - sum('gpDebtServiceTotal'); return c > 0 ? nd / c : 0; })(),
     // Committed MOIC = NetDist / Original Equity (secondary metric)
     lpCommittedMOIC: lpEquity > 0 ? (sum('lpNetDist') || sum('lpTotalDist')) / lpEquity : 0,
-    gpCommittedMOIC: gpEquity > 0 ? (sum('gpNetDist') || sum('gpTotalDist')) / gpEquity : 0,
-    // DPI = NetDist / TotalCalled (same as paid-in MOIC)
+    gpCommittedMOIC: gpEquity > 0 ? ((sum('gpNetDist') || sum('gpTotalDist')) - sum('gpDebtServiceTotal')) / gpEquity : 0,
+    // DPI = NetDist / TotalCalled (same as paid-in MOIC, debt-adjusted for hybrid-GP)
     lpDPI: (() => { const c = sumArr('lpCalls').reduce((a,b)=>a+b,0); const nd = sum('lpNetDist') || sum('lpTotalDist'); return c > 0 ? nd / c : 0; })(),
     gpDPI: (() => { const c = sumArr('gpCalls').reduce((a,b)=>a+b,0); const nd = sum('gpNetDist') || sum('gpTotalDist'); return c > 0 ? nd / c : 0; })(),
     lpNPV10: calcNPV(lpNetCF, 0.10), lpNPV12: calcNPV(lpNetCF, 0.12), lpNPV14: calcNPV(lpNetCF, 0.14),
