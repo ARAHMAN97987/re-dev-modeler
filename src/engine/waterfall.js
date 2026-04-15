@@ -350,10 +350,22 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   // a significant equity share (from land capitalization or cash investment).
   const hasPromoteStructure = project.gpCatchup && (project.carryPct || 0) > 0;
   const _lpSplitRaw = project.lpProfitSplitPct;
-  const lpSplitPct = hasPromoteStructure
+  let lpSplitPct = hasPromoteStructure
     ? Math.max(0, Math.min(1, (_lpSplitRaw ?? 70) / 100))  // Promote: use explicit split (default 70%)
     : lpPct;  // No promote: ALWAYS equity-proportional, ignore any saved lpProfitSplitPct
-  const gpSplitPct = 1 - lpSplitPct;
+  let gpSplitPct = 1 - lpSplitPct;
+  // ── Sponsor-Promote Floor ──
+  // A promote structure is supposed to reward the sponsor ABOVE equity pro-rata, never below.
+  // If a user misconfigures the waterfall so that GP's tier4 share falls below their equity %
+  // (e.g. lpProfitSplitPct=100 while GP owns 20% of equity), the sponsor/developer-as-investor
+  // would receive LESS than their fair equity-pro-rata share of residual profit. That's the
+  // "developer gets only capital back while LP takes all profit" bug.
+  // Guard: when a promote is configured, floor gpSplitPct at gpPct so the sponsor is never
+  // punished below equity-proportional participation in tier 4.
+  if (hasPromoteStructure && gpPct > 0 && gpSplitPct < gpPct) {
+    gpSplitPct = gpPct;
+    lpSplitPct = 1 - gpSplitPct;
+  }
 
   const tier1 = new Array(h).fill(0); // Return of Capital
   const tier2 = new Array(h).fill(0); // Preferred Return
@@ -567,12 +579,12 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     // Hybrid-GP: developer pays debt service from their distributions
     const gpDebtObligation = isHybridGP ? (f.debtService[y] || 0) : 0;
     gpNetCF[y] = -gpCalls[y] + gpDist[y] - gpLandRentObligation[y] - gpDebtObligation;
-    // Guard: deeply negative GP net cash-flow usually signals that debt service
-    // exceeds GP distributions in a given year (under-distributed hybrid structure).
-    // This is not an engine error but an economically stressed scenario — warn so
-    // the caller can surface it in the UI rather than silently passing a large negative.
-    if (gpNetCF[y] < -1e6) {
-      console.warn(`[waterfall] Year ${y}: gpNetCF=${gpNetCF[y].toFixed(0)} — GP distributions insufficient to cover obligations (debt service + land rent). Review leverage or GP equity split.`);
+    // Guard: warn only when non-capital-call OBLIGATIONS (debt service, land rent) exceed
+    // distributions by a meaningful amount. Pure equity-call outflows are expected and not
+    // a sign of distress — they happen on every fund call.
+    const obligationDeficit = (gpLandRentObligation[y] + gpDebtObligation) - gpDist[y];
+    if (obligationDeficit > 1e6) {
+      console.warn(`[waterfall] Year ${y}: GP obligations (debt+land rent = ${(gpLandRentObligation[y]+gpDebtObligation).toFixed(0)}) exceed distributions (${gpDist[y].toFixed(0)}) by ${obligationDeficit.toFixed(0)}. Review leverage or GP equity split.`);
     }
   }
 
