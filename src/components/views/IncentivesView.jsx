@@ -1,57 +1,59 @@
-// Extracted from App.jsx lines 11238-11469
-import { useState, useMemo } from "react";
-import { fmt, fmtPct, fmtM } from "../../utils/format";
+// IncentivesView — government incentives configuration + summary.
+// Apple HIG: toggle-driven cards, KPI tiles, inline help.
+import React, { useState, useMemo } from "react";
+import { fmt, fmtM } from "../../utils/format";
 import { useIsMobile } from "../shared/hooks.js";
-import EmptyState from "../shared/EmptyState.jsx";
+import SharedEmptyState from "../shared/EmptyState.jsx";
+import { Badge, Button, Callout, Card, Field, Input, KpiTile, SegmentedControl, Toggle } from "../ui";
+import { Select as UiSelect } from "../ui/Input";
 
-const btnS = { border: "none", borderRadius: 5, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" };
-const btnSm = { ...btnS, padding: "4px 8px", fontSize: 11, fontWeight: 500, borderRadius: 4 };
-const sideInputStyle = { width: "100%", padding: "7px 10px", borderRadius: 5, border: "1px solid #282d3a", background: "#0F2D4F", color: "#d0d4dc", fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
-const mktInputStyle = { padding: "6px 10px", border: "1px solid #e5e7ec", borderRadius: 6, fontSize: 12, fontFamily: "inherit", width: "100%", boxSizing: "border-box", background: "#fafbfc" };
-
-function NI({ value, onChange, style: sx }) {
-  return <input type="number" value={value||""} onChange={e => onChange(parseFloat(e.target.value) || 0)} style={{ ...mktInputStyle, ...sx }} />;
-}
-
-// Minimal Tip component for standalone use
+// ────────── Lightweight Tip (tooltip) ──────────
 function Tip({ text }) {
   const [show, setShow] = useState(false);
   return (
-    <span style={{ position: "relative", display: "inline-block", marginInlineStart: 4 }}
-      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
-      <span style={{ cursor: "help", fontSize: 10, color: "#9ca3af" }}>ⓘ</span>
-      {show && <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", background: "#1a1d23", color: "#fff", padding: "6px 10px", borderRadius: 6, fontSize: 10, whiteSpace: "pre-line", zIndex: 999, minWidth: 200, maxWidth: 320, lineHeight: 1.5, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>{text}</div>}
+    <span
+      style={{ position: "relative", display: "inline-block", marginInlineStart: 4 }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span style={{ cursor: "help", fontSize: 11, color: "var(--text-tertiary)" }}>ⓘ</span>
+      {show && (
+        <div
+          className="z-tooltip"
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 6px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            whiteSpace: "pre-line",
+            zIndex: 999,
+            minWidth: 200,
+            maxWidth: 320,
+          }}
+        >
+          {text}
+        </div>
+      )}
     </span>
   );
 }
 
-// Minimal KPI component for standalone use
-function KPI({ label, value, sub, color, tip }) {
+function HelpLink({ lang, onOpen, label: customLabel, contentKey }) {
   return (
-    <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #e5e7ec", padding: "12px 14px" }}>
-      <div style={{ fontSize: 11, color: "#6b7080", marginBottom: 4 }}>{label}{tip && <Tip text={tip} />}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: color || "#1a1d23" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "#6b7080", marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
-}
-
-// Minimal HelpLink component for standalone use
-function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
-  return (
-    <button onClick={() => onOpen && onOpen(contentKey)} style={{ background: "none", border: "none", color: "#2563eb", fontSize: 11, cursor: "pointer", padding: 0, fontFamily: "inherit", textDecoration: "underline" }}>
+    <Button variant="link" size="sm" onClick={() => onOpen && onOpen(contentKey)}>
       {customLabel || (lang === "ar" ? "اعرف أكثر" : "Learn more")}
-    </button>
+    </Button>
   );
 }
 
-// Minimal EducationalModal component for standalone use
 function EducationalModal({ contentKey, lang, onClose }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: 12, padding: 24, maxWidth: 600, maxHeight: "80vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>{contentKey}</div>
-        <button onClick={onClose} style={{ ...btnS, background: "#f0f1f5", padding: "8px 16px", marginTop: 12 }}>{lang === "ar" ? "إغلاق" : "Close"}</button>
+    <div className="z-modal-overlay" onClick={onClose}>
+      <div className="z-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="z-modal-title">{contentKey}</div>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Button variant="secondary" onClick={onClose}>{lang === "ar" ? "إغلاق" : "Close"}</Button>
+        </div>
       </div>
     </div>
   );
@@ -62,50 +64,60 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
   const isMobile = useIsMobile();
   const [eduModal, setEduModal] = useState(null);
   const [selectedPhases, setSelectedPhases] = useState([]);
-
-  // ── Phase filter ──
   const ar = lang === "ar";
+
+  // ────────── Hooks (order preserved regardless of early return) ──────────
   const allPhaseNames = Object.keys(results?.phaseResults || {});
   const activePh = selectedPhases.length > 0 ? selectedPhases : allPhaseNames;
   const isFiltered = selectedPhases.length > 0 && selectedPhases.length < allPhaseNames.length;
-  const togglePhase = (p) => setSelectedPhases(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
-  const hasPhases = allPhaseNames.length > 1;
 
-  // ── Phase share for proportional display ──
-  const phaseShare = useMemo(() => { if (!results || !isFiltered) return { capex: 1, land: 1 };
+  const phaseShare = useMemo(() => {
+    if (!results || !isFiltered) return { capex: 1, land: 1 };
     const rawC = results.consolidated;
     let capexSum = 0, landSum = 0;
-    activePh.forEach(pName => { const pr = results.phaseResults?.[pName]; if (!pr) return; capexSum += pr.totalCapex || 0; landSum += pr.totalLandRent || 0; });
-    return { capex: rawC.totalCapex > 0 ? capexSum / rawC.totalCapex : 0, land: rawC.totalLandRent > 0 ? landSum / rawC.totalLandRent : 0 };
-  }, [isFiltered, selectedPhases, results]);
+    activePh.forEach((pName) => {
+      const pr = results.phaseResults?.[pName];
+      if (!pr) return;
+      capexSum += pr.totalCapex || 0;
+      landSum += pr.totalLandRent || 0;
+    });
+    return {
+      capex: rawC.totalCapex > 0 ? capexSum / rawC.totalCapex : 0,
+      land:  rawC.totalLandRent > 0 ? landSum / rawC.totalLandRent : 0,
+    };
+  }, [isFiltered, selectedPhases, results, activePh]);
 
-  const ir = incentivesResult;
+  const pIR = useMemo(() => {
+    if (!incentivesResult) return null;
+    if (!isFiltered) return incentivesResult;
+    return {
+      ...incentivesResult,
+      totalIncentiveValue: (incentivesResult.totalIncentiveValue || 0) * phaseShare.capex,
+      capexGrantTotal: (incentivesResult.capexGrantTotal || 0) * phaseShare.capex,
+      landRentSavingTotal: (incentivesResult.landRentSavingTotal || 0) * phaseShare.land,
+      feeRebateTotal: (incentivesResult.feeRebateTotal || 0) * phaseShare.capex,
+    };
+  }, [incentivesResult, isFiltered, phaseShare]);
+
+  if (_isEmpty) {
+    return (
+      <SharedEmptyState
+        icon="🏛"
+        title={ar ? "أضف أصول أولاً" : "Add Assets First"}
+        subtitle={ar ? "الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج." : "Incentives need project data. Add assets from the Program tab."}
+      />
+    );
+  }
+
   const inc = project.incentives || {};
   const cur = project.currency || "SAR";
   const rawC = results.consolidated;
-  // Filtered CAPEX for display in formula
-  const cTotalCapex = isFiltered ? activePh.reduce((s, p) => s + (results.phaseResults?.[p]?.totalCapex || 0), 0) : rawC.totalCapex;
-
-  // Proportional incentive values
-  const pIR = useMemo(() => {
-    if (!ir) return null;
-    if (!isFiltered) return ir;
-    return {
-      ...ir,
-      totalIncentiveValue: (ir.totalIncentiveValue || 0) * phaseShare.capex,
-      capexGrantTotal: (ir.capexGrantTotal || 0) * phaseShare.capex,
-      landRentSavingTotal: (ir.landRentSavingTotal || 0) * phaseShare.land,
-      feeRebateTotal: (ir.feeRebateTotal || 0) * phaseShare.capex,
-    };
-  }, [ir, isFiltered, phaseShare, selectedPhases]);
-
-  if (_isEmpty) return (
-    <EmptyState
-      icon="🏛"
-      title={lang === "ar" ? "أضف أصول أولاً" : "Add Assets First"}
-      subtitle={lang === "ar" ? "الحوافز تحتاج بيانات المشروع. أضف أصول من تبويب البرنامج." : "Incentives need project data. Add assets from the Program tab."}
-    />
-  );
+  const cTotalCapex = isFiltered
+    ? activePh.reduce((s, p) => s + (results.phaseResults?.[p]?.totalCapex || 0), 0)
+    : rawC.totalCapex;
+  const hasPhases = allPhaseNames.length > 1;
+  const togglePhase = (p) =>
+    setSelectedPhases((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
 
   const upInc = (key, updates) => {
     const newInc = { ...project.incentives, [key]: { ...project.incentives[key], ...updates } };
@@ -125,160 +137,323 @@ function IncentivesView({ project, results, incentivesResult, financing, lang, u
     upInc("feeRebates", { items: (inc.feeRebates?.items || []).filter((_, j) => j !== i) });
   };
 
-  // Without incentives calc (for comparison)
-  const irrWithout = rawC.irr;
-  const irrWith = financing?.leveredIRR;
-  const npvWithout = rawC.npv10;
-
-  const ToggleCard = ({ title, titleAr, enabled, onToggle, color, value, children, tip }) => (
-    <div style={{ background: "#fff", borderRadius: 8, border: `1px solid ${enabled ? color : "#e5e7ec"}`, overflow: "hidden", transition: "border-color 0.2s" }}>
-      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: enabled ? `1px solid ${color}22` : "none", cursor: "pointer" }} onClick={onToggle}>
-        <div style={{ width: 36, height: 20, borderRadius: 10, background: enabled ? color : "#d1d5db", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
-          <div style={{ width: 16, height: 16, borderRadius: 8, background: "#fff", position: "absolute", top: 2, insetInlineStart: enabled ? 18 : 2, transition: "inset-inline-start 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
-        </div>
+  // ────────── Reusable IncentiveCard (Apple-style toggle card) ──────────
+  const IncentiveCard = ({ titleEn, titleAr, enabled, onToggle, value, children, tip, accent }) => (
+    <Card
+      variant="default"
+      padding={0}
+      style={{
+        borderColor: enabled ? "var(--border-focus)" : "var(--border-default)",
+        transition: "border-color 200ms cubic-bezier(0.25, 1, 0.5, 1)",
+      }}
+    >
+      <div
+        onClick={onToggle}
+        style={{
+          padding: "14px 18px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          borderBottom: enabled ? "0.5px solid var(--border-default)" : "none",
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+      >
+        <Toggle checked={!!enabled} onChange={onToggle} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: enabled ? "#1a1d23" : "#9ca3af" }}>{lang === "ar" ? titleAr : title}{tip && <Tip text={tip} />}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: enabled ? "var(--text-primary)" : "var(--text-secondary)", letterSpacing: "-0.01em" }}>
+            {ar ? titleAr : titleEn}
+            {tip && <Tip text={tip} />}
+          </div>
         </div>
-        {enabled && value && <div style={{ fontSize: 15, fontWeight: 700, color }}>{fmtM(value)}</div>}
+        {enabled && value != null && (
+          <div style={{ fontSize: 17, fontWeight: 700, color: accent || "var(--sys-blue)", fontVariantNumeric: "tabular-nums" }}>
+            {fmtM(value)}
+          </div>
+        )}
       </div>
-      {enabled && <div style={{ padding: "12px 16px" }}>{children}</div>}
-    </div>
+      {enabled && <div style={{ padding: "16px 18px" }}>{children}</div>}
+    </Card>
   );
 
-  const F = ({ label, children, hint }) => <div style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: "#6b7080", marginBottom: 3 }}>{label}</div>{children}{hint && <div style={{ fontSize: 11, color: "#6b7080", marginTop: 2 }}>{hint}</div>}</div>;
-
-  return (<div>
-    {/* ═══ PHASE FILTER ═══ */}
-    {hasPhases && (
-      <div style={{marginBottom:14}}>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec"),borderRadius:6}}>
-            {ar?"كل المراحل":"All Phases"}
-          </button>
-          {allPhaseNames.map(p => {
-            const active = activePh.includes(p) && selectedPhases.length > 0;
-            return <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:600,background:active?"#0f766e":"#f0f1f5",color:active?"#fff":"#1a1d23",border:"1px solid "+(active?"#0f766e":"#e5e7ec"),borderRadius:6}}>
-              {p}
-            </button>;
-          })}
-          {isFiltered && <span style={{fontSize:10,color:"#6b7080",marginInlineStart:8}}>{ar?`حصة المراحل المختارة: ${(phaseShare.capex*100).toFixed(0)}% من التكاليف`:`Selected phases: ${(phaseShare.capex*100).toFixed(0)}% of CAPEX`}</span>}
+  // ────────── Render ──────────
+  return (
+    <div>
+      {/* Phase filter */}
+      {hasPhases && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            <Button
+              variant={selectedPhases.length === 0 ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setSelectedPhases([])}
+            >
+              {ar ? "كل المراحل" : "All Phases"}
+            </Button>
+            {allPhaseNames.map((p) => {
+              const active = activePh.includes(p) && selectedPhases.length > 0;
+              return (
+                <Button
+                  key={p}
+                  variant={active ? "teal" : "secondary"}
+                  size="sm"
+                  onClick={() => togglePhase(p)}
+                >
+                  {p}
+                </Button>
+              );
+            })}
+            {isFiltered && (
+              <span className="z-caption" style={{ marginInlineStart: 8, color: "var(--text-secondary)" }}>
+                {ar
+                  ? `حصة المراحل المختارة: ${(phaseShare.capex * 100).toFixed(0)}% من التكاليف`
+                  : `Selected phases: ${(phaseShare.capex * 100).toFixed(0)}% of CAPEX`}
+              </span>
+            )}
+          </div>
         </div>
+      )}
+
+      {hasPhases && isFiltered && (
+        <Callout tone="warning" style={{ marginBottom: 14 }}>
+          {ar
+            ? "إعدادات الحوافز على مستوى المشروع كاملاً. الأرقام المعروضة تعكس حصة المراحل المختارة فقط"
+            : "Incentive settings apply to the entire project. Numbers shown reflect the selected phases' share only"}
+        </Callout>
+      )}
+
+      {/* KPI summary */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 20 }}>
+        <KpiTile
+          label={ar ? "إجمالي الحوافز" : "Total Incentives"}
+          value={fmtM(pIR?.totalIncentiveValue || 0)}
+          sublabel={cur}
+          tone="positive"
+        />
+        <KpiTile
+          label={ar ? "منحة CAPEX" : "CAPEX Grant"}
+          value={fmtM(pIR?.capexGrantTotal || 0)}
+          sublabel={inc.capexGrant?.enabled ? (ar ? "مفعّل" : "On") : (ar ? "معطّل" : "Off")}
+          tone={inc.capexGrant?.enabled ? "info" : "neutral"}
+        />
+        <KpiTile
+          label={ar ? "وفر إيجار الأرض" : "Land Rent Savings"}
+          value={fmtM(pIR?.landRentSavingTotal || 0)}
+          sublabel={inc.landRentRebate?.enabled ? (ar ? "مفعّل" : "On") : (ar ? "معطّل" : "Off")}
+          tone={inc.landRentRebate?.enabled ? "warning" : "neutral"}
+        />
+        <KpiTile
+          label={ar ? "دعم التمويل" : "Finance Support"}
+          value={fmtM(financing?.interestSubsidyTotal || 0)}
+          sublabel={inc.financeSupport?.enabled ? (ar ? "مفعّل" : "On") : (ar ? "معطّل" : "Off")}
+          tone={inc.financeSupport?.enabled ? "info" : "neutral"}
+        />
+        <KpiTile
+          label={ar ? "استرداد رسوم" : "Fee Rebates"}
+          value={fmtM(pIR?.feeRebateTotal || 0)}
+          sublabel={inc.feeRebates?.enabled ? (ar ? "مفعّل" : "On") : (ar ? "معطّل" : "Off")}
+          tone={inc.feeRebates?.enabled ? "info" : "neutral"}
+        />
       </div>
-    )}
-    {/* Warning: settings are always project-level */}
-    {hasPhases && isFiltered && (
-      <div style={{background:"#fffbeb",borderRadius:8,border:"1px solid #fde68a",padding:"8px 14px",marginBottom:12,fontSize:11,color:"#92400e",display:"flex",alignItems:"center",gap:6}}>
-        <span style={{fontSize:13}}>⚠</span>
-        {ar ? "إعدادات الحوافز على مستوى المشروع كاملاً. الأرقام المعروضة تعكس حصة المراحل المختارة فقط" : "Incentive settings apply to the entire project. Numbers shown reflect the selected phases' share only"}
+
+      <div style={{ marginBottom: 12 }}>
+        <HelpLink
+          contentKey="govIncentives"
+          lang={lang}
+          onOpen={setEduModal}
+          label={ar ? "اعرف أكثر عن أنواع الحوافز" : "Learn about incentive types"}
+        />
       </div>
-    )}
-    {/* Summary KPIs */}
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 18 }}>
-      <KPI label={ar ? "إجمالي الحوافز" : "Total Incentives"} value={fmtM(pIR?.totalIncentiveValue || 0)} sub={cur} color="#16a34a" tip="مجموع كل الحوافز الحكومية (منح + دعم + إعفاءات)\nSum of all government incentives" />
-      <KPI label={ar ? "منحة CAPEX" : "CAPEX Grant"} value={fmtM(pIR?.capexGrantTotal || 0)} sub={inc.capexGrant?.enabled ? "ON" : "OFF"} color={inc.capexGrant?.enabled ? "#2563eb" : "#9ca3af"} tip="الحكومة تغطي نسبة من تكاليف البناء. تقلل رأس المال المطلوب\nGov covers % of construction cost. Reduces equity needed" />
-      <KPI label={ar ? "وفر إيجار الأرض" : "Land Rent Savings"} value={fmtM(pIR?.landRentSavingTotal || 0)} sub={inc.landRentRebate?.enabled ? "ON" : "OFF"} color={inc.landRentRebate?.enabled ? "#f59e0b" : "#9ca3af"} tip="الحكومة تعفي أو تخفض إيجار الأرض لسنوات محددة\nGov waives/reduces land rent for specified years" />
-      <KPI label={ar ? "دعم التمويل" : "Finance Support"} value={fmtM(financing?.interestSubsidyTotal || 0)} sub={inc.financeSupport?.enabled ? "ON" : "OFF"} color={inc.financeSupport?.enabled ? "#8b5cf6" : "#9ca3af"} tip="الحكومة تدفع جزء من فوائد البنك أو تقدم قرض ميسر\nGov pays portion of bank interest or provides soft loan" />
-      <KPI label={ar ? "استرداد رسوم" : "Fee Rebates"} value={fmtM(pIR?.feeRebateTotal || 0)} sub={inc.feeRebates?.enabled ? "ON" : "OFF"} color={inc.feeRebates?.enabled ? "#06b6d4" : "#9ca3af"} tip="إعفاء أو تخفيض رسوم حكومية (تراخيص، ربط خدمات)\nGov fee waivers/reductions (permits, utility connections)" />
-    </div>
 
-    {/* Incentive cards */}
-    <div style={{ marginBottom: 12 }}><HelpLink contentKey="govIncentives" lang={lang} onOpen={setEduModal} label={lang === "ar" ? "اعرف أكثر عن أنواع الحوافز" : "Learn about incentive types"} /></div>
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-      {/* ── 1. CAPEX Grant ── */}
-      <ToggleCard title="CAPEX Grant (Capital Subsidy)" tip={"منحة حكومية تغطي جزءاً من CAPEX الإنشائي. تخفض التكلفة الفعلية وترفع IRR\nGovernment grant covering part of construction CAPEX. Lowers effective cost and improves IRR"} titleAr="دعم رأسمالي (منحة CAPEX)" enabled={inc.capexGrant?.enabled} onToggle={() => upInc("capexGrant", { enabled: !inc.capexGrant?.enabled })} color="#2563eb" value={pIR?.capexGrantTotal}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <F label={lang === "ar" ? "نسبة المنحة %" : "Grant %"}><NI value={inc.capexGrant?.grantPct || 25} onChange={v => upInc("capexGrant", { grantPct: v })} /></F>
-          <F label={lang === "ar" ? "الحد الأقصى (ريال)" : "Max Cap (SAR)"}><NI value={inc.capexGrant?.maxCap || 50000000} onChange={v => upInc("capexGrant", { maxCap: v })} /></F>
-        </div>
-        <F label={lang === "ar" ? "توقيت الاستلام" : "Timing"}>
-          <select value={inc.capexGrant?.timing || "construction"} onChange={e => upInc("capexGrant", { timing: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }}>
-            <option value="construction">{lang === "ar" ? "خلال البناء" : "During Construction"}</option>
-            <option value="completion">{lang === "ar" ? "عند الإنجاز" : "At Completion"}</option>
-          </select>
-        </F>
-        <div style={{ fontSize: 11, color: "#6b7080", marginTop: 6, padding: 8, background: "#f0f4ff", borderRadius: 4 }}>
-          {lang === "ar" ? "القيمة المحسوبة" : "Calculated"}: <strong>{fmt(pIR?.capexGrantTotal || 0)} {cur}</strong> = min({inc.capexGrant?.grantPct}% × {fmtM(cTotalCapex)}, {fmt(inc.capexGrant?.maxCap)})
-        </div>
-      </ToggleCard>
-
-      {/* ── 2. Finance Support ── */}
-      <ToggleCard title="Finance Support (Interest Subsidy / Soft Loan)" tip={"الجهة الحكومية تتحمل جزءاً من تكلفة التمويل أو تقدم قرضاً بدون ربح. يخفض معدل التمويل الفعلي ويحسن DSCR\nGovernment pays part of financing cost or provides a zero-profit loan. Lowers effective rate and improves DSCR"} titleAr="دعم التمويل (تحمل فوائد / قرض حسن)" enabled={inc.financeSupport?.enabled} onToggle={() => upInc("financeSupport", { enabled: !inc.financeSupport?.enabled })} color="#8b5cf6" value={financing?.interestSubsidyTotal}>
-        <F label={lang === "ar" ? "نوع الدعم" : "Support Type"}>
-          <select value={inc.financeSupport?.subType || "interestSubsidy"} onChange={e => upInc("financeSupport", { subType: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }}>
-            <option value="interestSubsidy">{lang === "ar" ? "تحمل فوائد" : "Interest Subsidy"}</option>
-            <option value="softLoan">{lang === "ar" ? "قرض حسن" : "Soft Loan"}</option>
-          </select>
-        </F>
-        {inc.financeSupport?.subType === "interestSubsidy" && (
-          <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr 1fr", gap: 8 }}>
-            <F label={lang === "ar" ? "نسبة التحمل %" : "Subsidy %"}><NI value={inc.financeSupport?.subsidyPct || 50} onChange={v => upInc("financeSupport", { subsidyPct: v })} /></F>
-            <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"}><NI value={inc.financeSupport?.subsidyYears || 5} onChange={v => upInc("financeSupport", { subsidyYears: v })} /></F>
-            <F label={lang === "ar" ? "البداية" : "Start"}>
-              <select value={inc.financeSupport?.subsidyStart || "operation"} onChange={e => upInc("financeSupport", { subsidyStart: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }}>
-                <option value="drawdown">{lang === "ar" ? "من السحب" : "From Drawdown"}</option>
-                <option value="operation">{lang === "ar" ? "من التشغيل" : "From Operation"}</option>
-              </select>
-            </F>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* ① CAPEX Grant */}
+        <IncentiveCard
+          titleEn="CAPEX Grant (Capital Subsidy)"
+          titleAr="دعم رأسمالي (منحة CAPEX)"
+          enabled={inc.capexGrant?.enabled}
+          onToggle={() => upInc("capexGrant", { enabled: !inc.capexGrant?.enabled })}
+          value={pIR?.capexGrantTotal}
+          accent="var(--sys-blue)"
+          tip={"منحة حكومية تغطي جزءاً من CAPEX الإنشائي. تخفض التكلفة الفعلية وترفع IRR\nGovernment grant covering part of construction CAPEX. Lowers effective cost and improves IRR"}
+        >
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label={ar ? "نسبة المنحة %" : "Grant %"}>
+              <Input type="number" size="sm" value={inc.capexGrant?.grantPct || 25} onChange={(e) => upInc("capexGrant", { grantPct: parseFloat(e.target.value) || 0 })} />
+            </Field>
+            <Field label={ar ? "الحد الأقصى (ريال)" : "Max Cap (SAR)"}>
+              <Input type="number" size="sm" value={inc.capexGrant?.maxCap || 50000000} onChange={(e) => upInc("capexGrant", { maxCap: parseFloat(e.target.value) || 0 })} />
+            </Field>
           </div>
-        )}
-        {inc.financeSupport?.subType === "softLoan" && (
-          <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr":"1fr 1fr 1fr", gap: 8 }}>
-            <F label={lang === "ar" ? "المبلغ (ريال)" : "Amount (SAR)"}><NI value={inc.financeSupport?.softLoanAmount || 0} onChange={v => upInc("financeSupport", { softLoanAmount: v })} /></F>
-            <F label={lang === "ar" ? "المدة (سنوات)" : "Tenor (yrs)"}><NI value={inc.financeSupport?.softLoanTenor || 10} onChange={v => upInc("financeSupport", { softLoanTenor: v })} /></F>
-            <F label={lang === "ar" ? "سماح (سنوات)" : "Grace (yrs)"}><NI value={inc.financeSupport?.softLoanGrace || 3} onChange={v => upInc("financeSupport", { softLoanGrace: v })} /></F>
+          <Field label={ar ? "توقيت الاستلام" : "Timing"}>
+            <UiSelect size="sm" value={inc.capexGrant?.timing || "construction"} onChange={(e) => upInc("capexGrant", { timing: e.target.value })}>
+              <option value="construction">{ar ? "خلال البناء" : "During Construction"}</option>
+              <option value="completion">{ar ? "عند الإنجاز" : "At Completion"}</option>
+            </UiSelect>
+          </Field>
+          <div style={{ fontSize: 12, color: "var(--color-info-text)", padding: 10, background: "var(--color-info-bg)", borderRadius: 8, marginTop: 8, fontVariantNumeric: "tabular-nums" }}>
+            {ar ? "القيمة المحسوبة" : "Calculated"}:{" "}
+            <strong>{fmt(pIR?.capexGrantTotal || 0)} {cur}</strong> = min({inc.capexGrant?.grantPct}% × {fmtM(cTotalCapex)}, {fmt(inc.capexGrant?.maxCap)})
           </div>
-        )}
-      </ToggleCard>
+        </IncentiveCard>
 
-      {/* ── 3. Land Rent Rebate ── */}
-      <ToggleCard title="Land Rent Rebate (Exemption/Discount)" tip={"تخفيض أو إعفاء إيجار الأرض خلال البناء أو السنوات الأولى. يحسن التدفقات النقدية المبكرة\nReducing or waiving land rent during construction or early years. Improves early cash flows"} titleAr="إعفاء/خصم إيجار الأرض" enabled={inc.landRentRebate?.enabled} onToggle={() => upInc("landRentRebate", { enabled: !inc.landRentRebate?.enabled })} color="#f59e0b" value={pIR?.landRentSavingTotal}>
-        {project.landType !== "lease" ? (
-          <div style={{ fontSize: 12, color: "#ef4444" }}>{lang === "ar" ? "غير متاح - الأرض ليست مؤجرة" : "Not applicable - land is not leased"}</div>
-        ) : (<>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", marginBottom: 6 }}>{lang === "ar" ? "فترة البناء" : "Construction Period"}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <F label={lang === "ar" ? "نسبة الإعفاء %" : "Rebate %"}><NI value={inc.landRentRebate?.constrRebatePct || 100} onChange={v => upInc("landRentRebate", { constrRebatePct: v })} /></F>
-            <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"} hint={lang === "ar" ? "0 = تلقائي من البناء" : "0 = auto from construction"}><NI value={inc.landRentRebate?.constrRebateYears || 0} onChange={v => upInc("landRentRebate", { constrRebateYears: v })} /></F>
-          </div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", marginTop: 10, marginBottom: 6 }}>{lang === "ar" ? "فترة ما بعد الافتتاح" : "Post-Opening Period"}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <F label={lang === "ar" ? "نسبة الخصم %" : "Discount %"}><NI value={inc.landRentRebate?.operRebatePct || 50} onChange={v => upInc("landRentRebate", { operRebatePct: v })} /></F>
-            <F label={lang === "ar" ? "المدة (سنوات)" : "Duration (yrs)"}><NI value={inc.landRentRebate?.operRebateYears || 3} onChange={v => upInc("landRentRebate", { operRebateYears: v })} /></F>
-          </div>
-        </>)}
-      </ToggleCard>
-
-      {/* ── 4. Fee/Tax Rebates ── */}
-      <ToggleCard title="Fee/Tax Rebates & Deferrals" tip={"استرداد أو تأجيل رسوم بلدية وتصاريح ومدفوعات نظامية. حتى التأجيل له منفعة زمنية تُحسب بمعدل خصم 10%\nRebates or deferrals of municipal charges, permits, and regulatory fees. Even deferrals have time-value benefit at 10% discount"} titleAr="استرداد/تأجيل رسوم وضرائب" enabled={inc.feeRebates?.enabled} onToggle={() => upInc("feeRebates", { enabled: !inc.feeRebates?.enabled })} color="#06b6d4" value={pIR?.feeRebateTotal}>
-        {(inc.feeRebates?.items || []).map((item, i) => (
-          <div key={i} style={{ background: "#f8f9fb", borderRadius: 6, padding: 10, marginBottom: 8 }}>
-            <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-              <input value={item.name || ""} onChange={e => updateFeeItem(i, { name: e.target.value })} placeholder={lang === "ar" ? "اسم الرسم" : "Fee name"} style={{ ...sideInputStyle, flex: 1, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec" }} />
-              <button onClick={() => removeFeeItem(i)} style={{ ...btnSm, background: "#fef2f2", color: "#ef4444" }}>✕</button>
+        {/* ② Finance Support */}
+        <IncentiveCard
+          titleEn="Finance Support (Interest Subsidy / Soft Loan)"
+          titleAr="دعم التمويل (تحمل فوائد / قرض حسن)"
+          enabled={inc.financeSupport?.enabled}
+          onToggle={() => upInc("financeSupport", { enabled: !inc.financeSupport?.enabled })}
+          value={financing?.interestSubsidyTotal}
+          accent="var(--sys-purple)"
+          tip={"الجهة الحكومية تتحمل جزءاً من تكلفة التمويل أو تقدم قرضاً بدون ربح. يخفض معدل التمويل الفعلي ويحسن DSCR\nGovernment pays part of financing cost or provides a zero-profit loan. Lowers effective rate and improves DSCR"}
+        >
+          <Field label={ar ? "نوع الدعم" : "Support Type"}>
+            <SegmentedControl
+              size="sm"
+              value={inc.financeSupport?.subType || "interestSubsidy"}
+              onChange={(v) => upInc("financeSupport", { subType: v })}
+              options={[
+                { value: "interestSubsidy", label: ar ? "تحمل فوائد" : "Interest Subsidy" },
+                { value: "softLoan",         label: ar ? "قرض حسن"    : "Soft Loan" },
+              ]}
+            />
+          </Field>
+          {inc.financeSupport?.subType === "softLoan" ? (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12 }}>
+              <Field label={ar ? "المبلغ (ريال)" : "Amount (SAR)"}>
+                <Input type="number" size="sm" value={inc.financeSupport?.softLoanAmount || 0} onChange={(e) => upInc("financeSupport", { softLoanAmount: parseFloat(e.target.value) || 0 })} />
+              </Field>
+              <Field label={ar ? "المدة (سنوات)" : "Tenor (yrs)"}>
+                <Input type="number" size="sm" value={inc.financeSupport?.softLoanTenor || 10} onChange={(e) => upInc("financeSupport", { softLoanTenor: parseFloat(e.target.value) || 0 })} />
+              </Field>
+              <Field label={ar ? "سماح (سنوات)" : "Grace (yrs)"}>
+                <Input type="number" size="sm" value={inc.financeSupport?.softLoanGrace || 3} onChange={(e) => upInc("financeSupport", { softLoanGrace: parseFloat(e.target.value) || 0 })} />
+              </Field>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr", gap: 6, fontSize: 11 }}>
-              <div>
-                <div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "النوع" : "Type"}</div>
-                <select value={item.type || "rebate"} onChange={e => updateFeeItem(i, { type: e.target.value })} style={{ ...sideInputStyle, background: "#fff", color: "#1a1d23", border: "1px solid #e5e7ec", padding: "4px 6px" }}>
-                  <option value="rebate">{lang === "ar" ? "استرداد" : "Rebate"}</option>
-                  <option value="deferral">{lang === "ar" ? "تأجيل" : "Deferral"}</option>
-                </select>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12 }}>
+              <Field label={ar ? "نسبة التحمل %" : "Subsidy %"}>
+                <Input type="number" size="sm" value={inc.financeSupport?.subsidyPct || 50} onChange={(e) => upInc("financeSupport", { subsidyPct: parseFloat(e.target.value) || 0 })} />
+              </Field>
+              <Field label={ar ? "المدة (سنوات)" : "Duration (yrs)"}>
+                <Input type="number" size="sm" value={inc.financeSupport?.subsidyYears || 5} onChange={(e) => upInc("financeSupport", { subsidyYears: parseFloat(e.target.value) || 0 })} />
+              </Field>
+              <Field label={ar ? "البداية" : "Start"}>
+                <UiSelect size="sm" value={inc.financeSupport?.subsidyStart || "operation"} onChange={(e) => upInc("financeSupport", { subsidyStart: e.target.value })}>
+                  <option value="drawdown">{ar ? "من السحب" : "From Drawdown"}</option>
+                  <option value="operation">{ar ? "من التشغيل" : "From Operation"}</option>
+                </UiSelect>
+              </Field>
+            </div>
+          )}
+        </IncentiveCard>
+
+        {/* ③ Land Rent Rebate */}
+        <IncentiveCard
+          titleEn="Land Rent Rebate (Exemption/Discount)"
+          titleAr="إعفاء/خصم إيجار الأرض"
+          enabled={inc.landRentRebate?.enabled}
+          onToggle={() => upInc("landRentRebate", { enabled: !inc.landRentRebate?.enabled })}
+          value={pIR?.landRentSavingTotal}
+          accent="var(--sys-orange)"
+          tip={"تخفيض أو إعفاء إيجار الأرض خلال البناء أو السنوات الأولى. يحسن التدفقات النقدية المبكرة\nReducing or waiving land rent during construction or early years. Improves early cash flows"}
+        >
+          {project.landType !== "lease" ? (
+            <div style={{ fontSize: 13, color: "var(--text-negative)", fontWeight: 500 }}>
+              {ar ? "غير متاح - الأرض ليست مؤجرة" : "Not applicable — land is not leased"}
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8, letterSpacing: "0.01em" }}>
+                {ar ? "فترة البناء" : "CONSTRUCTION PERIOD"}
               </div>
-              <div><div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "المبلغ" : "Amount"}</div><NI value={item.amount || 0} onChange={v => updateFeeItem(i, { amount: v })} /></div>
-              <div><div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "السنة" : "Year"}</div><NI value={item.year || 1} onChange={v => updateFeeItem(i, { year: v })} /></div>
-              {item.type === "deferral" && <div><div style={{ color: "#6b7080", marginBottom: 2 }}>{lang === "ar" ? "تأجيل (شهر)" : "Defer (mo)"}</div><NI value={item.deferralMonths || 12} onChange={v => updateFeeItem(i, { deferralMonths: v })} /></div>}
-            </div>
-          </div>
-        ))}
-        <button onClick={addFeeItem} style={{ ...btnS, width: "100%", background: "#f0fdf4", color: "#16a34a", padding: "8px", fontSize: 11, border: "1px solid #bbf7d0" }}>
-          + {lang === "ar" ? "إضافة رسم" : "Add Fee Item"}
-        </button>
-      </ToggleCard>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Field label={ar ? "نسبة الإعفاء %" : "Rebate %"}>
+                  <Input type="number" size="sm" value={inc.landRentRebate?.constrRebatePct || 100} onChange={(e) => upInc("landRentRebate", { constrRebatePct: parseFloat(e.target.value) || 0 })} />
+                </Field>
+                <Field
+                  label={ar ? "المدة (سنوات)" : "Duration (yrs)"}
+                  hint={ar ? "0 = تلقائي من البناء" : "0 = auto from construction"}
+                >
+                  <Input type="number" size="sm" value={inc.landRentRebate?.constrRebateYears || 0} onChange={(e) => upInc("landRentRebate", { constrRebateYears: parseFloat(e.target.value) || 0 })} />
+                </Field>
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginTop: 14, marginBottom: 8, letterSpacing: "0.01em" }}>
+                {ar ? "فترة ما بعد الافتتاح" : "POST-OPENING PERIOD"}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Field label={ar ? "نسبة الخصم %" : "Discount %"}>
+                  <Input type="number" size="sm" value={inc.landRentRebate?.operRebatePct || 50} onChange={(e) => upInc("landRentRebate", { operRebatePct: parseFloat(e.target.value) || 0 })} />
+                </Field>
+                <Field label={ar ? "المدة (سنوات)" : "Duration (yrs)"}>
+                  <Input type="number" size="sm" value={inc.landRentRebate?.operRebateYears || 3} onChange={(e) => upInc("landRentRebate", { operRebateYears: parseFloat(e.target.value) || 0 })} />
+                </Field>
+              </div>
+            </>
+          )}
+        </IncentiveCard>
 
+        {/* ④ Fee/Tax Rebates */}
+        <IncentiveCard
+          titleEn="Fee/Tax Rebates & Deferrals"
+          titleAr="استرداد/تأجيل رسوم وضرائب"
+          enabled={inc.feeRebates?.enabled}
+          onToggle={() => upInc("feeRebates", { enabled: !inc.feeRebates?.enabled })}
+          value={pIR?.feeRebateTotal}
+          accent="var(--sys-teal)"
+          tip={"استرداد أو تأجيل رسوم بلدية وتصاريح ومدفوعات نظامية. حتى التأجيل له منفعة زمنية تُحسب بمعدل خصم 10%\nRebates or deferrals of municipal charges, permits, and regulatory fees. Even deferrals have time-value benefit at 10% discount"}
+        >
+          {(inc.feeRebates?.items || []).map((item, i) => (
+            <div
+              key={i}
+              style={{
+                background: "var(--surface-input)",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 10,
+                border: "0.5px solid var(--border-default)",
+              }}
+            >
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <Input
+                    value={item.name || ""}
+                    onChange={(e) => updateFeeItem(i, { name: e.target.value })}
+                    placeholder={ar ? "اسم الرسم" : "Fee name"}
+                    size="sm"
+                  />
+                </div>
+                <Button variant="destructive" size="sm" onClick={() => removeFeeItem(i)}>✕</Button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 8 }}>
+                <Field label={ar ? "النوع" : "Type"}>
+                  <UiSelect size="sm" value={item.type || "rebate"} onChange={(e) => updateFeeItem(i, { type: e.target.value })}>
+                    <option value="rebate">{ar ? "استرداد" : "Rebate"}</option>
+                    <option value="deferral">{ar ? "تأجيل" : "Deferral"}</option>
+                  </UiSelect>
+                </Field>
+                <Field label={ar ? "المبلغ" : "Amount"}>
+                  <Input type="number" size="sm" value={item.amount || 0} onChange={(e) => updateFeeItem(i, { amount: parseFloat(e.target.value) || 0 })} />
+                </Field>
+                <Field label={ar ? "السنة" : "Year"}>
+                  <Input type="number" size="sm" value={item.year || 1} onChange={(e) => updateFeeItem(i, { year: parseFloat(e.target.value) || 0 })} />
+                </Field>
+                {item.type === "deferral" && (
+                  <Field label={ar ? "تأجيل (شهر)" : "Defer (mo)"}>
+                    <Input type="number" size="sm" value={item.deferralMonths || 12} onChange={(e) => updateFeeItem(i, { deferralMonths: parseFloat(e.target.value) || 0 })} />
+                  </Field>
+                )}
+              </div>
+            </div>
+          ))}
+          <Button variant="tinted" block onClick={addFeeItem}>
+            + {ar ? "إضافة رسم" : "Add Fee Item"}
+          </Button>
+        </IncentiveCard>
+      </div>
+
+      {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
     </div>
-    {eduModal && <EducationalModal contentKey={eduModal} lang={lang} onClose={() => setEduModal(null)} />}
-  </div>);
+  );
 }
 
 export default IncentivesView;
