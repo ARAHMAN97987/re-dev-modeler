@@ -189,11 +189,23 @@
 
   /* === Motion (Apple timing) === */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-quart:     cubic-bezier(0.25, 1, 0.5, 1); /* alias used by auth + component styles */
   --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
   --transition-fast:   120ms var(--ease-out-quart);
   --transition-normal: 200ms var(--ease-out-quart);
   --transition-slow:   320ms var(--ease-out-expo);
+
+  /* === Surface aliases + hairline (used by Apple HIG primitives & views) ===
+     The numbered --surface-1/2/3 pattern is what our Apple HIG inline styles
+     reference; they map onto the existing named surfaces to keep dark-mode
+     overrides working without duplicating the ramp. Shipped 2026-04-17 after
+     forensic audit found 197 call sites using these names. */
+  --surface-1: var(--surface-card);    /* primary elevated surface (white) */
+  --surface-2: var(--surface-sidebar); /* subtle inset / row stripes */
+  --surface-3: var(--surface-active);  /* pressed / track bg */
+  --hairline:  var(--border-default);  /* hairline border */
+  --bg:        var(--surface-page);    /* page bg alias used by auth */
 
   /* === Z-index === */
   --z-dropdown: 10;
