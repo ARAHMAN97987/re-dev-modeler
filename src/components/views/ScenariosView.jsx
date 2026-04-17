@@ -429,34 +429,34 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
 
     {/* ── Scenario Comparison ── */}
     {activeSection === "compare" && (
-      <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
-        <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600}}>
+      <div style={{background:"var(--surface-1)",borderRadius:10,border:"1px solid var(--hairline)",overflow:"hidden"}}>
+        <div style={{padding:"12px 16px",borderBottom:"1px solid var(--hairline)",fontSize:13,fontWeight:600,color:"var(--text-primary)",letterSpacing:"-0.01em"}}>
           {lang==="ar"?"مقارنة 8 سيناريوهات":"8 Scenario Comparison"}
         </div>
         <div style={{overflowX:"auto"}}>
           <table style={{...tblStyle,fontSize:11}}>
             <thead><tr>
-              <th style={{...thSt,minWidth:130,position:"sticky",left:0,background:"#f8f9fb",zIndex:2}}>{lang==="ar"?"المؤشر":"Metric"}</th>
+              <th style={{...thSt,minWidth:130,position:"sticky",left:0,background:"var(--surface-2)",zIndex:2}}>{lang==="ar"?"المؤشر":"Metric"}</th>
               {scenarioResults.map((s,i) => <th key={i} style={{...thSt,textAlign:"right",minWidth:100}}>{s.name}</th>)}
             </tr></thead>
             <tbody>
               {[
-                { label: lang==="ar"?"إجمالي التكاليف":"Total CAPEX", fn: s => getScenarioData(s).totalCapex, fmt: v => fmt(v), color: "#ef4444", tip:"إجمالي البناء + غير مباشرة + طوارئ\nAll construction + soft costs + contingency" },
-                { label: lang==="ar"?"إجمالي الإيرادات":"Total Income", fn: s => getScenarioData(s).totalIncome, fmt: v => fmt(v), color: "#16a34a", tip:"مجموع الإيرادات خلال كامل فترة النموذج\nTotal revenue over entire projection period" },
-                { label: ar?"IRR قبل التمويل":"Unlevered IRR", fn: s => getScenarioData(s).irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "#2563eb", tip:"معدل العائد بدون تمويل. فوق 12% قوي\nReturn ignoring debt. Above 12% is strong" },
-                { label: "NPV @10%", fn: s => getScenarioData(s).npv10, fmt: v => fmtM(v), color: "#06b6d4", tip:"القيمة الحالية بخصم 10%. موجب = يخلق قيمة\nPresent value at 10% discount. Positive = value-creating" },
+                { label: lang==="ar"?"إجمالي التكاليف":"Total CAPEX", fn: s => getScenarioData(s).totalCapex, fmt: v => fmt(v), color: "var(--sys-red)", tip:"إجمالي البناء + غير مباشرة + طوارئ\nAll construction + soft costs + contingency" },
+                { label: lang==="ar"?"إجمالي الإيرادات":"Total Income", fn: s => getScenarioData(s).totalIncome, fmt: v => fmt(v), color: "var(--sys-green)", tip:"مجموع الإيرادات خلال كامل فترة النموذج\nTotal revenue over entire projection period" },
+                { label: ar?"IRR قبل التمويل":"Unlevered IRR", fn: s => getScenarioData(s).irr, fmt: v => v !== null ? fmtPct(v*100) : "N/A", color: "var(--sys-blue)", tip:"معدل العائد بدون تمويل. فوق 12% قوي\nReturn ignoring debt. Above 12% is strong" },
+                { label: "NPV @10%", fn: s => getScenarioData(s).npv10, fmt: v => fmtM(v), color: "var(--sys-teal)", tip:"القيمة الحالية بخصم 10%. موجب = يخلق قيمة\nPresent value at 10% discount. Positive = value-creating" },
                 { label: "NPV @12%", fn: s => getScenarioData(s).npv12, fmt: v => fmtM(v), tip:"القيمة الحالية بخصم 12%\nPresent value at 12% discount rate" },
-                ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل العائد بعد التمويل\nReturn after debt service" }]:[]),
+                ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "var(--sys-indigo)", tip:"معدل العائد بعد التمويل\nReturn after debt service" }]:[]),
                 { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => getScenarioData(s).totalNetCF, fmt: v => fmtM(v), tip:"صافي التدفق = إيرادات - تكاليف - إيجار أرض\nNet CF = Income - CAPEX - Land Rent" },
                 ...(!isFiltered?[
-                  { label: ar?"عائد الممول (LP)":"Investor IRR (LP)", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "#8b5cf6", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
+                  { label: ar?"عائد الممول (LP)":"Investor IRR (LP)", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "var(--sys-indigo)", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
                   { label: ar?"مضاعف الممول (LP)":"Investor MOIC (LP)", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
                 ]:[]),
               ].map((metric, mi) => {
                 const baseVal = metric.fn(scenarioResults[0]);
                 return (
-                  <tr key={mi} style={mi%2===0?{}:{background:"#fafbfc"}}>
-                    <td style={{...tdSt,position:"sticky",left:0,background:mi%2===0?"#fff":"#fafbfc",zIndex:1,fontWeight:600,fontSize:11}}>{metric.tip?<Tip text={metric.tip}>{metric.label}</Tip>:metric.label}</td>
+                  <tr key={mi} style={mi%2===0?{}:{background:"var(--surface-2)"}}>
+                    <td style={{...tdSt,position:"sticky",left:0,background:mi%2===0?"var(--surface-1)":"var(--surface-2)",zIndex:1,fontWeight:600,fontSize:11}}>{metric.tip?<Tip text={metric.tip}>{metric.label}</Tip>:metric.label}</td>
                     {scenarioResults.map((s, si) => {
                       const val = metric.fn(s);
                       const isBase = si === 0;
@@ -464,8 +464,8 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
                       const isWorse = typeof val === "number" && typeof baseVal === "number" && val < baseVal;
                       return (
                         <td key={si} style={{...tdN,fontSize:11,fontWeight:isBase?700:400,
-                          color: isBase ? (metric.color || "#1a1d23") : isBetter ? "#16a34a" : isWorse ? "#ef4444" : "#6b7080",
-                          background: isBase ? "#f0f4ff" : undefined }}>
+                          color: isBase ? (metric.color || "var(--text-primary)") : isBetter ? "var(--sys-green)" : isWorse ? "var(--sys-red)" : "var(--text-secondary)",
+                          background: isBase ? "color-mix(in srgb, var(--sys-blue) 10%, transparent)" : undefined }}>
                           {metric.fmt(val)}
                         </td>
                       );
