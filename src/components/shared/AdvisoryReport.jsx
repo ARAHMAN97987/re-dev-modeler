@@ -26,20 +26,20 @@ const STEPS = [
 ];
 
 const mdComps = {
-  h1: ({children}) => <h3 style={{fontSize:16,fontWeight:700,color:"#111",margin:"16px 0 8px",borderBottom:"2px solid #2EC4B6",paddingBottom:4}}>{children}</h3>,
-  h2: ({children}) => <h4 style={{fontSize:14,fontWeight:600,color:"#1a1d23",margin:"12px 0 6px"}}>{children}</h4>,
-  h3: ({children}) => <h5 style={{fontSize:13,fontWeight:600,color:"#374151",margin:"10px 0 4px"}}>{children}</h5>,
-  p: ({children}) => <p style={{margin:"6px 0",lineHeight:1.8,color:"#374151"}}>{children}</p>,
-  strong: ({children}) => <strong style={{fontWeight:700,color:"#111"}}>{children}</strong>,
+  h1: ({children}) => <h3 style={{fontSize:16,fontWeight:700,color:"var(--text-primary)",margin:"16px 0 8px",borderBottom:"2px solid #2EC4B6",paddingBottom:4}}>{children}</h3>,
+  h2: ({children}) => <h4 style={{fontSize:14,fontWeight:600,color:"var(--text-primary)",margin:"12px 0 6px"}}>{children}</h4>,
+  h3: ({children}) => <h5 style={{fontSize:13,fontWeight:600,color:"var(--text-secondary)",margin:"10px 0 4px"}}>{children}</h5>,
+  p: ({children}) => <p style={{margin:"6px 0",lineHeight:1.8,color:"var(--text-secondary)"}}>{children}</p>,
+  strong: ({children}) => <strong style={{fontWeight:700,color:"var(--text-primary)"}}>{children}</strong>,
   ul: ({children}) => <ul style={{margin:"6px 0",paddingInlineStart:20}}>{children}</ul>,
   ol: ({children}) => <ol style={{margin:"6px 0",paddingInlineStart:20}}>{children}</ol>,
-  li: ({children}) => <li style={{margin:"4px 0",lineHeight:1.7,color:"#374151"}}>{children}</li>,
+  li: ({children}) => <li style={{margin:"4px 0",lineHeight:1.7,color:"var(--text-secondary)"}}>{children}</li>,
   table: ({children}) => <div style={{overflowX:"auto",margin:"10px 0"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>{children}</table></div>,
   thead: ({children}) => <thead style={{background:"#f0fdf4"}}>{children}</thead>,
   th: ({children}) => <th style={{padding:"8px 12px",textAlign:"start",fontWeight:600,color:"#166534",borderBottom:"2px solid #2EC4B6",fontSize:11}}>{children}</th>,
-  td: ({children}) => <td style={{padding:"6px 12px",borderBottom:"1px solid #e5e7eb",color:"#374151"}}>{children}</td>,
-  hr: () => <hr style={{border:"none",borderTop:"1px solid #e5e7eb",margin:"12px 0"}} />,
-  blockquote: ({children}) => <div style={{borderInlineStart:"3px solid #2EC4B6",paddingInlineStart:14,margin:"8px 0",color:"#6b7280",fontStyle:"italic"}}>{children}</div>,
+  td: ({children}) => <td style={{padding:"6px 12px",borderBottom:"1px solid var(--hairline)",color:"var(--text-secondary)"}}>{children}</td>,
+  hr: () => <hr style={{border:"none",borderTop:"1px solid var(--hairline)",margin:"12px 0"}} />,
+  blockquote: ({children}) => <div style={{borderInlineStart:"3px solid #2EC4B6",paddingInlineStart:14,margin:"8px 0",color:"var(--text-secondary)",fontStyle:"italic"}}>{children}</div>,
 };
 
 export default function AdvisoryReport({ project, results, financing, waterfall, incentivesResult, smartAlerts, lang, onClose }) {
@@ -162,48 +162,48 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
       <div style={{width:"100%",maxWidth:900,minHeight:"100vh",background:"#fff",boxShadow:"0 0 60px rgba(0,0,0,0.3)"}}>
 
         {/* Action bar */}
-        <div className="report-actions" style={{position:"sticky",top:0,zIndex:10,background:"#fff",borderBottom:"1px solid #e5e7eb",padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+        <div className="report-actions" style={{position:"sticky",top:0,zIndex:10,background:"#fff",borderBottom:"1px solid var(--hairline)",padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <span style={{fontSize:20}}>📄</span>
             <div>
-              <div style={{fontSize:14,fontWeight:700,color:"#111"}}>{ar ? "التقرير الاستشاري" : "Advisory Report"}</div>
-              <div style={{fontSize:10,color:"#6b7280"}}>{rd?.project?.name || project?.name}</div>
+              <div style={{fontSize:14,fontWeight:700,color:"var(--text-primary)"}}>{ar ? "التقرير الاستشاري" : "Advisory Report"}</div>
+              <div style={{fontSize:10,color:"var(--text-secondary)"}}>{rd?.project?.name || project?.name}</div>
             </div>
           </div>
           <div style={{display:"flex",gap:8}}>
             {state === "ready" && <button onClick={handlePrint} style={{padding:"8px 16px",borderRadius:8,border:"1px solid #2EC4B6",background:"#f0fdfa",color:"#0d9488",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>📥 {ar ? "تحميل PDF" : "Download PDF"}</button>}
-            {state === "ready" && <button onClick={generate} style={{padding:"8px 16px",borderRadius:8,border:"1px solid #e5e7eb",background:"#fff",color:"#374151",fontSize:12,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>🔄 {ar ? "إعادة" : "Regenerate"}</button>}
-            <button onClick={onClose} style={{padding:"8px 16px",borderRadius:8,border:"1px solid #e5e7eb",background:"#fff",color:"#6b7280",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+            {state === "ready" && <button onClick={generate} style={{padding:"8px 16px",borderRadius:8,border:"1px solid var(--hairline)",background:"#fff",color:"var(--text-secondary)",fontSize:12,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>🔄 {ar ? "إعادة" : "Regenerate"}</button>}
+            <button onClick={onClose} style={{padding:"8px 16px",borderRadius:8,border:"1px solid var(--hairline)",background:"#fff",color:"var(--text-secondary)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
           </div>
         </div>
 
         {/* Content */}
-        <div ref={reportRef} className="report-container" dir={ar ? "rtl" : "ltr"} style={{padding:"40px 48px",fontFamily:"'DM Sans','Tajawal',sans-serif",color:"#1a1d23",lineHeight:1.7}}>
+        <div ref={reportRef} className="report-container" dir={ar ? "rtl" : "ltr"} style={{padding:"40px 48px",fontFamily:"'DM Sans','Tajawal',sans-serif",color:"var(--text-primary)",lineHeight:1.7}}>
 
           {/* Header */}
           <div style={{textAlign:"center",marginBottom:40}}>
             <div style={{fontSize:28,fontWeight:900,color:"#2EC4B6",letterSpacing:2,fontFamily:"'Tajawal',sans-serif"}}>{ar ? "حصيف" : "Haseef"}</div>
-            <div style={{fontSize:11,color:"#6b7280",letterSpacing:1,textTransform:"uppercase",marginTop:2}}>{ar ? "التقرير الاستشاري للجدوى المالية" : "Financial Feasibility Advisory Report"}</div>
+            <div style={{fontSize:11,color:"var(--text-secondary)",letterSpacing:1,textTransform:"uppercase",marginTop:2}}>{ar ? "التقرير الاستشاري للجدوى المالية" : "Financial Feasibility Advisory Report"}</div>
             <hr style={{border:"none",borderTop:"2px solid #2EC4B6",width:80,margin:"16px auto"}} />
-            <div style={{fontSize:18,fontWeight:700,color:"#111",marginTop:12}}>{rd?.project?.name || project?.name}</div>
-            <div style={{fontSize:12,color:"#6b7280",marginTop:4}}>{rd?.project?.location} | {fmtDate()}</div>
+            <div style={{fontSize:18,fontWeight:700,color:"var(--text-primary)",marginTop:12}}>{rd?.project?.name || project?.name}</div>
+            <div style={{fontSize:12,color:"var(--text-secondary)",marginTop:4}}>{rd?.project?.location} | {fmtDate()}</div>
           </div>
 
           {/* Loading state */}
           {state === "generating" && (
             <div style={{textAlign:"center",padding:"60px 0"}}>
               <div style={{fontSize:32,marginBottom:16}}>📝</div>
-              <div style={{fontSize:16,fontWeight:600,color:"#111",marginBottom:24}}>{ar ? "جاري إعداد التقرير..." : "Preparing your report..."}</div>
+              <div style={{fontSize:16,fontWeight:600,color:"var(--text-primary)",marginBottom:24}}>{ar ? "جاري إعداد التقرير..." : "Preparing your report..."}</div>
               <div style={{maxWidth:300,margin:"0 auto"}}>
                 {STEPS.map((s, i) => (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",opacity:i<=step?1:0.3}}>
                     <span style={{fontSize:14}}>{i<step?"✅":i===step?"🔄":"⏳"}</span>
-                    <span style={{fontSize:13,color:i<=step?"#111":"#9ca3af"}}>{ar ? s.ar : s.en}</span>
+                    <span style={{fontSize:13,color:i<=step?"var(--text-primary)":"var(--text-tertiary)"}}>{ar ? s.ar : s.en}</span>
                   </div>
                 ))}
               </div>
               {wordCount > 0 && <div style={{fontSize:12,color:"#2EC4B6",fontWeight:600,marginTop:12}}>{ar ? `${wordCount.toLocaleString()} كلمة...` : `${wordCount.toLocaleString()} words...`}</div>}
-              <div style={{fontSize:11,color:"#9ca3af",marginTop:8}}>{ar ? "يستغرق 15-30 ثانية" : "Takes 15-30 seconds"}</div>
+              <div style={{fontSize:11,color:"var(--text-tertiary)",marginTop:8}}>{ar ? "يستغرق 15-30 ثانية" : "Takes 15-30 seconds"}</div>
             </div>
           )}
 
@@ -211,7 +211,7 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
           {state === "error" && (
             <div style={{textAlign:"center",padding:"60px 0"}}>
               <div style={{fontSize:32,marginBottom:12}}>❌</div>
-              <div style={{fontSize:14,color:"#ef4444",marginBottom:8}}>{error}</div>
+              <div style={{fontSize:14,color:"var(--sys-red)",marginBottom:8}}>{error}</div>
               <button onClick={generate} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"#2EC4B6",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>🔄 {ar ? "حاول مرة أخرى" : "Try Again"}</button>
             </div>
           )}
@@ -220,17 +220,17 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
           {state === "ready" && aiSections && rd && (<>
 
             {/* Key Metrics Bar */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12,marginBottom:32,padding:20,background:"#f8fafc",borderRadius:12,border:"1px solid #e2e8f0"}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12,marginBottom:32,padding:20,background:"var(--surface-2)",borderRadius:12,border:"1px solid var(--hairline)"}}>
               {[
-                { l: ar?"CAPEX":"CAPEX", v: fmtM(rd.financials.totalCAPEX), c:"#1e3a5f" },
-                { l: ar?"IRR المشروع":"Project IRR", v: rd.financials.projectIRR!=null?fmtPct(rd.financials.projectIRR*100):"—", c: (rd.financials.projectIRR||0)>=0.15?"#16a34a":(rd.financials.projectIRR||0)>=0.12?"#f59e0b":"#ef4444" },
-                { l: "NPV @10%", v: fmtM(rd.financials.npv10), c: (rd.financials.npv10||0)>0?"#16a34a":"#ef4444" },
-                ...(f?[{ l: "DSCR", v: f.minDSCR!=null?f.minDSCR.toFixed(2)+"x":"—", c: (f.minDSCR||0)>=1.5?"#16a34a":(f.minDSCR||0)>=1.2?"#f59e0b":"#ef4444" }]:[]),
-                ...(w?[{ l: "LP IRR", v: w.lpIRR!=null?fmtPct(w.lpIRR*100):"—", c:"#7c3aed" }]:[]),
-                ...(w?[{ l: "LP MOIC", v: w.lpMOIC!=null?w.lpMOIC.toFixed(2)+"x":"—", c:"#7c3aed" }]:[]),
+                { l: ar?"CAPEX":"CAPEX", v: fmtM(rd.financials.totalCAPEX), c: "var(--text-primary)" },
+                { l: ar?"IRR المشروع":"Project IRR", v: rd.financials.projectIRR!=null?fmtPct(rd.financials.projectIRR*100):"—", c: (rd.financials.projectIRR||0)>=0.15?"var(--sys-green)":(rd.financials.projectIRR||0)>=0.12?"var(--sys-orange)":"var(--sys-red)" },
+                { l: "NPV @10%", v: fmtM(rd.financials.npv10), c: (rd.financials.npv10||0)>0?"var(--sys-green)":"var(--sys-red)" },
+                ...(f?[{ l: "DSCR", v: f.minDSCR!=null?f.minDSCR.toFixed(2)+"x":"—", c: (f.minDSCR||0)>=1.5?"var(--sys-green)":(f.minDSCR||0)>=1.2?"var(--sys-orange)":"var(--sys-red)" }]:[]),
+                ...(w?[{ l: "LP IRR", v: w.lpIRR!=null?fmtPct(w.lpIRR*100):"—", c: "var(--sys-indigo)" }]:[]),
+                ...(w?[{ l: "LP MOIC", v: w.lpMOIC!=null?w.lpMOIC.toFixed(2)+"x":"—", c: "var(--sys-indigo)" }]:[]),
               ].map((m,i) => (
                 <div key={i} style={{textAlign:"center"}}>
-                  <div style={{fontSize:10,color:"#6b7280",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{m.l}</div>
+                  <div style={{fontSize:10,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>{m.l}</div>
                   <div style={{fontSize:18,fontWeight:800,color:m.c,marginTop:2}}>{m.v}</div>
                 </div>
               ))}
@@ -240,7 +240,7 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
             {SECTIONS.map((sec, idx) => (
               aiSections[sec.key] ? (
                 <div key={sec.key} className="report-section" style={{marginBottom:28,pageBreakInside:"avoid"}}>
-                  <h2 className="report-section-title" style={{fontSize:16,fontWeight:700,color:"#111",marginBottom:10,paddingBottom:6,borderBottom:"2px solid #2EC4B6",display:"flex",alignItems:"center",gap:8,pageBreakAfter:"avoid"}}>
+                  <h2 className="report-section-title" style={{fontSize:16,fontWeight:700,color:"var(--text-primary)",marginBottom:10,paddingBottom:6,borderBottom:"2px solid #2EC4B6",display:"flex",alignItems:"center",gap:8,pageBreakAfter:"avoid"}}>
                     <span>{sec.icon}</span> <span>{idx+1}. {ar ? sec.ar : sec.en}</span>
                   </h2>
                   <Markdown components={mdComps}>{aiSections[sec.key]}</Markdown>
@@ -279,7 +279,7 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
                   )}
 
                   {sec.key === "riskAnalysis" && rd.alerts.total > 0 && (
-                    <div style={{margin:"12px 0",padding:12,background:"#fef3c7",borderRadius:8,border:"1px solid #fbbf24",fontSize:11}}>
+                    <div style={{margin:"12px 0",padding:12,background:"color-mix(in srgb, var(--sys-orange) 10%, transparent)",borderRadius:8,border:"1px solid color-mix(in srgb, var(--sys-orange) 30%, transparent)",fontSize:11,color:"var(--text-primary)"}}>
                       <div style={{fontWeight:700,marginBottom:6}}>⚠ {ar?"تنبيهات المراجع الذكي":"Smart Reviewer Alerts"}: {rd.alerts.critical} {ar?"حرج":"critical"}, {rd.alerts.warning} {ar?"تحذير":"warning"}</div>
                       {rd.alerts.items.slice(0,5).map((a,i) => <div key={i} style={{padding:"2px 0"}}>• [{a.severity}] {ar?a.ar:a.en}{a.assetName?` (${a.assetName})`:""}</div>)}
                     </div>
@@ -289,7 +289,7 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
             ))}
 
             {/* Footer */}
-            <div style={{marginTop:40,paddingTop:20,borderTop:"2px solid #e5e7eb",textAlign:"center",color:"#9ca3af",fontSize:10}}>
+            <div style={{marginTop:40,paddingTop:20,borderTop:"2px solid var(--hairline)",textAlign:"center",color:"var(--text-tertiary)",fontSize:10}}>
               <div style={{color:"#2EC4B6",fontWeight:700,fontSize:12,marginBottom:4}}>Haseef | حصيف</div>
               <div>Generated by Haseef Financial Modeler | haseefdev.com</div>
               <div>{fmtDate()}</div>
@@ -316,5 +316,5 @@ export default function AdvisoryReport({ project, results, financing, waterfall,
 }
 
 const thS = { padding:"8px 12px", textAlign:"start", fontWeight:600, color:"#166534", borderBottom:"2px solid #2EC4B6", fontSize:10, textTransform:"uppercase", letterSpacing:0.3 };
-const tdS = { padding:"6px 12px", borderBottom:"1px solid #e5e7eb", fontSize:12, color:"#374151" };
+const tdS = { padding:"6px 12px", borderBottom:"1px solid var(--hairline)", fontSize:12, color:"var(--text-secondary)" };
 const tdN = { ...tdS, textAlign:"right", fontVariantNumeric:"tabular-nums" };
