@@ -198,11 +198,13 @@ process.stdout.write('[E] Non-Fund Modes: ');
   const { w: wDebt } = run({ finMode:'debt' });
   t('E', 'debt: waterfall=null', wDebt === null, `w=${wDebt}`);
   
-  // But devFee still deducted from leveredCF in all modes
+  // DevFee is intentionally ZERO in non-fund modes: in self/debt, the developer
+  // IS the owner (no GP/LP split) so a "fee to self" makes no sense. Only fund/jv/
+  // hybrid/incomeFund modes charge devFee — see financing.js hasFundStructure check.
   const { f: fSelf } = run({ finMode:'self' });
-  t('E', 'self: devFee in leveredCF', fSelf.devFeeTotal > 0, `devFee=${fSelf.devFeeTotal}`);
+  t('E', 'self: devFee = 0 (developer is owner)', fSelf.devFeeTotal === 0, `devFee=${fSelf.devFeeTotal}`);
   const { f: fDebt } = run({ finMode:'debt' });
-  t('E', 'debt: devFee in leveredCF', fDebt.devFeeTotal > 0, `devFee=${fDebt.devFeeTotal}`);
+  t('E', 'debt: devFee = 0 (developer is owner)', fDebt.devFeeTotal === 0, `devFee=${fDebt.devFeeTotal}`);
 }
 console.log('');
 

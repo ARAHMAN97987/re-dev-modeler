@@ -369,12 +369,17 @@ export function computeProjectCashFlows(project) {
   // Recompute consolidated netCF to use full land rent
   for (let y = 0; y < horizon; y++) { cn[y] = ci[y] - cl[y] - cc[y]; }
 
-  // Payback + Peak Negative
+  // Payback + Peak Negative.
+  // Threshold for "was negative" is relative to project size so small-scale projects
+  // (total CAPEX < $1k) still detect payback correctly. The fixed $1 threshold was
+  // magnitude-insensitive and could fail to latch for micro models.
+  const _totalCapex = cc.reduce((s, v) => s + v, 0);
+  const _pbFloor = Math.max(1, _totalCapex * 0.0001); // 0.01% of total CAPEX or $1 min
   let cumCF = 0, paybackYear = null, peakNegative = 0, peakNegativeYear = 0, _pbWasNeg = false;
   for (let y = 0; y < horizon; y++) {
     cumCF += cn[y];
     if (cumCF < peakNegative) { peakNegative = cumCF; peakNegativeYear = y; }
-    if (cumCF < -1) _pbWasNeg = true;
+    if (cumCF < -_pbFloor) _pbWasNeg = true;
     if (paybackYear === null && _pbWasNeg && cumCF >= 0) { paybackYear = y; }
   }
 

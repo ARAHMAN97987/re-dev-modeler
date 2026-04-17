@@ -88,13 +88,17 @@ for (let i = 0; i < project.assets.length; i++) {
   const schedSum = as.capexSchedule.reduce((s,v) => s+v, 0);
   t('A', `${a.name} capex schedule sum`, EQ(schedSum, as.totalCapex), `schedSum=${schedSum} total=${as.totalCapex}`);
   
-  // CAPEX spread: durYears equal slices
+  // CAPEX spread: monthly proration (matches Excel) — each year gets
+  // capex × min(12, durMonths - yearOffset×12) / durMonths.
+  // For 30-month duration: year0=12/30, year1=12/30, year2=6/30 (not equal thirds).
   const durYears = Math.ceil(a.constrDuration / 12);
-  const annualCapex = as.totalCapex / durYears;
+  const durMonths = a.constrDuration;
   const nonZeroYears = as.capexSchedule.filter(v => v > 0);
   t('A', `${a.name} capex spread ${durYears}yr`, nonZeroYears.length === durYears, `nonZero=${nonZeroYears.length} expected=${durYears}`);
   if (nonZeroYears.length > 0) {
-    t('A', `${a.name} equal annual`, EQ(nonZeroYears[0], annualCapex), `annual=${nonZeroYears[0]} expected=${annualCapex}`);
+    // Year 0 takes min(12, durMonths) months
+    const expectedYear0 = as.totalCapex * Math.min(12, durMonths) / durMonths;
+    t('A', `${a.name} year-0 proration`, EQ(nonZeroYears[0], expectedYear0), `year0=${nonZeroYears[0]} expected=${expectedYear0}`);
   }
 }
 console.log('');

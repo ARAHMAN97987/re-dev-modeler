@@ -49,23 +49,33 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     for (let tryExit = scanStart; tryExit <= scanEnd; tryExit++) {
       let exitVal = 0;
       const exitIdx = Math.min(tryExit, h - 1);
+      // Cap rate valuation: use NOI (income - land rent), not gross income.
+      // Gross-income cap rate inflates exit value by LR/capRate. NOI basis is
+      // the industry-standard valuation for stabilized income-producing assets.
+      // Multiples are applied to gross income (unchanged — common convention for multiples).
+      const stabLR = c.landRent?.[exitIdx] || 0;
+      const phaseTotalIncome = assetScheds.reduce((s, as) =>
+        (as.revType === "Sale") ? s : s + (as.revenueSchedule[exitIdx] || as.revenueSchedule[Math.min(exitIdx + 1, h - 1)] || 0), 0);
       if (assetScheds.length > 0) {
         for (const as of assetScheds) {
           if (as.revType === "Sale") continue;
           const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[Math.min(exitIdx + 1, h - 1)] || 0;
           if (exitStrategy === "caprate") {
             const capRate = (project.exitCapRate ?? 9) / 100;
-            exitVal += capRate > 0 ? assetIncome / capRate : 0;
+            // Allocate land rent to this asset by income share so NOI cap works per-asset
+            const lrShare = phaseTotalIncome > 0 ? stabLR * (assetIncome / phaseTotalIncome) : 0;
+            const assetNOI = Math.max(0, assetIncome - lrShare);
+            exitVal += capRate > 0 ? assetNOI / capRate : 0;
           } else {
             exitVal += assetIncome * (project.exitMultiple ?? 10);
           }
         }
       } else {
         const stabIncome = c.income[exitIdx] || 0;
-        // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
         if (exitStrategy === "caprate") {
           const capRate = (project.exitCapRate ?? 9) / 100;
-          exitVal = capRate > 0 ? stabIncome / capRate : 0;
+          const stabNOI = Math.max(0, stabIncome - stabLR);
+          exitVal = capRate > 0 ? stabNOI / capRate : 0;
         } else {
           exitVal = stabIncome * (project.exitMultiple ?? 10);
         }
@@ -134,10 +144,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   }
 
   if (project.finMode === "self") {
-    // For self-funded: use incentive-adjusted CF if available
+    // For self-funded: use incentive-adjusted CF if available.
+    // Note: devFeeSchedule is all-zero in self mode (hasFundStructure=false
+    // above zeroes devFeeTotal → schedule is zero). No deduction needed.
     const selfCF = ir && ir.adjustedNetCF ? [...ir.adjustedNetCF] : [...c.netCF];
-    // Deduct dev fee during construction (real cost to the project)
-    for (let y = 0; y < h; y++) selfCF[y] -= devFeeSchedule[y];
     // ── Self-funded Exit ──
     let constrEndSelf = 0;
     for (let y = h - 1; y >= 0; y--) { if (c.capex[y] > 0) { constrEndSelf = y; break; } }
@@ -155,23 +165,28 @@ export function computeFinancing(project, projectResults, incentivesResult) {
       const exitIdx = Math.min(exitYrSelf, h - 1);
       const fallbackIdx = Math.min(constrEndSelf + 2, h - 1);
       const assetScheds = projectResults.assetSchedules || [];
+      const stabLR = c.landRent?.[exitIdx] || c.landRent?.[fallbackIdx] || 0;
+      const phaseTotalIncomeSelf = assetScheds.reduce((s, as) =>
+        (as.revType === "Sale") ? s : s + (as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0), 0);
       if (assetScheds.length > 0) {
         for (const as of assetScheds) {
           if (as.revType === "Sale") continue; // Skip - already realized through sales
           const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0;
           if (exitStrategySelf === "caprate") {
             const capRate = (project.exitCapRate ?? 9) / 100;
-            exitVal += capRate > 0 ? assetIncome / capRate : 0;
+            const lrShare = phaseTotalIncomeSelf > 0 ? stabLR * (assetIncome / phaseTotalIncomeSelf) : 0;
+            const assetNOI = Math.max(0, assetIncome - lrShare);
+            exitVal += capRate > 0 ? assetNOI / capRate : 0;
           } else {
             exitVal += assetIncome * (project.exitMultiple ?? 10);
           }
         }
       } else {
         const stabIncome = c.income[exitIdx] || c.income[fallbackIdx] || 0;
-        // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
         if (exitStrategySelf === "caprate") {
           const capRateSelf = (project.exitCapRate ?? 9) / 100;
-          exitVal = capRateSelf > 0 ? stabIncome / capRateSelf : 0;
+          const stabNOI = Math.max(0, stabIncome - stabLR);
+          exitVal = capRateSelf > 0 ? stabNOI / capRateSelf : 0;
         } else {
           exitVal = stabIncome * (project.exitMultiple ?? 10);
         }
@@ -580,20 +595,32 @@ export function computeFinancing(project, projectResults, incentivesResult) {
 
   if (exitStrategy !== "hold" && exitYr >= 0 && exitYr < h) {
     // H8: Per-component exit valuation
+    // ═══ CAP RATE FIX (2026-04-18 audit) ═══
+    // Cap rate valuation now uses NOI (Income − Land Rent), not gross income.
+    // Gross-income cap rate over-values leased-land projects because it
+    // implicitly capitalizes the land-rent obligation into the building's value.
+    // NOI basis is the industry-standard valuation for stabilized assets.
+    // Multiples (for sale exit) continue to apply to gross income — this matches
+    // common "multiple on revenue" conventions for development exits.
     let exitVal = 0;
     const exitIdx = Math.min(exitYr, h - 1);
     const fallbackIdx = Math.min(constrEnd + 2, h - 1);
     const assetScheds = projectResults.assetSchedules || [];
+    const stabLR = c.landRent?.[exitIdx] || c.landRent?.[fallbackIdx] || 0;
+    const phaseTotalIncomeExit = assetScheds.reduce((s, as) =>
+      (as.revType === "Sale") ? s : s + (as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0), 0);
     if (assetScheds.length > 0) {
       for (const as of assetScheds) {
         const assetIncome = as.revenueSchedule[exitIdx] || as.revenueSchedule[fallbackIdx] || 0;
         if (as.revType === "Sale") {
           // Sale: remaining unsold value (skip - already realized through sales)
         } else if (exitStrategy === "caprate") {
-          // CapRate exit: ALL assets valued at income/capRate (matches Excel: totalIncome/$C$45)
-          // This is standard real estate cap rate valuation applied to total property income.
           const capRate = (project.exitCapRate ?? 9) / 100;
-          exitVal += capRate > 0 ? assetIncome / capRate : 0;
+          // Allocate consolidated land rent to this asset by its income share of the
+          // non-Sale income pool, so each asset is valued on its own NOI.
+          const lrShare = phaseTotalIncomeExit > 0 ? stabLR * (assetIncome / phaseTotalIncomeExit) : 0;
+          const assetNOI = Math.max(0, assetIncome - lrShare);
+          exitVal += capRate > 0 ? assetNOI / capRate : 0;
         } else {
           // Sale exit: income × multiple for all asset types
           exitVal += assetIncome * (project.exitMultiple ?? 10);
@@ -602,10 +629,10 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     } else {
       // Fallback: old method if no asset schedules
       const stabIncome = c.income[exitIdx] || c.income[fallbackIdx] || 0;
-      // ZAN convention: exit value uses gross income (no land rent deduction), matching Excel
       if (exitStrategy === "caprate") {
         const capRate = (project.exitCapRate ?? 9) / 100;
-        exitVal = capRate > 0 ? stabIncome / capRate : 0;
+        const stabNOI = Math.max(0, stabIncome - stabLR);
+        exitVal = capRate > 0 ? stabNOI / capRate : 0;
       } else {
         exitVal = stabIncome * (project.exitMultiple ?? 10);
       }

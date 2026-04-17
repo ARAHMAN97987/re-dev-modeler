@@ -96,8 +96,15 @@ export function computeIncentives(project, projectResults) {
         // H5: Actually move cash flow - save at original year, pay at deferred year
         result.feeRebateSchedule[yr] += amt;        // Save the fee at original year
         result.feeRebateSchedule[newYr] -= amt;      // Pay it at deferred year
-        // Net benefit = NPV of deferral
-        const benefit = amt - amt / Math.pow(1.1, deferYrs);
+        // Net benefit = NPV of deferral.
+        // Discount rate preference order: per-item → project.discountRate → project.financeRate → 10% fallback.
+        // The fallback was previously hard-coded at 10%; exposing it avoids misstated benefit for
+        // projects with materially different cost of capital (e.g. 4% sovereign-backed vs 15% VC).
+        const dr = (item.discountRate != null ? item.discountRate
+                  : project.discountRate != null ? project.discountRate
+                  : project.financeRate != null ? project.financeRate
+                  : 10) / 100;
+        const benefit = amt - amt / Math.pow(1 + dr, deferYrs);
         result.feeRebateTotal += benefit;
       }
     }

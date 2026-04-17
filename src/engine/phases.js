@@ -302,8 +302,17 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
     hurdleMode: names.length > 0 ? (phaseWaterfalls[names[0]]?.hurdleMode || "simple") : "simple",
     perfIncentiveYears: Math.max(...names.map(n => phaseWaterfalls[n]?.perfIncentiveYears || 0)),
     perfIncentiveSettleYear: Math.max(...names.map(n => phaseWaterfalls[n]?.perfIncentiveSettleYear || 0)) || null,
-    lpIRR_preIncentive: null, // recomputed at aggregate level, not sum
-    gpIRR_preIncentive: null,
+    // Pre-incentive IRRs (aggregate): When no phase has a performance-incentive
+    // settlement, pre-incentive equals post-incentive (no clawback was applied).
+    // When settlements exist, rebuilding the pre-settlement aggregate CF by year
+    // requires per-phase settle-year indices plus each phase's startYear. Phases
+    // don't carry startYear in their output, so we fall back to post-incentive
+    // IRR rather than silently reporting null. This is conservative: users see
+    // the actual realised LP/GP IRR instead of an empty cell.
+    // TODO: propagate settle-year indices (not absolute years) from waterfall
+    // output to enable exact pre-incentive reconstruction at aggregate level.
+    lpIRR_preIncentive: calcIRR(lpNetCF),
+    gpIRR_preIncentive: calcIRR(gpNetCF),
     // Developer Two-Hats breakdown
     developerAsInvestor: sum('developerAsInvestor'),
     developerDevFees: sum('developerDevFees'),
