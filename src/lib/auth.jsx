@@ -1,15 +1,31 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
-// ─── Haseef Design Tokens (from zandestiny.com) ───
+// ─── Haseef Design Tokens — Apple HIG light theme (2026-04-17) ───
+// Shape-compatible with the prior dark token map: C.navy/C.deep are background
+// tints, C.teal/C.gold are accents, and the w-ramp progresses from subtle (w05)
+// to strong (w70). The values were flipped to an on-white scale so every
+// downstream style automatically reads correctly.
 const C = {
-  navy: "#0B2341", deep: "#071829", teal: "#2EC4B6", gold: "#C8A96E",
-  tealDim: "rgba(46,196,182,0.12)", tealBorder: "rgba(46,196,182,0.25)",
-  goldDim: "rgba(200,169,110,0.12)", goldBorder: "rgba(200,169,110,0.25)",
-  w05: "rgba(255,255,255,0.05)", w10: "rgba(255,255,255,0.10)",
-  w15: "rgba(255,255,255,0.15)", w25: "rgba(255,255,255,0.25)",
-  w30: "rgba(255,255,255,0.30)", w40: "rgba(255,255,255,0.40)",
-  w50: "rgba(255,255,255,0.50)", w70: "rgba(255,255,255,0.70)",
+  navy:       "#F5F5F7",              // page bg (was dark navy)
+  deep:       "#FFFFFF",              // surface (was near-black)
+  text:       "#1D1D1F",              // Apple primary label — replaces #fff
+  teal:       "#007AFF",              // Apple system blue (was brand teal)
+  tealSolid:  "#0066D6",              // hover/press darken
+  gold:       "#FF9500",              // Apple system orange (was brand gold)
+  goldSolid:  "#D97A00",              // hover/press darken
+  tealDim:    "rgba(0,122,255,0.10)",
+  tealBorder: "rgba(0,122,255,0.22)",
+  goldDim:    "rgba(255,149,0,0.10)",
+  goldBorder: "rgba(255,149,0,0.22)",
+  w05:        "rgba(0,0,0,0.03)",     // subtle fill
+  w10:        "rgba(0,0,0,0.06)",     // hairlines
+  w15:        "rgba(0,0,0,0.10)",     // borders
+  w25:        "rgba(60,60,67,0.30)",  // tertiary label
+  w30:        "rgba(60,60,67,0.40)",
+  w40:        "rgba(60,60,67,0.55)",  // secondary label
+  w50:        "rgba(60,60,67,0.65)",
+  w70:        "rgba(29,29,31,0.92)",  // primary label (near-black)
 };
 
 const TX = {
@@ -88,7 +104,7 @@ function LoadingScreen() {
     <div style={{position:'fixed',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:C.navy,zIndex:1000}}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div style={{width:36,height:36,border:`3px solid ${C.tealDim}`,borderTop:`3px solid ${C.teal}`,borderRadius:'50%',animation:'spin 0.8s linear infinite',marginBottom:14}} />
-      <div style={{fontSize:32,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif"}}>حصيف</div>
+      <div style={{fontSize:32,fontWeight:900,color:C.text,fontFamily:"'Tajawal',sans-serif"}}>حصيف</div>
       <p style={{color:C.w40,fontSize:12,marginTop:6}}>Financial Modeler</p>
     </div>
   )
@@ -126,7 +142,7 @@ function FeatCard({icon,title,desc,idx,rtl,compact}) {
       style={{background:hov?`${ac}18`:bg,border:`1px solid ${hov?ac:bd}`,borderRadius:14,padding:compact?'14px 16px':'18px 20px',display:'flex',alignItems:'flex-start',gap:compact?12:14,direction:rtl?'rtl':'ltr',transition:'all 0.35s cubic-bezier(0.4,0,0.2,1)',transform:hov?'translateY(-3px)':'translateY(0)',boxShadow:hov?`0 8px 30px ${ac}20`:'none',cursor:'default'}}>
       <div style={{width:compact?36:42,height:compact?36:42,borderRadius:10,background:`${ac}20`,color:ac,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'transform 0.3s',transform:hov?'scale(1.1)':'scale(1)'}}>{IC[icon]}</div>
       <div style={{minWidth:0}}>
-        <div style={{color:'#fff',fontSize:compact?13:14.5,fontWeight:700,marginBottom:3,fontFamily:"'Tajawal',sans-serif"}}>{title}</div>
+        <div style={{color:C.text,fontSize:compact?13:14.5,fontWeight:700,marginBottom:3,fontFamily:"'Tajawal',sans-serif"}}>{title}</div>
         <div style={{color:C.w40,fontSize:compact?11.5:12.5,lineHeight:1.55}}>{desc}</div>
       </div>
     </div>
@@ -142,7 +158,7 @@ function AcademyCard({lang,isRTL,isMobile,onEnter}) {
         <div style={{width:48,height:48,borderRadius:14,background:`${C.gold}20`,color:C.gold,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'transform 0.3s',transform:hov?'scale(1.08)':'scale(1)'}}>{IC.book}</div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
-            <span style={{color:'#fff',fontSize:15,fontWeight:800,fontFamily:"'Tajawal',sans-serif"}}>{t(TX.academy,lang)}</span>
+            <span style={{color:C.text,fontSize:15,fontWeight:800,fontFamily:"'Tajawal',sans-serif"}}>{t(TX.academy,lang)}</span>
             <span style={{padding:'2px 10px',borderRadius:20,background:`linear-gradient(135deg,${C.gold},#d4b87a)`,color:C.deep,fontSize:10,fontWeight:800,letterSpacing:'0.5px'}}>{t(TX.free,lang)}</span>
           </div>
           <p style={{color:C.w40,fontSize:12.5,lineHeight:1.5,margin:0}}>{t(TX.academyP,lang)}</p>
@@ -192,7 +208,7 @@ function PricingShowcase({ lang, isMobile }) {
   return (
     <div style={{marginTop:isMobile?24:32}}>
       <div style={{textAlign:'center',marginBottom:20}}>
-        <h2 style={{color:'#fff',fontSize:isMobile?20:24,fontWeight:900,fontFamily:"'Tajawal',sans-serif",marginBottom:6}}>
+        <h2 style={{color:C.text,fontSize:isMobile?20:24,fontWeight:900,fontFamily:"'Tajawal',sans-serif",marginBottom:6}}>
           {ar?'\u062E\u0637\u0637 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643':'Subscription Plans'}
         </h2>
         <p style={{color:C.w40,fontSize:12}}>{ar?'3 \u0623\u064A\u0627\u0645 \u0645\u062C\u0627\u0646\u0627\u064B \u0639\u0646\u062F \u0627\u0644\u062A\u0633\u062C\u064A\u0644. \u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A.':'3 days free on signup. Annual billing.'}</p>
@@ -200,10 +216,10 @@ function PricingShowcase({ lang, isMobile }) {
       <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:12}}>
         {PLANS.map((p)=>(
           <div key={p.id} style={{background:p.popular?'rgba(46,196,182,0.08)':C.w05,border:`1px solid ${p.popular?C.tealBorder:C.w10}`,borderRadius:16,padding:isMobile?'18px 16px':'22px 20px',position:'relative',textAlign:'center'}}>
-            {p.popular&&<div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',padding:'3px 14px',borderRadius:12,background:`linear-gradient(135deg,${C.teal},#25a89c)`,color:C.deep,fontSize:10,fontWeight:800,whiteSpace:'nowrap'}}>{ar?'\u0627\u0644\u0623\u0643\u062B\u0631 \u0637\u0644\u0628\u0627\u064B':'Most Popular'}</div>}
+            {p.popular&&<div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',padding:'3px 14px',borderRadius:12,background:`linear-gradient(135deg,${C.teal},#0066D6)`,color:C.deep,fontSize:10,fontWeight:800,whiteSpace:'nowrap'}}>{ar?'\u0627\u0644\u0623\u0643\u062B\u0631 \u0637\u0644\u0628\u0627\u064B':'Most Popular'}</div>}
             <div style={{color:C.w50,fontSize:12,fontWeight:600,marginBottom:4,marginTop:p.popular?8:0}}><PlanName id={p.id} ar={ar}/></div>
             <div style={{display:'flex',alignItems:'baseline',justifyContent:'center',gap:4}}>
-              <span style={{color:'#fff',fontSize:28,fontWeight:900,fontFamily:"'DM Sans',sans-serif"}}>{p.price.toLocaleString()}</span>
+              <span style={{color:C.text,fontSize:28,fontWeight:900,fontFamily:"'DM Sans',sans-serif"}}>{p.price.toLocaleString()}</span>
               <span style={{color:C.w30,fontSize:11}}>SAR</span>
             </div>
             <div style={{color:C.w40,fontSize:11,marginTop:2}}>{ar?'\u0633\u0646\u0648\u064A\u0627\u064B':'/year'}</div>
@@ -250,18 +266,18 @@ function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOu
     setTimeout(()=>onSubscribe(),2000);
   };
 
-  const cI={width:'100%',padding:'14px 16px',background:'#0d1f35',border:'1px solid #1b3a5c',borderRadius:10,color:'#e0e4ea',fontSize:15,outline:'none',fontFamily:"'DM Sans','Tajawal',sans-serif",direction:'ltr',textAlign:'left',boxSizing:'border-box',transition:'border-color 0.3s,box-shadow 0.3s',letterSpacing:'0.5px'};
+  const cI={width:'100%',padding:'14px 16px',background:'#FFFFFF',border:'1px solid rgba(0,0,0,0.10)',borderRadius:10,color:'#1D1D1F',fontSize:15,outline:'none',fontFamily:"'DM Sans','Tajawal',sans-serif",direction:'ltr',textAlign:'left',boxSizing:'border-box',transition:'border-color 0.3s,box-shadow 0.3s',letterSpacing:'0.5px'};
   const cL={display:'block',color:C.w50,fontSize:12,marginBottom:6,fontFamily:"'Tajawal',sans-serif",textAlign:ar?'right':'left'};
   const cF=(e)=>{e.target.style.borderColor=C.teal;e.target.style.boxShadow='0 0 0 3px '+C.tealDim;};
-  const cB=(e)=>{e.target.style.borderColor='#1b3a5c';e.target.style.boxShadow='none';};
+  const cB=(e)=>{e.target.style.borderColor='rgba(0,0,0,0.10)';e.target.style.boxShadow='none';};
 
   return (
-    <div dir={dir} className="haseef-auth" style={{minHeight:'100vh',background:'linear-gradient(145deg,'+C.deep+' 0%,'+C.navy+' 40%,#0e3050 100%)',fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",display:'flex',flexDirection:'column',alignItems:'center',padding:isMobile?'24px 16px':'40px 24px',overflowY:'auto'}}>
-      <style>{"@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.35)!important}input[type=email],input[type=password],input[type=text]{background:#0d1f35!important;border-color:#1b3a5c!important;color:#e0e4ea!important}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}*{box-sizing:border-box}"}</style>
+    <div dir={dir} className="haseef-auth" style={{minHeight:'100vh',background:'linear-gradient(145deg,'+C.deep+' 0%,'+C.navy+' 40%,#EDEDF2 100%)',fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",display:'flex',flexDirection:'column',alignItems:'center',padding:isMobile?'24px 16px':'40px 24px',overflowY:'auto'}}>
+      <style>{"@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');input::placeholder{color:rgba(60,60,67,0.40)!important}input[type=email],input[type=password],input[type=text]{background:#FFFFFF!important;border-color:rgba(0,0,0,0.10)!important;color:#1D1D1F!important}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.3)}100%{transform:scale(1)}}*{box-sizing:border-box}"}</style>
       <Orbs/>
       <div style={{position:'relative',zIndex:10,display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:800,marginBottom:28}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <span style={{fontSize:28,fontWeight:900,color:'#fff',letterSpacing:2}}>{ar?'\u062D\u0635\u064A\u0641':'Haseef'}</span>
+          <span style={{fontSize:28,fontWeight:900,color:C.text,letterSpacing:2}}>{ar?'\u062D\u0635\u064A\u0641':'Haseef'}</span>
           <span style={{width:1,height:22,background:C.teal+'50'}}/>
           <span style={{color:C.teal,fontSize:11,fontWeight:600}}>{ar?'\u0627\u0644\u0646\u0645\u0630\u062C\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629':'Financial Modeler'}</span>
         </div>
@@ -272,8 +288,8 @@ function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOu
       </div>
 
       {step==='success'&&(<div style={{position:'relative',zIndex:10,textAlign:'center',maxWidth:400,marginTop:80}}>
-        <div style={{width:80,height:80,borderRadius:'50%',background:'linear-gradient(135deg,'+C.teal+',#25a89c)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',animation:'checkPop 0.5s ease-out'}}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
-        <h2 style={{color:'#fff',fontSize:24,fontWeight:800,marginBottom:8}}>{ar?'\u062A\u0645 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0628\u0646\u062C\u0627\u062D!':'Subscription Activated!'}</h2>
+        <div style={{width:80,height:80,borderRadius:'50%',background:'linear-gradient(135deg,'+C.teal+',#0066D6)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',animation:'checkPop 0.5s ease-out'}}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h2 style={{color:C.text,fontSize:24,fontWeight:800,marginBottom:8}}>{ar?'\u062A\u0645 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0628\u0646\u062C\u0627\u062D!':'Subscription Activated!'}</h2>
         <p style={{color:C.w50,fontSize:14}}>{ar?'\u062C\u0627\u0631\u064A \u062A\u062D\u0648\u064A\u0644\u0643 \u0644\u0644\u0645\u0646\u0635\u0629...':'Redirecting to platform...'}</p>
       </div>)}
 
@@ -284,35 +300,35 @@ function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOu
             <span style={{color:C.teal,fontSize:13,fontWeight:700}}>{ar?'\u0627\u0646\u062A\u0647\u062A \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629':'Your free trial has ended'}</span>
           </div>
         </div>
-        <h1 style={{textAlign:'center',color:'#fff',fontSize:isMobile?22:30,fontWeight:900,marginBottom:6}}>{ar?'\u0627\u062E\u062A\u0631 \u0628\u0627\u0642\u062A\u0643':'Choose Your Plan'}</h1>
+        <h1 style={{textAlign:'center',color:C.text,fontSize:isMobile?22:30,fontWeight:900,marginBottom:6}}>{ar?'\u0627\u062E\u062A\u0631 \u0628\u0627\u0642\u062A\u0643':'Choose Your Plan'}</h1>
         <p style={{textAlign:'center',color:C.w40,fontSize:13,marginBottom:32}}>{ar?'\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u0627\u0642\u0627\u062A \u062A\u0634\u0645\u0644 \u0643\u0644 \u0627\u0644\u0645\u0632\u0627\u064A\u0627. \u0627\u0644\u0641\u0631\u0642 \u0641\u064A \u0639\u062F\u062F \u0627\u0644\u0645\u0634\u0627\u0631\u064A\u0639.':'All plans include every feature. Only project count differs.'}</p>
 
         <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:16,marginBottom:32}}>
           {PLANS.map((p)=>{const sel=selectedPlan===p.id;return(
-            <div key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{background:sel?'rgba(46,196,182,0.06)':'rgba(11,35,65,0.5)',backdropFilter:'blur(16px)',border:'2px solid '+(sel?C.teal:p.popular?'rgba(46,196,182,0.25)':'rgba(255,255,255,0.08)'),borderRadius:20,padding:isMobile?'24px 20px':'28px 24px',cursor:'pointer',transition:'all 0.3s',position:'relative',transform:sel?'scale(1.02)':'scale(1)',boxShadow:sel?'0 8px 32px '+C.tealDim:'none'}}>
-              {p.popular&&<div style={{position:'absolute',top:-12,left:'50%',transform:'translateX(-50%)',padding:'4px 16px',borderRadius:14,background:'linear-gradient(135deg,'+C.teal+',#25a89c)',color:C.deep,fontSize:11,fontWeight:800,whiteSpace:'nowrap'}}>{ar?'\u0627\u0644\u0623\u0643\u062B\u0631 \u0637\u0644\u0628\u0627\u064B':'Most Popular'}</div>}
+            <div key={p.id} onClick={()=>setSelectedPlan(p.id)} style={{background:sel?'rgba(46,196,182,0.06)':'rgba(255,255,255,0.85)',backdropFilter:'blur(16px)',border:'2px solid '+(sel?C.teal:p.popular?'rgba(46,196,182,0.25)':'rgba(255,255,255,0.08)'),borderRadius:20,padding:isMobile?'24px 20px':'28px 24px',cursor:'pointer',transition:'all 0.3s',position:'relative',transform:sel?'scale(1.02)':'scale(1)',boxShadow:sel?'0 8px 32px '+C.tealDim:'none'}}>
+              {p.popular&&<div style={{position:'absolute',top:-12,left:'50%',transform:'translateX(-50%)',padding:'4px 16px',borderRadius:14,background:'linear-gradient(135deg,'+C.teal+',#0066D6)',color:C.deep,fontSize:11,fontWeight:800,whiteSpace:'nowrap'}}>{ar?'\u0627\u0644\u0623\u0643\u062B\u0631 \u0637\u0644\u0628\u0627\u064B':'Most Popular'}</div>}
               <div style={{position:'absolute',top:16,[ar?'left':'right']:16,width:22,height:22,borderRadius:'50%',border:'2px solid '+(sel?C.teal:C.w25),display:'flex',alignItems:'center',justifyContent:'center'}}>{sel&&<div style={{width:12,height:12,borderRadius:'50%',background:C.teal}}/>}</div>
               <div style={{color:C.w50,fontSize:12,fontWeight:600,marginBottom:8,marginTop:p.popular?6:0}}><PlanName id={p.id} ar={ar}/></div>
               <div style={{display:'flex',alignItems:'baseline',gap:4}}>
-                <span style={{color:'#fff',fontSize:36,fontWeight:900,fontFamily:"'DM Sans',sans-serif",letterSpacing:'-1px'}}>{p.price.toLocaleString()}</span>
+                <span style={{color:C.text,fontSize:36,fontWeight:900,fontFamily:"'DM Sans',sans-serif",letterSpacing:'-1px'}}>{p.price.toLocaleString()}</span>
                 <span style={{color:C.w40,fontSize:12}}>SAR</span>
               </div>
               <div style={{color:C.w30,fontSize:11,marginBottom:14}}>{ar?'\u2248 '+p.monthly+' \u0631.\u0633/\u0634\u0647\u0631\u064A\u0627\u064B':'\u2248 '+p.monthly+' SAR/mo'}</div>
               <div style={{padding:'8px 14px',background:sel?C.teal+'15':C.w05,borderRadius:10,border:'1px solid '+(sel?C.tealBorder:C.w10),textAlign:'center'}}>
-                <span style={{color:sel?C.teal:'#fff',fontSize:14,fontWeight:800}}><ProjLabel count={p.projects} ar={ar}/></span>
+                <span style={{color:sel?C.teal:C.w70,fontSize:14,fontWeight:800}}><ProjLabel count={p.projects} ar={ar}/></span>
               </div>
             </div>
           );})}
         </div>
 
-        <div style={{background:'rgba(11,35,65,0.5)',backdropFilter:'blur(16px)',border:'1px solid '+C.w10,borderRadius:18,padding:isMobile?'24px 20px':'28px 32px',marginBottom:24}}>
-          <h3 style={{color:'#fff',fontSize:16,fontWeight:800,marginBottom:16,textAlign:'center'}}>{ar?'\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u0627\u0642\u0627\u062A \u062A\u0634\u0645\u0644':'All Plans Include'}</h3>
+        <div style={{background:'rgba(255,255,255,0.85)',backdropFilter:'blur(16px)',border:'1px solid '+C.w10,borderRadius:18,padding:isMobile?'24px 20px':'28px 32px',marginBottom:24}}>
+          <h3 style={{color:C.text,fontSize:16,fontWeight:800,marginBottom:16,textAlign:'center'}}>{ar?'\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u0627\u0642\u0627\u062A \u062A\u0634\u0645\u0644':'All Plans Include'}</h3>
           <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(2,1fr)',gap:12}}>
             {PLAN_FEATURES.map((f,i)=>(<div key={i} style={{display:'flex',alignItems:'center',gap:10}}><span style={{fontSize:16,width:26,textAlign:'center'}}>{f.icon}</span><span style={{color:C.w70,fontSize:13,fontWeight:500}}>{ar?f.ar:f.en}</span></div>))}
           </div>
         </div>
 
-        <button onClick={()=>setStep('payment')} style={{width:'100%',maxWidth:400,margin:'0 auto',display:'flex',padding:'16px 0',borderRadius:14,border:'none',background:'linear-gradient(135deg,'+C.teal+' 0%,#25a89c 100%)',color:C.deep,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",boxShadow:'0 6px 24px '+C.tealDim,alignItems:'center',justifyContent:'center',gap:8}}>
+        <button onClick={()=>setStep('payment')} style={{width:'100%',maxWidth:400,margin:'0 auto',display:'flex',padding:'16px 0',borderRadius:14,border:'none',background:'linear-gradient(135deg,'+C.teal+' 0%,#0066D6 100%)',color:C.deep,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",boxShadow:'0 6px 24px '+C.tealDim,alignItems:'center',justifyContent:'center',gap:8}}>
           {'\u{1F4B3}'} {ar?'\u0627\u0634\u062A\u0631\u0643 \u0628\u0640 '+plan.price.toLocaleString()+' \u0631.\u0633/\u0633\u0646\u0629':'Subscribe for '+plan.price.toLocaleString()+' SAR/year'}
         </button>
         <div style={{textAlign:'center',marginTop:14,color:C.w25,fontSize:11}}>{ar?'\u062F\u0641\u0639 \u0622\u0645\u0646 \u0648\u0645\u0634\u0641\u0631. \u0636\u0645\u0627\u0646 \u0627\u0633\u062A\u0631\u062F\u0627\u062F 14 \u064A\u0648\u0645.':'Secure payment. 14-day money-back guarantee.'}</div>
@@ -323,15 +339,15 @@ function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOu
         <button onClick={()=>setStep('plan')} style={{background:'none',border:'none',color:C.w40,fontSize:13,cursor:'pointer',fontFamily:"'Tajawal',sans-serif",marginBottom:16,display:'flex',alignItems:'center',gap:4}}>
           <span style={{transform:ar?'rotate(180deg)':'none',display:'inline-block'}}>{'\u2190'}</span> {ar?'\u0631\u062C\u0648\u0639':'Back'}
         </button>
-        <div style={{background:'rgba(11,35,65,0.6)',backdropFilter:'blur(20px)',border:'1px solid '+C.w10,borderRadius:20,padding:isMobile?'28px 22px':'36px 32px'}}>
+        <div style={{background:'rgba(255,255,255,0.88)',backdropFilter:'blur(20px)',border:'1px solid '+C.w10,borderRadius:20,padding:isMobile?'28px 22px':'36px 32px'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24,padding:'14px 18px',background:C.w05,borderRadius:12}}>
             <div>
-              <div style={{color:'#fff',fontSize:14,fontWeight:700}}><PlanName id={selectedPlan} ar={ar}/></div>
+              <div style={{color:C.text,fontSize:14,fontWeight:700}}><PlanName id={selectedPlan} ar={ar}/></div>
               <div style={{color:C.w40,fontSize:11,marginTop:2}}><ProjLabel count={plan.projects} ar={ar}/> {'\u00B7'} {ar?'\u0633\u0646\u0648\u064A':'annual'}</div>
             </div>
-            <div><div style={{color:'#fff',fontSize:20,fontWeight:900,fontFamily:"'DM Sans',sans-serif"}}>{plan.price.toLocaleString()} <span style={{fontSize:11,color:C.w50}}>SAR</span></div></div>
+            <div><div style={{color:C.text,fontSize:20,fontWeight:900,fontFamily:"'DM Sans',sans-serif"}}>{plan.price.toLocaleString()} <span style={{fontSize:11,color:C.w50}}>SAR</span></div></div>
           </div>
-          <h2 style={{color:'#fff',fontSize:18,fontWeight:800,marginBottom:4}}>{ar?'\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u0641\u0639':'Payment Details'}</h2>
+          <h2 style={{color:C.text,fontSize:18,fontWeight:800,marginBottom:4}}>{ar?'\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062F\u0641\u0639':'Payment Details'}</h2>
           <p style={{color:C.w30,fontSize:12,marginBottom:20}}>{ar?'\u0623\u062F\u062E\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0637\u0627\u0642\u062A\u0643 \u0627\u0644\u0627\u0626\u062A\u0645\u0627\u0646\u064A\u0629':'Enter your credit card information'}</p>
           <div style={{display:'flex',gap:8,marginBottom:20}}>{['Visa','Mastercard','mada'].map(c=>(<div key={c} style={{padding:'6px 12px',borderRadius:6,background:C.w05,border:'1px solid '+C.w10,color:C.w50,fontSize:11,fontWeight:600}}>{c}</div>))}</div>
           <div style={{marginBottom:16}}><label style={cL}>{ar?'\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629':'Card Number'}</label><input type="text" value={cardNumber} onChange={e=>setCardNumber(fmtCard(e.target.value))} placeholder="0000 0000 0000 0000" style={cI} onFocus={cF} onBlur={cB} maxLength={19}/></div>
@@ -341,7 +357,7 @@ function SubscriptionPage({ user, lang, setLang, isMobile, onSubscribe, onSignOu
             <div style={{flex:1}}><label style={cL}>CVV</label><input type="password" value={cvv} onChange={e=>setCvv(e.target.value.replace(/\D/g,'').slice(0,4))} placeholder={'\u2022\u2022\u2022'} style={cI} onFocus={cF} onBlur={cB} maxLength={4}/></div>
           </div>
           {error&&<div style={{marginBottom:14,padding:'10px 14px',borderRadius:10,background:'rgba(239,68,68,0.08)',color:'#f87171',fontSize:12,border:'1px solid rgba(239,68,68,0.2)'}}>{error}</div>}
-          <button onClick={handlePay} disabled={processing} style={{width:'100%',padding:'16px 0',borderRadius:14,border:'none',background:processing?C.teal+'60':'linear-gradient(135deg,'+C.teal+' 0%,#25a89c 100%)',color:C.deep,fontSize:16,fontWeight:800,cursor:processing?'wait':'pointer',fontFamily:"'Tajawal',sans-serif",boxShadow:'0 6px 24px '+C.tealDim,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+          <button onClick={handlePay} disabled={processing} style={{width:'100%',padding:'16px 0',borderRadius:14,border:'none',background:processing?C.teal+'60':'linear-gradient(135deg,'+C.teal+' 0%,#0066D6 100%)',color:C.deep,fontSize:16,fontWeight:800,cursor:processing?'wait':'pointer',fontFamily:"'Tajawal',sans-serif",boxShadow:'0 6px 24px '+C.tealDim,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
             {processing&&<div style={{width:18,height:18,borderRadius:'50%',border:'2px solid '+C.deep+'40',borderTopColor:C.deep,animation:'spin 0.7s linear infinite'}}/>}
             {processing?(ar?'\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629...':'Processing...'):(ar?'\u0627\u062F\u0641\u0639 '+plan.price.toLocaleString()+' \u0631.\u0633':'Pay '+plan.price.toLocaleString()+' SAR')}
           </button>
@@ -452,7 +468,7 @@ export function AuthGate({ children }) {
     setBusy(false)
   }
 
-  const inp={width:'100%',padding:'13px 16px',background:'#0d1f35',border:'1px solid #1b3a5c',borderRadius:10,color:'#e0e4ea',fontSize:14,outline:'none',transition:'border-color 0.3s,box-shadow 0.3s',fontFamily:"'Tajawal',sans-serif",direction:dir,boxSizing:'border-box'}
+  const inp={width:'100%',padding:'13px 16px',background:'#FFFFFF',border:'1px solid rgba(0,0,0,0.10)',borderRadius:10,color:'#1D1D1F',fontSize:14,outline:'none',transition:'border-color 0.3s,box-shadow 0.3s',fontFamily:"'Tajawal',sans-serif",direction:dir,boxSizing:'border-box'}
   const lbl={display:'block',color:C.w50,fontSize:12.5,marginBottom:6,fontFamily:"'Tajawal',sans-serif",textAlign:isRTL?'right':'left'}
   const focusIn=(e)=>{e.target.style.borderColor=C.teal;e.target.style.boxShadow=`0 0 0 3px ${C.tealDim}`}
   const blurIn=(e)=>{e.target.style.borderColor=C.w15;e.target.style.boxShadow='none'}
@@ -461,7 +477,7 @@ export function AuthGate({ children }) {
     <div style={{display:'flex',flexDirection:'column',gap:isMobile?20:28,opacity:mounted?1:0,transform:mounted?'translateY(0)':'translateY(30px)',transition:'all 0.8s cubic-bezier(0.4,0,0.2,1) 0.1s'}}>
       <div>
         <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'5px 14px',borderRadius:20,background:C.tealDim,border:`1px solid ${C.tealBorder}`,color:C.teal,fontSize:12,fontWeight:600,marginBottom:16,fontFamily:"'Tajawal',sans-serif"}}>{IC.sparkle}{t(TX.poweredBy,lang)}</div>
-        <h1 style={{fontSize:isMobile?30:'clamp(32px,3.5vw,50px)',fontWeight:900,color:'#fff',lineHeight:1.15,margin:'0 0 14px 0',fontFamily:"'Tajawal',sans-serif"}}>{t(TX.heroT1,lang)}{' '}<span style={{color:C.teal}}>{t(TX.heroT2,lang)}</span></h1>
+        <h1 style={{fontSize:isMobile?30:'clamp(32px,3.5vw,50px)',fontWeight:900,color:C.text,lineHeight:1.15,margin:'0 0 14px 0',fontFamily:"'Tajawal',sans-serif"}}>{t(TX.heroT1,lang)}{' '}<span style={{color:C.teal}}>{t(TX.heroT2,lang)}</span></h1>
         <p style={{color:C.w50,fontSize:isMobile?14:16,lineHeight:1.7,maxWidth:520,margin:0}}>{t(TX.heroP,lang)}</p>
       </div>
       <div style={{display:'flex',background:C.w05,borderRadius:14,border:`1px solid ${C.w10}`,overflow:'hidden'}}>
@@ -477,9 +493,9 @@ export function AuthGate({ children }) {
 
   const Auth=()=>(
     <div style={{opacity:mounted?1:0,transform:mounted?'translateY(0)':'translateY(30px)',transition:'all 0.8s cubic-bezier(0.4,0,0.2,1) 0.25s'}}>
-      <div style={{background:'rgba(11,35,65,0.55)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',border:`1px solid ${C.w10}`,borderRadius:22,padding:isMobile?'28px 22px 24px':'36px 32px 30px',boxShadow:'0 24px 64px rgba(0,0,0,0.35)'}}>
+      <div style={{background:'rgba(255,255,255,0.85)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',border:`1px solid ${C.w10}`,borderRadius:22,padding:isMobile?'28px 22px 24px':'36px 32px 30px',boxShadow:'0 24px 64px rgba(0,0,0,0.35)'}}>
         <div style={{display:'flex',background:C.w05,borderRadius:12,padding:3.5,marginBottom:24}}>
-          {['login','signup'].map(m=>(<button key={m} onClick={()=>switchMode(m)} style={{flex:1,padding:'11px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:14,fontWeight:700,fontFamily:"'Tajawal',sans-serif",transition:'all 0.35s',background:(mode===m||(mode==='forgot'&&m==='login'))?`linear-gradient(135deg,${C.navy},#0d2d4a)`:'transparent',color:(mode===m||(mode==='forgot'&&m==='login'))?'#fff':C.w40,boxShadow:(mode===m||(mode==='forgot'&&m==='login'))?'0 2px 10px rgba(0,0,0,0.25)':'none'}}>{t(m==='login'?TX.signIn:TX.signUp,lang)}</button>))}
+          {['login','signup'].map(m=>(<button key={m} onClick={()=>switchMode(m)} style={{flex:1,padding:'11px 0',borderRadius:9,border:'none',cursor:'pointer',fontSize:14,fontWeight:700,fontFamily:"'Tajawal',sans-serif",transition:'all 0.35s',background:(mode===m||(mode==='forgot'&&m==='login'))?C.deep:'transparent',color:(mode===m||(mode==='forgot'&&m==='login'))?C.text:C.w40,boxShadow:(mode===m||(mode==='forgot'&&m==='login'))?'0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04)':'none'}}>{t(m==='login'?TX.signIn:TX.signUp,lang)}</button>))}
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
           <div><label style={lbl}>{t(TX.email,lang)}</label><input type="email" placeholder={t(TX.emailPh,lang)} value={email} onChange={e=>setEmail(e.target.value)} style={inp} onFocus={focusIn} onBlur={blurIn} onKeyDown={e=>e.key==='Enter'&&go()}/></div>
@@ -495,7 +511,7 @@ export function AuthGate({ children }) {
         </div>
         {error&&<div style={{marginTop:14,padding:'12px 16px',borderRadius:10,background:'rgba(239,68,68,0.08)',color:'#f87171',fontSize:12,border:'1px solid rgba(239,68,68,0.2)'}}>{error}</div>}
         {message&&<div style={{marginTop:14,padding:'12px 16px',borderRadius:10,background:'rgba(74,222,128,0.08)',color:'#4ade80',fontSize:12,border:'1px solid rgba(74,222,128,0.2)'}}>{message}</div>}
-        <button onClick={go} disabled={busy} style={{marginTop:20,width:'100%',padding:'14px 0',borderRadius:12,border:'none',background:busy?`${C.teal}80`:`linear-gradient(135deg,${C.teal} 0%,#25a89c 100%)`,color:C.deep,fontSize:15,fontWeight:800,fontFamily:"'Tajawal',sans-serif",cursor:busy?'wait':'pointer',transition:'all 0.35s',boxShadow:`0 4px 20px ${C.tealDim}`,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+        <button onClick={go} disabled={busy} style={{marginTop:20,width:'100%',padding:'14px 0',borderRadius:12,border:'none',background:busy?`${C.teal}80`:`linear-gradient(135deg,${C.teal} 0%,#0066D6 100%)`,color:C.deep,fontSize:15,fontWeight:800,fontFamily:"'Tajawal',sans-serif",cursor:busy?'wait':'pointer',transition:'all 0.35s',boxShadow:`0 4px 20px ${C.tealDim}`,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
           {busy&&<div style={{width:18,height:18,borderRadius:'50%',border:`2px solid ${C.deep}40`,borderTopColor:C.deep,animation:'spin 0.7s linear infinite'}}/>}
           {busy?t(TX.loading,lang):mode==='login'?t(TX.signIn,lang):mode==='signup'?t(TX.createAcc,lang):t(TX.sendLink,lang)}
         </button>
@@ -506,11 +522,11 @@ export function AuthGate({ children }) {
         </div>
         {/* Social login buttons hidden — enable after Supabase OAuth setup */}
         {false&&<><div style={{display:'flex',alignItems:'center',gap:12,margin:'22px 0 18px'}}><div style={{flex:1,height:1,background:C.w10}}/><span style={{color:C.w25,fontSize:11.5}}>{t(TX.or,lang)}</span><div style={{flex:1,height:1,background:C.w10}}/></div>
-        <button onClick={async()=>{if(!supabase)return;setBusy(true);try{await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}})}catch(e){setError(e.message)}setBusy(false)}} style={{width:'100%',padding:'13px 0',borderRadius:11,border:`1px solid ${C.w15}`,background:'rgba(255,255,255,0.04)',color:'#fff',fontSize:13.5,fontWeight:700,fontFamily:"'Tajawal',sans-serif",cursor:'pointer',transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:10}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.borderColor=C.w25}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.borderColor=C.w15}}>
+        <button onClick={async()=>{if(!supabase)return;setBusy(true);try{await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}})}catch(e){setError(e.message)}setBusy(false)}} style={{width:'100%',padding:'13px 0',borderRadius:11,border:`1px solid ${C.w15}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:13.5,fontWeight:700,fontFamily:"'Tajawal',sans-serif",cursor:'pointer',transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:10}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.borderColor=C.w25}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.borderColor=C.w15}}>
           <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
           {ar?'الدخول بحساب Google':'Sign in with Google'}
         </button>
-        <button onClick={async()=>{if(!supabase)return;setBusy(true);try{await supabase.auth.signInWithOAuth({provider:'apple',options:{redirectTo:window.location.origin}})}catch(e){setError(e.message)}setBusy(false)}} style={{width:'100%',padding:'13px 0',borderRadius:11,border:`1px solid ${C.w15}`,background:'rgba(255,255,255,0.04)',color:'#fff',fontSize:13.5,fontWeight:700,fontFamily:"'Tajawal',sans-serif",cursor:'pointer',transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:10}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.borderColor=C.w25}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.borderColor=C.w15}}>
+        <button onClick={async()=>{if(!supabase)return;setBusy(true);try{await supabase.auth.signInWithOAuth({provider:'apple',options:{redirectTo:window.location.origin}})}catch(e){setError(e.message)}setBusy(false)}} style={{width:'100%',padding:'13px 0',borderRadius:11,border:`1px solid ${C.w15}`,background:'rgba(255,255,255,0.04)',color:C.text,fontSize:13.5,fontWeight:700,fontFamily:"'Tajawal',sans-serif",cursor:'pointer',transition:'all 0.3s',display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:10}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.borderColor=C.w25}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.borderColor=C.w15}}>
           <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 6.28c-.09.07-1.66.95-1.66 2.92 0 2.28 2.01 3.09 2.07 3.11-.01.06-.32 1.1-1.06 2.17-.64.94-1.31 1.87-2.33 1.87s-1.28-.59-2.46-.59c-1.14 0-1.55.61-2.49.61s-1.56-.87-2.33-1.93C3.72 13.01 2.87 11.08 2.87 9.27c0-2.85 1.86-4.36 3.68-4.36 .97 0 1.78.63 2.39.63.57 0 1.47-.67 2.58-.67.42 0 1.91.04 2.9.73l.68.68zM11.35 3.3c.48-.57.82-1.36.82-2.15 0-.11-.01-.22-.03-.31-.78.03-1.7.52-2.26 1.16-.44.5-.85 1.3-.85 2.1 0 .12.02.24.03.28.05.01.14.02.22.02.7 0 1.56-.47 2.07-1.1z" fill="#fff"/></svg>
           {t(TX.appleSignIn,lang)}
         </button></>}
@@ -528,12 +544,12 @@ export function AuthGate({ children }) {
   );
 
   return (
-    <div dir={dir} className="haseef-auth" style={{minHeight:'100vh',background:`linear-gradient(145deg,${C.deep} 0%,${C.navy} 40%,#0e3050 100%)`,fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",direction:dir,overflowX:'hidden',position:'relative'}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');input::placeholder{color:rgba(255,255,255,0.45)!important}input[type=email],input[type=password],input[type=text]{background:#0d1f35!important;border-color:#1b3a5c!important;color:#e0e4ea!important}@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}`}</style>
+    <div dir={dir} className="haseef-auth" style={{minHeight:'100vh',background:`linear-gradient(145deg,${C.deep} 0%,${C.navy} 40%,#EDEDF2 100%)`,fontFamily:"'Tajawal','IBM Plex Sans Arabic',sans-serif",direction:dir,overflowX:'hidden',position:'relative'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');input::placeholder{color:rgba(60,60,67,0.40)!important}input[type=email],input[type=password],input[type=text]{background:#FFFFFF!important;border-color:rgba(0,0,0,0.10)!important;color:#1D1D1F!important}@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}`}</style>
       <Orbs/>
       <div style={{position:'relative',zIndex:20,display:'flex',alignItems:'center',justifyContent:'space-between',padding:isMobile?'14px 16px':'18px 32px',maxWidth:1400,margin:'0 auto'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:isMobile?28:34,fontWeight:900,color:'#fff',fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>{ar?'حصيف':'Haseef'}</span>
+          <span style={{fontSize:isMobile?28:34,fontWeight:900,color:C.text,fontFamily:"'Tajawal',sans-serif",letterSpacing:2}}>{ar?'حصيف':'Haseef'}</span>
           <span style={{width:1,height:isMobile?22:28,background:`${C.teal}50`}}/>
           <div style={{lineHeight:1.25}}><div style={{color:C.teal,fontSize:isMobile?11:12.5,fontWeight:700}}>{t(TX.fm,lang)}</div><div style={{color:C.w30,fontSize:isMobile?9:10}}>{t(TX.tagline,lang)}</div></div>
         </div>
