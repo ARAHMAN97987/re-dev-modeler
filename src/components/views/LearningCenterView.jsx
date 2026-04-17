@@ -1,8 +1,22 @@
-// Extracted from App.jsx lines 8562-9352
-import { useState, useEffect, useRef } from "react";
+// LearningCenterView.jsx — Haseef Academy (educational/marketing surface).
+// Restyled 2026-04-17 with Apple HIG primitives where appropriate, while
+// preserving the deliberate brand palette (#0B2341 navy, #2EC4B6 teal,
+// #C8A96E gold) on the hero and CTA surfaces — this page is marketing,
+// not in-app chrome.
+import { useState, useEffect } from "react";
 import { EDUCATIONAL_CONTENT } from "../../data/educational-content";
 import { useIsMobile } from "../shared/hooks";
 import EmptyState from "../shared/EmptyState.jsx";
+import { Button } from "../ui";
+
+// ── Brand palette (explicit, not tokens — this is a marketing page) ──
+const BRAND = {
+  navy: "#0B2341",
+  teal: "#2EC4B6",
+  tealSoft: "rgba(46,196,182,0.12)",
+  tealBorder: "rgba(46,196,182,0.25)",
+  gold: "#C8A96E",
+};
 
 function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
   const ar = lang === "ar";
@@ -12,7 +26,7 @@ function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
       onClick={(e) => { e.stopPropagation(); onOpen(contentKey); }}
       style={{
         fontSize: 11,
-        color: "#2563eb",
+        color: "var(--sys-blue)",
         textDecoration: "underline",
         textDecorationStyle: "dotted",
         textUnderlineOffset: 3,
@@ -20,10 +34,10 @@ function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
         fontWeight: 500,
         whiteSpace: "nowrap",
         userSelect: "none",
-        transition: "color 0.15s",
+        transition: "color 0.15s var(--ease-quart)",
       }}
-      onMouseEnter={e => { e.target.style.color = "#1d4ed8"; }}
-      onMouseLeave={e => { e.target.style.color = "#2563eb"; }}
+      onMouseEnter={(e) => { e.target.style.color = "var(--sys-indigo)"; }}
+      onMouseLeave={(e) => { e.target.style.color = "var(--sys-blue)"; }}
     >
       {label}
     </span>
@@ -36,7 +50,6 @@ function EducationalModal({ contentKey, lang, onClose }) {
   const content = EDUCATIONAL_CONTENT[contentKey]?.[ar ? "ar" : "en"];
   const [activeTab, setActiveTab] = useState(0);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
@@ -44,22 +57,33 @@ function EducationalModal({ contentKey, lang, onClose }) {
   }, [onClose]);
 
   if (!content) return null;
-
   const tab = content.tabs[activeTab];
 
   const renderBlock = (block, i) => {
     if (block.type === "heading") {
-      return <div key={i} style={{ fontSize: 13, fontWeight: 700, color: "#1a1d23", marginTop: i === 0 ? 0 : 18, marginBottom: 6 }}>{block.text}</div>;
+      return (
+        <div key={i} style={{
+          fontSize: 14, fontWeight: 700, color: "var(--text-primary)",
+          marginTop: i === 0 ? 0 : 20, marginBottom: 8, letterSpacing: "-0.01em",
+        }}>{block.text}</div>
+      );
     }
     if (block.type === "text") {
-      return <div key={i} style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.75, marginBottom: 6 }}>{block.text}</div>;
+      return (
+        <div key={i} style={{
+          fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.75, marginBottom: 8,
+        }}>{block.text}</div>
+      );
     }
     if (block.type === "list") {
       return (
-        <div key={i} style={{ marginBottom: 8 }}>
+        <div key={i} style={{ marginBottom: 10 }}>
           {block.items.map((item, j) => (
-            <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5, fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
-              <span style={{ color: "#9ca3af", fontSize: 8, marginTop: 6, flexShrink: 0 }}>●</span>
+            <div key={j} style={{
+              display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 6,
+              fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.65,
+            }}>
+              <span style={{ color: "var(--sys-blue)", fontSize: 8, marginTop: 7, flexShrink: 0 }}>●</span>
               <span>{item}</span>
             </div>
           ))}
@@ -69,79 +93,103 @@ function EducationalModal({ contentKey, lang, onClose }) {
     return null;
   };
 
-  return (<>
-    {/* Overlay */}
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9998, backdropFilter: "blur(2px)" }} />
-
-    {/* Modal */}
-    <div style={{
-      position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-      width: isMobile ? "96vw" : 620, maxWidth: "96vw", maxHeight: "88vh",
-      background: "#fff", borderRadius: 16,
-      boxShadow: "0 24px 80px rgba(0,0,0,0.22)",
-      zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden",
-      direction: ar ? "rtl" : "ltr",
-    }}>
-
-      {/* Header */}
-      <div style={{ padding: "18px 22px 14px", borderBottom: "1px solid #e5e7ec", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        <span style={{ fontSize: 20 }}>📘</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>{content.title}</div>
-          <div style={{ fontSize: 12, color: "#6b7080", marginTop: 3, lineHeight: 1.5 }}>{content.intro}</div>
-        </div>
-        <button onClick={onClose} style={{ background: "#f0f1f5", border: "none", borderRadius: 8, width: 34, height: 34, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7080", fontFamily: "inherit", flexShrink: 0 }}>✕</button>
-      </div>
-
-      {/* Tabs */}
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+          zIndex: 9998, backdropFilter: "blur(12px) saturate(1.2)",
+          WebkitBackdropFilter: "blur(12px) saturate(1.2)",
+        }}
+      />
       <div style={{
-        display: "flex", gap: 0, borderBottom: "1px solid #e5e7ec", flexShrink: 0,
-        overflowX: "auto", WebkitOverflowScrolling: "touch",
-        msOverflowStyle: "none", scrollbarWidth: "none",
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+        width: isMobile ? "96vw" : 620, maxWidth: "96vw", maxHeight: "88vh",
+        background: "var(--surface-1)", borderRadius: 18,
+        boxShadow: "var(--shadow-xl)",
+        zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden",
+        direction: ar ? "rtl" : "ltr",
+        border: "0.5px solid var(--hairline)",
       }}>
-        {content.tabs.map((t, i) => {
-          const isActive = i === activeTab;
-          return (
-            <button key={t.id} onClick={() => setActiveTab(i)} style={{
-              padding: isMobile ? "10px 12px" : "12px 18px",
-              background: "none", border: "none", borderBottom: isActive ? "2.5px solid #2563eb" : "2.5px solid transparent",
-              fontSize: isMobile ? 11 : 12, fontWeight: isActive ? 700 : 500,
-              color: isActive ? "#2563eb" : "#6b7080",
-              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-              transition: "all 0.15s", flexShrink: 0,
-            }}>
-              <span style={{ marginInlineEnd: 5 }}>{t.icon}</span>{t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab Content */}
-      <div style={{ flex: 1, overflow: "auto", padding: isMobile ? "16px 18px" : "20px 24px" }}>
-        {tab && tab.content.map(renderBlock)}
-      </div>
-
-      {/* Footer CTA */}
-      {content.cta && (
-        <div style={{ padding: "12px 22px", borderTop: "1px solid #e5e7ec", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-          {window.__zanOpenAcademy ? (
-            <button onClick={() => { onClose(); window.__zanOpenAcademy(contentKey); }} style={{
-              background: "none", border: "none", color: "#C8A96E", fontSize: 11, fontWeight: 600,
-              cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4,
-            }}>📚 {ar ? "اقرأ المزيد في الأكاديمية" : "Read more in Academy"}</button>
-          ) : <span />}
-          <button onClick={onClose} style={{
-            padding: "9px 28px", borderRadius: 8, border: "none",
-            background: "#2563eb", color: "#fff", fontSize: 13, fontWeight: 600,
-            cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s",
-          }}
-          onMouseEnter={e => { e.target.style.background = "#1d4ed8"; }}
-          onMouseLeave={e => { e.target.style.background = "#2563eb"; }}
-          >{content.cta}</button>
+        {/* Header */}
+        <div style={{
+          padding: "20px 22px 14px", borderBottom: "1px solid var(--hairline)",
+          display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
+        }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "linear-gradient(135deg, var(--sys-blue), var(--sys-indigo))",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+          }}>📘</div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: 16, fontWeight: 700, color: "var(--text-primary)",
+              letterSpacing: "-0.012em",
+            }}>{content.title}</div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2, lineHeight: 1.5 }}>
+              {content.intro}
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close">✕</Button>
         </div>
-      )}
-    </div>
-  </>);
+
+        {/* Tabs */}
+        <div style={{
+          display: "flex", gap: 0, borderBottom: "1px solid var(--hairline)", flexShrink: 0,
+          overflowX: "auto", WebkitOverflowScrolling: "touch",
+          msOverflowStyle: "none", scrollbarWidth: "none",
+        }}>
+          {content.tabs.map((t, i) => {
+            const isActive = i === activeTab;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(i)}
+                style={{
+                  padding: isMobile ? "10px 14px" : "12px 20px",
+                  background: "none", border: "none",
+                  borderBottom: isActive ? "2px solid var(--sys-blue)" : "2px solid transparent",
+                  fontSize: isMobile ? 12 : 13,
+                  fontWeight: isActive ? 600 : 500,
+                  color: isActive ? "var(--sys-blue)" : "var(--text-secondary)",
+                  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                  transition: "all 0.18s var(--ease-quart)", flexShrink: 0,
+                }}
+              >
+                <span style={{ marginInlineEnd: 6 }}>{t.icon}</span>{t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflow: "auto", padding: isMobile ? "18px 20px" : "22px 26px" }}>
+          {tab && tab.content.map(renderBlock)}
+        </div>
+
+        {/* Footer */}
+        {content.cta && (
+          <div style={{
+            padding: "12px 22px", borderTop: "1px solid var(--hairline)",
+            display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0,
+            background: "var(--surface-2)",
+          }}>
+            {window.__zanOpenAcademy ? (
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => { onClose(); window.__zanOpenAcademy(contentKey); }}
+              >
+                📚 {ar ? "اقرأ المزيد في الأكاديمية" : "Read more in Academy"}
+              </Button>
+            ) : <span />}
+            <Button variant="primary" size="md" onClick={onClose}>{content.cta}</Button>
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
 const ACADEMY_TERM_REGISTRY = {
@@ -169,36 +217,28 @@ const ACADEMY_TERM_REGISTRY = {
 
 const ACADEMY_PATHS = [
   {
-    id: "quickstart",
-    icon: "🚀",
+    id: "quickstart", icon: "🚀",
     title: { ar: "البداية السريعة", en: "Quick Start" },
     desc: { ar: "ابدأ هنا: دليل عملي خطوة بخطوة لبناء أول نموذج مالي لك", en: "Start here: step-by-step practical guide to building your first financial model" },
-    sections: ["quickStart", "projectTypes"],
-    color: "#f59e0b",
+    sections: ["quickStart", "projectTypes"], color: "#FF9500",
   },
   {
-    id: "foundations",
-    icon: "🧱",
+    id: "foundations", icon: "🧱",
     title: { ar: "أساسيات النمذجة المالية", en: "Financial Modeling Foundations" },
     desc: { ar: "المفاهيم الأساسية: المقاييس المالية، أنواع الأرض، وتحليل السيناريوهات", en: "Core concepts: financial metrics, land types, and scenario analysis" },
-    sections: ["financialMetrics", "landType", "scenarioAnalysis"],
-    color: "#2563eb",
+    sections: ["financialMetrics", "landType", "scenarioAnalysis"], color: "#007AFF",
   },
   {
-    id: "structuring",
-    icon: "🏗",
+    id: "structuring", icon: "🏗",
     title: { ar: "هيكلة التمويل والاستثمار", en: "Financing & Investment Structuring" },
     desc: { ar: "خيارات التمويل البنكي، الإسلامي، الصناديق، والحوافز الحكومية", en: "Bank debt, Islamic finance, fund structures, and government incentives" },
-    sections: ["financingMode", "islamicFinance", "govIncentives", "waterfallConcepts"],
-    color: "#8b5cf6",
+    sections: ["financingMode", "islamicFinance", "govIncentives", "waterfallConcepts"], color: "#5856D6",
   },
   {
-    id: "exits",
-    icon: "🎯",
+    id: "exits", icon: "🎯",
     title: { ar: "التخارج والتقديم للبنك", en: "Exit & Bank Submission" },
     desc: { ar: "استراتيجيات التخارج، حساب العوائد، وتجهيز حزمة البنك", en: "Exit strategies, return calculations, and bank pack preparation" },
-    sections: ["exitStrategy", "bankPack", "financialMetrics"],
-    color: "#16a34a",
+    sections: ["exitStrategy", "bankPack", "financialMetrics"], color: "#34C759",
   },
 ];
 
@@ -217,24 +257,15 @@ const ACADEMY_RELATED = {
 };
 
 const ACADEMY_SECTION_ICONS = {
-  financingMode: "🏦",
-  landType: "🏗",
-  exitStrategy: "🚪",
-  waterfallConcepts: "🌊",
-  islamicFinance: "☪️",
-  govIncentives: "🏛",
-  financialMetrics: "📊",
-  scenarioAnalysis: "🔄",
-  projectTypes: "🏘",
-  bankPack: "📋",
-  quickStart: "🚀",
+  financingMode: "🏦", landType: "🏗", exitStrategy: "🚪", waterfallConcepts: "🌊",
+  islamicFinance: "☪️", govIncentives: "🏛", financialMetrics: "📊",
+  scenarioAnalysis: "🔄", projectTypes: "🏘", bankPack: "📋", quickStart: "🚀",
 };
 
-// ── Demo Projects for Academy ──
+// ── Demo Projects for Academy (unchanged) ──
 const ACADEMY_DEMO_PROJECTS = [
   {
-    id: "demo_self_residential",
-    icon: "🏘",
+    id: "demo_self_residential", icon: "🏘",
     title: { ar: "مجمع سكني - تمويل ذاتي", en: "Residential - Self Funded" },
     desc: { ar: "مشروع سكني بسيط بتمويل ذاتي كامل. أبسط سيناريو للتعلم.", en: "Simple residential project, fully self-funded. Easiest scenario to learn." },
     tags: ["self", "purchase", "hold"],
@@ -249,8 +280,7 @@ const ACADEMY_DEMO_PROJECTS = [
     },
   },
   {
-    id: "demo_bank_commercial",
-    icon: "🏢",
+    id: "demo_bank_commercial", icon: "🏢",
     title: { ar: "مركز تجاري - تمويل بنكي", en: "Commercial Center - Bank Debt" },
     desc: { ar: "مول تجاري مع تمويل بنكي. تعلّم كيف يعمل DSCR وخدمة الدين.", en: "Shopping mall with bank financing. Learn how DSCR and debt service work." },
     tags: ["debt", "lease", "sale"],
@@ -267,8 +297,7 @@ const ACADEMY_DEMO_PROJECTS = [
     },
   },
   {
-    id: "demo_fund_hotel",
-    icon: "🏨",
+    id: "demo_fund_hotel", icon: "🏨",
     title: { ar: "فندق 5 نجوم - صندوق استثماري", en: "5-Star Hotel - Investment Fund" },
     desc: { ar: "فندق فاخر بهيكل صندوق GP/LP مع شلال توزيعات. أعقد سيناريو.", en: "Luxury hotel with GP/LP fund structure and waterfall. Most complex scenario." },
     tags: ["fund", "lease", "sale"],
@@ -287,8 +316,7 @@ const ACADEMY_DEMO_PROJECTS = [
     },
   },
   {
-    id: "demo_mixed_waterfront",
-    icon: "🌊",
+    id: "demo_mixed_waterfront", icon: "🌊",
     title: { ar: "واجهة بحرية متكاملة", en: "Waterfront Mixed-Use" },
     desc: { ar: "مشروع مختلط: مول + فندق + مكاتب + سكني + مارينا. النموذج الأشمل.", en: "Mixed project: mall + hotel + offices + residential + marina. The most comprehensive model." },
     tags: ["fund", "lease", "sale"],
@@ -313,8 +341,7 @@ const ACADEMY_DEMO_PROJECTS = [
     },
   },
   {
-    id: "demo_incentives",
-    icon: "🏛",
+    id: "demo_incentives", icon: "🏛",
     title: { ar: "مشروع مدعوم حكومياً", en: "Government-Supported Project" },
     desc: { ar: "مشروع يستفيد من حوافز حكومية: دعم CAPEX، إعفاء إيجار أرض، دعم تمويل.", en: "Project benefiting from government incentives: CAPEX grant, land rebate, finance support." },
     tags: ["debt", "lease", "hold"],
@@ -348,7 +375,7 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
   const navigateTo = (contentKey, tabIndex = 0) => {
     if (activeSection) {
-      setNavStack(prev => [...prev, { key: activeSection, tab: activeTabIdx }]);
+      setNavStack((prev) => [...prev, { key: activeSection, tab: activeTabIdx }]);
     }
     setActiveSection(contentKey);
     setActiveTabIdx(tabIndex);
@@ -358,7 +385,7 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
   const goBackInStack = () => {
     if (navStack.length > 0) {
       const prev = navStack[navStack.length - 1];
-      setNavStack(s => s.slice(0, -1));
+      setNavStack((s) => s.slice(0, -1));
       setActiveSection(prev.key);
       setActiveTabIdx(prev.tab);
     } else {
@@ -378,14 +405,20 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
   const renderWithLinks = (text) => {
     if (!text || typeof text !== "string") return text;
     const terms = Object.keys(ACADEMY_TERM_REGISTRY).sort((a, b) => b.length - a.length);
-    const regex = new RegExp(`(${terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+    const regex = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
     const parts = text.split(regex);
     return parts.map((part, i) => {
       const entry = ACADEMY_TERM_REGISTRY[part];
       if (entry && entry.key !== activeSection) {
         return (
-          <span key={i} onClick={(e) => { e.stopPropagation(); navigateTo(entry.key, entry.tab); }}
-            style={{ color: "#2563eb", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3, cursor: "pointer", fontWeight: 600 }}
+          <span
+            key={i}
+            onClick={(e) => { e.stopPropagation(); navigateTo(entry.key, entry.tab); }}
+            style={{
+              color: "var(--sys-blue)", textDecoration: "underline",
+              textDecorationStyle: "dotted", textUnderlineOffset: 3,
+              cursor: "pointer", fontWeight: 600,
+            }}
           >{part}</span>
         );
       }
@@ -395,17 +428,37 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
   const renderBlock = (block, i) => {
     if (block.type === "heading") {
-      return <div key={i} style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: "#0B2341", marginTop: i === 0 ? 0 : (isMobile ? 16 : 22), marginBottom: 6, fontFamily: "'Tajawal',sans-serif" }}>{renderWithLinks(block.text)}</div>;
+      return (
+        <div key={i} style={{
+          fontSize: isMobile ? 14 : 16,
+          fontWeight: 700,
+          color: BRAND.navy,
+          marginTop: i === 0 ? 0 : (isMobile ? 16 : 22),
+          marginBottom: 8,
+          fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+          letterSpacing: "-0.01em",
+        }}>{renderWithLinks(block.text)}</div>
+      );
     }
     if (block.type === "text") {
-      return <div key={i} style={{ fontSize: isMobile ? 12.5 : 13.5, color: "#374151", lineHeight: 1.8, marginBottom: 6 }}>{renderWithLinks(block.text)}</div>;
+      return (
+        <div key={i} style={{
+          fontSize: isMobile ? 13 : 14,
+          color: "var(--text-secondary)",
+          lineHeight: 1.8,
+          marginBottom: 8,
+        }}>{renderWithLinks(block.text)}</div>
+      );
     }
     if (block.type === "list") {
       return (
-        <div key={i} style={{ marginBottom: 8 }}>
+        <div key={i} style={{ marginBottom: 10 }}>
           {block.items.map((item, j) => (
-            <div key={j} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 5, fontSize: isMobile ? 12.5 : 13.5, color: "#374151", lineHeight: 1.7 }}>
-              <span style={{ color: "#2EC4B6", fontSize: 7, marginTop: 7, flexShrink: 0 }}>●</span>
+            <div key={j} style={{
+              display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 6,
+              fontSize: isMobile ? 13 : 14, color: "var(--text-secondary)", lineHeight: 1.7,
+            }}>
+              <span style={{ color: BRAND.teal, fontSize: 7, marginTop: 8, flexShrink: 0 }}>●</span>
               <span>{renderWithLinks(item)}</span>
             </div>
           ))}
@@ -421,20 +474,25 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
     const q = searchQuery.trim().toLowerCase();
     const results = [];
     const langKey = ar ? "ar" : "en";
-    Object.keys(EDUCATIONAL_CONTENT).forEach(key => {
+    Object.keys(EDUCATIONAL_CONTENT).forEach((key) => {
       const sec = EDUCATIONAL_CONTENT[key]?.[langKey];
       if (!sec) return;
       const titleMatch = sec.title?.toLowerCase().includes(q);
       const introMatch = sec.intro?.toLowerCase().includes(q);
       sec.tabs?.forEach((tab, tabIdx) => {
         const labelMatch = tab.label?.toLowerCase().includes(q);
-        const contentMatch = tab.content?.some(b =>
-          (b.text && b.text.toLowerCase().includes(q)) ||
-          (b.items && b.items.some(it => it.toLowerCase().includes(q)))
+        const contentMatch = tab.content?.some(
+          (b) =>
+            (b.text && b.text.toLowerCase().includes(q)) ||
+            (b.items && b.items.some((it) => it.toLowerCase().includes(q)))
         );
         if (titleMatch || introMatch || labelMatch || contentMatch) {
-          if (!results.find(r => r.key === key && r.tabIdx === tabIdx)) {
-            results.push({ key, tabIdx, title: sec.title, tabLabel: sec.tabs?.[tabIdx]?.label, icon: ACADEMY_SECTION_ICONS[key] });
+          if (!results.find((r) => r.key === key && r.tabIdx === tabIdx)) {
+            results.push({
+              key, tabIdx, title: sec.title,
+              tabLabel: sec.tabs?.[tabIdx]?.label,
+              icon: ACADEMY_SECTION_ICONS[key],
+            });
           }
         }
       });
@@ -453,97 +511,218 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
     const parentStack = navStack.length > 0 ? navStack[navStack.length - 1] : null;
 
     return (
-      <div dir={dir} style={{ minHeight: "100vh", background: "#f8f9fb", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
+      <div dir={dir} style={{
+        minHeight: "100vh", background: "var(--surface-2)",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Tajawal', 'IBM Plex Sans Arabic', system-ui, sans-serif",
+        color: "var(--text-primary)",
+      }}>
         {/* Top Bar */}
-        <div style={{ background: "#0B2341", padding: isMobile ? "10px 12px" : "16px 32px", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 12 }}>
-            <button onClick={goBackInStack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: isMobile ? "6px 10px" : "7px 14px", color: "#2EC4B6", fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        <div style={{
+          background: BRAND.navy,
+          padding: isMobile ? "10px 14px" : "14px 32px",
+          position: "sticky", top: 0, zIndex: 100,
+          boxShadow: "0 1px 0 rgba(255,255,255,0.05), 0 2px 12px rgba(0,0,0,0.15)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
+            <button
+              onClick={goBackInStack}
+              style={{
+                background: BRAND.tealSoft,
+                border: `1px solid ${BRAND.tealBorder}`,
+                borderRadius: 8,
+                padding: isMobile ? "6px 12px" : "7px 14px",
+                color: BRAND.teal,
+                fontSize: isMobile ? 12 : 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+                transition: "all 0.18s var(--ease-quart)",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(46,196,182,0.2)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = BRAND.tealSoft; }}
+            >
               <span>{ar ? "→" : "←"}</span>
-              {isMobile ? (parentStack ? (ar ? "رجوع" : "Back") : "📚") : (parentStack ? (ar ? "ارجع" : "Back") : (ar ? "الأكاديمية" : "Academy"))}
+              {isMobile
+                ? (parentStack ? (ar ? "رجوع" : "Back") : "📚")
+                : (parentStack ? (ar ? "ارجع" : "Back") : (ar ? "الأكاديمية" : "Academy"))}
             </button>
             {parentStack && !isMobile && (
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
+              <span style={{
+                fontSize: 12, color: "rgba(255,255,255,0.45)",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240,
+              }}>
                 {ar ? "من:" : "from:"} {EDUCATIONAL_CONTENT[parentStack.key]?.[ar ? "ar" : "en"]?.title}
               </span>
             )}
             <div style={{ flex: 1 }} />
-            {!isMobile && <button onClick={goHome} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>📚 {ar ? "الرئيسية" : "Home"}</button>}
-            {publicMode && onLangToggle && <button onClick={onLangToggle} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "4px 10px", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{ar ? "EN" : "عربي"}</button>}
-            <button onClick={onBack} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 500, flexShrink: 0 }}>{publicMode ? (ar ? "تسجيل →" : "Sign Up") : (ar ? "✕" : "✕")}</button>
+            {!isMobile && (
+              <button
+                onClick={goHome}
+                style={{
+                  background: "none", border: "none",
+                  color: "rgba(255,255,255,0.55)", fontSize: 12,
+                  cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+                }}
+              >📚 {ar ? "الرئيسية" : "Home"}</button>
+            )}
+            {publicMode && onLangToggle && (
+              <button
+                onClick={onLangToggle}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 8, padding: "5px 11px",
+                  color: "rgba(255,255,255,0.6)", fontSize: 12,
+                  cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+                }}
+              >{ar ? "EN" : "عربي"}</button>
+            )}
+            <button
+              onClick={onBack}
+              style={{
+                background: "none", border: "none",
+                color: "rgba(255,255,255,0.55)", fontSize: 12,
+                cursor: "pointer", fontFamily: "inherit", fontWeight: 500, flexShrink: 0,
+              }}
+            >{publicMode ? (ar ? "تسجيل →" : "Sign Up") : "✕"}</button>
           </div>
         </div>
 
         {/* Breadcrumbs */}
         {navStack.length > 0 && (
-          <div style={{ background: "#fff", borderBottom: "1px solid #e5e7ec", padding: isMobile ? "8px 16px" : "8px 32px", display: "flex", alignItems: "center", gap: 6, overflowX: "auto", flexWrap: "nowrap" }}>
-            <span onClick={goHome} style={{ fontSize: 11, color: "#2563eb", cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>📚 {ar ? "الأكاديمية" : "Academy"}</span>
+          <div style={{
+            background: "var(--surface-1)", borderBottom: "1px solid var(--hairline)",
+            padding: isMobile ? "8px 16px" : "10px 32px",
+            display: "flex", alignItems: "center", gap: 8,
+            overflowX: "auto", flexWrap: "nowrap",
+          }}>
+            <span
+              onClick={goHome}
+              style={{ fontSize: 12, color: "var(--sys-blue)", cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}
+            >📚 {ar ? "الأكاديمية" : "Academy"}</span>
             {navStack.map((item, i) => (
               <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-                <span style={{ color: "#d1d5db", fontSize: 10 }}>{ar ? "←" : "→"}</span>
-                <span onClick={() => { setNavStack(s => s.slice(0, i)); setActiveSection(item.key); setActiveTabIdx(item.tab); }}
-                  style={{ fontSize: 11, color: "#2563eb", cursor: "pointer", fontWeight: 500 }}>
+                <span style={{ color: "var(--text-quaternary)", fontSize: 10 }}>{ar ? "←" : "→"}</span>
+                <span
+                  onClick={() => {
+                    setNavStack((s) => s.slice(0, i));
+                    setActiveSection(item.key);
+                    setActiveTabIdx(item.tab);
+                  }}
+                  style={{ fontSize: 12, color: "var(--sys-blue)", cursor: "pointer", fontWeight: 500 }}
+                >
                   {EDUCATIONAL_CONTENT[item.key]?.[ar ? "ar" : "en"]?.title}
                 </span>
               </span>
             ))}
-            <span style={{ color: "#d1d5db", fontSize: 10 }}>{ar ? "←" : "→"}</span>
-            <span style={{ fontSize: 11, color: "#6b7080", fontWeight: 600, whiteSpace: "nowrap" }}>{content.title}</span>
+            <span style={{ color: "var(--text-quaternary)", fontSize: 10 }}>{ar ? "←" : "→"}</span>
+            <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600, whiteSpace: "nowrap" }}>
+              {content.title}
+            </span>
           </div>
         )}
 
-        <div style={{ maxWidth: 780, margin: "0 auto", padding: isMobile ? "16px 14px" : "32px 24px" }}>
+        <div style={{ maxWidth: 780, margin: "0 auto", padding: isMobile ? "18px 16px" : "36px 24px" }}>
           {/* Article Header */}
-          <div style={{ marginBottom: isMobile ? 20 : 28 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 10, marginBottom: 8 }}>
-              <span style={{ fontSize: isMobile ? 22 : 28, flexShrink: 0 }}>{ACADEMY_SECTION_ICONS[activeSection] || "📘"}</span>
-              <h1 style={{ fontSize: isMobile ? 18 : 28, fontWeight: 900, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", margin: 0, lineHeight: 1.3 }}>{content.title}</h1>
+          <div style={{ marginBottom: isMobile ? 22 : 30 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12, marginBottom: 10 }}>
+              <span style={{ fontSize: isMobile ? 26 : 32, flexShrink: 0 }}>{ACADEMY_SECTION_ICONS[activeSection] || "📘"}</span>
+              <h1 style={{
+                fontSize: isMobile ? 22 : 32, fontWeight: 800,
+                color: BRAND.navy,
+                fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                margin: 0, lineHeight: 1.2, letterSpacing: "-0.018em",
+              }}>{content.title}</h1>
             </div>
-            <p style={{ fontSize: isMobile ? 12 : 14, color: "#6b7080", lineHeight: 1.7, margin: 0 }}>{content.intro}</p>
+            <p style={{
+              fontSize: isMobile ? 13 : 15,
+              color: "var(--text-secondary)", lineHeight: 1.7, margin: 0,
+            }}>{content.intro}</p>
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7ec", marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div style={{
+            display: "flex", gap: 0,
+            borderBottom: "1px solid var(--hairline)",
+            marginBottom: 24,
+            overflowX: "auto", WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none", msOverflowStyle: "none",
+          }}>
             {content.tabs.map((t, i) => {
               const isAct = i === activeTabIdx;
               return (
-                <button key={t.id} onClick={() => setActiveTabIdx(i)} style={{
-                  padding: isMobile ? "10px 12px" : "14px 22px",
-                  background: "none", border: "none",
-                  borderBottom: isAct ? "3px solid #2EC4B6" : "3px solid transparent",
-                  fontSize: isMobile ? 11 : 13, fontWeight: isAct ? 700 : 500,
-                  color: isAct ? "#0B2341" : "#6b7080",
-                  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
-                  transition: "all 0.15s", flexShrink: 0, marginBottom: -2,
-                }}>
-                  <span style={{ marginInlineEnd: 4 }}>{t.icon}</span>{t.label}
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTabIdx(i)}
+                  style={{
+                    padding: isMobile ? "10px 14px" : "14px 22px",
+                    background: "none", border: "none",
+                    borderBottom: isAct ? `2.5px solid ${BRAND.teal}` : "2.5px solid transparent",
+                    fontSize: isMobile ? 12 : 13, fontWeight: isAct ? 700 : 500,
+                    color: isAct ? BRAND.navy : "var(--text-secondary)",
+                    cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                    transition: "all 0.18s var(--ease-quart)",
+                    flexShrink: 0, marginBottom: -1,
+                  }}
+                >
+                  <span style={{ marginInlineEnd: 6 }}>{t.icon}</span>{t.label}
                 </button>
               );
             })}
           </div>
 
           {/* Tab Content */}
-          <div style={{ background: "#fff", borderRadius: isMobile ? 10 : 12, border: "1px solid #e5e7ec", padding: isMobile ? "16px 14px" : "28px 32px", marginBottom: isMobile ? 20 : 32, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+          <div style={{
+            background: "var(--surface-1)",
+            borderRadius: 14,
+            border: "1px solid var(--hairline)",
+            padding: isMobile ? "18px 16px" : "28px 32px",
+            marginBottom: isMobile ? 22 : 32,
+            boxShadow: "var(--shadow-sm)",
+          }}>
             {tab && tab.content.map(renderBlock)}
           </div>
 
           {/* Related Topics */}
           {related.length > 0 && (
             <div style={{ marginBottom: isMobile ? 24 : 40 }}>
-              <div style={{ fontSize: isMobile ? 12 : 13, fontWeight: 700, color: "#0B2341", marginBottom: 10, fontFamily: "'Tajawal',sans-serif" }}>
+              <div style={{
+                fontSize: isMobile ? 13 : 14, fontWeight: 700,
+                color: BRAND.navy, marginBottom: 12,
+                fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                letterSpacing: "-0.01em",
+              }}>
                 {ar ? "📎 مواضيع ذات صلة" : "📎 Related Topics"}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {related.filter(k => EDUCATIONAL_CONTENT[k]).map(k => {
+                {related.filter((k) => EDUCATIONAL_CONTENT[k]).map((k) => {
                   const s2 = EDUCATIONAL_CONTENT[k][ar ? "ar" : "en"];
                   return (
-                    <button key={k} onClick={() => navigateTo(k, 0)} style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: isMobile ? "8px 12px" : "10px 16px", background: "#fff", border: "1px solid #e5e7ec",
-                      borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
-                      transition: "all 0.15s", fontSize: isMobile ? 11 : 12, fontWeight: 500, color: "#374151",
-                    }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#2EC4B6"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(46,196,182,0.12)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7ec"; e.currentTarget.style.boxShadow = "none"; }}
+                    <button
+                      key={k}
+                      onClick={() => navigateTo(k, 0)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        padding: isMobile ? "9px 14px" : "10px 16px",
+                        background: "var(--surface-1)",
+                        border: "1px solid var(--hairline)",
+                        borderRadius: 10,
+                        cursor: "pointer", fontFamily: "inherit",
+                        transition: "all 0.18s var(--ease-quart)",
+                        fontSize: isMobile ? 12 : 13, fontWeight: 500,
+                        color: "var(--text-primary)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = BRAND.teal;
+                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(46,196,182,0.12)";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "var(--hairline)";
+                        e.currentTarget.style.boxShadow = "none";
+                        e.currentTarget.style.transform = "translateY(0)";
+                      }}
                     >
                       <span>{ACADEMY_SECTION_ICONS[k]}</span>
                       <span>{s2?.title}</span>
@@ -560,54 +739,139 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
   // ── PATHS OVERVIEW (HOME) ──
   return (
-    <div dir={dir} style={{ minHeight: "100vh", background: isMobile ? "linear-gradient(180deg, #0B2341 0%, #0B2341 280px, #f8f9fb 280px)" : "linear-gradient(180deg, #0B2341 0%, #0B2341 340px, #f8f9fb 340px)", fontFamily: "'DM Sans','IBM Plex Sans Arabic','Segoe UI',system-ui,sans-serif", color: "#1a1d23" }}>
-      {/* Hero Header */}
-      <div style={{ padding: isMobile ? "16px 14px 56px" : "24px 32px 80px", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+    <div
+      dir={dir}
+      style={{
+        minHeight: "100vh",
+        background: isMobile
+          ? `linear-gradient(180deg, ${BRAND.navy} 0%, ${BRAND.navy} 280px, var(--surface-2) 280px)`
+          : `linear-gradient(180deg, ${BRAND.navy} 0%, ${BRAND.navy} 340px, var(--surface-2) 340px)`,
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Tajawal', 'IBM Plex Sans Arabic', system-ui, sans-serif",
+        color: "var(--text-primary)",
+      }}
+    >
+      {/* Hero */}
+      <div style={{ padding: isMobile ? "16px 16px 56px" : "24px 32px 80px", position: "relative", overflow: "hidden" }}>
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.04,
+          backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
+          backgroundSize: "40px 40px",
+        }} />
         {/* Top bar */}
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12, marginBottom: isMobile ? 20 : 40, position: "relative", zIndex: 1 }}>
-          <button onClick={onBack} style={{ background: "rgba(46,196,182,0.12)", border: "1px solid rgba(46,196,182,0.25)", borderRadius: 8, padding: isMobile ? "6px 10px" : "7px 14px", color: "#2EC4B6", fontSize: isMobile ? 11 : 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+          <button
+            onClick={onBack}
+            style={{
+              background: BRAND.tealSoft,
+              border: `1px solid ${BRAND.tealBorder}`,
+              borderRadius: 10,
+              padding: isMobile ? "7px 12px" : "8px 16px",
+              color: BRAND.teal,
+              fontSize: isMobile ? 12 : 13,
+              fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+              transition: "all 0.18s var(--ease-quart)",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(46,196,182,0.2)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = BRAND.tealSoft; }}
+          >
             {publicMode ? (ar ? "→ تسجيل" : "← Sign In") : (ar ? "→ المشاريع" : "← Projects")}
           </button>
           {publicMode && onLangToggle && (
-            <button onClick={onLangToggle} style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "7px 14px", color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              {ar ? "EN" : "عربي"}
-            </button>
+            <button
+              onClick={onLangToggle}
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 10,
+                padding: "8px 14px",
+                color: "rgba(255,255,255,0.7)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >{ar ? "EN" : "عربي"}</button>
           )}
           <div style={{ flex: 1 }} />
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: isMobile ? 20 : 24, fontWeight: 900, color: "#fff", fontFamily: "'Tajawal',sans-serif" }}>{ar?"حصيف":"Haseef"}</span>
-            {!isMobile && <>
-              <span style={{ width: 1, height: 18, background: "rgba(46,196,182,0.35)" }} />
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", lineHeight: 1.3 }}>{ar ? "النمذجة" : "Financial"}<br />{ar ? "المالية" : "Modeler"}</span>
-            </>}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+            <span style={{
+              fontSize: isMobile ? 22 : 26, fontWeight: 900, color: "#fff",
+              fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+              letterSpacing: "-0.02em",
+            }}>{ar ? "حصيف" : "Haseef"}</span>
+            {!isMobile && (
+              <>
+                <span style={{ width: 1, height: 20, background: "rgba(46,196,182,0.35)" }} />
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.3 }}>
+                  {ar ? "النمذجة" : "Financial"}<br />{ar ? "المالية" : "Modeler"}
+                </span>
+              </>
+            )}
           </div>
         </div>
         {/* Title */}
-        <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 640, margin: "0 auto" }}>
-          <div style={{ display: "inline-block", padding: "6px 18px", background: "rgba(46,196,182,0.1)", border: "1px solid rgba(46,196,182,0.2)", borderRadius: 20, marginBottom: 16 }}>
-            <span style={{ fontSize: 12, color: "#2EC4B6", fontWeight: 600 }}>📚 {ar ? "أكاديمية حصيف المالية" : "Haseef Academy"}</span>
+        <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 680, margin: "0 auto" }}>
+          <div style={{
+            display: "inline-block", padding: "7px 20px",
+            background: BRAND.tealSoft, border: `1px solid ${BRAND.tealBorder}`,
+            borderRadius: 999, marginBottom: 18,
+          }}>
+            <span style={{ fontSize: 13, color: BRAND.teal, fontWeight: 600, letterSpacing: "-0.005em" }}>
+              📚 {ar ? "أكاديمية حصيف المالية" : "Haseef Academy"}
+            </span>
           </div>
-          <h1 style={{ fontSize: isMobile ? 22 : 36, fontWeight: 900, color: "#fff", lineHeight: 1.25, marginBottom: 10, fontFamily: "'Tajawal',sans-serif" }}>
+          <h1 style={{
+            fontSize: isMobile ? 26 : 42, fontWeight: 800, color: "#fff",
+            lineHeight: 1.1, marginBottom: 14,
+            fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+            letterSpacing: "-0.024em",
+          }}>
             {ar ? "تعلّم النمذجة المالية العقارية" : "Learn Real Estate Financial Modeling"}
           </h1>
-          <p style={{ fontSize: isMobile ? 12 : 15, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 480, margin: "0 auto" }}>
+          <p style={{
+            fontSize: isMobile ? 13 : 16, color: "rgba(255,255,255,0.55)",
+            lineHeight: 1.65, maxWidth: 520, margin: "0 auto",
+          }}>
             {ar ? "محتوى عملي مصمم للسوق السعودي." : "Practical content designed for the Saudi market."}
           </p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ maxWidth: 900, margin: isMobile ? "-24px auto 0" : "-40px auto 0", padding: isMobile ? "0 14px 40px" : "0 24px 60px", position: "relative", zIndex: 1 }}>
+      {/* Main */}
+      <div style={{
+        maxWidth: 920, margin: isMobile ? "-24px auto 0" : "-40px auto 0",
+        padding: isMobile ? "0 16px 40px" : "0 24px 60px", position: "relative", zIndex: 1,
+      }}>
         {/* Search */}
         <div style={{ marginBottom: isMobile ? 24 : 32 }}>
-          <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e5e7ec", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", padding: isMobile ? "2px 2px 2px 12px" : "4px 4px 4px 16px", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 14, color: "#9ca3af", flexShrink: 0 }}>🔍</span>
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder={ar ? (isMobile ? "ابحث... IRR, المرابحة" : "ابحث عن مفهوم... مثال: IRR, المرابحة, شلال التوزيعات") : (isMobile ? "Search... IRR, DSCR" : "Search concepts... e.g. IRR, Murabaha, Waterfall")}
-              style={{ flex: 1, border: "none", outline: "none", fontSize: isMobile ? 13 : 13, color: "#374151", fontFamily: "inherit", padding: isMobile ? "11px 0" : "12px 0", background: "transparent", minWidth: 0 }} />
+          <div style={{
+            background: "var(--surface-1)", borderRadius: 14,
+            border: "1px solid var(--hairline)",
+            boxShadow: "var(--shadow-md)",
+            padding: isMobile ? "4px 4px 4px 14px" : "6px 6px 6px 18px",
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <span style={{ fontSize: 16, color: "var(--text-tertiary)", flexShrink: 0 }}>🔍</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                ar
+                  ? (isMobile ? "ابحث... IRR, المرابحة" : "ابحث عن مفهوم... مثال: IRR, المرابحة, شلال التوزيعات")
+                  : (isMobile ? "Search... IRR, DSCR" : "Search concepts... e.g. IRR, Murabaha, Waterfall")
+              }
+              style={{
+                flex: 1, border: "none", outline: "none",
+                fontSize: isMobile ? 14 : 14,
+                color: "var(--text-primary)",
+                fontFamily: "inherit",
+                padding: isMobile ? "12px 0" : "13px 0",
+                background: "transparent", minWidth: 0,
+              }}
+            />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} style={{ background: "#f0f1f5", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 11, color: "#6b7080", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>✕</button>
+              <Button variant="secondary" size="sm" onClick={() => setSearchQuery("")}>✕</Button>
             )}
           </div>
         </div>
@@ -615,22 +879,44 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
         {/* Search Results */}
         {searchResults && searchResults.length > 0 && (
           <div style={{ marginBottom: 32 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7080", marginBottom: 12 }}>{ar ? `${searchResults.length} نتيجة` : `${searchResults.length} results`}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 12 }}>
+              {ar ? `${searchResults.length} نتيجة` : `${searchResults.length} results`}
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {searchResults.map((r, i) => (
-                <button key={i} onClick={() => navigateTo(r.key, r.tabIdx)} style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "14px 18px", background: "#fff", border: "1px solid #e5e7ec",
-                  borderRadius: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "start",
-                  transition: "all 0.15s", width: "100%",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = "#2EC4B6"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(46,196,182,0.1)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7ec"; e.currentTarget.style.boxShadow = "none"; }}
+                <button
+                  key={i}
+                  onClick={() => navigateTo(r.key, r.tabIdx)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 14,
+                    padding: "14px 18px",
+                    background: "var(--surface-1)",
+                    border: "1px solid var(--hairline)",
+                    borderRadius: 12,
+                    cursor: "pointer", fontFamily: "inherit", textAlign: "start",
+                    transition: "all 0.18s var(--ease-quart)", width: "100%",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = BRAND.teal;
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(46,196,182,0.1)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--hairline)";
+                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
                 >
-                  <span style={{ fontSize: 20 }}>{r.icon}</span>
+                  <span style={{ fontSize: 22 }}>{r.icon}</span>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#0B2341" }}>{r.title}</div>
-                    {r.tabLabel && <div style={{ fontSize: 11, color: "#6b7080", marginTop: 2 }}>{r.tabLabel}</div>}
+                    <div style={{ fontSize: 14, fontWeight: 600, color: BRAND.navy, letterSpacing: "-0.008em" }}>
+                      {r.title}
+                    </div>
+                    {r.tabLabel && (
+                      <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+                        {r.tabLabel}
+                      </div>
+                    )}
                   </div>
                 </button>
               ))}
@@ -646,43 +932,101 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
         )}
 
         {/* Learning Paths */}
-        {!searchQuery && ACADEMY_PATHS.map((path, pathIdx) => (
+        {!searchQuery && ACADEMY_PATHS.map((path) => (
           <div key={path.id} style={{ marginBottom: isMobile ? 28 : 36 }}>
-            <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 10, marginBottom: 12, background: isMobile ? "#fff" : "transparent", padding: isMobile ? "12px 14px" : 0, borderRadius: isMobile ? 10 : 0, border: isMobile ? "1px solid #e5e7ec" : "none", boxShadow: isMobile ? "0 1px 3px rgba(0,0,0,0.04)" : "none" }}>
-              <span style={{ fontSize: isMobile ? 18 : 22, flexShrink: 0, marginTop: isMobile ? 2 : 0 }}>{path.icon}</span>
+            <div style={{
+              display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 12,
+              marginBottom: 14,
+              background: isMobile ? "var(--surface-1)" : "transparent",
+              padding: isMobile ? "14px 16px" : 0,
+              borderRadius: isMobile ? 12 : 0,
+              border: isMobile ? "1px solid var(--hairline)" : "none",
+              boxShadow: isMobile ? "var(--shadow-sm)" : "none",
+            }}>
+              <span style={{ fontSize: isMobile ? 20 : 26, flexShrink: 0, marginTop: isMobile ? 2 : 0 }}>
+                {path.icon}
+              </span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.3 }}>{ar ? path.title.ar : path.title.en}</div>
-                <div style={{ fontSize: isMobile ? 11 : 12, color: "#6b7080", marginTop: 2, lineHeight: 1.5 }}>{ar ? path.desc.ar : path.desc.en}</div>
+                <div style={{
+                  fontSize: isMobile ? 15 : 20, fontWeight: 800, color: BRAND.navy,
+                  fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                  lineHeight: 1.25, letterSpacing: "-0.018em",
+                }}>
+                  {ar ? path.title.ar : path.title.en}
+                </div>
+                <div style={{
+                  fontSize: isMobile ? 12 : 13, color: "var(--text-secondary)",
+                  marginTop: 3, lineHeight: 1.55,
+                }}>
+                  {ar ? path.desc.ar : path.desc.en}
+                </div>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : `repeat(${Math.min(path.sections.length, 3)}, 1fr)`, gap: 12 }}>
-              {path.sections.filter(k => EDUCATIONAL_CONTENT[k]).map((sectionKey, idx) => {
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : `repeat(${Math.min(path.sections.length, 3)}, 1fr)`,
+              gap: 12,
+            }}>
+              {path.sections.filter((k) => EDUCATIONAL_CONTENT[k]).map((sectionKey, idx) => {
                 const sec = EDUCATIONAL_CONTENT[sectionKey][ar ? "ar" : "en"];
                 if (!sec) return null;
                 const tabCount = sec.tabs?.length || 0;
                 return (
-                  <button key={sectionKey + "-" + idx} onClick={() => navigateTo(sectionKey, 0)} style={{
-                    background: "#fff", border: "1px solid #e5e7ec", borderRadius: isMobile ? 10 : 12,
-                    padding: isMobile ? "14px 12px" : "22px 20px",
-                    cursor: "pointer", fontFamily: "inherit", textAlign: "start",
-                    transition: "all 0.2s", display: "flex", flexDirection: "column", gap: 8,
-                    borderTop: `3px solid ${path.color}`,
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.08)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "translateY(0)"; }}
+                  <button
+                    key={sectionKey + "-" + idx}
+                    onClick={() => navigateTo(sectionKey, 0)}
+                    style={{
+                      background: "var(--surface-1)",
+                      border: "1px solid var(--hairline)",
+                      borderRadius: 14,
+                      padding: isMobile ? "16px 14px" : "22px 20px",
+                      cursor: "pointer", fontFamily: "inherit", textAlign: "start",
+                      transition: "all 0.22s var(--ease-quart)",
+                      display: "flex", flexDirection: "column", gap: 10,
+                      borderTop: `3px solid ${path.color}`,
+                      boxShadow: "var(--shadow-sm)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--shadow-lg)";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: isMobile ? 18 : 22 }}>{ACADEMY_SECTION_ICONS[sectionKey]}</span>
-                      <span style={{ fontSize: isMobile ? 13 : 15, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.3 }}>{sec.title}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: isMobile ? 20 : 24 }}>{ACADEMY_SECTION_ICONS[sectionKey]}</span>
+                      <span style={{
+                        fontSize: isMobile ? 14 : 16, fontWeight: 700, color: BRAND.navy,
+                        fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                        lineHeight: 1.25, letterSpacing: "-0.012em",
+                      }}>{sec.title}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: "#6b7080", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{sec.intro}</div>
-                    {!isMobile && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
-                      {sec.tabs?.slice(0, 4).map(t2 => (
-                        <span key={t2.id} style={{ fontSize: 10, padding: "3px 8px", background: "#f0f1f5", borderRadius: 4, color: "#4b5060", fontWeight: 500 }}>{t2.icon} {t2.label}</span>
-                      ))}
-                    </div>}
-                    <div style={{ fontSize: 10, color: path.color, fontWeight: 600, marginTop: isMobile ? 2 : 4 }}>{tabCount} {ar ? "مواضيع" : "topics"} {ar ? "←" : "→"}</div>
+                    <div style={{
+                      fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.55,
+                      display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>{sec.intro}</div>
+                    {!isMobile && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                        {sec.tabs?.slice(0, 4).map((t2) => (
+                          <span
+                            key={t2.id}
+                            style={{
+                              fontSize: 11, padding: "3px 9px",
+                              background: "var(--surface-3)",
+                              borderRadius: 6, color: "var(--text-secondary)",
+                              fontWeight: 500,
+                            }}
+                          >{t2.icon} {t2.label}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{
+                      fontSize: 11, color: path.color, fontWeight: 600, marginTop: isMobile ? 2 : 4,
+                    }}>
+                      {tabCount} {ar ? "مواضيع" : "topics"} {ar ? "←" : "→"}
+                    </div>
                   </button>
                 );
               })}
@@ -692,48 +1036,92 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
         {/* ── Interactive Demo Projects ── */}
         {!searchQuery && (onCreateDemo || publicMode) && (
-          <div style={{ marginTop: 8, marginBottom: 36 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <span style={{ fontSize: 22 }}>🎮</span>
+          <div style={{ marginTop: 8, marginBottom: 40 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <span style={{ fontSize: 26 }}>🎮</span>
               <div>
-                <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: "#0B2341", fontFamily: "'Tajawal',sans-serif" }}>{ar ? "نماذج تعليمية تفاعلية" : "Interactive Demo Projects"}</div>
-                <div style={{ fontSize: isMobile ? 11 : 12, color: "#6b7080", marginTop: 2, lineHeight: 1.5 }}>{publicMode ? (ar ? "سجّل حساب مجاني لتجربة هذه النماذج." : "Create a free account to try these demos.") : (ar ? "مشاريع جاهزة بأرقام واقعية. افتحها وعدّل عليها." : "Ready projects with realistic numbers. Open and customize.")}</div>
+                <div style={{
+                  fontSize: isMobile ? 15 : 20, fontWeight: 800, color: BRAND.navy,
+                  fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                  letterSpacing: "-0.018em",
+                }}>
+                  {ar ? "نماذج تعليمية تفاعلية" : "Interactive Demo Projects"}
+                </div>
+                <div style={{
+                  fontSize: isMobile ? 12 : 13, color: "var(--text-secondary)",
+                  marginTop: 2, lineHeight: 1.55,
+                }}>
+                  {publicMode
+                    ? (ar ? "سجّل حساب مجاني لتجربة هذه النماذج." : "Create a free account to try these demos.")
+                    : (ar ? "مشاريع جاهزة بأرقام واقعية. افتحها وعدّل عليها." : "Ready projects with realistic numbers. Open and customize.")}
+                </div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-              {ACADEMY_DEMO_PROJECTS.map(demo => (
-                <div key={demo.id} style={{
-                  background: "#fff", border: "1px solid #e5e7ec", borderRadius: 12,
-                  padding: isMobile ? "16px 14px" : "20px 18px",
-                  display: "flex", flexDirection: "column", gap: 8,
-                  borderInlineStart: "4px solid #C8A96E",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                  transition: "all 0.2s", opacity: publicMode ? 0.85 : 1,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: isMobile ? 18 : 22, flexShrink: 0 }}>{demo.icon}</span>
-                    <span style={{ fontSize: isMobile ? 12 : 14, fontWeight: 700, color: "#0B2341", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.3 }}>{ar ? demo.title.ar : demo.title.en}</span>
+              {ACADEMY_DEMO_PROJECTS.map((demo) => (
+                <div
+                  key={demo.id}
+                  style={{
+                    background: "var(--surface-1)",
+                    border: "1px solid var(--hairline)",
+                    borderRadius: 14,
+                    padding: isMobile ? "16px 14px" : "20px 18px",
+                    display: "flex", flexDirection: "column", gap: 10,
+                    borderInlineStart: `4px solid ${BRAND.gold}`,
+                    boxShadow: "var(--shadow-sm)",
+                    transition: "all 0.22s var(--ease-quart)",
+                    opacity: publicMode ? 0.88 : 1,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: isMobile ? 20 : 24, flexShrink: 0 }}>{demo.icon}</span>
+                    <span style={{
+                      fontSize: isMobile ? 13 : 15, fontWeight: 700, color: BRAND.navy,
+                      fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                      lineHeight: 1.25, letterSpacing: "-0.012em",
+                    }}>{ar ? demo.title.ar : demo.title.en}</span>
                   </div>
-                  <div style={{ fontSize: isMobile ? 11 : 12, color: "#6b7080", lineHeight: 1.5 }}>{ar ? demo.desc.ar : demo.desc.en}</div>
+                  <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--text-secondary)", lineHeight: 1.55 }}>
+                    {ar ? demo.desc.ar : demo.desc.en}
+                  </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {demo.tags.map(tag => (
-                      <span key={tag} style={{ fontSize: 9, padding: "2px 7px", background: "#f0f1f5", borderRadius: 4, color: "#4b5060", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>{tag}</span>
+                    {demo.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          fontSize: 10, padding: "3px 8px",
+                          background: "var(--surface-3)",
+                          borderRadius: 6, color: "var(--text-secondary)",
+                          fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.4,
+                        }}
+                      >{tag}</span>
                     ))}
                   </div>
                   {onCreateDemo ? (
-                    <button onClick={() => onCreateDemo(demo)} style={{
-                      marginTop: 4, padding: "9px 18px", background: "#0B2341", color: "#C8A96E",
-                      border: "1px solid rgba(200,169,110,0.3)", borderRadius: 8,
-                      fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                      transition: "all 0.15s", alignSelf: "flex-start",
-                    }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#C8A96E"; e.currentTarget.style.color = "#0B2341"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "#0B2341"; e.currentTarget.style.color = "#C8A96E"; }}
+                    <button
+                      onClick={() => onCreateDemo(demo)}
+                      style={{
+                        marginTop: 6, padding: "10px 20px",
+                        background: BRAND.navy, color: BRAND.gold,
+                        border: `1px solid rgba(200,169,110,0.3)`,
+                        borderRadius: 10,
+                        fontSize: 13, fontWeight: 600,
+                        cursor: "pointer", fontFamily: "inherit",
+                        transition: "all 0.18s var(--ease-quart)", alignSelf: "flex-start",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = BRAND.gold;
+                        e.currentTarget.style.color = BRAND.navy;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = BRAND.navy;
+                        e.currentTarget.style.color = BRAND.gold;
+                      }}
                     >
                       {ar ? "🚀 افتح النموذج التعليمي" : "🚀 Open Demo Project"}
                     </button>
                   ) : (
-                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, fontStyle: "italic" }}>
+                    <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 4, fontStyle: "italic" }}>
                       🔒 {ar ? "سجّل مجاناً لتجربة هذا النموذج" : "Sign up free to try this demo"}
                     </div>
                   )}
@@ -741,15 +1129,25 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
               ))}
             </div>
             {publicMode && (
-              <div style={{ textAlign: "center", marginTop: 16 }}>
-                <button onClick={onBack} style={{
-                  padding: "12px 32px", background: "#2EC4B6", color: "#fff", border: "none",
-                  borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer",
-                  fontFamily: "'Tajawal',sans-serif", transition: "all 0.2s",
-                  boxShadow: "0 4px 12px rgba(46,196,182,0.2)",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#25a89c"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#2EC4B6"; }}
+              <div style={{ textAlign: "center", marginTop: 18 }}>
+                <button
+                  onClick={onBack}
+                  style={{
+                    padding: "14px 36px", background: BRAND.teal, color: "#fff", border: "none",
+                    borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer",
+                    fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+                    letterSpacing: "-0.012em",
+                    transition: "all 0.22s var(--ease-quart)",
+                    boxShadow: "0 8px 20px rgba(46,196,182,0.28)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#25a89c";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = BRAND.teal;
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
                 >
                   {ar ? "سجّل حساب مجاني الآن ←" : "Create Free Account Now →"}
                 </button>
@@ -760,21 +1158,46 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
 
         {/* All Topics */}
         {!searchQuery && (
-          <div style={{ marginTop: 16, padding: "24px", background: "#fff", borderRadius: 12, border: "1px solid #e5e7ec" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#0B2341", marginBottom: 14, fontFamily: "'Tajawal',sans-serif" }}>{ar ? "📖 جميع المواضيع" : "📖 All Topics"}</div>
+          <div style={{
+            marginTop: 16, padding: "24px",
+            background: "var(--surface-1)", borderRadius: 14,
+            border: "1px solid var(--hairline)",
+            boxShadow: "var(--shadow-sm)",
+          }}>
+            <div style={{
+              fontSize: 15, fontWeight: 700, color: BRAND.navy, marginBottom: 14,
+              fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+              letterSpacing: "-0.012em",
+            }}>
+              {ar ? "📖 جميع المواضيع" : "📖 All Topics"}
+            </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {allSectionKeys.map(k => {
+              {allSectionKeys.map((k) => {
                 const s3 = EDUCATIONAL_CONTENT[k][ar ? "ar" : "en"];
                 if (!s3) return null;
                 return (
-                  <button key={k} onClick={() => navigateTo(k, 0)} style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "8px 14px", background: "#f8f9fb", border: "1px solid #e5e7ec",
-                    borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
-                    fontSize: 12, fontWeight: 500, color: "#374151", transition: "all 0.15s",
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#2EC4B6"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "#2EC4B6"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "#f8f9fb"; e.currentTarget.style.color = "#374151"; e.currentTarget.style.borderColor = "#e5e7ec"; }}
+                  <button
+                    key={k}
+                    onClick={() => navigateTo(k, 0)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "9px 14px",
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--hairline)",
+                      borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                      fontSize: 13, fontWeight: 500, color: "var(--text-primary)",
+                      transition: "all 0.18s var(--ease-quart)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = BRAND.teal;
+                      e.currentTarget.style.color = "#fff";
+                      e.currentTarget.style.borderColor = BRAND.teal;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "var(--surface-2)";
+                      e.currentTarget.style.color = "var(--text-primary)";
+                      e.currentTarget.style.borderColor = "var(--hairline)";
+                    }}
                   >
                     <span>{ACADEMY_SECTION_ICONS[k]}</span> {s3.title}
                   </button>
@@ -785,14 +1208,13 @@ function LearningCenterView({ lang, onBack, onCreateDemo, publicMode, onLangTogg
         )}
 
         {/* Footer */}
-        <div style={{ textAlign: "center", marginTop: 40, fontSize: 11, color: "#9ca3af" }}>
+        <div style={{ textAlign: "center", marginTop: 44, fontSize: 12, color: "var(--text-tertiary)" }}>
           {ar ? "أكاديمية حصيف المالية - محتوى تعليمي مصمم للسوق السعودي" : "Haseef Academy - Educational content designed for the Saudi market"}
         </div>
       </div>
     </div>
   );
 }
-
 
 export default LearningCenterView;
 export { HelpLink, EducationalModal };
