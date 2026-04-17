@@ -55,12 +55,12 @@ function ShareModal({ project, up, lang, user, onClose }) {
   };
 
   const sty = {
-    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, backdropFilter: "blur(2px)" },
-    modal: { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: isMobile ? "94vw" : 480, maxWidth: "94vw", maxHeight: "85vh", background: "#fff", borderRadius: 14, boxShadow: "0 24px 80px rgba(0,0,0,0.2)", zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden" },
-    header: { padding: "18px 22px 14px", borderBottom: "1px solid #e5e7ec", display: "flex", alignItems: "center", gap: 10 },
+    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9998, backdropFilter: "blur(4px)" },
+    modal: { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: isMobile ? "94vw" : 480, maxWidth: "94vw", maxHeight: "85vh", background: "var(--surface-1)", borderRadius: 16, boxShadow: "0 24px 64px rgba(0,0,0,0.18)", zIndex: 9999, display: "flex", flexDirection: "column", overflow: "hidden" },
+    header: { padding: "18px 22px 14px", borderBottom: "1px solid var(--hairline)", display: "flex", alignItems: "center", gap: 10 },
     body: { flex: 1, overflow: "auto", padding: "16px 22px" },
-    input: { flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #e5e7ec", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box", minHeight: 44 },
-    btn: { padding: "10px 18px", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 44, display: "flex", alignItems: "center", gap: 6 },
+    input: { flex: 1, padding: "10px 12px", borderRadius: 10, border: "1px solid var(--hairline)", fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box", minHeight: 44, transition: "border-color 0.15s var(--ease-quart), box-shadow 0.15s var(--ease-quart)", background: "var(--surface-1)", color: "var(--text-primary)" },
+    btn: { padding: "10px 18px", borderRadius: 10, border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 44, display: "flex", alignItems: "center", gap: 6, transition: "all 0.18s var(--ease-quart)" },
   };
 
   return (<>
@@ -69,72 +69,75 @@ function ShareModal({ project, up, lang, user, onClose }) {
       {/* Header */}
       <div style={sty.header}>
         <span style={{ fontSize: 18 }}>📤</span>
-        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "#1a1d23" }}>{ar ? "مشاركة المشروع" : "Share Project"}</span>
-        <button onClick={onClose} style={{ ...sty.btn, background: "#f0f1f5", color: "#6b7080", padding: "6px 12px", fontSize: 16 }}>✕</button>
+        <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>{ar ? "مشاركة المشروع" : "Share Project"}</span>
+        <button onClick={onClose} style={{ ...sty.btn, background: "var(--surface-2)", color: "var(--text-secondary)", padding: "6px 12px", fontSize: 16, minHeight: 36 }}>✕</button>
       </div>
 
       <div style={sty.body}>
         {/* ── Copy Link Section ── */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{ar ? "رابط المشروع" : "Project Link"}</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{ar ? "رابط المشروع" : "Project Link"}</div>
           <div style={{ display: "flex", gap: 8, alignItems: isMobile ? "stretch" : "center", flexDirection: isMobile ? "column" : "row" }}>
-            <div style={{ flex: 1, padding: "10px 12px", background: "#f8f9fb", borderRadius: 8, border: "1px solid #e5e7ec", fontSize: 11, color: "#6b7080", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", direction: "ltr", minHeight: 44, display: "flex", alignItems: "center" }}>{shareUrl}</div>
+            <div style={{ flex: 1, padding: "10px 12px", background: "var(--surface-2)", borderRadius: 10, border: "1px solid var(--hairline)", fontSize: 11, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", direction: "ltr", minHeight: 44, display: "flex", alignItems: "center" }}>{shareUrl}</div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={copyLink} style={{ ...sty.btn, background: copied === "link" ? "#16a34a" : "#2563eb", color: "#fff", whiteSpace: "nowrap" }}>
+              <button onClick={copyLink} style={{ ...sty.btn, background: copied === "link" ? "var(--sys-green)" : "var(--sys-blue)", color: "#fff", whiteSpace: "nowrap" }}>
                 {copied === "link" ? "✓" : "🔗"} {copied === "link" ? (ar ? "تم النسخ" : "Copied!") : (ar ? "نسخ الرابط" : "Copy Link")}
               </button>
-              <button onClick={copyInvite} style={{ ...sty.btn, background: copied === "invite" ? "#16a34a" : "#f0f4ff", color: copied === "invite" ? "#fff" : "#2563eb", border: "1px solid #bfdbfe", whiteSpace: "nowrap" }}>
+              <button onClick={copyInvite} style={{ ...sty.btn, background: copied === "invite" ? "var(--sys-green)" : "color-mix(in srgb, var(--sys-blue) 10%, transparent)", color: copied === "invite" ? "#fff" : "var(--sys-blue)", border: "1px solid color-mix(in srgb, var(--sys-blue) 22%, transparent)", whiteSpace: "nowrap" }}>
                 {copied === "invite" ? "✓" : "💬"} {copied === "invite" ? (ar ? "تم" : "Done") : (ar ? "نص دعوة" : "Invite Text")}
               </button>
             </div>
           </div>
-          <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6 }}>{ar ? "أي شخص عنده الرابط ومسجل بالمنصة يقدر يفتح المشروع. غير المسجلين يطلب منهم التسجيل أول." : "Anyone with this link who is registered can access the project. Unregistered users will be prompted to sign up."}</div>
+          <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 6, lineHeight: 1.5 }}>{ar ? "أي شخص عنده الرابط ومسجل بالمنصة يقدر يفتح المشروع. غير المسجلين يطلب منهم التسجيل أول." : "Anyone with this link who is registered can access the project. Unregistered users will be prompted to sign up."}</div>
         </div>
 
         {/* ── Add User ── */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{ar ? "إضافة مشارك" : "Add Person"}</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{ar ? "إضافة مشارك" : "Add Person"}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={ar ? "البريد الإلكتروني" : "Email address"}
               style={sty.input} onKeyDown={e => e.key === "Enter" && addUser()} />
             <select value={perm} onChange={e => setPerm(e.target.value)}
-              style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #e5e7ec", fontSize: 12, fontFamily: "inherit", background: "#fff", cursor: "pointer", minHeight: 44 }}>
+              style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--hairline)", fontSize: 12, fontFamily: "inherit", background: "var(--surface-1)", color: "var(--text-primary)", cursor: "pointer", minHeight: 44 }}>
               <option value="view">{ar ? "قراءة فقط" : "View only"}</option>
               <option value="edit">{ar ? "تعديل" : "Can edit"}</option>
             </select>
-            <button onClick={addUser} style={{ ...sty.btn, background: "#2563eb", color: "#fff" }}>
+            <button onClick={addUser} style={{ ...sty.btn, background: "var(--sys-blue)", color: "#fff" }}>
               {ar ? "أضف" : "Add"}
             </button>
           </div>
-          {error && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 6 }}>{error}</div>}
+          {error && <div style={{ fontSize: 11, color: "var(--sys-red)", marginTop: 6 }}>{error}</div>}
         </div>
 
         {/* ── Shared Users List ── */}
         <div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7080", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
-            {ar ? "المشاركون" : "Shared With"} {shared.length > 0 && <span style={{ fontSize: 10, background: "#dbeafe", color: "#2563eb", padding: "1px 6px", borderRadius: 8, marginInlineStart: 6 }}>{shared.length}</span>}
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>
+            {ar ? "المشاركون" : "Shared With"} {shared.length > 0 && <span style={{ fontSize: 10, background: "color-mix(in srgb, var(--sys-blue) 12%, transparent)", color: "var(--sys-blue)", padding: "1px 6px", borderRadius: 8, marginInlineStart: 6, fontWeight: 600 }}>{shared.length}</span>}
           </div>
           {shared.length === 0 ? (
-            <div style={{ padding: "20px 0", textAlign: "center", color: "#9ca3af", fontSize: 12 }}>
+            <div style={{ padding: "20px 0", textAlign: "center", color: "var(--text-tertiary)", fontSize: 12 }}>
               {ar ? "لم تتم المشاركة مع أحد بعد" : "Not shared with anyone yet"}
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {shared.map((s, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#f8f9fb", borderRadius: 8, border: "1px solid #e5e7ec" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#2563eb", fontWeight: 600, flexShrink: 0 }}>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--surface-2)", borderRadius: 10, border: "1px solid var(--hairline)" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "color-mix(in srgb, var(--sys-blue) 15%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "var(--sys-blue)", fontWeight: 600, flexShrink: 0 }}>
                     {(s.email || "?")[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: "#1a1d23", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.email}</div>
-                    {s.addedAt && <div style={{ fontSize: 10, color: "#9ca3af" }}>{new Date(s.addedAt).toLocaleDateString()}</div>}
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.email}</div>
+                    {s.addedAt && <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{new Date(s.addedAt).toLocaleDateString()}</div>}
                   </div>
                   <select value={s.permission || "edit"} onChange={e => changePerm(s.email, e.target.value)}
-                    style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #e5e7ec", fontSize: 11, fontFamily: "inherit", background: s.permission === "edit" ? "#dbeafe" : "#fef3c7", color: s.permission === "edit" ? "#1d4ed8" : "#92400e", cursor: "pointer", fontWeight: 600, minHeight: 36 }}>
+                    style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--hairline)", fontSize: 11, fontFamily: "inherit",
+                      background: s.permission === "edit" ? "color-mix(in srgb, var(--sys-blue) 14%, transparent)" : "color-mix(in srgb, var(--sys-orange) 14%, transparent)",
+                      color: s.permission === "edit" ? "var(--sys-blue)" : "var(--sys-orange)",
+                      cursor: "pointer", fontWeight: 600, minHeight: 36 }}>
                     <option value="view">{ar ? "قراءة" : "View"}</option>
                     <option value="edit">{ar ? "تعديل" : "Edit"}</option>
                   </select>
-                  <button onClick={() => removeUser(s.email)} style={{ ...btnSm, background: "#fef2f2", color: "#ef4444", padding: "6px 10px", minHeight: 36 }} title={ar ? "إزالة" : "Remove"}>✕</button>
+                  <button onClick={() => removeUser(s.email)} style={{ ...btnSm, background: "color-mix(in srgb, var(--sys-red) 10%, transparent)", color: "var(--sys-red)", padding: "6px 10px", minHeight: 36, border: "none", fontFamily: "inherit", borderRadius: 8, cursor: "pointer" }} title={ar ? "إزالة" : "Remove"}>✕</button>
                 </div>
               ))}
             </div>
