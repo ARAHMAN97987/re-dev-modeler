@@ -5729,11 +5729,30 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         </>) : (
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill, minmax(280px, 1fr))",gap:isMobile?8:12}}>
             {filteredIndices.map(i=>{const a=assets[i];const comp=results?.assetSchedules?.[i];const capex=comp?.totalCapex||computeAssetCapex(a,project);const income=comp?.totalRevenue||0;const catC={Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899"};const catI={Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭","Open Space":"🌳",Utilities:"⚡",Flexible:"🔧"};const cc=catC[a.category]||"#6b7080";
-            return <div key={a.id||i} className="asset-card" onClick={()=>setEditIdx(i)} style={{background:"var(--surface-card)",borderRadius:12,border:"0.5px solid var(--border-default)",cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)",animationDelay:i*0.05+"s"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.08)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
+            return <div key={a.id||i} className="asset-card" onClick={()=>setEditIdx(i)} style={{background:"var(--surface-1)",borderRadius:14,border:"1px solid var(--hairline)",cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",transition:"all 0.18s var(--ease-quart)",animationDelay:i*0.05+"s"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 6px 18px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.borderColor="color-mix(in srgb, var(--sys-blue) 20%, transparent)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 2px rgba(0,0,0,0.04)";e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.borderColor="var(--hairline)";}}>
               <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
                 <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"var(--text-tertiary)"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
-                <button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",cursor:"pointer",color:"#0f766e",fontSize:11,padding:"4px 8px",lineHeight:1,borderRadius:6,flexShrink:0,fontWeight:600}}>{ar?"تفاصيل ↗":"Details ↗"}</button>
+                <button
+                  onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}}
+                  title={ar?"فتح التفاصيل الكاملة":"Open full details"}
+                  style={{
+                    display:"inline-flex",alignItems:"center",gap:5,
+                    background:"color-mix(in srgb, var(--sys-blue) 10%, transparent)",
+                    border:"1px solid color-mix(in srgb, var(--sys-blue) 22%, transparent)",
+                    color:"var(--sys-blue)",
+                    fontSize:12,fontWeight:600,
+                    padding:"5px 10px",lineHeight:1,borderRadius:8,
+                    flexShrink:0,cursor:"pointer",fontFamily:"inherit",
+                    letterSpacing:"-0.01em",
+                    transition:"all 0.15s var(--ease-quart)",
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.style.background="color-mix(in srgb, var(--sys-blue) 15%, transparent)";e.currentTarget.style.borderColor="color-mix(in srgb, var(--sys-blue) 35%, transparent)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="color-mix(in srgb, var(--sys-blue) 10%, transparent)";e.currentTarget.style.borderColor="color-mix(in srgb, var(--sys-blue) 22%, transparent)";}}
+                >
+                  {ar?"تفاصيل":"Details"}
+                  <span style={{fontSize:10,opacity:0.75}}>{ar?"‹":"›"}</span>
+                </button>
                 <span style={{fontSize:11,padding:"3px 8px",borderRadius:12,background:cc+"15",color:cc,fontWeight:600}}>{catL(a.category,ar)}</span>
               </div>
               <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
@@ -5872,7 +5891,22 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                     <tr key={a.id||i} style={{background:bg}}>
                       <td style={{...tdSt,color:"var(--text-tertiary)",fontWeight:500,width:28,...hd("#")}}>{i+1}</td>
                       <td style={{...tdSt,...hd("phase")}}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></td>
-                      <td style={{...tdSt,...hd("name")}}><div style={{display:"flex",flexDirection:"column",gap:2}}><div style={{display:"flex",alignItems:"center"}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><button onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}} title={ar?"تفاصيل":"Details"} style={{background:"rgba(46,196,182,0.1)",border:"1px solid rgba(46,196,182,0.3)",cursor:"pointer",color:"#0f766e",fontSize:10,padding:"3px 6px",lineHeight:1,borderRadius:4,flexShrink:0,fontWeight:600}}>↗</button><FieldAlertDot alerts={(smartAlerts||[]).filter(al=>al.assetIndex===i)} lang={lang} /></div>{a.assetPriority&&a.assetPriority!=="standard"&&<select value={a.assetPriority||"standard"} onChange={e=>upAsset(i,{assetPriority:e.target.value})} style={{fontSize:9,padding:"1px 3px",border:"none",borderRadius:3,cursor:"pointer",fontWeight:600,...(a.assetPriority==="anchor"?{background:"#dc262620",color:"#dc2626"}:a.assetPriority==="quickWin"?{background:"#16a34a20",color:"#16a34a"}:a.assetPriority==="optional"?{background:"#8b5cf620",color:"#8b5cf6"}:{background:"#6b728020",color:"#6b7280"})}}><option value="anchor">{ar?"رئيسي":"Anchor"}</option><option value="quickWin">{ar?"سريع":"Quick Win"}</option><option value="standard">{ar?"عادي":"Standard"}</option><option value="optional">{ar?"اختياري":"Optional"}</option></select>}</div></td>
+                      <td style={{...tdSt,...hd("name")}}><div style={{display:"flex",flexDirection:"column",gap:2}}><div style={{display:"flex",alignItems:"center",gap:4}}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"الاسم":"Name"} /><button
+                      onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}}
+                      title={ar?"فتح التفاصيل الكاملة":"Open full details"}
+                      style={{
+                        display:"inline-flex",alignItems:"center",justifyContent:"center",
+                        background:"transparent",
+                        border:"1px solid color-mix(in srgb, var(--sys-blue) 25%, transparent)",
+                        color:"var(--sys-blue)",
+                        fontSize:12,fontWeight:700,
+                        width:24,height:24,lineHeight:1,borderRadius:6,
+                        flexShrink:0,cursor:"pointer",fontFamily:"inherit",
+                        transition:"all 0.15s var(--ease-quart)",
+                      }}
+                      onMouseEnter={e=>{e.currentTarget.style.background="color-mix(in srgb, var(--sys-blue) 12%, transparent)";e.currentTarget.style.borderColor="var(--sys-blue)";}}
+                      onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="color-mix(in srgb, var(--sys-blue) 25%, transparent)";}}
+                    >{ar?"‹":"›"}</button><FieldAlertDot alerts={(smartAlerts||[]).filter(al=>al.assetIndex===i)} lang={lang} /></div>{a.assetPriority&&a.assetPriority!=="standard"&&<select value={a.assetPriority||"standard"} onChange={e=>upAsset(i,{assetPriority:e.target.value})} style={{fontSize:9,padding:"1px 3px",border:"none",borderRadius:3,cursor:"pointer",fontWeight:600,...(a.assetPriority==="anchor"?{background:"#dc262620",color:"#dc2626"}:a.assetPriority==="quickWin"?{background:"#16a34a20",color:"#16a34a"}:a.assetPriority==="optional"?{background:"#8b5cf620",color:"#8b5cf6"}:{background:"#6b728020",color:"#6b7280"})}}><option value="anchor">{ar?"رئيسي":"Anchor"}</option><option value="quickWin">{ar?"سريع":"Quick Win"}</option><option value="standard">{ar?"عادي":"Standard"}</option><option value="optional">{ar?"اختياري":"Optional"}</option></select>}</div></td>
                       <td style={{...tdSt,...hd("category")}}>{(()=>{
                         const atGroups = {};
                         Object.entries(ASSET_TYPES).forEach(([k,v])=>{const g=v.group;if(!atGroups[g])atGroups[g]=[];atGroups[g].push({value:k,label:ar?v.labelAr:v.label});});
@@ -6050,34 +6084,62 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                 if (assetNetCF[y] < 0) hasStartedSpending = true;
                 if (hasStartedSpending && cumCF >= 0 && paybackYr === null) { paybackYr = y + 1; break; }
               }
-              // Color coding for IRR
+              // Color coding for IRR — Apple HIG tokens
               const irrPct = assetIRR != null ? assetIRR * 100 : null;
-              const irrColor = irrPct == null ? "#9ca3af" : irrPct >= 12 ? "#16a34a" : irrPct >= 8 ? "#f59e0b" : "#ef4444";
-              const irrBg = irrPct == null ? "#f3f4f6" : irrPct >= 12 ? "#dcfce7" : irrPct >= 8 ? "#fef3c7" : "#fee2e2";
-              const ncfColor = totalNCF >= 0 ? "#16a34a" : "#ef4444";
+              const irrColor = irrPct == null ? "var(--text-tertiary)" : irrPct >= 12 ? "var(--sys-green)" : irrPct >= 8 ? "var(--sys-orange)" : "var(--sys-red)";
+              const irrBg = irrPct == null
+                ? "var(--surface-2)"
+                : irrPct >= 12
+                  ? "color-mix(in srgb, var(--sys-green) 14%, transparent)"
+                  : irrPct >= 8
+                    ? "color-mix(in srgb, var(--sys-orange) 14%, transparent)"
+                    : "color-mix(in srgb, var(--sys-red) 12%, transparent)";
+              const ncfColor = totalNCF >= 0 ? "var(--sys-green)" : "var(--sys-red)";
               return (
-                <div key={i} style={{marginBottom:6,border:"0.5px solid var(--border-default)",borderRadius:8,overflow:"hidden",background:"var(--surface-card)"}}>
-                  <div onClick={()=>setCfOpen(p=>({...p,[i]:!p[i]}))} style={{padding:"8px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:isOpen?"#f0f4ff":"#fafbfc",userSelect:"none",flexWrap:"wrap"}}>
-                    <span style={{fontSize:11,color:"var(--text-tertiary)"}}>{isOpen?"▼":"▶"}</span>
-                    <span style={{fontSize:12,fontWeight:700,color:"var(--text-primary)",flex:1,minWidth:120}}>{asset?.name||`Asset ${i+1}`}</span>
-                    <span style={{fontSize:10,color:"var(--text-secondary)",background:"#e5e7ec",borderRadius:10,padding:"2px 8px",fontWeight:600}}>{asset?.phase}</span>
-                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                      <span style={{fontSize:10,color:"#9ca3af"}}>{ar?"إيراد":"Rev"}</span>
-                      <span style={{fontSize:11,color:"#16a34a",fontWeight:600,minWidth:44,textAlign:"right"}}>{fmtM(totalRev)}</span>
-                      <span style={{fontSize:10,color:"#9ca3af",marginInlineStart:4}}>{ar?"كلفة":"Cost"}</span>
-                      <span style={{fontSize:11,color:"#ef4444",fontWeight:600,minWidth:44,textAlign:"right"}}>{fmtM(totalCap)}</span>
-                      <span style={{fontSize:10,color:"#9ca3af",marginInlineStart:4}}>{ar?"صافي":"NCF"}</span>
-                      <span style={{fontSize:11,color:ncfColor,fontWeight:700,minWidth:48,textAlign:"right"}}>{fmtM(totalNCF)}</span>
+                <div key={i} style={{marginBottom:6,border:"1px solid var(--hairline)",borderRadius:10,overflow:"hidden",background:"var(--surface-1)",transition:"box-shadow 0.15s var(--ease-quart)"}}>
+                  <div
+                    onClick={()=>setCfOpen(p=>({...p,[i]:!p[i]}))}
+                    onMouseEnter={e=>{if(!isOpen)e.currentTarget.style.background="var(--surface-2)";}}
+                    onMouseLeave={e=>{if(!isOpen)e.currentTarget.style.background="var(--surface-1)";}}
+                    style={{
+                      padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,
+                      background:isOpen?"color-mix(in srgb, var(--sys-blue) 6%, transparent)":"var(--surface-1)",
+                      userSelect:"none",flexWrap:"wrap",
+                      transition:"background 0.15s var(--ease-quart)",
+                      borderBottom:isOpen?"1px solid var(--hairline)":"none",
+                    }}
+                  >
+                    <span
+                      aria-label={isOpen?(ar?"طي":"Collapse"):(ar?"توسيع":"Expand")}
+                      style={{
+                        display:"inline-flex",alignItems:"center",justifyContent:"center",
+                        width:22,height:22,borderRadius:6,
+                        background: isOpen ? "color-mix(in srgb, var(--sys-blue) 14%, transparent)" : "var(--surface-2)",
+                        color: isOpen ? "var(--sys-blue)" : "var(--text-secondary)",
+                        fontSize:10,flexShrink:0,
+                        transition:"all 0.2s var(--ease-quart)",
+                        transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      }}
+                    >▶</span>
+                    <span style={{fontSize:13,fontWeight:600,color:"var(--text-primary)",flex:1,minWidth:120,letterSpacing:"-0.01em"}}>{asset?.name||`Asset ${i+1}`}</span>
+                    <span style={{fontSize:10,color:"var(--text-secondary)",background:"var(--surface-2)",border:"1px solid var(--hairline)",borderRadius:12,padding:"2px 10px",fontWeight:600}}>{asset?.phase}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",fontVariantNumeric:"tabular-nums"}}>
+                      <span style={{fontSize:10,color:"var(--text-tertiary)"}}>{ar?"إيراد":"Rev"}</span>
+                      <span style={{fontSize:11.5,color:"var(--sys-green)",fontWeight:600,minWidth:44,textAlign:"right"}}>{fmtM(totalRev)}</span>
+                      <span style={{fontSize:10,color:"var(--text-tertiary)",marginInlineStart:4}}>{ar?"كلفة":"Cost"}</span>
+                      <span style={{fontSize:11.5,color:"var(--sys-red)",fontWeight:600,minWidth:44,textAlign:"right"}}>{fmtM(totalCap)}</span>
+                      <span style={{fontSize:10,color:"var(--text-tertiary)",marginInlineStart:4}}>{ar?"صافي":"NCF"}</span>
+                      <span style={{fontSize:11.5,color:ncfColor,fontWeight:700,minWidth:48,textAlign:"right"}}>{fmtM(totalNCF)}</span>
                       <span
                         title={ar?`معدل العائد الداخلي غير المرفوع للأصل. يشمل نصيب الأصل من إيجار الأرض (موزّع بحسب نسبة البصمة داخل المرحلة). تغيير البصمة لأصول أخرى في نفس المرحلة يغيّر هذه القيمة.`:`Unlevered IRR for this asset, including its share of land rent (allocated by footprint ratio within its phase). Changing footprints of other assets in the same phase will affect this value.`}
-                        style={{fontSize:11,fontWeight:700,color:irrColor,background:irrBg,borderRadius:10,padding:"2px 10px",minWidth:58,textAlign:"center",marginInlineStart:4,border:`1px solid ${irrColor}33`}}
+                        style={{fontSize:11,fontWeight:700,color:irrColor,background:irrBg,borderRadius:12,padding:"2px 10px",minWidth:58,textAlign:"center",marginInlineStart:4,border:`1px solid color-mix(in srgb, ${irrColor} 25%, transparent)`}}
                       >
                         IRR {irrPct == null ? "—" : `${irrPct.toFixed(1)}%`}
                       </span>
                       {paybackYr && (
                         <span
                           title={ar?"سنوات الاسترداد (أول سنة يصبح التدفق التراكمي موجب)":"Simple payback period"}
-                          style={{fontSize:10,color:"var(--text-secondary)",background:"#f3f4f6",borderRadius:10,padding:"2px 8px",fontWeight:600}}
+                          style={{fontSize:10,color:"var(--text-secondary)",background:"var(--surface-2)",border:"1px solid var(--hairline)",borderRadius:12,padding:"2px 8px",fontWeight:600}}
                         >
                           ⏱ {paybackYr}y
                         </span>
@@ -6096,13 +6158,25 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
                           <tbody>{renderCFRows(a.revenueSchedule, a.capexSchedule, lr, asset?.name, "#1a1d23")}</tbody>
                         </table>
                       </div>
-                      <div style={{padding:"6px 12px",borderTop:"1px solid #f0f1f5",background:"#fafbfc",display:"flex",justifyContent:"flex-end"}}>
+                      <div style={{padding:"8px 14px",borderTop:"1px solid var(--hairline)",background:"var(--surface-2)",display:"flex",justifyContent:"flex-end"}}>
                         <button
                           onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}}
-                          style={{background:"transparent",border:"none",color:"#2563eb",fontSize:10.5,fontWeight:600,cursor:"pointer",padding:"2px 6px"}}
+                          style={{
+                            display:"inline-flex",alignItems:"center",gap:6,
+                            background:"transparent",border:"none",
+                            color:"var(--sys-blue)",fontSize:12,fontWeight:600,
+                            cursor:"pointer",padding:"4px 8px",
+                            fontFamily:"inherit",letterSpacing:"-0.01em",
+                            borderRadius:6,
+                            transition:"background 0.15s var(--ease-quart)",
+                          }}
+                          onMouseEnter={e=>e.currentTarget.style.background="color-mix(in srgb, var(--sys-blue) 10%, transparent)"}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}
                           title={ar?"فتح الإعدادات الكاملة للأصل":"Open full asset settings panel"}
                         >
-                          {ar?"⚙ الإعدادات الكاملة للأصل ↗":"⚙ Full Asset Settings ↗"}
+                          <span>⚙</span>
+                          <span>{ar?"الإعدادات الكاملة":"Full Settings"}</span>
+                          <span style={{fontSize:10,opacity:0.75}}>{ar?"‹":"›"}</span>
                         </button>
                       </div>
                     </>
