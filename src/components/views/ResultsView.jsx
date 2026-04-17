@@ -250,7 +250,6 @@ function IncomeFundResultsView({
             <SecHd text={ar ? "توزيعات المستثمر" : "INVESTOR DISTRIBUTIONS"} />
             <KR l={ar ? "إجمالي التوزيعات" : "Total Distributions"} v={fmtM(w.lpTotalDist)} c="var(--sys-green)" bold />
             <KR l={ar ? "إجمالي المساهمة" : "Total Invested"} v={fmtM(w.lpTotalCalled)} />
-            <KR l="DPI" v={w.lpDPI ? w.lpDPI.toFixed(2) + "x" : "—"} c="var(--sys-blue)" bold />
             {w.lpIRR !== null && <KR l="IRR" v={fmtPct(w.lpIRR * 100)} c="var(--text-primary)" bold />}
           </div>
         </Card>
@@ -274,10 +273,10 @@ function IncomeFundResultsView({
             {f.totalDebt > 0 && <KR l={ar ? "الدين" : "Debt"} v={fmtM(f.totalDebt)} c="var(--sys-red)" />}
             {f.totalDebt > 0 && <KR l="LTV" v={fmtPct((f.totalDebt / f.devCostInclLand) * 100)} />}
             <SecHd text={ar ? "الرسوم" : "FEES"} />
-            <KR l={ar ? "إجمالي الرسوم" : "Total Fees"} v={fmtM(w.totalFees)} c="var(--sys-red)" />
             <KR
               l={ar ? "رسوم/ملكية" : "Fees/Equity"}
               v={f.totalEquity > 0 ? fmtPct((w.totalFees / f.totalEquity) * 100) : "—"}
+              c="var(--sys-red)"
             />
           </div>
         </Card>
