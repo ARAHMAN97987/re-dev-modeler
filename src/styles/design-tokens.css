@@ -984,25 +984,28 @@ button:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible { 
 [data-theme="dark"] .sidebar-input { background: var(--surface-input) !important; color: var(--text-primary) !important; border-color: var(--border-input) !important; }
 [data-theme="dark"] button { color: inherit; }
 
-/* ========== AUTH PAGE INPUT OVERRIDES ========== */
+/* ========== AUTH PAGE INPUT OVERRIDES (Apple HIG light) ========== */
+/* Auth page is now light-theme across all color schemes. These rules
+   force white inputs with near-black text, overriding earlier dark-navy
+   overrides and the OS-level prefers-color-scheme dark pref. */
 @media (prefers-color-scheme: dark) {
   .haseef-auth input[type="text"], .haseef-auth input[type="email"],
   .haseef-auth input[type="password"], .haseef-auth input[type="number"] {
-    background: #0d1f35 !important; border-color: #1b3a5c !important; color: #e0e4ea !important;
+    background: #FFFFFF !important; border-color: rgba(0,0,0,0.10) !important; color: #1D1D1F !important;
   }
-  .haseef-auth input::placeholder { color: rgba(255,255,255,0.4) !important; }
+  .haseef-auth input::placeholder { color: rgba(60,60,67,0.40) !important; }
 }
 [data-theme="dark"] .haseef-auth input[type="text"],
 [data-theme="dark"] .haseef-auth input[type="email"],
 [data-theme="dark"] .haseef-auth input[type="password"],
 [data-theme="dark"] .haseef-auth input[type="number"] {
-  background: #0d1f35 !important; border-color: #1b3a5c !important; color: #e0e4ea !important;
+  background: #FFFFFF !important; border-color: rgba(0,0,0,0.10) !important; color: #1D1D1F !important;
 }
-[data-theme="dark"] .haseef-auth input::placeholder { color: rgba(255,255,255,0.4) !important; }
+[data-theme="dark"] .haseef-auth input::placeholder { color: rgba(60,60,67,0.40) !important; }
 [data-theme="light"] .haseef-auth input[type="text"],
 [data-theme="light"] .haseef-auth input[type="email"],
 [data-theme="light"] .haseef-auth input[type="password"],
 [data-theme="light"] .haseef-auth input[type="number"] {
-  background: #0d1f35 !important; border-color: #1b3a5c !important; color: #e0e4ea !important;
+  background: #FFFFFF !important; border-color: rgba(0,0,0,0.10) !important; color: #1D1D1F !important;
 }
-[data-theme="light"] .haseef-auth input::placeholder { color: rgba(255,255,255,0.4) !important; }
+[data-theme="light"] .haseef-auth input::placeholder { color: rgba(60,60,67,0.40) !important; }
