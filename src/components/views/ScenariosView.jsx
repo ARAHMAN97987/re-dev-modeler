@@ -476,7 +476,7 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
             </tbody>
           </table>
         </div>
-        <div style={{padding:"10px 16px",fontSize:10,color:"#9ca3af",borderTop:"1px solid #f0f1f5"}}>
+        <div style={{padding:"10px 16px",fontSize:10,color:"var(--text-tertiary)",borderTop:"1px solid var(--hairline)"}}>
           {lang==="ar"?"الأزرق = الحالة الأساسية | الأخضر = أفضل | الأحمر = أسوأ":"Blue = Base Case | Green = Better than base | Red = Worse than base"}
         </div>
       </div>
@@ -487,41 +487,59 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
       <div>
         <div style={{display:"flex",gap:12,marginBottom:14,flexWrap:"wrap",alignItems:"flex-end"}}>
           <div>
-            <div style={{fontSize:11,color:"#6b7080",marginBottom:3}}>{lang==="ar"?"المحور العمودي (الصفوف)":"Row Variable"}</div>
-            <select value={sensRow} onChange={e => setSensRow(e.target.value)} style={{padding:"6px 10px",borderRadius:5,border:"1px solid #e5e7ec",fontSize:12}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4,letterSpacing:"-0.01em"}}>{lang==="ar"?"المحور العمودي (الصفوف)":"Row Variable"}</div>
+            <select value={sensRow} onChange={e => setSensRow(e.target.value)} style={{padding:"7px 10px",borderRadius:8,border:"1px solid var(--hairline)",fontSize:12,background:"var(--surface-1)",color:"var(--text-primary)",fontFamily:"inherit"}}>
               {sensParams.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
             </select>
           </div>
           <div>
-            <div style={{fontSize:11,color:"#6b7080",marginBottom:3}}>{lang==="ar"?"المحور الأفقي (الأعمدة)":"Column Variable"}</div>
-            <select value={sensCol} onChange={e => setSensCol(e.target.value)} style={{padding:"6px 10px",borderRadius:5,border:"1px solid #e5e7ec",fontSize:12}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4,letterSpacing:"-0.01em"}}>{lang==="ar"?"المحور الأفقي (الأعمدة)":"Column Variable"}</div>
+            <select value={sensCol} onChange={e => setSensCol(e.target.value)} style={{padding:"7px 10px",borderRadius:8,border:"1px solid var(--hairline)",fontSize:12,background:"var(--surface-1)",color:"var(--text-primary)",fontFamily:"inherit"}}>
               {sensParams.filter(p => p.key !== sensRow).map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
             </select>
           </div>
         </div>
 
         {/* IRR Sensitivity */}
-        <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden",marginBottom:16}}>
-          <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600}}>
+        <div style={{background:"var(--surface-1)",borderRadius:10,border:"1px solid var(--hairline)",overflow:"hidden",marginBottom:16}}>
+          <div style={{padding:"12px 16px",borderBottom:"1px solid var(--hairline)",fontSize:13,fontWeight:600,color:"var(--text-primary)",letterSpacing:"-0.01em"}}>
             {lang==="ar"?"حساسية العائد (Unlevered IRR)":"Unlevered IRR Sensitivity"}
           </div>
           <div style={{overflowX:"auto"}}>
             <table style={{...tblStyle,fontSize:11}}>
               <thead><tr>
-                <th style={{...thSt,background:"#1e3a5f",color:"#fff",minWidth:100}}>{rowParam.label} \ {colParam.label}</th>
-                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"#2563eb":"#1e3a5f",color:"#fff",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
+                <th style={{...thSt,background:"var(--text-primary)",color:"var(--surface-1)",minWidth:100,textTransform:"none",letterSpacing:0}}>{rowParam.label} \ {colParam.label}</th>
+                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"var(--sys-blue)":"var(--text-primary)",color:"var(--surface-1)",minWidth:80,textTransform:"none",letterSpacing:0}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
               </tr></thead>
               <tbody>
                 {sensTable.map((row, ri) => (
                   <tr key={ri}>
-                    <td style={{...tdSt,fontWeight:600,background:rowParam.steps[ri]===0?"#dbeafe":"#f8f9fb",fontSize:11}}>
+                    <td style={{...tdSt,fontWeight:600,background:rowParam.steps[ri]===0?"color-mix(in srgb, var(--sys-blue) 14%, transparent)":"var(--surface-2)",fontSize:11,color:"var(--text-primary)"}}>
                       {(rowParam.base + rowParam.steps[ri]).toFixed(rowParam.decimals??(rowParam.steps.some(st=>st%1!==0)?1:rowParam.base<10?2:0))}
                     </td>
                     {row.map((cell, ci) => {
                       const isBase = rowParam.steps[ri] === 0 && colParam.steps[ci] === 0;
                       const irr = cell.irr;
-                      const bg = isBase ? "#dbeafe" : irr === null ? "#f8f9fb" : irr >= 0.15 ? "#dcfce7" : irr >= 0.10 ? "#fefce8" : irr >= 0 ? "#ffedd5" : "#fef2f2";
-                      const fg = irr === null ? "#9ca3af" : irr >= 0.15 ? "#166534" : irr >= 0.10 ? "#854d0e" : irr >= 0 ? "#9a3412" : "#991b1b";
+                      const bg = isBase
+                        ? "color-mix(in srgb, var(--sys-blue) 18%, transparent)"
+                        : irr === null
+                          ? "var(--surface-2)"
+                          : irr >= 0.15
+                            ? "color-mix(in srgb, var(--sys-green) 14%, transparent)"
+                            : irr >= 0.10
+                              ? "color-mix(in srgb, var(--sys-yellow, #FFCC00) 18%, transparent)"
+                              : irr >= 0
+                                ? "color-mix(in srgb, var(--sys-orange) 14%, transparent)"
+                                : "color-mix(in srgb, var(--sys-red) 12%, transparent)";
+                      const fg = irr === null
+                        ? "var(--text-tertiary)"
+                        : irr >= 0.15
+                          ? "var(--sys-green)"
+                          : irr >= 0.10
+                            ? "color-mix(in srgb, var(--sys-orange) 80%, black)"
+                            : irr >= 0
+                              ? "var(--sys-orange)"
+                              : "var(--sys-red)";
                       return <td key={ci} style={{...tdN,background:bg,color:fg,fontWeight:isBase?700:500,fontSize:11}}>
                         {irr !== null ? fmtPct(irr * 100) : "N/A"}
                       </td>;
@@ -531,33 +549,37 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
               </tbody>
             </table>
           </div>
-          <div style={{padding:"8px 16px",fontSize:10,color:"#9ca3af"}}>
+          <div style={{padding:"8px 16px",fontSize:10,color:"var(--text-tertiary)",lineHeight:1.5}}>
             {lang==="ar"?"أخضر ≥15% | أصفر ≥10% | برتقالي ≥0% | أحمر < 0% | أزرق = الحالة الأساسية":"Green ≥15% | Yellow ≥10% | Orange ≥0% | Red <0% | Blue = Base Case"}
           </div>
         </div>
 
         {/* NPV Sensitivity */}
-        <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",overflow:"hidden"}}>
-          <div style={{padding:"12px 16px",borderBottom:"1px solid #e5e7ec",fontSize:13,fontWeight:600}}>
+        <div style={{background:"var(--surface-1)",borderRadius:10,border:"1px solid var(--hairline)",overflow:"hidden"}}>
+          <div style={{padding:"12px 16px",borderBottom:"1px solid var(--hairline)",fontSize:13,fontWeight:600,color:"var(--text-primary)",letterSpacing:"-0.01em"}}>
             {lang==="ar"?"حساسية القيمة الحالية (NPV @10%)":"NPV @10% Sensitivity"}
           </div>
           <div style={{overflowX:"auto"}}>
             <table style={{...tblStyle,fontSize:11}}>
               <thead><tr>
-                <th style={{...thSt,background:"#1e3a5f",color:"#fff",minWidth:100}}>{rowParam.label} \ {colParam.label}</th>
-                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"#2563eb":"#1e3a5f",color:"#fff",minWidth:80}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
+                <th style={{...thSt,background:"var(--text-primary)",color:"var(--surface-1)",minWidth:100,textTransform:"none",letterSpacing:0}}>{rowParam.label} \ {colParam.label}</th>
+                {colParam.steps.map((s, i) => <th key={i} style={{...thSt,textAlign:"center",background:s===0?"var(--sys-blue)":"var(--text-primary)",color:"var(--surface-1)",minWidth:80,textTransform:"none",letterSpacing:0}}>{(colParam.base + s).toFixed(colParam.decimals??(colParam.steps.some(st=>st%1!==0)?1:colParam.base<10?2:0))}</th>)}
               </tr></thead>
               <tbody>
                 {sensTable.map((row, ri) => (
                   <tr key={ri}>
-                    <td style={{...tdSt,fontWeight:600,background:rowParam.steps[ri]===0?"#dbeafe":"#f8f9fb",fontSize:11}}>
+                    <td style={{...tdSt,fontWeight:600,background:rowParam.steps[ri]===0?"color-mix(in srgb, var(--sys-blue) 14%, transparent)":"var(--surface-2)",fontSize:11,color:"var(--text-primary)"}}>
                       {(rowParam.base + rowParam.steps[ri]).toFixed(rowParam.decimals??(rowParam.steps.some(st=>st%1!==0)?1:rowParam.base<10?2:0))}
                     </td>
                     {row.map((cell, ci) => {
                       const isBase = rowParam.steps[ri] === 0 && colParam.steps[ci] === 0;
                       const npv = cell.npv;
-                      const bg = isBase ? "#dbeafe" : npv > 0 ? "#dcfce7" : "#fef2f2";
-                      const fg = npv > 0 ? "#166534" : "#991b1b";
+                      const bg = isBase
+                        ? "color-mix(in srgb, var(--sys-blue) 18%, transparent)"
+                        : npv > 0
+                          ? "color-mix(in srgb, var(--sys-green) 14%, transparent)"
+                          : "color-mix(in srgb, var(--sys-red) 12%, transparent)";
+                      const fg = npv > 0 ? "var(--sys-green)" : "var(--sys-red)";
                       return <td key={ci} style={{...tdN,background:bg,color:fg,fontWeight:isBase?700:500,fontSize:11}}>
                         {fmtM(npv)}
                       </td>;
@@ -576,96 +598,96 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
       <div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:14}}>
           {/* Occupancy break-even */}
-          <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
-            <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+          <div style={{background:"var(--surface-1)",borderRadius:12,border:"1px solid var(--hairline)",padding:20}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,fontWeight:600}}>
               <Tip text={"أقل نسبة إشغال تخلي NPV موجب. تحتها المشروع يخسر قيمة\nMinimum occupancy where NPV stays positive. Below this, project loses value"}>{lang==="ar"?"نقطة تعادل الإشغال":"Occupancy Break-Even"}</Tip>
             </div>
-            <div style={{fontSize:28,fontWeight:700,color:breakeven.occupancy?"#f59e0b":"#16a34a"}}>
+            <div style={{fontSize:28,fontWeight:700,color:breakeven.occupancy?"var(--sys-orange)":"var(--sys-green)",letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>
               {breakeven.occupancy ? breakeven.occupancy + "%" : "> 0%"}
             </div>
-            <div style={{fontSize:11,color:"#6b7080",marginTop:6}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:6,lineHeight:1.45}}>
               {lang==="ar"?"الحد الأدنى للإشغال لتحقيق NPV@10% موجب":"Min occupancy for positive NPV@10%"}
             </div>
-            <div style={{marginTop:12,height:8,background:"#f0f1f5",borderRadius:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:(breakeven.occupancy||5)+"%",background:breakeven.occupancy>70?"#ef4444":breakeven.occupancy>50?"#f59e0b":"#16a34a",borderRadius:4,transition:"width 0.3s"}} />
+            <div style={{marginTop:12,height:6,background:"var(--surface-3)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:(breakeven.occupancy||5)+"%",background:breakeven.occupancy>70?"var(--sys-red)":breakeven.occupancy>50?"var(--sys-orange)":"var(--sys-green)",borderRadius:3,transition:"width 0.3s var(--ease-quart)"}} />
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#9ca3af",marginTop:3}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text-tertiary)",marginTop:4,fontVariantNumeric:"tabular-nums"}}>
               <span>0%</span><span>{lang==="ar"?"الحالي: ":"Current: "}~{Math.round((project.assets||[]).reduce((s,a)=>s+(a.stabilizedOcc||100),0)/(project.assets.length||1))}%</span><span>100%</span>
             </div>
           </div>
 
           {/* Rent drop tolerance */}
-          <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
-            <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+          <div style={{background:"var(--surface-1)",borderRadius:12,border:"1px solid var(--hairline)",padding:20}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,fontWeight:600}}>
               <Tip text={"أقصى انخفاض بالإيجار قبل ما يصير NPV سالب\nMaximum rent decrease before NPV turns negative"}>{lang==="ar"?"تحمل انخفاض الإيجار":"Rent Drop Tolerance"}</Tip>
             </div>
-            <div style={{fontSize:28,fontWeight:700,color:breakeven.rentDrop?"#f59e0b":"#16a34a"}}>
+            <div style={{fontSize:28,fontWeight:700,color:breakeven.rentDrop?"var(--sys-orange)":"var(--sys-green)",letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>
               {breakeven.rentDrop ? "-" + breakeven.rentDrop + "%" : "> -100%"}
             </div>
-            <div style={{fontSize:11,color:"#6b7080",marginTop:6}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:6,lineHeight:1.45}}>
               {lang==="ar"?"أقصى انخفاض في الإيجارات مع بقاء NPV@10% موجب":"Max rent reduction keeping NPV@10% positive"}
             </div>
-            <div style={{marginTop:12,height:8,background:"#f0f1f5",borderRadius:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:Math.min(100,breakeven.rentDrop||100)+"%",background:breakeven.rentDrop<15?"#ef4444":breakeven.rentDrop<30?"#f59e0b":"#16a34a",borderRadius:4}} />
+            <div style={{marginTop:12,height:6,background:"var(--surface-3)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.min(100,breakeven.rentDrop||100)+"%",background:breakeven.rentDrop<15?"var(--sys-red)":breakeven.rentDrop<30?"var(--sys-orange)":"var(--sys-green)",borderRadius:3}} />
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#9ca3af",marginTop:3}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text-tertiary)",marginTop:4}}>
               <span>{lang==="ar"?"مخاطرة عالية":"High Risk"}</span><span>{lang==="ar"?"هامش أمان":"Safety Margin"}</span>
             </div>
           </div>
 
           {/* CAPEX increase tolerance */}
-          <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
-            <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+          <div style={{background:"var(--surface-1)",borderRadius:12,border:"1px solid var(--hairline)",padding:20}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,fontWeight:600}}>
               <Tip text={"أقصى زيادة بالتكاليف قبل ما يصير NPV سالب\nMaximum cost overrun before NPV turns negative"}>{lang==="ar"?"تحمل زيادة التكاليف":"CAPEX Increase Tolerance"}</Tip>
             </div>
-            <div style={{fontSize:28,fontWeight:700,color:breakeven.capexIncrease?"#f59e0b":"#16a34a"}}>
+            <div style={{fontSize:28,fontWeight:700,color:breakeven.capexIncrease?"var(--sys-orange)":"var(--sys-green)",letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>
               {breakeven.capexIncrease ? "+" + breakeven.capexIncrease + "%" : "> +100%"}
             </div>
-            <div style={{fontSize:11,color:"#6b7080",marginTop:6}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:6,lineHeight:1.45}}>
               {lang==="ar"?"أقصى زيادة في التكاليف مع بقاء NPV@10% موجب":"Max CAPEX increase keeping NPV@10% positive"}
             </div>
-            <div style={{marginTop:12,height:8,background:"#f0f1f5",borderRadius:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:Math.min(100,breakeven.capexIncrease||100)+"%",background:breakeven.capexIncrease<15?"#ef4444":breakeven.capexIncrease<30?"#f59e0b":"#16a34a",borderRadius:4}} />
+            <div style={{marginTop:12,height:6,background:"var(--surface-3)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.min(100,breakeven.capexIncrease||100)+"%",background:breakeven.capexIncrease<15?"var(--sys-red)":breakeven.capexIncrease<30?"var(--sys-orange)":"var(--sys-green)",borderRadius:3}} />
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#9ca3af",marginTop:3}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text-tertiary)",marginTop:4}}>
               <span>{lang==="ar"?"مخاطرة عالية":"High Risk"}</span><span>{lang==="ar"?"هامش أمان":"Safety Margin"}</span>
             </div>
           </div>
 
           {/* Finance rate tolerance (only for debt modes) */}
-          {project.finMode !== "self" && <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
-            <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+          {project.finMode !== "self" && <div style={{background:"var(--surface-1)",borderRadius:12,border:"1px solid var(--hairline)",padding:20}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,fontWeight:600}}>
               <Tip text={"أعلى معدل ربح بنكي قبل ما يصير العائد سالب\nMaximum finance rate before levered IRR turns negative"}>{lang==="ar"?"تحمل ارتفاع الفائدة":"Finance Rate Tolerance"}</Tip>
             </div>
-            <div style={{fontSize:28,fontWeight:700,color:breakeven.financeRate?"#f59e0b":"#16a34a"}}>
+            <div style={{fontSize:28,fontWeight:700,color:breakeven.financeRate?"var(--sys-orange)":"var(--sys-green)",letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>
               {breakeven.financeRate ? breakeven.financeRate.toFixed(1) + "%" : "> 25%"}
             </div>
-            <div style={{fontSize:11,color:"#6b7080",marginTop:6}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:6,lineHeight:1.45}}>
               {lang==="ar"?`الحالي: ${project.financeRate??6.5}% · هامش: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "واسع"}`:`Current: ${project.financeRate??6.5}% · Margin: ${breakeven.financeRateMargin ? "+"+breakeven.financeRateMargin.toFixed(1)+"%" : "wide"}`}
             </div>
-            <div style={{marginTop:12,height:8,background:"#f0f1f5",borderRadius:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:Math.min(100,(breakeven.financeRateMargin||20)*5)+"%",background:(breakeven.financeRateMargin||20)<3?"#ef4444":(breakeven.financeRateMargin||20)<6?"#f59e0b":"#16a34a",borderRadius:4}} />
+            <div style={{marginTop:12,height:6,background:"var(--surface-3)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.min(100,(breakeven.financeRateMargin||20)*5)+"%",background:(breakeven.financeRateMargin||20)<3?"var(--sys-red)":(breakeven.financeRateMargin||20)<6?"var(--sys-orange)":"var(--sys-green)",borderRadius:3}} />
             </div>
           </div>}
 
           {/* Delay tolerance */}
-          <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:20}}>
-            <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>
+          <div style={{background:"var(--surface-1)",borderRadius:12,border:"1px solid var(--hairline)",padding:20}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,fontWeight:600}}>
               <Tip text={"أقصى تأخير بالبناء قبل ما يصير NPV سالب\nMaximum construction delay before NPV turns negative"}>{lang==="ar"?"تحمل التأخير":"Delay Tolerance"}</Tip>
             </div>
-            <div style={{fontSize:28,fontWeight:700,color:breakeven.delayMonths?"#f59e0b":"#16a34a"}}>
+            <div style={{fontSize:28,fontWeight:700,color:breakeven.delayMonths?"var(--sys-orange)":"var(--sys-green)",letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}}>
               {breakeven.delayMonths != null ? breakeven.delayMonths + (lang==="ar"?" شهر":" mo") : "> 36" + (lang==="ar"?" شهر":" mo")}
             </div>
-            <div style={{fontSize:11,color:"#6b7080",marginTop:6}}>
+            <div style={{fontSize:11,color:"var(--text-secondary)",marginTop:6,lineHeight:1.45}}>
               {lang==="ar"?"أقصى تأخير في البناء مع بقاء NPV@10% موجب":"Max construction delay keeping NPV@10% positive"}
             </div>
-            <div style={{marginTop:12,height:8,background:"#f0f1f5",borderRadius:4,overflow:"hidden"}}>
-              <div style={{height:"100%",width:Math.min(100,((breakeven.delayMonths||36)/36)*100)+"%",background:(breakeven.delayMonths||36)<6?"#ef4444":(breakeven.delayMonths||36)<12?"#f59e0b":"#16a34a",borderRadius:4}} />
+            <div style={{marginTop:12,height:6,background:"var(--surface-3)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.min(100,((breakeven.delayMonths||36)/36)*100)+"%",background:(breakeven.delayMonths||36)<6?"var(--sys-red)":(breakeven.delayMonths||36)<12?"var(--sys-orange)":"var(--sys-green)",borderRadius:3}} />
             </div>
           </div>
         </div>
-        <div style={{background:"#fff",borderRadius:8,border:"1px solid #e5e7ec",padding:18,marginTop:16}}>
-          <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>{lang==="ar"?"ملخص المخاطر":"Risk Summary"}</div>
+        <div style={{background:"var(--surface-1)",borderRadius:12,border:"1px solid var(--hairline)",padding:18,marginTop:16}}>
+          <div style={{fontSize:14,fontWeight:600,marginBottom:12,color:"var(--text-primary)",letterSpacing:"-0.01em"}}>{lang==="ar"?"ملخص المخاطر":"Risk Summary"}</div>
           <table style={{...tblStyle,fontSize:12}}>
             <thead><tr>
               <th style={thSt}>{lang==="ar"?"المتغير":"Variable"}</th>
@@ -718,9 +740,9 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
                   <td style={{...tdSt,textAlign:"center"}}>{r.current}</td>
                   <td style={{...tdSt,textAlign:"center",fontWeight:600}}>{r.margin}</td>
                   <td style={{...tdSt,textAlign:"center"}}>
-                    <span style={{padding:"3px 10px",borderRadius:4,fontSize:11,fontWeight:600,
-                      background:r.risk==="low"?"#dcfce7":r.risk==="med"?"#fefce8":"#fef2f2",
-                      color:r.risk==="low"?"#16a34a":r.risk==="med"?"#a16207":"#ef4444"}}>
+                    <span style={{padding:"3px 10px",borderRadius:6,fontSize:11,fontWeight:600,
+                      background:r.risk==="low"?"color-mix(in srgb, var(--sys-green) 14%, transparent)":r.risk==="med"?"color-mix(in srgb, var(--sys-orange) 14%, transparent)":"color-mix(in srgb, var(--sys-red) 12%, transparent)",
+                      color:r.risk==="low"?"var(--sys-green)":r.risk==="med"?"var(--sys-orange)":"var(--sys-red)"}}>
                       {r.risk==="low"?(lang==="ar"?"مخاطر منخفضة":"LOW RISK"):r.risk==="med"?(lang==="ar"?"مخاطر متوسطة":"MEDIUM"):lang==="ar"?"مخاطر مرتفعة":"HIGH RISK"}
                     </span>
                   </td>
@@ -824,11 +846,11 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
             const loGood = (r.loVal||0)>(tornadoData.baseVal||0);
             const hiGood = (r.hiVal||0)>(tornadoData.baseVal||0);
             return <div key={r.key} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,fontSize:11}}>
-              <div style={{width:130,textAlign:"right",color:"#374151",fontWeight:500,flexShrink:0}}>{r.l}</div>
+              <div style={{width:130,textAlign:"right",color:"var(--text-secondary)",fontWeight:500,flexShrink:0}}>{r.l}</div>
               <div style={{flex:1,display:"flex",alignItems:"center",height:22}}>
-                <div style={{flex:1,display:"flex",justifyContent:"flex-end"}}><div style={{height:18,borderRadius:3,background:loGood?"#22c55e":"#ef4444",width:pctLo+"%",minWidth:pctLo>0?2:0,transition:"width 0.3s"}} /></div>
-                <div style={{width:1,height:22,background:"#374151",margin:"0 2px",flexShrink:0}} />
-                <div style={{flex:1}}><div style={{height:18,borderRadius:3,background:hiGood?"#22c55e":"#ef4444",width:pctHi+"%",minWidth:pctHi>0?2:0,transition:"width 0.3s"}} /></div>
+                <div style={{flex:1,display:"flex",justifyContent:"flex-end"}}><div style={{height:18,borderRadius:3,background:loGood?"var(--sys-green)":"var(--sys-red)",width:pctLo+"%",minWidth:pctLo>0?2:0,transition:"width 0.3s var(--ease-quart)"}} /></div>
+                <div style={{width:1,height:22,background:"var(--text-primary)",margin:"0 2px",flexShrink:0,opacity:0.5}} />
+                <div style={{flex:1}}><div style={{height:18,borderRadius:3,background:hiGood?"var(--sys-green)":"var(--sys-red)",width:pctHi+"%",minWidth:pctHi>0?2:0,transition:"width 0.3s var(--ease-quart)"}} /></div>
               </div>
               <div style={{ width: 80, fontSize: 10, color: "var(--text-secondary)", textAlign: "center" }}>
                 {fmtMV(r.loVal, tornadoMetric)} — {fmtMV(r.hiVal, tornadoMetric)}
@@ -1097,15 +1119,15 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
           {/* Perspective labels */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:16}}>
             {[
-              {r:optResults.best,icon:"✅",l:ar?"الأفضل":"Best",c:"#166534",bg:"#f0fdf4"},
-              {r:optResults.safest,icon:"🛡️",l:ar?"الأكثر أماناً":"Safest",c:"#1e40af",bg:"#eff6ff"},
-              {r:optResults.bestGP,icon:"💰",l:ar?"الأعلى عائد GP":"Best GP",c:"#92400e",bg:"#fffbeb"},
-              {r:optResults.balanced,icon:"⚖️",l:ar?"الأكثر توازناً":"Balanced",c:"#6b21a8",bg:"#faf5ff"},
-            ].filter(x=>x.r).map(x=><div key={x.l} style={{padding:12,borderRadius:8,background:x.bg,border:"1px solid "+x.c+"20"}}>
-              <div style={{fontSize:12,fontWeight:700,color:x.c,marginBottom:4}}>{x.icon} {x.l}</div>
-              <div style={{fontSize:11,color:"#374151"}}>{optResults.selected.map(v=><span key={v.k}>{v.l}: <strong>{x.r[v.k]}</strong> </span>)}</div>
-              <div style={{fontSize:10,color:"#6b7080",marginTop:2}}>Target: {fmtV(x.r._target,['irr','leveredIRR','lpIRR','gpIRR'].includes(optMetric))} | DSCR: {x.r._minDSCR?.toFixed(2)||'-'}</div>
-              {up && <button onClick={()=>applyOpt(x.r)} style={{...btnS,padding:"3px 10px",fontSize:10,marginTop:6,background:"#1e3a5f",color:"#fff",border:"none"}}>{ar?"تطبيق":"Apply"}</button>}
+              {r:optResults.best,   icon:"✅",l:ar?"الأفضل":"Best",         c:"var(--sys-green)"},
+              {r:optResults.safest, icon:"🛡️",l:ar?"الأكثر أماناً":"Safest", c:"var(--sys-blue)"},
+              {r:optResults.bestGP, icon:"💰",l:ar?"الأعلى عائد GP":"Best GP",c:"var(--sys-orange)"},
+              {r:optResults.balanced,icon:"⚖️",l:ar?"الأكثر توازناً":"Balanced",c:"var(--sys-indigo)"},
+            ].filter(x=>x.r).map(x=><div key={x.l} style={{padding:12,borderRadius:12,background:`color-mix(in srgb, ${x.c} 8%, transparent)`,border:`1px solid color-mix(in srgb, ${x.c} 22%, transparent)`}}>
+              <div style={{fontSize:12,fontWeight:700,color:x.c,marginBottom:4,letterSpacing:"-0.01em"}}>{x.icon} {x.l}</div>
+              <div style={{fontSize:11,color:"var(--text-primary)"}}>{optResults.selected.map(v=><span key={v.k}>{v.l}: <strong>{x.r[v.k]}</strong> </span>)}</div>
+              <div style={{fontSize:10,color:"var(--text-secondary)",marginTop:2}}>Target: {fmtV(x.r._target,['irr','leveredIRR','lpIRR','gpIRR'].includes(optMetric))} | DSCR: {x.r._minDSCR?.toFixed(2)||'-'}</div>
+              {up && <button onClick={()=>applyOpt(x.r)} style={{...btnS,padding:"3px 10px",fontSize:10,marginTop:6,background:"var(--sys-blue)",color:"#fff",border:"none",borderRadius:6,fontWeight:600}}>{ar?"تطبيق":"Apply"}</button>}
             </div>)}
           </div>
           {/* Top results table */}
@@ -1120,9 +1142,9 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
               {optResults.all.slice(0,10).map((r,i)=><tr key={i}>
                 <td style={tdN}>{i+1}</td>
                 {optResults.selected.map(v=><td key={v.k} style={tdN}>{r[v.k]}</td>)}
-                <td style={{...tdN,fontWeight:700,color:i===0?"#166534":"#1a1d23"}}>{fmtV(r._target,['irr','leveredIRR','lpIRR','gpIRR'].includes(optMetric))}</td>
+                <td style={{...tdN,fontWeight:700,color:i===0?"var(--sys-green)":"var(--text-primary)"}}>{fmtV(r._target,['irr','leveredIRR','lpIRR','gpIRR'].includes(optMetric))}</td>
                 <td style={tdN}>{r._minDSCR?.toFixed(2)||'-'}</td>
-                <td style={tdSt}>{up && <button onClick={()=>applyOpt(r)} style={{...btnS,padding:"2px 8px",fontSize:10,background:"#f0f4ff",color:"#2563eb",border:"1px solid #bfdbfe"}}>{ar?"تطبيق":"Apply"}</button>}</td>
+                <td style={tdSt}>{up && <button onClick={()=>applyOpt(r)} style={{...btnS,padding:"3px 10px",fontSize:10,background:"color-mix(in srgb, var(--sys-blue) 10%, transparent)",color:"var(--sys-blue)",border:"1px solid color-mix(in srgb, var(--sys-blue) 22%, transparent)",borderRadius:6,fontWeight:600}}>{ar?"تطبيق":"Apply"}</button>}</td>
               </tr>)}
             </tbody></table>
           </div>
