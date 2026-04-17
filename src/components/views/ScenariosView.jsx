@@ -1,4 +1,7 @@
 // Extracted from App.jsx lines 10690-11237
+// Restyled 2026-04-17: design tokens + Apple HIG primitives where non-disruptive.
+// Engine logic (runScenario, breakeven search, tornado/goalseek/optimizer loops)
+// is unchanged — only presentational layer touched.
 import { useState, useMemo, useRef, useEffect } from "react";
 import EmptyState from "../shared/EmptyState.jsx";
 import Tip from "../shared/Tip.jsx";
@@ -9,6 +12,7 @@ import { computeWaterfall } from "../../engine/waterfall.js";
 import { calcIRR, calcNPV } from "../../engine/math.js";
 import { fmt, fmtPct, fmtM } from "../../utils/format.js";
 import { useIsMobile } from "../shared/hooks.js";
+import { Button, SegmentedControl, Select, Input, Badge, Card } from "../ui";
 
 // ── HelpLink component (local copy from App.jsx) ──
 function HelpLink({ contentKey, lang, onOpen, label: customLabel }) {
@@ -137,14 +141,14 @@ function EducationalModal({ contentKey, lang, onClose, educationalContent }) {
   </>);
 }
 
-// ── Styles (from App.jsx lines 12138-12147) ──
-const btnS={border:"none",borderRadius:5,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"};
-const btnPrim={...btnS,background:"#2563eb",color:"#fff",fontWeight:600};
-const btnSm={...btnS,padding:"4px 8px",fontSize:11,fontWeight:500,borderRadius:4};
-const tblStyle={width:"100%",borderCollapse:"collapse"};
-const thSt={padding:"7px 8px",textAlign:"start",fontSize:10,fontWeight:600,color:"#6b7080",background:"#f8f9fb",borderBottom:"1px solid #e5e7ec",whiteSpace:"nowrap",textTransform:"uppercase",letterSpacing:0.3};
-const tdSt={padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:12,whiteSpace:"nowrap"};
-const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
+// ── Styles (HIG-polished; preserving original export surface) ──
+const btnS  = { border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", transition: "all 0.18s var(--ease-quart)" };
+const btnPrim = { ...btnS, background: "var(--sys-blue)", color: "#fff", fontWeight: 600 };
+const btnSm = { ...btnS, padding: "5px 10px", fontSize: 11, fontWeight: 500, borderRadius: 6 };
+const tblStyle = { width: "100%", borderCollapse: "collapse" };
+const thSt = { padding: "8px 10px", textAlign: "start", fontSize: 10.5, fontWeight: 600, color: "var(--text-secondary)", background: "var(--surface-2)", borderBottom: "1px solid var(--hairline)", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: 0.4 };
+const tdSt = { padding: "6px 10px", borderBottom: "1px solid var(--hairline)", fontSize: 12, whiteSpace: "nowrap" };
+const tdN  = { ...tdSt, textAlign: "right", fontVariantNumeric: "tabular-nums" };
 
 // ── runScenario helper (extracted from App.jsx line 10690) ──
 export function runScenario(project, overrides) {
@@ -378,32 +382,46 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
   );
 
   return (<div>
-    {/* Sub-nav */}
-    <div style={{display:"flex",gap:8,marginBottom:10}}>
-      {sections.map(s => (
-        <button key={s.key} onClick={() => setActiveSection(s.key)}
-          style={{...btnS,padding:"8px 16px",fontSize:12,fontWeight:500,
-            background:activeSection===s.key?"#1e3a5f":"#fff",
-            color:activeSection===s.key?"#fff":"#1a1d23",
-            border:"1px solid "+(activeSection===s.key?"#1e3a5f":"#e5e7ec")}}>
-          {s.label}
-        </button>
-      ))}
+    {/* Sub-nav — Apple segmented control */}
+    <div style={{ marginBottom: 14, overflowX: "auto" }}>
+      <SegmentedControl
+        value={activeSection}
+        onChange={setActiveSection}
+        options={sections.map(s => ({ value: s.key, label: s.label }))}
+      />
     </div>
-    <div style={{marginBottom:14}}><HelpLink contentKey="scenarioAnalysis" lang={lang} onOpen={setEduModal} label={ar?"كيف أستخدم تحليل السيناريوهات؟":"How to use Scenario Analysis?"} /></div>
+    <div style={{ marginBottom: 14 }}>
+      <HelpLink
+        contentKey="scenarioAnalysis"
+        lang={lang}
+        onOpen={setEduModal}
+        label={ar ? "كيف أستخدم تحليل السيناريوهات؟" : "How to use Scenario Analysis?"}
+      />
+    </div>
 
     {/* Phase filter */}
     {phaseNames.length > 1 && (
-      <div style={{marginBottom:14}}>
-        <div style={{fontSize:12,color:"#6b7080",marginBottom:6}}>{lang==="ar"?"اختر المراحل للتحليل":"Select phases for analysis"}</div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"#1e3a5f":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#1e3a5f":"#e5e7ec")}}>
-            {lang==="ar"?"الكل":"All"}
-          </button>
-          {phaseNames.map(p=>(
-            <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"5px 12px",fontSize:11,background:activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#f0f1f5",color:activePh.includes(p)&&selectedPhases.length>0?"#fff":"#1a1d23",border:"1px solid "+(activePh.includes(p)&&selectedPhases.length>0?"#2563eb":"#e5e7ec")}}>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8 }}>
+          {lang === "ar" ? "اختر المراحل للتحليل" : "Select phases for analysis"}
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <Button
+            variant={selectedPhases.length === 0 ? "primary" : "secondary"}
+            size="xs"
+            onClick={() => setSelectedPhases([])}
+          >
+            {lang === "ar" ? "الكل" : "All"}
+          </Button>
+          {phaseNames.map(p => (
+            <Button
+              key={p}
+              variant={activePh.includes(p) && selectedPhases.length > 0 ? "tinted" : "secondary"}
+              size="xs"
+              onClick={() => togglePhase(p)}
+            >
               {p}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -785,17 +803,21 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
       };
       const maxSpread = tornadoData?.rows?.[0]?.spread || 1;
       return <div>
-        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
-          <span style={{fontSize:12,fontWeight:600}}>{ar?"المقياس المستهدف:":"Target Metric:"}</span>
-          <select value={tornadoMetric} onChange={e=>setTornadoMetric(e.target.value)} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #e5e7ec",fontSize:12}}>
-            {metricOpts.map(m=><option key={m.k} value={m.k}>{m.l}</option>)}
-          </select>
-          <button onClick={runTornado} disabled={tornadoLoading} style={{...btnPrim,padding:"8px 20px",fontSize:12,opacity:tornadoLoading?0.6:1}}>
-            {tornadoLoading?(ar?"جاري التحليل...":"Analyzing..."):(ar?"▶ تحليل":"▶ Run")}
-          </button>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>
+            {ar ? "المقياس المستهدف:" : "Target Metric:"}
+          </span>
+          <Select value={tornadoMetric} onChange={e => setTornadoMetric(e.target.value)} style={{ width: 200 }}>
+            {metricOpts.map(m => <option key={m.k} value={m.k}>{m.l}</option>)}
+          </Select>
+          <Button variant="primary" size="sm" onClick={runTornado} disabled={tornadoLoading}>
+            {tornadoLoading ? (ar ? "جاري التحليل..." : "Analyzing...") : (ar ? "▶ تحليل" : "▶ Run")}
+          </Button>
         </div>
-        {tornadoData && <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:16}}>
-          <div style={{fontSize:11,color:"#6b7080",marginBottom:12}}>{ar?"القيمة الأساسية:":"Base value:"} <strong>{fmtMV(tornadoData.baseVal,tornadoMetric)}</strong></div>
+        {tornadoData && <Card>
+          <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}>
+            {ar ? "القيمة الأساسية:" : "Base value:"} <strong style={{ color: "var(--text-primary)" }}>{fmtMV(tornadoData.baseVal, tornadoMetric)}</strong>
+          </div>
           {tornadoData.rows.map((r,i) => {
             const pctLo = r.spread>0 ? Math.abs((r.loVal||0)-tornadoData.baseVal)/maxSpread*100 : 0;
             const pctHi = r.spread>0 ? Math.abs((r.hiVal||0)-tornadoData.baseVal)/maxSpread*100 : 0;
@@ -808,10 +830,12 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
                 <div style={{width:1,height:22,background:"#374151",margin:"0 2px",flexShrink:0}} />
                 <div style={{flex:1}}><div style={{height:18,borderRadius:3,background:hiGood?"#22c55e":"#ef4444",width:pctHi+"%",minWidth:pctHi>0?2:0,transition:"width 0.3s"}} /></div>
               </div>
-              <div style={{width:80,fontSize:10,color:"#6b7080",textAlign:"center"}}>{fmtMV(r.loVal,tornadoMetric)} — {fmtMV(r.hiVal,tornadoMetric)}</div>
+              <div style={{ width: 80, fontSize: 10, color: "var(--text-secondary)", textAlign: "center" }}>
+                {fmtMV(r.loVal, tornadoMetric)} — {fmtMV(r.hiVal, tornadoMetric)}
+              </div>
             </div>;
           })}
-        </div>}
+        </Card>}
       </div>;
     })()}
 
@@ -878,27 +902,72 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
         if (vOpt?.isAsset) { up(prev=>({...prev,assets:(prev.assets||[]).map(a=>({...a,[gsVariable]:Math.round(gsResult.value*100)/100}))})); }
         else { up({[gsVariable]:Math.round(gsResult.value*100)/100}); }
       };
-      return <div style={{maxWidth:500}}>
-        <div style={{background:"#fff",borderRadius:10,border:"1px solid #e5e7ec",padding:20}}>
-          <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>🎯 {ar?"البحث عن الهدف":"Goal Seeker"}</div>
-          <div style={{display:"grid",gridTemplateColumns:"120px 1fr",gap:10,alignItems:"center",fontSize:12}}>
-            <span>{ar?"المقياس:":"Metric:"}</span>
-            <select value={gsMetric} onChange={e=>setGsMetric(e.target.value)} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #e5e7ec"}}>{metricOpts.map(m=><option key={m.k} value={m.k}>{m.l}</option>)}</select>
-            <span>{ar?"القيمة المطلوبة:":"Target:"}</span>
-            <div style={{display:"flex",alignItems:"center",gap:4}}><input type="number" value={gsTarget} onChange={e=>setGsTarget(Number(e.target.value))} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #e5e7ec",width:100}} /><span style={{color:"#6b7080"}}>{metricOpts.find(m=>m.k===gsMetric)?.pct?'%':'x'}</span></div>
-            <span>{ar?"المتغير:":"Variable:"}</span>
-            <select value={gsVariable} onChange={e=>setGsVariable(e.target.value)} style={{padding:"6px 10px",borderRadius:6,border:"1px solid #e5e7ec"}}>{varOpts.map(v=><option key={v.k} value={v.k}>{v.l}</option>)}</select>
+      return <div style={{ maxWidth: 520 }}>
+        <Card>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, letterSpacing: "-0.012em", color: "var(--text-primary)" }}>
+            🎯 {ar ? "البحث عن الهدف" : "Goal Seeker"}
           </div>
-          <button onClick={runGoalSeek} disabled={gsLoading} style={{...btnPrim,padding:"10px 24px",fontSize:13,marginTop:16,width:"100%",opacity:gsLoading?0.6:1}}>
-            {gsLoading?(ar?"جاري البحث...":"Searching..."):(ar?"🔍 ابحث":"🔍 Find")}
-          </button>
-          {gsResult && <div style={{marginTop:16,padding:14,borderRadius:8,background:gsResult.found?"#f0fdf4":"#fffbeb",border:"1px solid "+(gsResult.found?"#bbf7d0":"#fde68a")}}>
-            <div style={{fontWeight:700,fontSize:13,color:gsResult.found?"#166534":"#92400e",marginBottom:6}}>{gsResult.found?(ar?"✅ تم العثور على القيمة":"✅ Value Found"):(ar?"⚠️ أقرب قيمة":"⚠️ Closest Value")}</div>
-            <div style={{fontSize:12,color:"#374151"}}><strong>{varOpts.find(v=>v.k===gsVariable)?.l}:</strong> {fmt(gsResult.value)} <span style={{color:"#6b7080"}}>(current: {fmt(gsResult.current)})</span></div>
-            <div style={{fontSize:12,color:"#374151",marginTop:4}}>{metricOpts.find(m=>m.k===gsMetric)?.l}: {metricOpts.find(m=>m.k===gsMetric)?.pct?fmtPct(gsResult.metric):(gsResult.metric?.toFixed(2)+'x')}</div>
-            {up && <button onClick={applyGS} style={{...btnPrim,padding:"6px 16px",fontSize:11,marginTop:10}}>{ar?"⚡ تطبيق":"⚡ Apply"}</button>}
+          <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: 12, alignItems: "center", fontSize: 12 }}>
+            <span style={{ color: "var(--text-secondary)" }}>{ar ? "المقياس:" : "Metric:"}</span>
+            <Select value={gsMetric} onChange={e => setGsMetric(e.target.value)}>
+              {metricOpts.map(m => <option key={m.k} value={m.k}>{m.l}</option>)}
+            </Select>
+            <span style={{ color: "var(--text-secondary)" }}>{ar ? "القيمة المطلوبة:" : "Target:"}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Input
+                type="number"
+                value={gsTarget}
+                onChange={e => setGsTarget(Number(e.target.value))}
+                style={{ width: 120 }}
+              />
+              <span style={{ color: "var(--text-secondary)" }}>
+                {metricOpts.find(m => m.k === gsMetric)?.pct ? "%" : "x"}
+              </span>
+            </div>
+            <span style={{ color: "var(--text-secondary)" }}>{ar ? "المتغير:" : "Variable:"}</span>
+            <Select value={gsVariable} onChange={e => setGsVariable(e.target.value)}>
+              {varOpts.map(v => <option key={v.k} value={v.k}>{v.l}</option>)}
+            </Select>
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            block
+            onClick={runGoalSeek}
+            disabled={gsLoading}
+            style={{ marginTop: 16 }}
+          >
+            {gsLoading ? (ar ? "جاري البحث..." : "Searching...") : (ar ? "🔍 ابحث" : "🔍 Find")}
+          </Button>
+          {gsResult && <div style={{
+            marginTop: 16,
+            padding: 14,
+            borderRadius: 10,
+            background: gsResult.found ? "rgba(52,199,89,0.08)" : "rgba(255,149,0,0.08)",
+            border: "1px solid " + (gsResult.found ? "rgba(52,199,89,0.25)" : "rgba(255,149,0,0.25)"),
+          }}>
+            <div style={{
+              fontWeight: 700, fontSize: 13,
+              color: gsResult.found ? "var(--sys-green)" : "var(--sys-orange)",
+              marginBottom: 6,
+            }}>
+              {gsResult.found ? (ar ? "✅ تم العثور على القيمة" : "✅ Value Found") : (ar ? "⚠️ أقرب قيمة" : "⚠️ Closest Value")}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-primary)" }}>
+              <strong>{varOpts.find(v => v.k === gsVariable)?.l}:</strong> {fmt(gsResult.value)}{" "}
+              <span style={{ color: "var(--text-secondary)" }}>(current: {fmt(gsResult.current)})</span>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-primary)", marginTop: 4 }}>
+              {metricOpts.find(m => m.k === gsMetric)?.l}:{" "}
+              {metricOpts.find(m => m.k === gsMetric)?.pct ? fmtPct(gsResult.metric) : (gsResult.metric?.toFixed(2) + "x")}
+            </div>
+            {up && (
+              <Button variant="primary" size="sm" onClick={applyGS} style={{ marginTop: 10 }}>
+                {ar ? "⚡ تطبيق" : "⚡ Apply"}
+              </Button>
+            )}
           </div>}
-        </div>
+        </Card>
       </div>;
     })()}
 
@@ -976,22 +1045,54 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
       const fmtV=(v,isPct)=>v==null?'-':isPct?fmtPct(v):(v?.toFixed(2)+'x');
       const applyOpt = (row) => { if(!up) return; const ov={}; varDefs.filter(v=>optVars.includes(v.k)).forEach(v=>{ if(row[v.k]!=null) ov[v.k]=row[v.k]; }); up(ov); };
       return <div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:16}}>
-          <div><span style={{fontSize:12,fontWeight:600}}>{ar?"المقياس:":"Target:"}</span>
-            <select value={optMetric} onChange={e=>setOptMetric(e.target.value)} style={{marginInlineStart:8,padding:"6px 10px",borderRadius:6,border:"1px solid #e5e7ec",fontSize:12}}>{metricOpts.map(m=><option key={m.k} value={m.k}>{m.l}</option>)}</select>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16, alignItems: "center" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>
+            {ar ? "المقياس:" : "Target:"}
+          </span>
+          <Select value={optMetric} onChange={e => setOptMetric(e.target.value)} style={{ width: 180 }}>
+            {metricOpts.map(m => <option key={m.k} value={m.k}>{m.l}</option>)}
+          </Select>
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: "var(--text-primary)" }}>
+          {ar ? "اختر المتغيرات (1-3):" : "Select variables (1-3):"}
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+          {varDefs.map(v => (
+            <Button
+              key={v.k}
+              variant={optVars.includes(v.k) ? "primary" : "secondary"}
+              size="xs"
+              onClick={() => toggleVar(v.k)}
+            >
+              {v.l}
+            </Button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={runOptimizer}
+            disabled={optLoading || optVars.length === 0}
+          >
+            {optLoading ? (ar ? `جاري التحليل ${optProgress}...` : `Analyzing ${optProgress}...`) : (ar ? "▶ تحسين" : "▶ Optimize")}
+          </Button>
+          {optLoading && (
+            <Button variant="danger" size="md" onClick={() => { optCancelRef.current = true; }}>
+              {ar ? "إلغاء" : "Cancel"}
+            </Button>
+          )}
+        </div>
+        {optLoading && (
+          <div style={{ marginTop: 12, height: 6, background: "var(--surface-3)", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{
+              height: "100%",
+              background: "var(--sys-blue)",
+              width: (optProgress / ((optResults?.total) || 1) * 100) + "%",
+              transition: "width 0.2s var(--ease-quart)",
+            }} />
           </div>
-        </div>
-        <div style={{fontSize:12,fontWeight:600,marginBottom:8}}>{ar?"اختر المتغيرات (1-3):":"Select variables (1-3):"}</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
-          {varDefs.map(v=><button key={v.k} onClick={()=>toggleVar(v.k)} style={{...btnS,padding:"6px 14px",fontSize:11,background:optVars.includes(v.k)?"#1e3a5f":"#fff",color:optVars.includes(v.k)?"#fff":"#1a1d23",border:"1px solid "+(optVars.includes(v.k)?"#1e3a5f":"#e5e7ec")}}>{v.l}</button>)}
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={runOptimizer} disabled={optLoading||optVars.length===0} style={{...btnPrim,padding:"10px 24px",fontSize:13,opacity:optLoading||optVars.length===0?0.5:1}}>
-            {optLoading?(ar?`جاري التحليل ${optProgress}...`:`Analyzing ${optProgress}...`):(ar?"▶ تحسين":"▶ Optimize")}
-          </button>
-          {optLoading && <button onClick={()=>{optCancelRef.current=true;}} style={{...btnS,padding:"10px 16px",fontSize:12,background:"#fef2f2",color:"#ef4444",border:"1px solid #fca5a5"}}>{ar?"إلغاء":"Cancel"}</button>}
-        </div>
-        {optLoading && <div style={{marginTop:12,height:6,background:"#e5e7eb",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",background:"#2563eb",width:(optProgress/((optResults?.total)||1)*100)+"%",transition:"width 0.2s"}} /></div>}
+        )}
         {optResults && <div style={{marginTop:20}}>
           {/* Perspective labels */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:10,marginBottom:16}}>
