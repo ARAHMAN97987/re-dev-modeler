@@ -12,14 +12,16 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
 
   const Option = ({icon, label, desc, selected, onClick}) => (
     <div onClick={onClick} style={{
-      background:selected?"#eff6ff":"#fff", border:selected?"2px solid #2563eb":"2px solid #e5e7ec",
-      borderRadius:12, padding:"16px 18px", cursor:"pointer", transition:"all 0.15s",
-      display:"flex", alignItems:"center", gap:14, minHeight:60,
-    }} onMouseEnter={e=>{if(!selected)e.currentTarget.style.borderColor="#c7d2fe";}} onMouseLeave={e=>{if(!selected)e.currentTarget.style.borderColor="#e5e7ec";}}>
+      background: selected ? "color-mix(in srgb, var(--sys-blue) 8%, transparent)" : "var(--surface-1)",
+      border: selected ? "2px solid var(--sys-blue)" : "2px solid var(--hairline)",
+      borderRadius: 12, padding: "16px 18px", cursor: "pointer",
+      transition: "all 0.18s var(--ease-quart)",
+      display: "flex", alignItems: "center", gap: 14, minHeight: 60,
+    }} onMouseEnter={e => { if (!selected) e.currentTarget.style.borderColor = "color-mix(in srgb, var(--sys-blue) 35%, transparent)"; }} onMouseLeave={e => { if (!selected) e.currentTarget.style.borderColor = "var(--hairline)"; }}>
       <span style={{fontSize:28}}>{icon}</span>
-      <div><div style={{fontSize:14,fontWeight:600,color:selected?"#2563eb":"#1a1d23"}}>{label}</div>
-      {desc&&<div style={{fontSize:11,color:"#6b7080",marginTop:2}}>{desc}</div>}</div>
-      {selected&&<span style={{marginInlineStart:"auto",fontSize:18,color:"#2563eb"}}>✓</span>}
+      <div><div style={{fontSize: 14, fontWeight: 600, color: selected ? "var(--sys-blue)" : "var(--text-primary)", letterSpacing: "-0.01em"}}>{label}</div>
+      {desc && <div style={{fontSize: 11, color: "var(--text-secondary)", marginTop: 2, lineHeight: 1.45}}>{desc}</div>}</div>
+      {selected && <span style={{marginInlineStart: "auto", fontSize: 18, color: "var(--sys-blue)"}}>✓</span>}
     </div>
   );
 
@@ -27,10 +29,10 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
     // Step 0: Project name + location
     { title: t?"اسم المشروع والموقع":"Project Name & Location", content: (
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
-        <div><div style={{fontSize:11,color:"#6b7080",marginBottom:4,fontWeight:500}}>{t?"اسم المشروع":"Project Name"}</div>
-        <input value={project.name||""} onChange={e=>onUpdate({name:e.target.value})} placeholder={t?"مثال: مشروع الواجهة البحرية":(lang==="ar"?"مثال: واجهة حصيف البحرية":"e.g. Haseef Waterfront")} style={{width:"100%",padding:"12px 16px",border:"2px solid #e5e7ec",borderRadius:10,fontSize:15,fontWeight:600,fontFamily:"inherit",outline:"none"}} autoFocus /></div>
-        <div><div style={{fontSize:11,color:"#6b7080",marginBottom:4,fontWeight:500}}>{t?"الموقع":"Location"}</div>
-        <input value={project.location||""} onChange={e=>onUpdate({location:e.target.value})} placeholder={t?"مثال: جازان، السعودية":"e.g. Jazan, Saudi Arabia"} style={{width:"100%",padding:"10px 14px",border:"1px solid #e5e7ec",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} /></div>
+        <div><div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4,fontWeight:500,letterSpacing:"-0.01em"}}>{t?"اسم المشروع":"Project Name"}</div>
+        <input value={project.name||""} onChange={e=>onUpdate({name:e.target.value})} placeholder={t?"مثال: مشروع الواجهة البحرية":(lang==="ar"?"مثال: واجهة حصيف البحرية":"e.g. Haseef Waterfront")} style={{width:"100%",padding:"12px 16px",border:"1px solid var(--hairline)",borderRadius:10,fontSize:15,fontWeight:600,fontFamily:"inherit",outline:"none",background:"var(--surface-1)",color:"var(--text-primary)",transition:"border-color 0.15s var(--ease-quart), box-shadow 0.15s var(--ease-quart)"}} autoFocus /></div>
+        <div><div style={{fontSize:11,color:"var(--text-secondary)",marginBottom:4,fontWeight:500,letterSpacing:"-0.01em"}}>{t?"الموقع":"Location"}</div>
+        <input value={project.location||""} onChange={e=>onUpdate({location:e.target.value})} placeholder={t?"مثال: جازان، السعودية":"e.g. Jazan, Saudi Arabia"} style={{width:"100%",padding:"10px 14px",border:"1px solid var(--hairline)",borderRadius:10,fontSize:13,fontFamily:"inherit",outline:"none",background:"var(--surface-1)",color:"var(--text-primary)"}} /></div>
       </div>
     )},
     // Step 1: Land type
@@ -71,28 +73,28 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
   const canNext = step === 0 ? (project.name && project.name !== "New Project") : true;
 
   return (<>
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
-      <div style={{background:"#fff",borderRadius:isMobile?14:20,width:520,maxWidth:"94vw",maxHeight:"85vh",padding:0,boxShadow:"0 24px 80px rgba(0,0,0,0.2)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:10000,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'DM Sans', 'Tajawal', 'Segoe UI', system-ui, sans-serif",backdropFilter:"blur(4px)"}}>
+      <div style={{background:"var(--surface-1)",borderRadius:isMobile?16:20,width:520,maxWidth:"94vw",maxHeight:"85vh",padding:0,boxShadow:"0 24px 64px rgba(0,0,0,0.18)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
         {/* Progress */}
         <div style={{padding:isMobile?"14px 16px 0":"20px 28px 0",display:"flex",gap:6}}>
-          {activeSteps.map((_,i)=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?"#2563eb":"#e5e7ec",transition:"background 0.3s"}} />)}
+          {activeSteps.map((_,i)=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=step?"var(--sys-blue)":"var(--surface-3)",transition:"background 0.3s var(--ease-quart)"}} />)}
         </div>
         {/* Header */}
         <div style={{padding:isMobile?"14px 16px 6px":"20px 28px 8px"}}>
-          <div style={{fontSize:11,color:"#6b7080",textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:6}}>
+          <div style={{fontSize:11,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:0.8,fontWeight:600,marginBottom:6}}>
             {t?"الخطوة":"Step"} {step+1} {t?"من":"of"} {activeSteps.length}
           </div>
-          <div style={{fontSize:isMobile?17:20,fontWeight:700,color:"#1a1d23"}}>{current.title}</div>
-          {current.subtitle&&<div style={{fontSize:12,color:"#6b7080",marginTop:4}}>{current.subtitle}</div>}
+          <div style={{fontSize:isMobile?18:22,fontWeight:700,color:"var(--text-primary)",letterSpacing:"-0.02em"}}>{current.title}</div>
+          {current.subtitle&&<div style={{fontSize:13,color:"var(--text-secondary)",marginTop:4,letterSpacing:"-0.01em"}}>{current.subtitle}</div>}
         </div>
         {/* Content — scrollable if step content is tall */}
         <div style={{padding:isMobile?"10px 16px 18px":"12px 28px 24px",minHeight:isMobile?160:200,flex:1,overflowY:"auto"}}>{current.content}</div>
         {/* Footer */}
-        <div style={{padding:isMobile?"12px 16px":"16px 28px",borderTop:"1px solid #f0f1f5",display:"flex",gap:10,justifyContent:"space-between",background:"#fafbfc"}}>
-          <button onClick={()=>step>0?setStep(step-1):onDone()} style={{padding:"10px 20px",borderRadius:8,border:"1px solid #e5e7ec",background:"#fff",color:"#6b7080",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>
+        <div style={{padding:isMobile?"12px 16px":"16px 28px",borderTop:"1px solid var(--hairline)",display:"flex",gap:10,justifyContent:"space-between",background:"var(--surface-2)"}}>
+          <button onClick={()=>step>0?setStep(step-1):onDone()} style={{padding:"10px 20px",borderRadius:10,border:"1px solid var(--hairline)",background:"var(--surface-1)",color:"var(--text-secondary)",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s var(--ease-quart)"}}>
             {step>0?(t?"السابق":"Back"):(t?"تخطي":"Skip")}
           </button>
-          <button onClick={()=>isLast?onDone():setStep(step+1)} disabled={!canNext} style={{padding:"10px 28px",borderRadius:8,border:"none",background:canNext?"#2563eb":"#e5e7ec",color:canNext?"#fff":"#9ca3af",fontSize:13,fontWeight:600,cursor:canNext?"pointer":"default",fontFamily:"inherit"}}>
+          <button onClick={()=>isLast?onDone():setStep(step+1)} disabled={!canNext} style={{padding:"10px 28px",borderRadius:10,border:"none",background:canNext?"var(--sys-blue)":"var(--surface-3)",color:canNext?"#fff":"var(--text-tertiary)",fontSize:13,fontWeight:600,cursor:canNext?"pointer":"default",fontFamily:"inherit",transition:"all 0.15s var(--ease-quart)",letterSpacing:"-0.01em",boxShadow:canNext?"0 1px 2px rgba(0,122,255,0.25)":"none"}}>
             {isLast?(t?"ابدأ العمل":"Start Working"):(t?"التالي":"Next →")}
           </button>
         </div>
