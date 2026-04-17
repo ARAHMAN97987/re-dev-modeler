@@ -4199,7 +4199,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                     <div style={{height:1,background:"var(--surface-sidebar)",margin:"4px 0"}} />
                     {/* Share */}
                     {!project?._shared && <button onClick={()=>{setShareModalOpen(true);setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"var(--text-primary)",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
-                      <span style={{fontSize:14}}>📤</span> {lang==="ar"?"مشاركة":"Share"} {project?.sharedWith?.length>0&&<span style={{marginLeft:"auto",fontSize:11,background:"#dbeafe",color:"#2563eb",padding:"1px 6px",borderRadius:8}}>{project.sharedWith.length}</span>}
+                      <span style={{fontSize:14}}>📤</span> {lang==="ar"?"مشاركة":"Share"} {project?.sharedWith?.length>0&&<span style={{marginLeft:"auto",fontSize:11,background:"color-mix(in srgb, var(--sys-blue) 12%, transparent)",color:"var(--sys-blue)",padding:"1px 6px",borderRadius:8,fontWeight:600}}>{project.sharedWith.length}</span>}
                     </button>}
                     {/* Sign Out */}
                     {signOut && <button onClick={()=>{signOut();setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"#ef4444",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
@@ -4218,7 +4218,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               <span style={{fontSize:12,fontWeight:700,color:"var(--tab-text-active)",letterSpacing:0.5}}>{ar?"وضع العرض":"Presentation Mode"}</span>
               <div style={{width:1,height:20,background:"var(--nav-tab-border)"}} />
               <button onClick={()=>setAudienceView("bank")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="bank"?"var(--zan-teal-500)":"var(--nav-btn-bg)",color:audienceView==="bank"?"#fff":"var(--tab-text)",borderRadius:20,border:"none"}}>{ar?"🏦 عرض البنك":"🏦 Bank View"}</button>
-              <button onClick={()=>setAudienceView("investor")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="investor"?"#7c3aed":"var(--nav-btn-bg)",color:audienceView==="investor"?"#fff":"var(--tab-text)",borderRadius:20,border:"none"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
+              <button onClick={()=>setAudienceView("investor")} style={{...btnS,padding:"6px 16px",fontSize:11,fontWeight:600,background:audienceView==="investor"?"var(--sys-indigo)":"var(--nav-btn-bg)",color:audienceView==="investor"?"#fff":"var(--tab-text)",borderRadius:20,border:"none"}}>{ar?"📊 عرض المستثمر":"📊 Investor View"}</button>
             </div>
           ) : (<>
           {(() => {
