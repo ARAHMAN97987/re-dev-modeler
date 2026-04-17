@@ -19,6 +19,7 @@ const tdSt={padding:"5px 8px",borderBottom:"1px solid #f0f1f5",fontSize:12,white
 const tdN={...tdSt,textAlign:"right",fontVariantNumeric:"tabular-nums"};
 
 import { useIsMobile } from "../shared/hooks.js";
+import { Button } from "../ui";
 
 // Simple toast helper (uses window.__addToast if available, else console)
 function addToast(msg, type) {
@@ -472,39 +473,77 @@ function ReportsView({ project, results, financing, waterfall, phaseWaterfalls, 
 
   return (<div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:12,marginBottom:18}}>
-      {Object.entries(reportLabels).map(([key,r]) => (
-        <button key={key} onClick={() => setActiveReport(key)}
-          style={{background:activeReport===key?"linear-gradient(135deg,#0f766e,#2EC4B6)":"#fff",color:activeReport===key?"#fff":"#1a1d23",
-            border:activeReport===key?"none":"1px solid #e5e7ec",borderRadius:10,padding:"18px",cursor:"pointer",textAlign:"start",transition:"all 0.2s",
-            boxShadow:activeReport===key?"0 4px 16px rgba(46,196,182,0.25)":"0 1px 3px rgba(0,0,0,0.04)"}}>
-          <div style={{fontSize:26,marginBottom:8}}>{r.icon}</div>
-          <div style={{fontSize:14,fontWeight:700,marginBottom:3}}>{r.label}</div>
-          <div style={{fontSize:11,opacity:0.75,fontWeight:400}}>{r.desc}</div>
-        </button>
-      ))}
+      {Object.entries(reportLabels).map(([key,r]) => {
+        const active = activeReport === key;
+        return (
+          <button key={key} onClick={() => setActiveReport(key)}
+            style={{
+              background: active ? "linear-gradient(135deg,#0f766e,#2EC4B6)" : "var(--surface-1)",
+              color: active ? "#fff" : "var(--text-primary)",
+              border: active ? "none" : "1px solid var(--hairline)",
+              borderRadius: 12, padding: "18px", cursor: "pointer", textAlign: "start",
+              transition: "all 0.2s var(--ease-quart)", fontFamily: "inherit",
+              boxShadow: active ? "0 4px 16px rgba(46,196,182,0.25)" : "0 1px 2px rgba(0,0,0,0.04)",
+            }}>
+            <div style={{fontSize:26,marginBottom:8}}>{r.icon}</div>
+            <div style={{fontSize:14,fontWeight:700,marginBottom:3,letterSpacing:"-0.01em"}}>{r.label}</div>
+            <div style={{fontSize:11,opacity: active ? 0.85 : 1, color: active ? "#fff" : "var(--text-secondary)", fontWeight:400,lineHeight:1.45}}>{r.desc}</div>
+          </button>
+        );
+      })}
     </div>
 
     {phaseNames.length > 1 && (
       <div style={{marginBottom:14}}>
-        <div style={{fontSize:12,color:"#6b7080",marginBottom:6}}>{ar?"\u0627\u062e\u062a\u0631 \u0627\u0644\u0645\u0631\u0627\u062d\u0644 \u0644\u0644\u062a\u0642\u0631\u064a\u0631":"Select phases for report"}</div>
+        <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:6}}>{ar?"\u0627\u062e\u062a\u0631 \u0627\u0644\u0645\u0631\u0627\u062d\u0644 \u0644\u0644\u062a\u0642\u0631\u064a\u0631":"Select phases for report"}</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <button onClick={()=>setSelectedPhases([])} style={{...btnS,padding:"5px 12px",fontSize:11,background:selectedPhases.length===0?"#0f1117":"#f0f1f5",color:selectedPhases.length===0?"#fff":"#1a1d23",border:"1px solid "+(selectedPhases.length===0?"#0f1117":"#e5e7ec")}}>
-            {ar?"\u0627\u0644\u0643\u0644":"All"}
-          </button>
-          {phaseNames.map(p=>(
-            <button key={p} onClick={()=>togglePhase(p)} style={{...btnS,padding:"5px 12px",fontSize:11,background:activePh.includes(p)&&selectedPhases.length>0?"#0f766e":"#f0f1f5",color:activePh.includes(p)&&selectedPhases.length>0?"#fff":"#1a1d23",border:"1px solid "+(activePh.includes(p)&&selectedPhases.length>0?"#0f766e":"#e5e7ec")}}>
-              {p}
-            </button>
-          ))}
+          <Button
+            variant={selectedPhases.length === 0 ? "primary" : "secondary"}
+            size="xs"
+            onClick={() => setSelectedPhases([])}
+          >
+            {ar ? "الكل" : "All"}
+          </Button>
+          {phaseNames.map(p => {
+            const on = activePh.includes(p) && selectedPhases.length > 0;
+            return (
+              <Button key={p} variant={on ? "primary" : "secondary"} size="xs" onClick={() => togglePhase(p)}>
+                {p}
+              </Button>
+            );
+          })}
         </div>
       </div>
     )}
 
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
-      {activeReport && <button className="zan-btn-prim" onClick={printReport} style={{background:"linear-gradient(135deg,#0f766e,#2EC4B6)",color:"#fff",border:"none",borderRadius:8,padding:"9px 20px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.3}}>{ar?"\u2B07 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062a\u0642\u0631\u064a\u0631 (HTML/PDF)":"\u2B07 Download Report (HTML/PDF)"}</button>}
-      <button onClick={async()=>{try{await generateTemplateExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);addToast(ar?"\u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u0627\u0644\u0646\u0645\u0648\u0630\u062c (Excel)":"Excel Model exported","success");}catch(e){console.error("Template Excel error:",e);addToast((ar?"\u062e\u0637\u0623 \u0641\u064a \u0627\u0644\u062a\u0635\u062f\u064a\u0631: ":"Export error: ")+e.message,"error");}}} style={{...btnS,background:"#1B4F72",color:"#fff",padding:"8px 18px",fontSize:12,border:"none",fontWeight:600,borderRadius:8}}>
-        {ar?"\u2B07 \u062a\u062d\u0645\u064a\u0644 \u0646\u0645\u0648\u0630\u062c Excel":"\u2B07 Download Excel Model"}
-      </button>
+      {activeReport && (
+        <button onClick={printReport} style={{
+          background: "linear-gradient(135deg,#0f766e,#2EC4B6)", color: "#fff",
+          border: "none", borderRadius: 8, padding: "9px 20px",
+          fontSize: 13, fontWeight: 600, cursor: "pointer",
+          letterSpacing: "-0.01em", fontFamily: "inherit",
+          transition: "all 0.18s var(--ease-quart)",
+          boxShadow: "0 2px 8px rgba(46,196,182,0.25)",
+        }}>
+          {ar ? "⬇ تحميل التقرير (HTML/PDF)" : "⬇ Download Report (HTML/PDF)"}
+        </button>
+      )}
+      <Button
+        variant="tinted"
+        size="md"
+        onClick={async () => {
+          try {
+            await generateTemplateExcel(project, results, financing, waterfall, phaseWaterfalls, phaseFinancings);
+            addToast(ar ? "تم تصدير النموذج (Excel)" : "Excel Model exported", "success");
+          } catch (e) {
+            console.error("Template Excel error:", e);
+            addToast((ar ? "خطأ في التصدير: " : "Export error: ") + e.message, "error");
+          }
+        }}
+      >
+        {ar ? "⬇ تحميل نموذج Excel" : "⬇ Download Excel Model"}
+      </Button>
     </div>
 
     <div ref={reportRef} dir={ar?"rtl":"ltr"} style={{textAlign:ar?"right":"left",fontFamily:ar?"'Tajawal','DM Sans','Segoe UI',system-ui,sans-serif":"'DM Sans','Segoe UI',system-ui,sans-serif"}}>
