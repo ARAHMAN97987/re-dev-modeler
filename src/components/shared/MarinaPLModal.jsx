@@ -42,7 +42,7 @@ export default function MarinaPLModal({ data, onSave, onClose, t, lang }) {
           <button onClick={onClose} style={{...btnSm,background:"var(--surface-sidebar)",color:"var(--text-secondary)"}}>✕</button>
         </div>
         <div style={{padding:"12px 20px"}}>
-          <button onClick={()=>setM(prev=>({...prev,...MARINA_PRESET}))} style={{...btnS,background:"#eef2ff",color:"#2563eb",padding:"6px 12px",fontSize:11,fontWeight:500,marginBottom:12}}>Marina Preset</button>
+          <button onClick={()=>setM(prev=>({...prev,...MARINA_PRESET}))} style={{...btnS,background:"color-mix(in srgb, var(--sys-blue) 10%, transparent)",color:"var(--sys-blue)",padding:"6px 12px",fontSize:11,fontWeight:600,marginBottom:12,borderRadius:8,border:"1px solid color-mix(in srgb, var(--sys-blue) 22%, transparent)"}}>Marina Preset</button>
           <Row label={t.berths}><NumIn value={m.berths} onChange={v=>upM({berths:v})} /></Row>
           <Row label={t.avgLength}><NumIn value={m.avgLength} onChange={v=>upM({avgLength:v})} /></Row>
           <Row label={t.unitPrice}><NumIn value={m.unitPrice} onChange={v=>upM({unitPrice:v})} /></Row>
@@ -59,13 +59,13 @@ export default function MarinaPLModal({ data, onSave, onClose, t, lang }) {
               <span style={{color:"var(--text-secondary)"}}>{t.fuelRevLabel||"Fuel Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.fuelRev)}</span>
               <span style={{color:"var(--text-secondary)"}}>{t.otherRevLabel||"Other Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
               <span style={{fontWeight:600}}>{t.totalRevenueLabel||"Total Revenue"}</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
-              <span style={{color:"#ef4444"}}>{t.totalOpexLabel||"Total OPEX"}</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
-              <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"#16a34a"}}>{fmt(calc.ebitda)}</span>
+              <span style={{color:"var(--sys-red)"}}>{t.totalOpexLabel||"Total OPEX"}</span><span style={{textAlign:"right",color:"var(--sys-red)",fontVariantNumeric:"tabular-nums"}}>{fmt(calc.totalOpex)}</span>
+              <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"var(--sys-green)",fontVariantNumeric:"tabular-nums"}}>{fmt(calc.ebitda)}</span>
               <span style={{color:"var(--text-secondary)"}}>{t.ebitdaMargin}</span><span style={{textAlign:"right"}}>{fmtPct(calc.margin*100)}</span>
             </div>
           </div>
         </div>
-        <div style={{padding:"12px 20px",borderTop:"1px solid #e5e7ec",display:"flex",justifyContent:"flex-end",gap:8}}>
+        <div style={{padding:"12px 20px",borderTop:"1px solid var(--hairline)",display:"flex",justifyContent:"flex-end",gap:8}}>
           <button onClick={onClose} style={{...btnS,background:"var(--surface-sidebar)",color:"var(--text-secondary)",padding:"8px 16px",fontSize:12}}>{ar?"إلغاء":"Cancel"}</button>
           <button onClick={()=>{onSave(m, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>{ar?"حفظ وتطبيق":"Save & Apply EBITDA"}</button>
         </div>

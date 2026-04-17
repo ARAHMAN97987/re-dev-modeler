@@ -48,7 +48,7 @@ export default function HotelPLModal({ data, onSave, onClose, t, lang }) {
         <div style={{padding:"12px 20px"}}>
           {/* Presets */}
           <div style={{display:"flex",gap:8,marginBottom:16}}>
-            {Object.keys(HOTEL_PRESETS).map(k=><button key={k} onClick={()=>applyPreset(k)} style={{...btnS,background:"#eef2ff",color:"#2563eb",padding:"6px 12px",fontSize:11,fontWeight:500}}>{k}</button>)}
+            {Object.keys(HOTEL_PRESETS).map(k=><button key={k} onClick={()=>applyPreset(k)} style={{...btnS,background:"color-mix(in srgb, var(--sys-blue) 10%, transparent)",color:"var(--sys-blue)",padding:"6px 12px",fontSize:11,fontWeight:600,borderRadius:8,border:"1px solid color-mix(in srgb, var(--sys-blue) 22%, transparent)"}}>{k}</button>)}
           </div>
 
           <div style={{fontSize:11,fontWeight:600,color:"var(--text-secondary)",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{t.keys}</div>
@@ -81,16 +81,16 @@ export default function HotelPLModal({ data, onSave, onClose, t, lang }) {
               <span style={{color:"var(--text-secondary)"}}>{t.otherRevLabel||"Other Rev"}</span><span style={{textAlign:"right"}}>{fmt(calc.otherRev)}</span>
               <span style={{fontWeight:600}}>{t.totalRevenueLabel||"Total Revenue"}</span><span style={{textAlign:"right",fontWeight:600}}>{fmt(calc.totalRev)}</span>
             </div>
-            <div style={{borderTop:"1px solid #e5e7ec",marginTop:8,paddingTop:8}}>
+            <div style={{borderTop:"1px solid var(--hairline)",marginTop:8,paddingTop:8}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:12}}>
-                <span style={{color:"#ef4444"}}>{t.totalOpexLabel||"Total OPEX"}</span><span style={{textAlign:"right",color:"#ef4444"}}>{fmt(calc.totalOpex)}</span>
-                <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"#16a34a"}}>{fmt(calc.ebitda)}</span>
+                <span style={{color:"var(--sys-red)"}}>{t.totalOpexLabel||"Total OPEX"}</span><span style={{textAlign:"right",color:"var(--sys-red)",fontVariantNumeric:"tabular-nums"}}>{fmt(calc.totalOpex)}</span>
+                <span style={{fontWeight:700,fontSize:14}}>{t.ebitda}</span><span style={{textAlign:"right",fontWeight:700,fontSize:14,color:"var(--sys-green)",fontVariantNumeric:"tabular-nums"}}>{fmt(calc.ebitda)}</span>
                 <span style={{color:"var(--text-secondary)"}}>{t.ebitdaMargin}</span><span style={{textAlign:"right"}}>{fmtPct(calc.margin*100)}</span>
               </div>
             </div>
           </div>
         </div>
-        <div style={{padding:"12px 20px",borderTop:"1px solid #e5e7ec",display:"flex",justifyContent:"flex-end",gap:8}}>
+        <div style={{padding:"12px 20px",borderTop:"1px solid var(--hairline)",display:"flex",justifyContent:"flex-end",gap:8}}>
           <button onClick={onClose} style={{...btnS,background:"var(--surface-sidebar)",color:"var(--text-secondary)",padding:"8px 16px",fontSize:12}}>{ar?"إلغاء":"Cancel"}</button>
           <button onClick={()=>{onSave(h, calc.ebitda);onClose();}} style={{...btnPrim,padding:"8px 16px",fontSize:12}}>{ar?"حفظ وتطبيق":"Save & Apply EBITDA"}</button>
         </div>
