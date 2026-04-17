@@ -5,11 +5,12 @@
  */
 import { useState } from "react";
 
+// Apple HIG — uses CSS vars for accent; tints built at call-site via color-mix.
 const SEV = {
-  critical: { icon: "⛔", bg: "#fef2f2", border: "#ef4444", text: "#991b1b", label_ar: "حرج", label_en: "Critical" },
-  error:    { icon: "❌", bg: "#fef2f2", border: "#f87171", text: "#b91c1c", label_ar: "خطأ", label_en: "Error" },
-  warning:  { icon: "⚠️", bg: "#fffbeb", border: "#f59e0b", text: "#92400e", label_ar: "تحذير", label_en: "Warning" },
-  info:     { icon: "ℹ️", bg: "#eff6ff", border: "#60a5fa", text: "#1e40af", label_ar: "معلومة", label_en: "Info" },
+  critical: { icon: "⛔", accent: "var(--sys-red)",    label_ar: "حرج",    label_en: "Critical" },
+  error:    { icon: "❌", accent: "var(--sys-red)",    label_ar: "خطأ",    label_en: "Error"    },
+  warning:  { icon: "⚠️", accent: "var(--sys-orange)", label_ar: "تحذير",  label_en: "Warning"  },
+  info:     { icon: "ℹ️", accent: "var(--sys-blue)",   label_ar: "معلومة", label_en: "Info"     },
 };
 
 /** Scan results object for NaN/Infinity in key financial metrics and return extra alerts */
@@ -70,64 +71,74 @@ export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI, res
   return (
     <div dir={ar ? "rtl" : "ltr"} style={{ marginBottom: 16 }}>
       {/* Header bar */}
-      <div
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
-          background: critCount > 0 ? "#fef2f2" : warnCount > 0 ? "#fffbeb" : "#eff6ff",
-          border: `1px solid ${critCount > 0 ? "#fca5a5" : warnCount > 0 ? "#fcd34d" : "#93c5fd"}`,
-          borderRadius: expanded ? "10px 10px 0 0" : 10,
-          cursor: "pointer", userSelect: "none", transition: "all 0.2s",
-        }}
-      >
-        <span style={{ fontSize: 16 }}>🔍</span>
-        <span style={{ fontWeight: 700, fontSize: 13, color: "#1a1d23" }}>
-          {ar ? "المراجع الذكي" : "Smart Reviewer"}
-        </span>
-        <span style={{ fontSize: 11, color: "#6b7080" }}>{badgeParts.join("  ")}</span>
-        <span style={{ marginInlineStart: "auto", fontSize: 10, color: "#9ca3af" }}>
-          {expanded ? (ar ? "إخفاء ▲" : "Hide ▲") : (ar ? "عرض ▼" : "Show ▼")}
-        </span>
-      </div>
+      {(() => {
+        const headAccent = critCount > 0 ? "var(--sys-red)" : warnCount > 0 ? "var(--sys-orange)" : "var(--sys-blue)";
+        const headBg = `color-mix(in srgb, ${headAccent} 8%, transparent)`;
+        const headBorder = `color-mix(in srgb, ${headAccent} 22%, transparent)`;
+        return (<>
+          <div
+            onClick={() => setExpanded(!expanded)}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
+              background: headBg,
+              border: `1px solid ${headBorder}`,
+              borderRadius: expanded ? "10px 10px 0 0" : 10,
+              cursor: "pointer", userSelect: "none",
+              transition: "all 0.2s var(--ease-quart)",
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🔍</span>
+            <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>
+              {ar ? "المراجع الذكي" : "Smart Reviewer"}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{badgeParts.join("  ")}</span>
+            <span style={{ marginInlineStart: "auto", fontSize: 10, color: "var(--text-tertiary)" }}>
+              {expanded ? (ar ? "إخفاء ▲" : "Hide ▲") : (ar ? "عرض ▼" : "Show ▼")}
+            </span>
+          </div>
 
-      {/* Expanded content */}
-      {expanded && (
-        <div style={{
-          border: `1px solid ${critCount > 0 ? "#fca5a5" : warnCount > 0 ? "#fcd34d" : "#93c5fd"}`,
-          borderTop: "none", borderRadius: "0 0 10px 10px",
-          background: "#fff", maxHeight: 400, overflowY: "auto",
-        }}>
+          {/* Expanded content */}
+          {expanded && (
+            <div style={{
+              border: `1px solid ${headBorder}`,
+              borderTop: "none", borderRadius: "0 0 10px 10px",
+              background: "var(--surface-1)", maxHeight: 400, overflowY: "auto",
+            }}>
           {grouped.map(({ sev, items }) => (
             <div key={sev}>
               <div style={{
                 padding: "6px 16px", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
-                letterSpacing: 0.5, color: SEV[sev].text, background: SEV[sev].bg + "80",
-                borderBottom: `0.5px solid ${SEV[sev].border}30`,
+                letterSpacing: 0.5,
+                color: SEV[sev].accent,
+                background: `color-mix(in srgb, ${SEV[sev].accent} 6%, transparent)`,
+                borderBottom: `0.5px solid color-mix(in srgb, ${SEV[sev].accent} 20%, transparent)`,
               }}>
                 {SEV[sev].icon} {ar ? SEV[sev].label_ar : SEV[sev].label_en} ({items.length})
               </div>
               {items.map((alert, i) => (
                 <div key={alert.id + '-' + (alert.assetIndex ?? '') + '-' + i} style={{
                   display: "flex", alignItems: "flex-start", gap: 8,
-                  padding: "8px 16px", borderBottom: "0.5px solid #f0f1f5",
+                  padding: "8px 16px", borderBottom: "0.5px solid var(--hairline)",
                   fontSize: 12, lineHeight: 1.5,
                 }}>
                   <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                     {alert.assetName && (
                       <span style={{
                         display: "inline-block", fontSize: 9, fontWeight: 600,
-                        background: "#e5e7eb", color: "#374151", borderRadius: 3,
+                        background: "var(--surface-2)",
+                        color: "var(--text-secondary)",
+                        borderRadius: 4,
                         padding: "1px 6px", marginBottom: 2, marginInlineEnd: 6,
                         maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }} title={alert.assetName}>
                         {alert.assetName}
                       </span>
                     )}
-                    <span style={{ fontWeight: 600, color: "#1a1d23", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={alert.ar || alert.en}>{alert.ar}</span>
+                    <span style={{ fontWeight: 600, color: "var(--text-primary)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={alert.ar || alert.en}>{alert.ar}</span>
                     <br />
-                    <span style={{ color: "#6b7080", fontSize: 11 }}>{alert.en}</span>
+                    <span style={{ color: "var(--text-secondary)", fontSize: 11 }}>{alert.en}</span>
                     {alert.source && (
-                      <span style={{ display: "block", fontSize: 10, color: "#6b7080", marginTop: 2 }}>
+                      <span style={{ display: "block", fontSize: 10, color: "var(--text-tertiary)", marginTop: 2 }}>
                         📚 {alert.source}
                       </span>
                     )}
@@ -137,9 +148,12 @@ export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI, res
                       <button
                         onClick={(e) => { e.stopPropagation(); onAskAI(alert); }}
                         style={{
-                          background: "none", border: "1px solid #d1d5db", borderRadius: 4,
-                          padding: "2px 8px", fontSize: 10, color: "#6b7280",
+                          background: "none",
+                          border: "1px solid var(--hairline)", borderRadius: 6,
+                          padding: "3px 10px", fontSize: 10,
+                          color: "var(--text-secondary)",
                           cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                          transition: "all 0.15s var(--ease-quart)",
                         }}
                       >
                         {ar ? "💡 اقترح تعديل" : "💡 Suggest Fix"}
@@ -149,7 +163,7 @@ export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI, res
                       onClick={(e) => { e.stopPropagation(); dismiss(alert); }}
                       style={{
                         background: "none", border: "none", cursor: "pointer",
-                        fontSize: 14, color: "#9ca3af", padding: 2, alignSelf: "center",
+                        fontSize: 14, color: "var(--text-tertiary)", padding: 2, alignSelf: "center",
                       }}
                       title={ar ? "إخفاء" : "Dismiss"}
                       aria-label={ar ? "إخفاء التنبيه" : "Dismiss alert"}
@@ -161,8 +175,10 @@ export default function SmartReviewerPanel({ alerts, lang, summary, onAskAI, res
               ))}
             </div>
           ))}
-        </div>
-      )}
+            </div>
+          )}
+        </>);
+      })()}
     </div>
   );
 }
@@ -176,14 +192,16 @@ export function SmartReviewerBadge({ alerts, onClick }) {
   if (crit > 0) parts.push(`${crit}⛔`);
   if (warn > 0) parts.push(`${warn}⚠️`);
   if (parts.length === 0) return null;
+  const accent = crit > 0 ? "var(--sys-red)" : "var(--sys-orange)";
   return (
     <span
       onClick={onClick}
       style={{
         display: "inline-flex", alignItems: "center", gap: 3,
         fontSize: 9, fontWeight: 600, padding: "2px 7px",
-        background: crit > 0 ? "#fef2f2" : "#fffbeb",
-        border: `1px solid ${crit > 0 ? "#fca5a5" : "#fcd34d"}`,
+        background: `color-mix(in srgb, ${accent} 10%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${accent} 22%, transparent)`,
+        color: accent,
         borderRadius: 12, cursor: "pointer", whiteSpace: "nowrap",
       }}
     >
