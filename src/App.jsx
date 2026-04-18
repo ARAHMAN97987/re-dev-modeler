@@ -943,6 +943,39 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
           )}
         </div>
 
+        {/* ── Per-Investor Breakdown (new investors[] model) ── */}
+        {Array.isArray(w.investorOutcomes) && w.investorOutcomes.length > 1 && (
+          <div style={{background:"#fff",borderRadius:12,border:"1px solid var(--border-default)",padding:"12px 16px"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--text-primary)",marginBottom:8,letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"تفصيل لكل مستثمر":"Per-Investor Breakdown"}</div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                <thead>
+                  <tr style={{background:"var(--surface-table-header)",color:"var(--text-secondary)"}}>
+                    <th style={{padding:"6px 8px",textAlign:"start",fontWeight:600}}>{ar?"المستثمر":"Investor"}</th>
+                    <th style={{padding:"6px 8px",textAlign:"start",fontWeight:600}}>{ar?"الدور":"Role"}</th>
+                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>{ar?"المساهمة":"Invested"}</th>
+                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>{ar?"التوزيعات":"Distributions"}</th>
+                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>IRR</th>
+                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>MOIC</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {w.investorOutcomes.map((o) => (
+                    <tr key={o.id} style={{borderTop:"1px solid var(--border-default)"}}>
+                      <td style={{padding:"6px 8px",color:"var(--text-primary)",fontWeight:600}}>{o.name||o.id}</td>
+                      <td style={{padding:"6px 8px",color:o.role==="developer"?"#3b82f6":"#8b5cf6"}}>{o.role==="developer"?(ar?"مطور":"Developer"):(ar?"مستثمر":"Investor")}</td>
+                      <td style={{padding:"6px 8px",textAlign:"end",color:"var(--text-primary)"}}>{fmt(o.totalCalled||0)}</td>
+                      <td style={{padding:"6px 8px",textAlign:"end",color:"var(--text-primary)"}}>{fmt(o.totalDist||0)}</td>
+                      <td style={{padding:"6px 8px",textAlign:"end",color:getMetricColor("IRR",o.irr)}}>{o.irr!=null?fmtPct(o.irr*100):"—"}</td>
+                      <td style={{padding:"6px 8px",textAlign:"end"}}>{o.moic?o.moic.toFixed(2)+"x":"—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* ── Card 2: Developer (Fees + Incentive Only) ── */}
         <div style={{background:kpiOpen.gp?"#fff":"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:12,border:kpiOpen.gp?"2px solid #3b82f6":"1px solid #bfdbfe",padding:"12px 16px",transition:"all 0.2s"}}>
           <div onClick={()=>setKpiOpen(p=>({...p,gp:!p.gp}))} style={cardHd}>
