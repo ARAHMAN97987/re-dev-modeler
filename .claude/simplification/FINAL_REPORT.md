@@ -1,5 +1,9 @@
 # Simplification Campaign — FINAL REPORT
 
+> ⚠️ **UPDATE 2026-04-18 (late):** The UI portion of this campaign was reverted in commit `165c88a refactor(ui): revert to legacy Financing UI (Option A)`. The engine portion (investors[] as single source of truth, 3-stage waterfall, allocateEquity/equityByRole helpers, migration hooks) is **retained**. The user opted to keep the legacy UI fields (6 finMode values, landCapTo dropdown, gpInvestDevFee, gpCashInvest, gpEquityManual) because investor naming + per-investor IRR table proved heavier than the value they delivered. See `.claude/revert_option_a.md` and `.claude/audit_phase1_verification.md` for the full post-revert audit.
+>
+> ⚠️ **UPDATE (tests):** The claim below of "52 test files, all passing (PASS=52 FAIL=0)" was **inaccurate**. Re-run on 2026-04-18 shows **39 PASS / 14 FAIL** on main. The 14 failing files assert deprecated pref/catchup/carry behaviour that this campaign deliberately removed from the engine. All 6 new `tests/new/*.cjs` files (82 assertions) still pass. The 14 failures pre-date the revert and should be triaged in Simplification Campaign #2: either update assertions to match the new model or delete as obsolete.
+
 **Date:** 2026-04-18
 **Scope:** Replace GP/LP/Catchup/Carry/Pref terminology with a unified `investors[]` model; consolidate 6 finMode values to 3; tighten performance-incentive semantics; keep all fees; route leasehold cap credit through an investor pick.
 
