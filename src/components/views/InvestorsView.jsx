@@ -259,18 +259,32 @@ export default function InvestorsView({ project, updateProject, financing, lang 
 
   return (
     <div dir={ar ? "rtl" : "ltr"} style={{ padding: isMobile ? "12px" : "16px 20px" }}>
-      {/* Banner: transition notice */}
-      <div style={{
-        background: "color-mix(in srgb, var(--sys-blue, #007AFF) 10%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--sys-blue, #007AFF) 22%, transparent)",
-        color: "var(--sys-blue, #007AFF)",
-        padding: "8px 14px", borderRadius: 10, fontSize: 12.5, marginBottom: 14,
-        lineHeight: 1.5,
-      }}>
-        {ar
-          ? "نسخة جديدة من إدارة المستثمرين. كل من يضخ مال = مستثمر. قريباً ستحل محل إعدادات المطور والشريك في تبويب التمويل."
-          : "New investor management. Everyone contributing capital is an investor. Will replace the Developer Investment / Partner Land sections in Financing soon."}
-      </div>
+      {/* Banner: equity target from financing (this is what investors must sum to) */}
+      {totalEquity > 0 ? (
+        <div style={{
+          background: "color-mix(in srgb, var(--sys-blue, #007AFF) 10%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--sys-blue, #007AFF) 22%, transparent)",
+          color: "var(--text-primary)",
+          padding: "10px 14px", borderRadius: 10, fontSize: 12.5, marginBottom: 14,
+          lineHeight: 1.6,
+        }}>
+          {ar
+            ? <>الهيكلة المالية حددت <b>إجمالي الملكية المطلوبة = {fmt(totalEquity)}</b> (تكلفة المشروع {fmt(totalCost)} − الدين {fmt(totalDebt)}). وزّع هذا المبلغ على المستثمرين أدناه. من يستلم رسملة حق الانتفاع يُحدَّد هنا أيضاً.</>
+            : <>Financial Structure determined <b>Total Equity required = {fmt(totalEquity)}</b> (Project Cost {fmt(totalCost)} − Debt {fmt(totalDebt)}). Distribute this amount across investors below. Whoever receives the leasehold cap credit is selected here too.</>}
+        </div>
+      ) : (
+        <div style={{
+          background: "color-mix(in srgb, var(--sys-orange, #FF9500) 10%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--sys-orange, #FF9500) 22%, transparent)",
+          color: "var(--text-primary)",
+          padding: "10px 14px", borderRadius: 10, fontSize: 12.5, marginBottom: 14,
+          lineHeight: 1.6,
+        }}>
+          {ar
+            ? "⚠ حدّد آلية التمويل في تبويب الهيكلة المالية أولاً. إجمالي الملكية المطلوبة يُحسب من (تكلفة المشروع − الدين)، وهذا ما يوزَّع على المستثمرين هنا."
+            : "⚠ Configure Financial Structure first. Total Equity (= Project Cost − Debt) is what gets distributed here."}
+        </div>
+      )}
 
       <Summary />
 
