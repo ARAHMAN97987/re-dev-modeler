@@ -204,6 +204,7 @@ import { calcHotelEBITDA, calcMarinaEBITDA } from './engine/hospitality.js';
 import { getScenarioMults, computeAssetCapex, computeAssetCapexBreakdown, computeProjectCashFlows } from './engine/cashflow.js';
 import { computeIncentives, applyInterestSubsidy } from './engine/incentives.js';
 import { computeFinancing } from './engine/financing.js';
+import { migrateProjectToInvestors } from './engine/investors.js';
 import { computeWaterfall } from './engine/waterfall.js';
 import ChecksView from './components/views/ChecksView';
 import MarketView from './components/views/MarketView';
@@ -211,6 +212,7 @@ import IncentivesView from './components/views/IncentivesView';
 import ScenariosView from './components/views/ScenariosView';
 import LearningCenterView from './components/views/LearningCenterView';
 import ReportsView from './components/views/ReportsView';
+import InvestorsView from './components/views/InvestorsView.jsx';
 import {
   FINANCING_FIELDS, getPhaseFinancing, hasPerPhaseFinancing, migrateToPerPhaseFinancing,
   buildPhaseIncentives, buildPhaseVirtualProject, buildPhaseProjectResults,
@@ -348,6 +350,36 @@ async function loadProject(id, ownerId, permission) {
         });
       }
     }
+    // Investors + Fund Manager migration (v3 structure — simplification campaign Apr 2026)
+    // - Builds project.investors[] from legacy equity fields if missing
+    // - Mirrors fund-fee top-level fields under project.fundManager so the new
+    //   Investors + Fund Manager UI has a clean sub-object to edit.
+    if (!Array.isArray(migrated.investors) || migrated.investors.length === 0) {
+      try {
+        const result = migrateProjectToInvestors(migrated);
+        migrated.investors = result.investors || [];
+      } catch (e) {
+        console.warn('[migration] investors migration failed:', e?.message);
+      }
+    }
+    if (!migrated.fundManager) {
+      migrated.fundManager = {
+        name: migrated.fundName || '',
+        annualFeePct: migrated.annualMgmtFeePct ?? 1.5,
+        mgmtFeeBase: migrated.mgmtFeeBase || 'nav',
+        mgmtFeeCapAnnual: migrated.mgmtFeeCapAnnual ?? 0,
+        subscriptionFeePct: migrated.subscriptionFeePct ?? 2,
+        structuringFeePct: migrated.structuringFeePct ?? 1,
+        structuringFeeCap: migrated.structuringFeeCap ?? 0,
+        custodyFeeAnnual: migrated.custodyFeeAnnual ?? 0,
+        auditorFeeAnnual: migrated.auditorFeeAnnual ?? 0,
+        spvFee: migrated.spvFee ?? 0,
+        preEstablishmentFee: migrated.preEstablishmentFee ?? 0,
+        miscExpensePct: migrated.miscExpensePct ?? 0,
+      };
+    }
+    if (!migrated._structureVersion) migrated._structureVersion = 3;
+
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
     if (ownerId) migrated._permission = permission || "edit";
@@ -4232,6 +4264,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               {key:"assets",label:t.assetProgram,group:"project"},
               {key:"cashflow",label:t.cashFlow,group:"project"},
               {key:"financing",label:lang==="ar"?"الهيكلة المالية":"Financial Structure",group:"finance",hide:fm==="self"},
+              {key:"investors",label:lang==="ar"?"المستثمرون":"Investors",group:"finance",hide:!(fm==="fund" || fm==="incomeFund" || fm==="hybrid" || (Array.isArray(project.investors) && project.investors.length > 1))},
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
               {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
@@ -4337,6 +4370,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} smartAlerts={smartAlerts.alerts} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} onAddAsset={()=>setActiveTab("assets")} />],
+            ["investors", <InvestorsView key="investors" project={project} updateProject={up} financing={financing} lang={lang} />],
             ["results", <><div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} onAskAI={(alert) => { setPendingChatMsg(lang==='ar' ? `تنبيه المراجع الذكي [${alert.id}]: ${alert.ar}\n${alert.assetName?'الأصل: '+alert.assetName+'\n':''}ايش تقترح أعدل عشان أحل هالمشكلة؟ اعطني رقم محدد ووضح الأثر على IRR/NPV.` : `Smart Reviewer alert [${alert.id}]: ${alert.en}\n${alert.assetName?'Asset: '+alert.assetName+'\n':''}What do you suggest I change to fix this? Give me a specific number and explain the impact on IRR/NPV.`); setAiOpen(true); }} /></div><div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}><button onClick={()=>setShowReport(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:8,border:"1px solid #2EC4B6",background:"linear-gradient(135deg,#f0fdfa,#ecfdf5)",color:"#0d9488",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#ccfbf1"} onMouseLeave={e=>e.currentTarget.style.background="linear-gradient(135deg,#f0fdfa,#ecfdf5)"}><span style={{fontSize:16}}>📄</span>{lang==="ar"?"توليد تقرير استشاري":"Generate Advisory Report"}</button></div><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} onAddAsset={()=>setActiveTab("assets")} /></>],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} up={up} />],
