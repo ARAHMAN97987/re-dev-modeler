@@ -9,6 +9,7 @@
 import { calcIRR, calcNPV } from './math.js';
 import { computeFinancing } from './financing.js';
 import { computeWaterfall } from './waterfall.js';
+import { migrateProjectToInvestors } from './investors.js';
 
 export const FINANCING_FIELDS = [
   'finMode','vehicleType','debtAllowed','maxLtvPct','financeRate',
@@ -394,6 +395,8 @@ export function aggregatePhaseWaterfalls(phaseWaterfalls, phaseFinancings, h) {
 /** Main orchestrator: runs independent financing + waterfall per phase, then aggregates */
 export function computeIndependentPhaseResults(project, projectResults, incentivesResult) {
   if (!project || !projectResults) return { phaseFinancings: {}, phaseWaterfalls: {}, consolidatedFinancing: null, consolidatedWaterfall: null };
+  // Ensure project has investors[] before any per-phase virtual projects inherit from it.
+  project = migrateProjectToInvestors(project);
 
   const phases = projectResults.phaseResults;
   const phaseNames = Object.keys(phases);

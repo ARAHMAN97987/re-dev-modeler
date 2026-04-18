@@ -457,6 +457,37 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T5","Exit Proceeds Generated", true, "Exit generates proceeds", `${fmt(f.exitProceeds.reduce((s,v)=>s+v,0))}`);
   }
 
+  // ═══════════════════════════════════════════════
+  // T6: INVESTORS MODEL (simplified campaign — Apr 2026)
+  // ═══════════════════════════════════════════════
+  if (Array.isArray(project.investors) && project.investors.length > 0) {
+    const devs = project.investors.filter(i => i.role === "developer");
+    const nonDevs = project.investors.filter(i => i.role !== "developer");
+    const isFundMode = project.finMode === "fund" || project.finMode === "incomeFund"
+      || project.finMode === "hybrid" || project.finMode === "jv";
+
+    if (isFundMode) {
+      add("T6", "Developers exist in fund", devs.length > 0,
+        `Fund mode requires ≥1 investor with role=developer. Found ${devs.length}.`,
+        devs.length === 0 ? "error" : "");
+    }
+
+    if (project.performanceIncentive === true) {
+      const hurdle = project.hurdleIRR ?? 15;
+      const pct = project.incentivePct ?? 20;
+      add("T6", "Performance Incentive hurdle > 0", hurdle > 0,
+        "Hurdle IRR must be positive when incentive is enabled");
+      add("T6", "Performance Incentive pct in [0,50]", pct >= 0 && pct <= 50,
+        "Incentive % must be between 0 and 50",
+        `incentivePct=${pct}`, (pct < 0 || pct > 50) ? "error" : "");
+      if (devs.length === 0 && isFundMode) {
+        add("T6", "Incentive has target developer", false,
+          "Performance incentive enabled but no developer-role investor defined",
+          "", "warn");
+      }
+    }
+  }
+
   return checks;
 }
 
