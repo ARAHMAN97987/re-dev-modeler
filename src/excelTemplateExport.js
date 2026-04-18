@@ -372,14 +372,14 @@ export async function generateTemplateExcel(project, results, financing, waterfa
       secCell.font = { name: "Arial", size: 10, bold: true, color: { argb: "FF2563EB" } };
       rr += 1;
 
-      writeRef(rr++, "LP IRR (Investor)", pw.lpIRR, 'pct');
-      writeRef(rr++, "GP IRR (Developer)", pw.gpIRR, 'pct');
-      writeRef(rr++, "LP MOIC", pw.lpMOIC, 'x');
-      writeRef(rr++, "GP MOIC", pw.gpMOIC, 'x');
-      writeRef(rr++, "LP DPI", pw.lpDPI, 'x');
+      writeRef(rr++, "Financier IRR", pw.lpIRR, 'pct');
+      writeRef(rr++, "Developer IRR", pw.gpIRR, 'pct');
+      writeRef(rr++, "Financier MOIC", pw.lpMOIC, 'x');
+      writeRef(rr++, "Developer MOIC", pw.gpMOIC, 'x');
+      writeRef(rr++, "Financier DPI", pw.lpDPI, 'x');
       writeRef(rr++, "Total Equity", pw.totalEquity, 'num');
-      writeRef(rr++, "LP Equity", pw.lpEquity, 'num');
-      writeRef(rr++, "GP Equity", pw.gpEquity, 'num');
+      writeRef(rr++, "Financier Equity", pw.lpEquity, 'num');
+      writeRef(rr++, "Developer Equity", pw.gpEquity, 'num');
       writeRef(rr++, "Total Fees", pw.totalFees, 'num');
       writeRef(rr++, "LP Total Distributions", pw.lpTotalDist, 'num');
       writeRef(rr++, "GP Total Distributions", pw.gpTotalDist, 'num');

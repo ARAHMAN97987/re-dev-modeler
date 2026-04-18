@@ -324,8 +324,8 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
                 ...(!isFiltered?[{ label: "Levered IRR", fn: s => s.financing?.leveredIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "var(--sys-indigo)", tip:"معدل العائد بعد التمويل\nReturn after debt service" }]:[]),
                 { label: lang==="ar"?"صافي التدفق":"Total Net CF", fn: s => getScenarioData(s).totalNetCF, fmt: v => fmtM(v), tip:"صافي التدفق = إيرادات - تكاليف - إيجار أرض\nNet CF = Income - CAPEX - Land Rent" },
                 ...(!isFiltered?[
-                  { label: ar?"عائد الممول (LP)":"Investor IRR (LP)", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "var(--sys-indigo)", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
-                  { label: ar?"مضاعف الممول (LP)":"Investor MOIC (LP)", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
+                  { label: ar?"عائد الممول":"Financier IRR", fn: s => s.waterfall?.lpIRR, fmt: v => v !== null && v !== undefined ? fmtPct(v*100) : "—", color: "var(--sys-indigo)", tip:"معدل عائد المستثمر بعد كل الرسوم\nInvestor return after all fees" },
+                  { label: ar?"مضاعف الممول":"Financier MOIC", fn: s => s.waterfall?.lpMOIC, fmt: v => v ? v.toFixed(2)+"x" : "—", tip:"مضاعف رأس مال المستثمر. 2x = ضعّف فلوسه\nInvestor multiple. 2x = doubled money" },
                 ]:[]),
               ].map((metric, mi) => {
                 const baseVal = metric.fn(scenarioResults[0]);
@@ -634,8 +634,8 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
         { k:"irr", l:ar?"IRR المشروع":"Project IRR" },
         { k:"npv10", l:ar?"القيمة الحالية @10%":"NPV @10%" },
         { k:"leveredIRR", l:ar?"IRR بعد التمويل":"Levered IRR" },
-        { k:"lpIRR", l:"LP IRR" },{ k:"gpIRR", l:"GP IRR" },
-        { k:"lpMOIC", l:"LP MOIC" },{ k:"gpMOIC", l:"GP MOIC" },
+        { k:"lpIRR", l:ar?"IRR الممول":"Financier IRR" },{ k:"gpIRR", l:ar?"IRR المطور":"Developer IRR" },
+        { k:"lpMOIC", l:ar?"مضاعف الممول":"Financier MOIC" },{ k:"gpMOIC", l:ar?"مضاعف المطور":"Developer MOIC" },
         { k:"minDSCR", l:ar?"أقل DSCR":"Min DSCR" },
       ];
       const extractM = (s, mk) => {
@@ -741,8 +741,8 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
       const metricOpts = [
         { k:"irr", l:ar?"IRR المشروع":"Project IRR", pct:true },
         { k:"leveredIRR", l:ar?"IRR بعد التمويل":"Levered IRR", pct:true },
-        { k:"lpIRR", l:"LP IRR", pct:true },{ k:"gpIRR", l:"GP IRR", pct:true },
-        { k:"lpMOIC", l:"LP MOIC" },{ k:"minDSCR", l:ar?"أقل DSCR":"Min DSCR" },
+        { k:"lpIRR", l:ar?"IRR الممول":"Financier IRR", pct:true },{ k:"gpIRR", l:ar?"IRR المطور":"Developer IRR", pct:true },
+        { k:"lpMOIC", l:ar?"مضاعف الممول":"Financier MOIC" },{ k:"minDSCR", l:ar?"أقل DSCR":"Min DSCR" },
         { k:"npv10", l:"NPV @10%" },
       ];
       const varOpts = [
@@ -871,16 +871,16 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
     {/* ═══ OPTIMIZER ═══ */}
     {activeSection === "optimizer" && (() => {
       const metricOpts = [
-        { k:"lpIRR", l:"LP IRR" },{ k:"gpIRR", l:"GP IRR" },{ k:"irr", l:ar?"IRR المشروع":"Project IRR" },
-        { k:"minDSCR", l:ar?"أقل DSCR":"Min DSCR" },{ k:"lpMOIC", l:"LP MOIC" },{ k:"npv10", l:"NPV @10%" },
+        { k:"lpIRR", l:ar?"IRR الممول":"Financier IRR" },{ k:"gpIRR", l:ar?"IRR المطور":"Developer IRR" },{ k:"irr", l:ar?"IRR المشروع":"Project IRR" },
+        { k:"minDSCR", l:ar?"أقل DSCR":"Min DSCR" },{ k:"lpMOIC", l:ar?"مضاعف الممول":"Financier MOIC" },{ k:"npv10", l:"NPV @10%" },
       ];
       const varDefs = [
         { k:"maxLtvPct", l:"LTV %", lo:0, hi:80, step:5 },
-        { k:"prefReturnPct", l:ar?"العائد المفضل":"Pref Return %", lo:8, hi:20, step:1 },
+        { k:"hurdleIRR", l:ar?"عائد الحد الأدنى":"Hurdle IRR %", lo:8, hi:20, step:1 },
         { k:"exitYear", l:ar?"سنة التخارج":"Exit Year", lo:(project.startYear||2026)+3, hi:(project.startYear||2026)+15, step:1 },
         { k:"exitMultiple", l:ar?"مضاعف التخارج":"Exit Multiple", lo:6, hi:15, step:1 },
         { k:"financeRate", l:ar?"معدل التمويل":"Finance Rate %", lo:4, hi:10, step:0.5 },
-        { k:"carryPct", l:ar?"حافز الأداء":"Carry %", lo:15, hi:40, step:5 },
+        { k:"incentivePct", l:ar?"حافز الأداء":"Performance Incentive %", lo:15, hi:40, step:5 },
         { k:"exitCapRate", l:"Exit Cap Rate %", lo:5, hi:12, step:1 },
         { k:"annualMgmtFeePct", l:ar?"رسوم الإدارة":"Mgmt Fee %", lo:0.5, hi:2.0, step:0.25 },
         { k:"developerFeePct", l:ar?"رسوم المطور":"Dev Fee %", lo:7, hi:15, step:2 },
@@ -996,7 +996,7 @@ function ScenariosView({ project, results, financing, waterfall, lang, up }) {
             {[
               {r:optResults.best,   icon:"✅",l:ar?"الأفضل":"Best",         c:"var(--sys-green)"},
               {r:optResults.safest, icon:"🛡️",l:ar?"الأكثر أماناً":"Safest", c:"var(--sys-blue)"},
-              {r:optResults.bestGP, icon:"💰",l:ar?"الأعلى عائد GP":"Best GP",c:"var(--sys-orange)"},
+              {r:optResults.bestGP, icon:"💰",l:ar?"الأعلى عائد للمطور":"Best Developer",c:"var(--sys-orange)"},
               {r:optResults.balanced,icon:"⚖️",l:ar?"الأكثر توازناً":"Balanced",c:"var(--sys-indigo)"},
             ].filter(x=>x.r).map(x=><div key={x.l} style={{padding:12,borderRadius:12,background:`color-mix(in srgb, ${x.c} 8%, transparent)`,border:`1px solid color-mix(in srgb, ${x.c} 22%, transparent)`}}>
               <div style={{fontSize:12,fontWeight:700,color:x.c,marginBottom:4,letterSpacing:"-0.01em"}}>{x.icon} {x.l}</div>

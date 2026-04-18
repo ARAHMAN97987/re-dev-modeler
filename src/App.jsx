@@ -737,8 +737,8 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             <HRow label={ar?"= صافي تدفق الصندوق":"= Net Fund CF"} arr={f.fundCF || f.leveredCF} bold />
             {/* Equity & distributions */}
             <HRow label={ar?"طلبات رأس المال":"Equity Calls"} arr={w.equityCalls||f.equityCalls||[]} color="#8b5cf6" />
-            {w.lpDist && <HRow label={ar?"توزيعات المستثمر (LP)":"LP Distributions"} arr={w.lpDist} color="#6d28d9" />}
-            {w.gpDist && <HRow label={ar?"توزيعات المطور (GP)":"GP Distributions"} arr={w.gpDist} color="#8b5cf6" />}
+            {w.lpDist && <HRow label={ar?"توزيعات الممول":"Financier Distributions"} arr={w.lpDist} color="#6d28d9" />}
+            {w.gpDist && <HRow label={ar?"توزيعات المطور":"Developer Distributions"} arr={w.gpDist} color="#8b5cf6" />}
           </tbody>
         </HybTable>
 
