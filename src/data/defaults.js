@@ -68,7 +68,6 @@ export const defaultProject = () => ({
   mgmtFeeCapAnnual: 2000000, // Max annual mgmt fee (0 = no cap)
   custodyFeeAnnual: 100000,
   mgmtFeeBase: "nav", // nav (net asset value) | deployed (ZAN: cumCAPEX) | devCost | equity
-  feeTreatment: "capital", // H14: capital (ROC+Pref) | rocOnly (ROC, no Pref) | expense (no ROC, no Pref)
   graceBasis: "cod", // H10: cod | firstDraw
   developerFeePct: 10,
   developerFeeBasis: "exclLand", // exclLand = construction cost only | inclLand = construction + land
@@ -94,12 +93,9 @@ export const defaultProject = () => ({
   propertyMgmtFeePct: 5, // Property management fee as % of rental income
   propertyMgmtFeeCap: 0, // Annual cap on property mgmt fee (0 = no cap)
   // Waterfall (Phase 3) — Simplified: all profits to investor, then Performance Incentive shares excess
-  prefReturnPct: 0, // HIDDEN: no separate pref tier (Performance Incentive replaces it)
-  gpCatchup: false, // HIDDEN: disabled
-  carryPct: 0, // HIDDEN: no carry (Performance Incentive replaces it)
+  // Legacy 4-tier fields (prefReturnPct, gpCatchup, carryPct, prefAllocation, catchupMethod, feeTreatment)
+  // were removed in Simplification Campaign #2 Phase 2. Performance Incentive is the single source.
   lpProfitSplitPct: null, // null = auto (equity-proportional: LP gets lpPct% of profits)
-  prefAllocation: "lpOnly", // HIDDEN: always Investor Only
-  catchupMethod: "perYear", // HIDDEN: backward compat
   // حافز حسن الأداء — Performance Incentive (IRR-based, compound)
   performanceIncentive: true, // تفعيل حافز حسن الأداء — Enable Performance Incentive
   hurdleMode: "simple", // "simple" = العائد السنوي المبسط (العرف السوقي) | "irr" = العائد المركب / IRR

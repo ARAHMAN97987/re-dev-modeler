@@ -664,7 +664,6 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
 
     // Pre-incentive IRRs (compat — simplified: same as post when no incentive applied)
     lpIRR_preIncentive: lpIRR, gpIRR_preIncentive: gpIRR,
-    prefAllocation: 'lpOnly', catchupMethod: 'perYear',
     exitYear: exitYr + sy,
 
     // Income fund

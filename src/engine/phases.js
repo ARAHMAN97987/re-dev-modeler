@@ -19,9 +19,8 @@ export const FINANCING_FIELDS = [
   'islamicMode','gpEquityManual','lpEquityManual','capitalizeIDC',
   'gpInvestDevFee','gpDevFeeInvestPct','gpCashInvest','gpCashInvestAmount',
   'exitStrategy','exitYear','exitCapRate','exitMultiple','exitCostPct',
-  'prefReturnPct','gpCatchup','carryPct','lpProfitSplitPct',
-  'feeTreatment','prefAllocation','subscriptionFeePct','annualMgmtFeePct','mgmtFeeCapAnnual','custodyFeeAnnual',
-  // NOTE: catchupMethod is intentionally NOT per-phase — it's project-level only (matches ZAN Excel perYear convention)
+  'lpProfitSplitPct',
+  'subscriptionFeePct','annualMgmtFeePct','mgmtFeeCapAnnual','custodyFeeAnnual',
   'developerFeePct','developerFeeBasis','structuringFeePct','structuringFeeCap','mgmtFeeBase',
   'preEstablishmentFee','spvFee','auditorFeeAnnual',
   'operatorFeePct','operatorFeeCap','miscExpensePct',
@@ -37,10 +36,8 @@ export function getPhaseFinancing(project, phaseName) {
   // Always start with project-level defaults as base
   const base = {};
   FINANCING_FIELDS.forEach(f => { if (project[f] !== undefined) base[f] = project[f]; });
-  // Overlay phase-specific settings, excluding project-level-only fields
-  const PROJECT_ONLY_FIELDS = ['catchupMethod']; // These are project-level conventions, not per-phase
+  // Overlay phase-specific settings
   const phaseFinancing = { ...(phase?.financing || {}) };
-  PROJECT_ONLY_FIELDS.forEach(f => delete phaseFinancing[f]);
   return { ...base, ...phaseFinancing };
 }
 

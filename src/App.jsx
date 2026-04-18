@@ -312,28 +312,25 @@ async function loadProject(id, ownerId, permission) {
       }
       migrated._feesVersion = 2;
     }
-    // Waterfall migration: old projects may have legacy 4-tier waterfall settings
-    // (prefReturnPct, gpCatchup, carryPct, lpProfitSplitPct) that conflict with
-    // the simplified model (performance incentive only). Reset them to defaults.
-    // NOTE: We check actual values, not just the flag, because _waterfallVersion:1
-    // may have been saved from defaults before the migration code existed.
-    const hasLegacyPhaseWaterfall = (migrated.phases || []).some(ph =>
-      ph.financing && (ph.financing.prefReturnPct > 0 || ph.financing.carryPct > 0 || (ph.financing.lpProfitSplitPct != null && ph.financing.lpProfitSplitPct < 100))
-    );
-    const needsWaterfallMigration = !p._waterfallVersion
-      || migrated.prefReturnPct > 0
-      || migrated.carryPct > 0
-      || migrated.lpProfitSplitPct < 100
-      || hasLegacyPhaseWaterfall;
+    // Waterfall migration v3 (Simplification Campaign #2 Phase 2):
+    // Legacy 4-tier waterfall fields (prefReturnPct, gpCatchup, carryPct,
+    // prefAllocation, catchupMethod, feeTreatment) have been fully retired.
+    // Performance Incentive is the single post-ROC mechanism. Strip these
+    // fields from saved projects on load, including from per-phase financing.
+    const needsWaterfallMigration = !p._waterfallVersion || p._waterfallVersion < 3
+      || 'prefReturnPct' in migrated || 'carryPct' in migrated || 'gpCatchup' in migrated
+      || 'prefAllocation' in migrated || 'catchupMethod' in migrated || 'feeTreatment' in migrated;
     if (needsWaterfallMigration) {
-      migrated.prefReturnPct = 0;
-      migrated.gpCatchup = false;
-      migrated.carryPct = 0;
-      migrated.lpProfitSplitPct = 100;
-      migrated.prefAllocation = "lpOnly";
-      migrated.catchupMethod = "perYear";
-      migrated._waterfallVersion = 2;
-      // Also clean up per-phase financing that may have inherited old waterfall values
+      delete migrated.prefReturnPct;
+      delete migrated.gpCatchup;
+      delete migrated.carryPct;
+      delete migrated.prefAllocation;
+      delete migrated.catchupMethod;
+      delete migrated.feeTreatment;
+      if (migrated.lpProfitSplitPct != null && migrated.lpProfitSplitPct < 100) {
+        migrated.lpProfitSplitPct = 100;
+      }
+      migrated._waterfallVersion = 3;
       if (migrated.phases) {
         migrated.phases = migrated.phases.map(ph => {
           if (ph.financing) {
@@ -343,6 +340,8 @@ async function loadProject(id, ownerId, permission) {
             delete f.carryPct;
             delete f.lpProfitSplitPct;
             delete f.prefAllocation;
+            delete f.catchupMethod;
+            delete f.feeTreatment;
             return { ...ph, financing: f };
           }
           return ph;
@@ -377,8 +376,6 @@ async function loadProject(id, ownerId, permission) {
         miscExpensePct: migrated.miscExpensePct ?? 0,
       };
     }
-    if (!migrated._structureVersion) migrated._structureVersion = 3;
-
     if (ownerId) migrated._shared = true;
     if (ownerId) migrated._ownerId = ownerId;
     if (ownerId) migrated._permission = permission || "edit";

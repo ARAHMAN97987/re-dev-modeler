@@ -55,8 +55,8 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
   // K1-K7: Additional validation checks from code audit
   if ((project.landRentEscalationEveryN ?? 5) <= 0 && project.landType === "lease")
     add("T0","Land Esc Interval = 0", false, "Step escalation interval must be > 0");
-  if ((project.carryPct ?? 30) >= 100 && project.gpCatchup)
-    add("T0","Carry ≥ 100%", false, "Carry percentage must be < 100% when catch-up enabled");
+  // (carry ≥ 100% + catch-up check removed — legacy 4-tier waterfall retired.
+  // Performance Incentive caps itself at 100% through input validation in the UI.)
   if (project.finMode === "hybrid" && (project.govFinancingPct ?? 70) >= 100 && (project.govBeneficiary || "project") === "project")
     add("T0","Gov Financing = 100%", false, "100% government financing leaves no equity for fund investors");
   // Hybrid-specific: tenor must exceed grace for gov loan (even without debtAllowed flag)
@@ -363,22 +363,9 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     add("T3","LP IRR Computed", w.lpIRR!==null||w.lpTotalDist===0||w.lpTotalInvested===0, "LP IRR computed (N/A if LP has no equity)", `${fp(w.lpIRR)}`);
     add("T3","GP IRR Computed", w.gpIRR!==null||w.gpTotalInvested===0||w.gpTotalDist===0||w.gpTotalDist<w.gpTotalInvested, "GP IRR computed (N/A if GP has no equity or return < equity)", `${fp(w.gpIRR)}`);
 
-    // FIX#18: Warn if perYear + proRata — GP gets investor share of T2 AND catch-up
-    // Use per-phase catchupMethod if available (per-phase overrides project-level)
-    const prefAlloc = project.prefAllocation || "proRata";
-    const effectiveCatchupMethod = (() => {
-      const phases = project.phases || [];
-      if (phases.length > 0 && phases[0]?.financing?.catchupMethod) {
-        // If ALL phases use cumulative, use cumulative (overrides project-level perYear)
-        const allCumulative = phases.every(p => (p.financing?.catchupMethod || project.catchupMethod || 'perYear') === 'cumulative');
-        if (allCumulative) return 'cumulative';
-      }
-      return project.catchupMethod || "perYear";
-    })();
-    if (project.gpCatchup && prefAlloc === "proRata" && effectiveCatchupMethod === "perYear" && (f.gpPct||0) > 0.01 && (f.lpPct||0) > 0.01) {
-      add("T3","GP Catch-up Convention", true, "perYear + proRata: GP receives both investor pref share and catch-up. Consider lpOnly or cumulative for stricter allocation.",
-        `GP gets ${((f.gpPct||0)*100).toFixed(0)}% of Pref + separate Catch-up`, "warn");
-    }
+    // (FIX#18 catch-up-convention warning removed — legacy 4-tier waterfall fields
+    // were retired in Simplification Campaign #2 Phase 2. Performance Incentive is
+    // the single post-ROC mechanism and has no catch-up/prefAlloc modes.)
 
     // FIX#19: Warn if any operating year has negative CF — informational, not a hard error
     let deficitYears = 0; let maxDeficit = 0;
