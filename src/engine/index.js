@@ -18,7 +18,7 @@ export { computeFinancing } from './financing.js';
 export { computeWaterfall } from './waterfall.js';
 export {
   migrateProjectToInvestors, developerIds, sumByRole,
-  resolveContributionAmount, allocateEquity,
+  resolveContributionAmount, allocateEquity, equityByRole,
 } from './investors.js';
 export {
   FINANCING_FIELDS,

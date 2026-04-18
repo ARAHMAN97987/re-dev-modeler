@@ -26,22 +26,14 @@ export function migrateProjectToInvestors(project) {
   const mode = project.finMode || 'self';
   const investors = [];
 
-  // === Modes without LPs: solo developer ===
-  if (mode === 'self') {
-    investors.push({
-      id: 'dev', name: 'Developer', role: 'developer',
-      contribution: { type: 'cash', amount: project.gpEquityManual || 0 },
-    });
-  } else if (mode === 'bank100') {
-    // 100% debt — developer has zero equity but still owns the deal
+  // === Modes without LPs: solo developer absorbs all equity (fill-rest) ===
+  // In debt/self/bank100, developer = 100% of equity by definition
+  // (totalEquity = totalProjectCost − maxDebt). Using cash amount=0 marks the
+  // developer as a "fill-rest" slot so allocateEquity assigns the full residual.
+  if (mode === 'self' || mode === 'bank100' || mode === 'debt') {
     investors.push({
       id: 'dev', name: 'Developer', role: 'developer',
       contribution: { type: 'cash', amount: 0 },
-    });
-  } else if (mode === 'debt') {
-    investors.push({
-      id: 'dev', name: 'Developer', role: 'developer',
-      contribution: { type: 'cash', amount: project.gpEquityManual || 0 },
     });
   } else {
     // === Fund-like modes: fund / jv / hybrid / incomeFund ===
@@ -185,51 +177,96 @@ export function resolveContributionAmount(contribution, context = {}) {
 }
 
 /**
- * Build per-investor equity amounts + pct, given a total equity pool to allocate.
- * Cash contributions keep their nominal amount; dynamic ones (devFee) resolve
- * against `context`; landValue/landCap use their valuation.
+ * Build per-investor equity amounts, given a total equity pool to allocate.
  *
- * Cash investors with `amount === 0` act as "fill the rest" — any residual
- * after fixed contributions is distributed pro-rata across them.
+ * UNIFIED POLICY (Apr 2026 simplification — single source of truth):
+ * 1. Resolve static contributions (cash-with-amount, devFee, landValue, landCap,
+ *    landPurchase) into concrete amounts.
+ * 2. Fill-rest slots = cash contributions with amount=0. They absorb the
+ *    `remainder = max(0, totalEquity - Σ static)`.
+ * 3. Only fill-rest slots whose role **matches** the capital-structure policy
+ *    absorb the remainder:
+ *      - hasLP=true  (fund/hybrid/incomeFund): investor-role fill-rest absorbs
+ *      - hasLP=false (debt/self):              developer-role fill-rest absorbs
+ *    Non-matching fill-rest slots get 0.
+ * 4. If no matching fill-rest exists but a non-matching one does, it falls
+ *    back to absorbing (so user intent is never lost).
+ * 5. If Σ static > totalEquity, static amounts are scaled down pro-rata and a
+ *    warning flag is returned in context.scaled=true.
  *
- * @param {Array} investors
+ * Post-condition: Σ return.amount === totalEquity (within 1 unit).
+ *
+ * @param {Array}  investors - project.investors[]
  * @param {number} totalEquity - target equity total (from financing.js)
- * @param {Object} context - { devFeeTotal, ... }
- * @returns {Array} [{ investorId, amount, source }]
+ * @param {Object} context - { devFeeTotal, hasLP }
+ * @returns {Array} [{ investorId, role, amount, source, isFillRest }]
  */
 export function allocateEquity(investors, totalEquity, context = {}) {
   if (!Array.isArray(investors) || investors.length === 0) return [];
+  const hasLP = context.hasLP !== false; // default: assume fund-like
+  const absorbingRole = hasLP ? 'investor' : 'developer';
 
-  // Pass 1: resolve all "known" contributions
+  // ── Pass 1: resolve each contribution ──
   const resolved = investors.map(i => {
-    const contrib = i.contribution || {};
-    const isFillRest = contrib.type === 'cash' && (!contrib.amount || contrib.amount === 0);
+    const c = i.contribution || {};
+    const isFillRest = c.type === 'cash' && (!c.amount || c.amount === 0);
     return {
       investorId: i.id,
-      source: contrib.type,
-      amount: isFillRest ? null : resolveContributionAmount(contrib, context),
+      role: i.role || 'investor',
+      source: c.type,
+      amount: isFillRest ? 0 : resolveContributionAmount(c, context),
       isFillRest,
     };
   });
 
-  // Sum of fixed contributions
-  const fixedTotal = resolved
+  // ── Scale-down if static exceeds totalEquity ──
+  const staticTotal = resolved
     .filter(r => !r.isFillRest)
-    .reduce((s, r) => s + (r.amount || 0), 0);
-
-  const remainder = Math.max(0, totalEquity - fixedTotal);
-  const fillRestCount = resolved.filter(r => r.isFillRest).length;
-
-  // Distribute remainder evenly across "fill the rest" slots
-  if (fillRestCount > 0) {
-    const per = remainder / fillRestCount;
-    resolved.forEach(r => { if (r.isFillRest) r.amount = per; });
+    .reduce((s, r) => s + r.amount, 0);
+  if (staticTotal > totalEquity && staticTotal > 0 && totalEquity > 0) {
+    const scale = totalEquity / staticTotal;
+    resolved.forEach(r => { if (!r.isFillRest) r.amount *= scale; });
   }
 
-  // Cleanup
+  // ── Remainder absorbed by fill-rest slots of the matching role ──
+  const actualStatic = resolved
+    .filter(r => !r.isFillRest)
+    .reduce((s, r) => s + r.amount, 0);
+  const remainder = Math.max(0, totalEquity - actualStatic);
+
+  const matchingFillRest = resolved.filter(r => r.isFillRest && r.role === absorbingRole);
+  const otherFillRest    = resolved.filter(r => r.isFillRest && r.role !== absorbingRole);
+
+  if (matchingFillRest.length > 0) {
+    const per = remainder / matchingFillRest.length;
+    matchingFillRest.forEach(r => { r.amount = per; });
+    otherFillRest.forEach(r => { r.amount = 0; }); // non-matching role stays 0
+  } else if (otherFillRest.length > 0) {
+    // No matching-role fill-rest — fallback so user intent isn't lost
+    const per = remainder / otherFillRest.length;
+    otherFillRest.forEach(r => { r.amount = per; });
+  }
+  // If no fill-rest at all, remainder is unallocated — caller may warn.
+
   return resolved.map(r => ({
     investorId: r.investorId,
+    role: r.role,
     amount: r.amount || 0,
     source: r.source,
+    isFillRest: r.isFillRest,
   }));
+}
+
+/**
+ * Aggregate perInvestorEquity by role. Returns { gpEquity, lpEquity, totalEquity }.
+ * This is the canonical way to derive gp/lp equity from investors[].
+ */
+export function equityByRole(perInvestorEquity) {
+  if (!Array.isArray(perInvestorEquity)) return { gpEquity: 0, lpEquity: 0, totalEquity: 0 };
+  let gp = 0, lp = 0;
+  for (const r of perInvestorEquity) {
+    if (r.role === 'developer') gp += r.amount || 0;
+    else lp += r.amount || 0;
+  }
+  return { gpEquity: gp, lpEquity: lp, totalEquity: gp + lp };
 }

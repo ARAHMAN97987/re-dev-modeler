@@ -9,7 +9,7 @@
 
 import { calcIRR } from './math.js';
 import { applyInterestSubsidy } from './incentives.js';
-import { migrateProjectToInvestors, allocateEquity } from './investors.js';
+import { migrateProjectToInvestors, allocateEquity, equityByRole } from './investors.js';
 
 export function computeFinancing(project, projectResults, incentivesResult) {
   if (!project || !projectResults) return null;
@@ -368,43 +368,32 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     }
   }
 
-  // ── INVESTORS-DERIVED OVERRIDE (Apr 2026 simplification) ──
-  // When `project.investors[]` carries concrete non-zero contributions (from
-  // InvestorsView edits), those become the source of truth for gpEquity/lpEquity.
-  // Legacy projects with placeholder-only investors (amount=0) keep the
-  // legacy-field-driven split above, preserving backward compat.
+  // ── UNIFIED INVESTORS-DERIVED EQUITY (Apr 2026 simplification) ──
+  // Single source of truth: project.investors[] drives both gp/lp aliases AND
+  // perInvestorEquity[]. Policy lives entirely in allocateEquity(). Legacy
+  // gpEquityManual / lpEquityManual / gpInvestDevFee / gpCashInvest paths above
+  // still run first so that zero-static projects (no user-edited investors)
+  // preserve their computed splits for backward compatibility.
+  let _earlyPerInvestorEquity = null;
   if (Array.isArray(project.investors) && project.investors.length > 0) {
-    const resolveStatic = (inv) => {
+    _earlyPerInvestorEquity = allocateEquity(
+      project.investors,
+      totalEquity,
+      { devFeeTotal, hasLP }
+    );
+    // Only override legacy gp/lp when investors[] carries real (non-fill-rest)
+    // contributions. Otherwise keep legacy computation to preserve behavior for
+    // projects created before the investors[] model existed.
+    const hasStaticContribution = project.investors.some(inv => {
       const c = inv.contribution || {};
-      if (c.type === 'cash') return c.amount || 0;
-      if (c.type === 'devFee') return devFeeTotal * ((c.investPct ?? 100) / 100);
-      if (c.type === 'landValue') return c.valuation || 0;
-      if (c.type === 'landCap') return c.valuation || 0;
-      if (c.type === 'landPurchase') return c.amount || 0;
-      return 0;
-    };
-    const devStatic = project.investors.filter(i => i.role === 'developer').reduce((s, i) => s + resolveStatic(i), 0);
-    const invStatic = project.investors.filter(i => i.role === 'investor').reduce((s, i) => s + resolveStatic(i), 0);
-    const totalStatic = devStatic + invStatic;
-
-    if (totalStatic > 0) {
-      // Remainder policy: follows the capital-structure convention.
-      //   - fund/incomeFund/hybrid (hasLP=true): residual equity belongs to investors
-      //   - debt/bank100/self (hasLP=false):    residual equity belongs to developer
-      // This matches "developer is sponsor, investors provide capital" — fill-rest
-      // cash placeholders in migration are zero-sum and don't override the rule.
-      const remainder = Math.max(0, totalEquity - totalStatic);
-      const devResidual = hasLP ? 0 : remainder;
-      const invResidual = hasLP ? remainder : 0;
-      let newGp = devStatic + devResidual;
-      let newLp = invStatic + invResidual;
-      // Reconcile with totalEquity (scale down if static contributions exceed totalEquity)
-      const sum = newGp + newLp;
-      if (sum > totalEquity && totalEquity > 0) {
-        const scale = totalEquity / sum;
-        newGp *= scale;
-        newLp *= scale;
-      }
+      if (c.type === 'cash') return (c.amount || 0) > 0;
+      if (c.type === 'devFee') return true; // resolves against devFeeTotal
+      if (c.type === 'landValue' || c.type === 'landCap') return (c.valuation || 0) > 0;
+      if (c.type === 'landPurchase') return (c.amount || 0) > 0;
+      return false;
+    });
+    if (hasStaticContribution) {
+      const { gpEquity: newGp, lpEquity: newLp } = equityByRole(_earlyPerInvestorEquity);
       gpEquity = newGp;
       lpEquity = newLp;
     }
@@ -844,10 +833,17 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const govLoanAmount = isHybrid ? totalDrawn : 0;
   const fundPortionCost = isHybrid ? Math.max(0, totalProjectCost - govLoanAmount) : null;
 
-  // ── NEW: per-investor equity schedule (for waterfall consumption) ──
-  // Uses the migrated investors[] shape. Resolves each investor's contribution
-  // against totalEquity, producing concrete amounts and source types.
-  const perInvestorEquity = allocateEquity(project.investors || [], totalEquity, { devFeeTotal });
+  // ── Per-investor equity schedule (for waterfall consumption) ──
+  // Recomputes with the FINAL totalEquity (after debt reconciliation above).
+  // Uses the same hasLP policy as the early derivation so gpEquity + lpEquity
+  // always equals Σ perInvestorEquity by role. If investors[] is empty, we
+  // synthesize single-entry records so waterfall still has something to consume.
+  let perInvestorEquity = allocateEquity(project.investors || [], totalEquity, { devFeeTotal, hasLP });
+  if (perInvestorEquity.length === 0 && totalEquity > 0) {
+    // Legacy path: investors[] empty → synthesize records from gp/lp split
+    if (gpEquity > 0) perInvestorEquity.push({ investorId: 'dev', role: 'developer', amount: gpEquity, source: 'cash', isFillRest: false });
+    if (lpEquity > 0) perInvestorEquity.push({ investorId: 'inv', role: 'investor',  amount: lpEquity, source: 'cash', isFillRest: false });
+  }
 
   return {
     mode: project.finMode, landCapValue, effectiveLandCap, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,

@@ -45,8 +45,31 @@ export default function InvestorsView({ project, updateProject, financing, lang 
   const invEquity   = financing?.lpEquity || 0;
   const totalDebt   = financing?.totalDebt || 0;
   const totalCost   = financing?.totalProjectCost || financing?.devCostInclLand || 0;
+  const devFeeTotal = financing?.devFeeTotal || 0;
 
-  const setInvestors = (next) => updateProject({ investors: next });
+  // ── Validation: compute Σ static contributions vs totalEquity ──
+  const resolveStatic = (c) => {
+    if (!c) return 0;
+    if (c.type === 'cash') return c.amount || 0;
+    if (c.type === 'devFee') return devFeeTotal * ((c.investPct ?? 100) / 100);
+    if (c.type === 'landValue' || c.type === 'landCap') return c.valuation || 0;
+    if (c.type === 'landPurchase') return c.amount || 0;
+    return 0;
+  };
+  const staticSum = investors.reduce((s, inv) => s + resolveStatic(inv.contribution), 0);
+  const hasFillRest = investors.some(inv => {
+    const c = inv.contribution || {};
+    return c.type === 'cash' && (!c.amount || c.amount === 0);
+  });
+  const landCapRecipients = investors.filter(inv => inv.contribution?.type === 'landCap').length;
+  const needsLandCapRecipient = project.landCapitalize && (project.landType === 'lease' || project.landType === 'bot') && landCapRecipients === 0;
+  const staticOverage = staticSum - totalEquity;
+  const staticOverageWarn = !hasFillRest && staticOverage > 1000 && totalEquity > 0;
+  const staticUnderWarn   = !hasFillRest && staticSum > 0 && totalEquity - staticSum > 1000 && totalEquity > 0;
+
+  // Any user edit through this view marks investors[] as user-owned,
+  // so a later finMode change will NOT auto-reseed it.
+  const setInvestors = (next) => updateProject({ investors: next, _investorsEditedByUser: true });
 
   const addInvestor = (preset) => {
     const id = randomId();
@@ -286,6 +309,37 @@ export default function InvestorsView({ project, updateProject, financing, lang 
         </div>
       )}
 
+      {/* ── Validation warnings ── */}
+      {(staticOverageWarn || staticUnderWarn || needsLandCapRecipient) && (
+        <div style={{
+          background: "color-mix(in srgb, var(--sys-orange, #FF9500) 12%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--sys-orange, #FF9500) 36%, transparent)",
+          color: "var(--text-primary)",
+          padding: "10px 14px", borderRadius: 10, fontSize: 12.5, marginBottom: 14,
+          lineHeight: 1.6,
+        }}>
+          {staticOverageWarn && (
+            <div>⚠ {ar
+              ? <>مجموع المساهمات ({fmt(staticSum)}) يتجاوز إجمالي الملكية المطلوبة ({fmt(totalEquity)}) بـ <b>{fmt(staticOverage)}</b>. ستُقلَّص المساهمات تلقائياً نسبياً — الأفضل تعديل المبالغ.</>
+              : <>Contributions ({fmt(staticSum)}) exceed required equity ({fmt(totalEquity)}) by <b>{fmt(staticOverage)}</b>. Amounts will be scaled down pro-rata — better to adjust explicitly.</>}
+            </div>
+          )}
+          {staticUnderWarn && (
+            <div>⚠ {ar
+              ? <>مجموع المساهمات ({fmt(staticSum)}) أقل من المطلوب ({fmt(totalEquity)}) بـ <b>{fmt(totalEquity - staticSum)}</b>. أضف مستثمراً بمبلغ 0 (يملأ الباقي) أو زد قيمة مساهمة موجودة.</>
+              : <>Contributions ({fmt(staticSum)}) fall short of required equity ({fmt(totalEquity)}) by <b>{fmt(totalEquity - staticSum)}</b>. Add an investor with amount 0 (fills remainder) or increase an existing contribution.</>}
+            </div>
+          )}
+          {needsLandCapRecipient && (
+            <div style={{ marginTop: (staticOverageWarn || staticUnderWarn) ? 6 : 0 }}>
+              🏷 {ar
+                ? <>رسملة حق الانتفاع مُفعَّلة في الهيكلة المالية لكن لا يوجد مستثمر من نوع <b>landCap</b>. أضف مستثمر "مالك حق انتفاع" وحدد قيمته.</>
+                : <>Leasehold capitalization is enabled but no investor has a <b>landCap</b> contribution. Add a "Leasehold Holder" investor with the valuation.</>}
+            </div>
+          )}
+        </div>
+      )}
+
       <Summary />
 
       {/* Investor list */}
@@ -309,19 +363,6 @@ export default function InvestorsView({ project, updateProject, financing, lang 
       }}>
         {ar ? "+ إضافة مستثمر" : "+ Add Investor"}
       </button>
-
-      {/* Leasehold credit hint */}
-      {project.landType === "lease" && project.landCapitalize && (
-        <div style={{ marginTop: 16, padding: "10px 14px",
-          background: "color-mix(in srgb, var(--sys-orange, #FF9500) 10%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--sys-orange, #FF9500) 22%, transparent)",
-          borderRadius: 10, fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6,
-        }}>
-          💡 {ar
-            ? "رسملة حق الانتفاع مُفعّلة. اختر مستثمراً ليحصل على حق الانتفاع (بنوع الحصة landCap)."
-            : "Leasehold capitalization is enabled. Pick an investor to receive the leasehold credit (contribution type: landCap)."}
-        </div>
-      )}
 
       {adding && <AddModal />}
     </div>

@@ -87,7 +87,7 @@ module.exports = {
   calcHotelEBITDA, calcMarinaEBITDA,
   // engine/investors.js
   migrateProjectToInvestors, developerIds, sumByRole,
-  resolveContributionAmount, allocateEquity,
+  resolveContributionAmount, allocateEquity, equityByRole,
   // engine/cashflow.js
   getScenarioMults, computeAssetCapex, computeProjectCashFlows,
   // engine/incentives.js
