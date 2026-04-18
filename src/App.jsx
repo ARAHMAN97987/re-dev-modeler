@@ -3727,6 +3727,9 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('haseefTheme') === 'dark' ? 'dark' : 'light'; } catch(_) { return 'light'; } });
+  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); try { localStorage.setItem('haseefTheme', theme); } catch(_) {} }, [theme]);
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
   useEffect(() => { window.__zanOpenAcademy = () => { setView("academy"); pushNavHash("academy",null,null); window.scrollTo(0,0); }; return () => { delete window.__zanOpenAcademy; }; }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
   // ── Sync URL hash with navigation state ──
@@ -4222,6 +4225,10 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
                     <button onClick={()=>{setLang(lang==="en"?"ar":"en");setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"var(--text-primary)",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>{lang==="en"?"🌐":"🌐"}</span> {lang==="en"?"العربية (Arabic)":"English"}
                     </button>
+                    {/* Theme */}
+                    <button onClick={()=>{toggleTheme();setMenuOpen(false);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"var(--text-primary)",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
+                      <span style={{fontSize:14}}>{theme==='dark'?'☀️':'🌙'}</span> {lang==="ar" ? (theme==='dark'?'الوضع الفاتح':'الوضع الداكن') : (theme==='dark'?'Light mode':'Dark mode')}
+                    </button>
                     {/* Academy */}
                     <button onClick={()=>{setView("academy");setMenuOpen(false);window.scrollTo(0,0);}} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"8px 16px",background:"none",border:"none",fontSize:12,color:"var(--text-primary)",cursor:"pointer",fontFamily:"inherit",textAlign:"start"}}>
                       <span style={{fontSize:14}}>📚</span> {lang==="ar"?"أكاديمية حصيف":"Haseef Academy"}
@@ -4546,6 +4553,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
             {onOpenAcademy && <button onClick={onOpenAcademy} className="z-btn z-btn-primary" style={{background:"var(--zan-navy-700)",border:"1px solid var(--zan-gold-700)"}} title={ar?"أكاديمية حصيف":"Haseef Academy"}>📚 <span style={{color:"var(--zan-gold-500)"}}>{ar?"الأكاديمية":"Academy"}</span></button>}
             {!isMobile && user && <div style={{fontSize:11,color:"var(--text-secondary)",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.email}</div>}
             {signOut && <button onClick={signOut} className="z-btn z-btn-danger">{ar?"خروج":"Sign Out"}</button>}
+            <button onClick={toggleTheme} className="z-btn z-btn-secondary" title={ar?(theme==='dark'?'التبديل إلى الوضع الفاتح':'التبديل إلى الوضع الداكن'):(theme==='dark'?'Switch to light mode':'Switch to dark mode')} aria-label={ar?'تبديل الوضع':'Toggle theme'}>{theme==='dark'?'☀️':'🌙'}</button>
             <button onClick={()=>setLang(lang==="en"?"ar":"en")} className="z-btn z-btn-secondary">{lang==="en"?"عربي":"English"}</button>
           </div>
         </div>

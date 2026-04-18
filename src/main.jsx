@@ -133,8 +133,13 @@ function Root() {
   )
 }
 
-// Force light mode — dark mode disabled
-document.documentElement.setAttribute('data-theme', 'light');
+// Persisted theme — defaults to light. Toggle available from the app toolbar
+// (see App.jsx). Design tokens in styles/design-tokens.css already support
+// both [data-theme="light"] and [data-theme="dark"].
+const savedTheme = (() => {
+  try { return localStorage.getItem('haseefTheme'); } catch (_) { return null; }
+})();
+document.documentElement.setAttribute('data-theme', savedTheme === 'dark' ? 'dark' : 'light');
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
