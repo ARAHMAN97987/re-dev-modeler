@@ -9,9 +9,15 @@
 
 import { calcIRR } from './math.js';
 import { applyInterestSubsidy } from './incentives.js';
+import { migrateProjectToInvestors, allocateEquity } from './investors.js';
 
 export function computeFinancing(project, projectResults, incentivesResult) {
   if (!project || !projectResults) return null;
+  // Migrate legacy projects to investors[] shape (no-op if already migrated).
+  // The engine internally uses the migrated shape; legacy output aliases still
+  // flow out for backward compatibility.
+  project = migrateProjectToInvestors(project);
+
   const h = project.horizon || 50;
   const startYear = project.startYear || 2026;
   const c = projectResults.consolidated;
@@ -217,8 +223,15 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // ── Debt ──
   const isBank100 = project.finMode === "bank100";
   const isHybrid = project.finMode === "hybrid";
-  const isHybridProject = isHybrid && (project.govBeneficiary || "project") === "project";
-  const isHybridGP = isHybrid && project.govBeneficiary === "gp";
+  // NEW: debt.beneficiary replaces legacy govBeneficiary. If project.debt.beneficiary
+  // is set, use it. Otherwise fall back to legacy govBeneficiary ("gp" → "developer"
+  // in new naming; "project" unchanged).
+  const _debtBeneficiary = project.debt?.beneficiary
+    || (project.govBeneficiary === "gp" ? "developer"
+        : project.govBeneficiary === "project" ? "project"
+        : null);
+  const isHybridProject = isHybrid && (_debtBeneficiary || "project") === "project";
+  const isHybridGP = isHybrid && _debtBeneficiary === "developer";
   const isIncomeFund = project.finMode === "incomeFund";
 
   let rate, tenor, grace, repayYears, maxDebt, upfrontFeePct;
@@ -777,9 +790,16 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const govLoanAmount = isHybrid ? totalDrawn : 0;
   const fundPortionCost = isHybrid ? Math.max(0, totalProjectCost - govLoanAmount) : null;
 
+  // ── NEW: per-investor equity schedule (for waterfall consumption) ──
+  // Uses the migrated investors[] shape. Resolves each investor's contribution
+  // against totalEquity, producing concrete amounts and source types.
+  const perInvestorEquity = allocateEquity(project.investors || [], totalEquity, { devFeeTotal });
+
   return {
     mode: project.finMode, landCapValue, effectiveLandCap, devCostExclLand, devCostInclLand, totalProjectCost, capexGrantTotal,
     gpEquity, lpEquity, totalEquity, gpPct, lpPct, gpEquityBreakdown,
+    // NEW: per-investor equity (source of truth for waterfall)
+    perInvestorEquity,
     capitalizedFinCosts, estimatedIDC, estimatedUpfrontFees,
     drawdown, equityCalls, debtBalOpen, debtBalClose,
     repayment: repay, interest: adjustedInterest, originalInterest: interest,
