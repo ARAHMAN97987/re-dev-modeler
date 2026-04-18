@@ -1,98 +1,146 @@
 /**
- * ZAN Financial Engine — Waterfall Distribution Engine
+ * ZAN Financial Engine — Waterfall Distribution Engine (Simplified)
  * @module engine/waterfall
- * 
- * Dependencies: engine/math.js (calcIRR, calcNPV)
+ *
+ * NEW MODEL (Apr 2026 simplification):
+ *   - All equity is modeled as project.investors[] (each with role: developer | investor)
+ *   - 3-stage distribution per year:
+ *       Stage 1: Return of Capital pro-rata across investors with unreturned equity
+ *       Stage 2: Performance Incentive (applied at settlement year if project IRR > hurdle)
+ *                — developers receive incentivePct × excess, clawed back from investors
+ *       Stage 3: Remaining profit pro-rata by original equity %
+ *   - Income-fund mode keeps its simplified pro-rata annual distribution.
+ *   - Legacy gp and lp output fields are DERIVED ALIASES (not source of truth)
+ *     so existing tests + UI continue working during the migration.
+ *
+ * Dependencies: engine/math.js, engine/investors.js
  * Consumes: computeFinancing output + project config
- * Produces: 4-tier waterfall, LP/GP distributions, IRR, MOIC
  */
 
 import { calcIRR, calcNPV } from './math.js';
+import {
+  migrateProjectToInvestors,
+  allocateEquity,
+  developerIds,
+} from './investors.js';
 
 export function computeWaterfall(project, projectResults, financing, incentivesResult) {
   if (!project || !projectResults || !financing) return null;
-  if (project.finMode === "self" || project.finMode === "bank100" || project.finMode === "debt") return null;
-  // No waterfall when zero equity (e.g. hybrid with 100% government financing)
+
+  // Self/Bank100/Debt modes: single developer, no profit split → no waterfall
+  if (project.finMode === 'self' ||
+      project.finMode === 'bank100' ||
+      project.finMode === 'debt') {
+    return null;
+  }
   if (financing.totalEquity <= 0) return null;
-  // Waterfall only applies to fund and jv modes (GP/LP distribution)
+
+  // Migrate project to investors[] shape (no-op if already migrated)
+  project = migrateProjectToInvestors(project);
+  const investors = project.investors || [];
+  if (investors.length === 0) return null;
+
   const h = project.horizon || 50;
   const sy = project.startYear || 2026;
-
-  // Fund life vs horizon validation: for income funds, the fund life should match (or exceed)
-  // the project horizon so that income distributions are fully captured.
-  // If fundLife < horizon, distributions in the tail years [fundLife..horizon] are silently lost.
-  const isIncomeFundMode = project.finMode === "incomeFund";
-  const fundLife = project.fundLife || 0; // explicit fund life (0 = not set)
-  if (isIncomeFundMode && fundLife > 0 && fundLife < h) {
-    console.warn(`[waterfall] incomeFund: fundLife=${fundLife} < project.horizon=${h}. Distributions in years ${fundLife}–${h-1} may be excluded from LP/GP cash flows. Consider increasing fundLife to match the horizon.`);
-  }
   const c = projectResults.consolidated;
   const f = financing;
+  const ir = incentivesResult;
 
-  // Use equity from financing engine
-  const gpEquity = f.gpEquity;
-  const lpEquity = f.lpEquity;
+  const isIncomeFund = project.finMode === 'incomeFund';
+  const isFund = project.finMode === 'fund' || project.finMode === 'hybrid' || isIncomeFund;
+  const isHybridMode = project.finMode === 'hybrid';
+  const isHybridGP = isHybridMode && (project.debt?.beneficiary === 'developer' ||
+                                       project.govBeneficiary === 'gp');
+
+  // Fund life validation
+  const fundLife = project.fundLife || 0;
+  if (isIncomeFund && fundLife > 0 && fundLife < h) {
+    console.warn(`[waterfall] incomeFund: fundLife=${fundLife} < horizon=${h}. Tail distributions may be excluded.`);
+  }
+
+  // ── Equity allocation per investor ──
   const totalEquity = f.totalEquity;
-  const gpPct = f.gpPct;
-  const lpPct = f.lpPct;
-  const isFund = project.finMode === "fund" || project.finMode === "hybrid" || project.finMode === "incomeFund";
-  const isIncomeFund = project.finMode === "incomeFund";
+  const devFeeTotal = f.devFeeTotal || 0;
+  const equityAllocation = allocateEquity(investors, totalEquity, { devFeeTotal });
+  const equityByInvestorId = {};
+  equityAllocation.forEach(e => { equityByInvestorId[e.investorId] = e.amount; });
 
-  // Fee basis: for hybrid mode, fees apply to fund portion only (not government-financed portion)
-  const isHybridMode = project.finMode === "hybrid";
-  const isHybridGP = isHybridMode && project.govBeneficiary === "gp";
-  // buildCostOnly = true construction cost (excludes land purchase from capex).
-  // For non-hybrid: use buildCostOnly if available, else devCostExclLand (which may include land purchase).
+  // Build investor records. Equity% is normalized across investor pool (sum to 1.0)
+  // so pro-rata distributions split cleanly even if investor contributions don't
+  // exactly match financing.js totalEquity (which still reflects legacy "capex-based"
+  // equity pool — Task 4 will align it with investor totals).
+  const sumInvestorContribs = investors.reduce((s, inv) => {
+    return s + (equityByInvestorId[inv.id] || 0);
+  }, 0);
+  const equityBase = sumInvestorContribs > 0 ? sumInvestorContribs : totalEquity;
+  const records = investors.map(inv => {
+    const equityAmount = equityByInvestorId[inv.id] || 0;
+    return {
+      id: inv.id,
+      name: inv.name || inv.id,
+      role: inv.role || 'investor',
+      contribution: inv.contribution || {},
+      equityAmount,
+      equityPct: equityBase > 0 ? equityAmount / equityBase : 0,
+      // Per-year arrays (filled below)
+      calls: new Array(h).fill(0),
+      distributions: new Array(h).fill(0),
+      netCF: new Array(h).fill(0),
+      // Bucketed distributions
+      roc: 0,
+      profitShare: 0,
+      incentiveReceived: 0,
+    };
+  });
+
+  const devRecords = records.filter(r => r.role === 'developer');
+  const invRecords = records.filter(r => r.role === 'investor');
+  const totalDevEquity = devRecords.reduce((s, r) => s + r.equityAmount, 0);
+  const totalInvEquity = invRecords.reduce((s, r) => s + r.equityAmount, 0);
+  const gpPct = totalEquity > 0 ? totalDevEquity / totalEquity : 0;
+  const lpPct = totalEquity > 0 ? totalInvEquity / totalEquity : 0;
+
+  // ── Fee basis ──
   const effectiveDevCost = f.buildCostOnly != null ? f.buildCostOnly : f.devCostExclLand;
-  // fundFeeBasis: construction cost only (used for structuring fee, operator fee, "deployed" basis)
   const fundFeeBasis = isHybridMode ? (f.fundPortionCost || effectiveDevCost) : effectiveDevCost;
-  // fundTotalCostBasis: total project cost including land equity contribution (used for "fundAssets"/"devCost" mgmt fee)
-  //   "fundAssets" per fund docs = total fund assets (devCostInclLand = GP+LP+Debt) including partner land / land cap
-  //   For hybrid: fund portion only (gov-financed portion excluded)
-  const fundTotalCostBasis = isHybridMode ? (f.fundPortionCost || f.devCostInclLand) : (f.devCostInclLand || effectiveDevCost);
-  // Fund equity basis: for hybrid, the fund's equity is only the fund portion (not gov-borrowed GP equity)
+  const fundTotalCostBasis = isHybridMode
+    ? (f.fundPortionCost || f.devCostInclLand)
+    : (f.devCostInclLand || effectiveDevCost);
   const fundEquityBasis = isHybridMode ? (f.fundPortionCost || totalEquity) : totalEquity;
 
-  // Fee calculations (only Fund type gets full fees)
-  // Subscription fee: for hybrid, apply only to fund portion equity (LP raise), not government-borrowed GP equity
-  const subFeeBase = fundEquityBasis;
-  const subFee = isFund ? subFeeBase * (project.subscriptionFeePct || 0) / 100 : 0;
-  // DevFee: developer manages FULL project → fee on full project cost (not scaled for hybrid)
-  // The dev fee is a project expense NOT included in devCostInclLand, so the government
-  // loan doesn't cover it. The full fee must be borne by project CF / fund equity.
-  const _rawDevFee = f.devFeeTotal || 0;
-  const hybridFundRatio = (isHybridMode && f.totalProjectCost > 0 && f.fundPortionCost > 0)
-    ? f.fundPortionCost / f.totalProjectCost : 1;
-  const devFeeTotal = _rawDevFee; // Full project — developer manages entire project
-  // Structuring fee: % of fund portion cost, not total project cost for hybrid
-  let structFee = isFund ? fundFeeBasis * (project.structuringFeePct || 0) / 100 : 0;
-  const structFeeCap = project.structuringFeeCap || 0;
+  // ── Fund manager fees (read from fundManager sub-object with top-level fallback) ──
+  const fm = project.fundManager || project;
+  const subFee = isFund ? fundEquityBasis * (fm.subscriptionFeePct ?? project.subscriptionFeePct ?? 0) / 100 : 0;
+  let structFee = isFund ? fundFeeBasis * (fm.structuringFeePct ?? project.structuringFeePct ?? 0) / 100 : 0;
+  const structFeeCap = fm.structuringFeeCap ?? project.structuringFeeCap ?? 0;
   if (structFeeCap > 0 && structFee > structFeeCap) structFee = structFeeCap;
-  const mgmtFeeBase = project.mgmtFeeBase || "nav";
-  const mgmtFeeRate = (project.annualMgmtFeePct || 0) / 100;
-  const mgmtFeeCap = project.mgmtFeeCapAnnual || 0;
-  const annualCustody = isFund ? (project.custodyFeeAnnual || 0) : 0;
-  const preEstFee = isFund ? (project.preEstablishmentFee || 0) : 0;
-  const spvSetupFee = isFund ? (project.spvFee || 0) : 0;
-  const auditorAnnual = isFund ? (project.auditorFeeAnnual || 0) : 0;
+  const mgmtFeeBase = fm.mgmtFeeBase ?? project.mgmtFeeBase ?? 'nav';
+  const mgmtFeeRate = (fm.annualFeePct ?? project.annualMgmtFeePct ?? 0) / 100;
+  const mgmtFeeCap = fm.mgmtFeeCapAnnual ?? project.mgmtFeeCapAnnual ?? 0;
+  const annualCustody = isFund ? (fm.custodyFeeAnnual ?? project.custodyFeeAnnual ?? 0) : 0;
+  const preEstFee = isFund ? (fm.preEstablishmentFee ?? project.preEstablishmentFee ?? 0) : 0;
+  const spvSetupFee = isFund ? (fm.spvFee ?? project.spvFee ?? 0) : 0;
+  const auditorAnnual = isFund ? (fm.auditorFeeAnnual ?? project.auditorFeeAnnual ?? 0) : 0;
 
-  // Operator fee: 0.15% of completed asset value, annual, only for rental/hold projects (not pure sale)
-  // Operator manages the ENTIRE physical asset regardless of financing structure
-  // → use full project cost (effectiveDevCost), NOT fund portion
-  const hasRentalAssets = (project.assets || []).some(a => a.revType !== "Sale");
+  // Operator fee: 0.15% of completed asset value, annual, only for rental/hold
+  const hasRentalAssets = (project.assets || []).some(a => a.revType !== 'Sale');
   const operatorFeePct = (project.operatorFeePct || 0) / 100;
   const operatorFeeBase = hasRentalAssets ? effectiveDevCost : 0;
 
-  // Miscellaneous expenses: 0.5% of fund portion, one-time at fund start
-  const miscExpensePct = (project.miscExpensePct || 0) / 100;
-  const miscExpenseTotal = (isFund || project.finMode === "jv") ? fundFeeBasis * miscExpensePct : 0;
+  // Misc expense one-time at fund start
+  const miscExpensePct = (fm.miscExpensePct ?? project.miscExpensePct ?? 0) / 100;
+  const miscExpenseTotal = isFund ? fundFeeBasis * miscExpensePct : 0;
 
-  // Fee schedule
+  // Dev fee (project-wide) already computed in financing.js
+  const feeDev = new Array(h).fill(0);
+  const fDevSchedule = f.devFeeSchedule || [];
+  for (let y = 0; y < h; y++) feeDev[y] = fDevSchedule[y] || 0;
+
+  // Fee schedule arrays
   const fees = new Array(h).fill(0);
   const feeSub = new Array(h).fill(0);
   const feeMgmt = new Array(h).fill(0);
   const feeCustody = new Array(h).fill(0);
-  const feeDev = new Array(h).fill(0);
   const feeStruct = new Array(h).fill(0);
   const feePreEst = new Array(h).fill(0);
   const feeSpv = new Array(h).fill(0);
@@ -100,26 +148,25 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
   const feeOperator = new Array(h).fill(0);
   const feeMisc = new Array(h).fill(0);
 
-  // Find construction period
+  // Construction period
   let constrStart = h, constrEnd = 0;
-  for (let y = 0; y < h; y++) { if (c.capex[y] > 0) { constrStart = Math.min(constrStart, y); constrEnd = Math.max(constrEnd, y); } }
+  for (let y = 0; y < h; y++) {
+    if (c.capex[y] > 0) {
+      constrStart = Math.min(constrStart, y);
+      constrEnd = Math.max(constrEnd, y);
+    }
+  }
 
-  // Fund start year: user input or auto (1 year before construction)
-  const fundStartIdx = Math.max(0, (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : constrStart);
+  const fundStartIdx = Math.max(0,
+    (project.fundStartYear || 0) > 0 ? project.fundStartYear - sy : constrStart);
 
-  // Exit year — use optimal exit from financing engine (highest IRR)
-  // "absorption" = Sale-asset absorption: treated as "hold" at engine level.
-  const _rawWfExit = project.exitStrategy || "sale";
-  const exitStrategy = (isIncomeFund || _rawWfExit === "absorption") ? "hold" : _rawWfExit;
+  const _rawWfExit = project.exitStrategy || 'sale';
+  const exitStrategy = (isIncomeFund || _rawWfExit === 'absorption') ? 'hold' : _rawWfExit;
   const optIdx = financing.optimalExitYear ? financing.optimalExitYear - sy : constrEnd + 3;
-  // Smart exit year: values < 100 treated as relative offset, ≥ startYear as absolute
   const rawExit = project.exitYear || 0;
   const resolvedExit = rawExit > 0 && rawExit < 100 ? rawExit : rawExit > 0 ? rawExit - sy : 0;
-  const exitYr = exitStrategy === "hold" ? h - 1 : (resolvedExit > 0 ? resolvedExit : optIdx);
-  const operYears = exitYr - constrStart + 1;
-
-  // Fee period end: hold = full horizon, sale/caprate = exit year
-  const feeEndYr = exitStrategy === "hold" ? h - 1 : exitYr;
+  const exitYr = exitStrategy === 'hold' ? h - 1 : (resolvedExit > 0 ? resolvedExit : optIdx);
+  const feeEndYr = exitStrategy === 'hold' ? h - 1 : exitYr;
 
   // One-time fees at fund start
   if (fundStartIdx < h) {
@@ -129,36 +176,25 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     feeSpv[fundStartIdx] = spvSetupFee;
     if (miscExpenseTotal > 0) feeMisc[fundStartIdx] = miscExpenseTotal;
   }
-  // Developer fee spread over construction
-  for (let y = constrStart; y <= constrEnd && y < h; y++) {
-    if (c.totalCapex > 0) feeDev[y] = devFeeTotal * (c.capex[y] / c.totalCapex);
-  }
-  // Management + custody + auditor fees from fund start to fee period end
-  // Fee basis options per fund document:
-  //   "fundAssets" = total fund assets (devCostInclLand = GP+LP+Debt, incl. land equity) — CORRECT per fund docs
-  //                  Fixed annual amount. "0.50% of total fund assets" → rate × fundSize
-  //   "nav"        = NAV proxy (equity + cumIncome - cumCapex, floor at equity)
-  //   "equity"     = total equity commitment (GP+LP, fixed)
-  //   "devCost"    = development cost including land (same as fundAssets — both use devCostInclLand)
-  //   "deployed"   = cumulative CAPEX deployed (legacy, for deployed-capital basis only)
+
+  // Hybrid fund ratio for NAV tracking
+  const hybridFundRatio = (isHybridMode && f.totalProjectCost > 0 && f.fundPortionCost > 0)
+    ? f.fundPortionCost / f.totalProjectCost : 1;
+
+  // Annual fees (mgmt/custody/auditor/operator) during operations
   let cumCapex = 0, cumIncome = 0;
   for (let y = fundStartIdx; y <= feeEndYr && y < h; y++) {
-    // For hybrid: fund's share of income/capex for accurate NAV tracking
     cumCapex += Math.abs(c.capex[y] || 0) * hybridFundRatio;
     cumIncome += (c.income[y] || 0) * hybridFundRatio;
     if (isFund) {
       let mgmtBase = 0;
-      if (mgmtFeeBase === "equity") {
+      if (mgmtFeeBase === 'equity') {
         mgmtBase = fundEquityBasis;
-      } else if (mgmtFeeBase === "devCost" || mgmtFeeBase === "fundAssets") {
-        // Total project cost including land equity contribution (partner land / land cap).
-        // For hybrid: fund portion only. For standard fund: devCostInclLand.
+      } else if (mgmtFeeBase === 'devCost' || mgmtFeeBase === 'fundAssets' || mgmtFeeBase === 'gav') {
         mgmtBase = fundTotalCostBasis;
-      } else if (mgmtFeeBase === "nav") {
-        // NAV proxy: equity + cumulative net income - cumulative capex (floor at equity)
+      } else if (mgmtFeeBase === 'nav') {
         mgmtBase = Math.max(fundEquityBasis, fundEquityBasis + cumIncome - cumCapex);
       } else {
-        // "deployed": cumulative CAPEX deployed (legacy)
         mgmtBase = cumCapex;
       }
       feeMgmt[y] = mgmtBase * mgmtFeeRate;
@@ -166,21 +202,367 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     }
     feeCustody[y] = annualCustody;
     feeAuditor[y] = auditorAnnual;
-    // Operator fee: annual, when income > 0 (operating period)
-    // Excel formula: IF(AND(year>=fundStart, year<=exitYear, income>0), MIN(cap, devCost*rate), 0)
     if (hasRentalAssets && operatorFeeBase > 0 && c.income[y] > 0) {
       feeOperator[y] = operatorFeeBase * operatorFeePct;
       const operatorCap = project.operatorFeeCap || 0;
       if (operatorCap > 0 && feeOperator[y] > operatorCap) feeOperator[y] = operatorCap;
     }
   }
-  for (let y = 0; y < h; y++) fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] + feeStruct[y] + feePreEst[y] + feeSpv[y] + feeAuditor[y] + feeOperator[y] + feeMisc[y];
 
+  for (let y = 0; y < h; y++) {
+    fees[y] = feeSub[y] + feeMgmt[y] + feeCustody[y] + feeDev[y] +
+              feeStruct[y] + feePreEst[y] + feeSpv[y] + feeAuditor[y] +
+              feeOperator[y] + feeMisc[y];
+  }
   const totalFees = fees.reduce((a, b) => a + b, 0);
 
-  // ── Phase A: Fee Attribution ──
-  // Split fees into developer fees vs fund-level operating fees vs subscription/investor costs
-  const _gpIsFundManager = project.gpIsFundManager !== false;
+  // ── Unfunded fees (fees that operating CF can't cover → equity absorbs) ──
+  const unfundedFees = new Array(h).fill(0);
+  for (let y = 0; y < h; y++) {
+    if (fees[y] > 0) {
+      const adjNetCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
+      const operatingCF = adjNetCF - (f.debtService[y] || 0) + (f.exitProceeds?.[y] || 0);
+      unfundedFees[y] = Math.max(0, fees[y] - Math.max(0, operatingCF));
+    }
+  }
+
+  // ── Equity calls pro-rata to CAPEX per year (same as before) ──
+  const callOrder = project.capitalCallOrder || 'prorata';
+  const totalEquityCalls = new Array(h).fill(0);
+  if (callOrder === 'debtFirst' && f.drawdown && c.totalCapex > 0) {
+    const finEquityCalls = new Array(h).fill(0);
+    let finTotalEquity = 0;
+    for (let y = 0; y < h; y++) {
+      finEquityCalls[y] = Math.max(0, (c.capex[y] || 0) - (f.drawdown[y] || 0));
+      finTotalEquity += finEquityCalls[y];
+    }
+    const scale = finTotalEquity > 0 ? totalEquity / finTotalEquity : 0;
+    for (let y = 0; y < h; y++) {
+      totalEquityCalls[y] = finEquityCalls[y] * scale + unfundedFees[y];
+    }
+  } else {
+    for (let y = 0; y < h; y++) {
+      const capexPortion = c.totalCapex > 0 && c.capex[y] > 0
+        ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
+      totalEquityCalls[y] = capexPortion + unfundedFees[y];
+    }
+  }
+
+  // Gate calls to fund period
+  if (fundStartIdx > 0) {
+    let pre = 0;
+    for (let y = 0; y < fundStartIdx; y++) { pre += totalEquityCalls[y]; totalEquityCalls[y] = 0; }
+    totalEquityCalls[fundStartIdx] += pre;
+  }
+
+  // Per-investor calls (each investor's share of each year's call)
+  for (let y = 0; y < h; y++) {
+    records.forEach(r => {
+      r.calls[y] = totalEquityCalls[y] * r.equityPct;
+    });
+  }
+
+  // ── Exit proceeds ──
+  const exitProceeds = [...(f.exitProceeds || new Array(h).fill(0))];
+
+  // ── Cash available per year ──
+  const adjLandRent = ir?.adjustedLandRent || c.landRent;
+  const cashAvail = new Array(h).fill(0);
+  for (let y = 0; y < h; y++) {
+    const unlevCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
+    const inPeriod = y >= fundStartIdx && y <= exitYr;
+    const dsDeduction = isHybridGP ? 0 : (f.debtService[y] || 0);
+    cashAvail[y] = Math.max(0,
+      (inPeriod ? unlevCF : 0)
+      - dsDeduction
+      - fees[y]
+      + unfundedFees[y]
+      + exitProceeds[y]
+    );
+  }
+
+  // ── Per-year distribution: Income fund simplified path ──
+  const tier1 = new Array(h).fill(0); // ROC
+  const tier2 = new Array(h).fill(0); // Incentive (settlement year only)
+  const tier3 = new Array(h).fill(0); // Remaining profit
+
+  if (isIncomeFund) {
+    // Income fund: simple annual pro-rata distribution, no stages
+    let cumReturned = new Array(records.length).fill(0);
+    for (let y = 0; y < h; y++) {
+      if (cashAvail[y] <= 0) continue;
+      // Stage 1: ROC first until all unreturned reach zero
+      let remaining = cashAvail[y];
+      const unret = records.map((r, i) => Math.max(0, r.equityAmount - cumReturned[i]));
+      const sumUnret = unret.reduce((a, b) => a + b, 0);
+      if (sumUnret > 0 && remaining > 0) {
+        const rocAmt = Math.min(remaining, sumUnret);
+        records.forEach((r, i) => {
+          if (unret[i] > 0) {
+            const share = rocAmt * (unret[i] / sumUnret);
+            r.distributions[y] += share;
+            cumReturned[i] += share;
+            r.roc += share;
+          }
+        });
+        tier1[y] += rocAmt;
+        remaining -= rocAmt;
+      }
+      // Stage 3: remaining pro-rata
+      if (remaining > 0) {
+        records.forEach(r => {
+          const share = remaining * r.equityPct;
+          r.distributions[y] += share;
+          r.profitShare += share;
+        });
+        tier3[y] += remaining;
+      }
+    }
+  } else {
+    // Standard fund: 3-stage per year
+    let cumReturned = new Array(records.length).fill(0);
+    for (let y = 0; y < h; y++) {
+      if (cashAvail[y] <= 0) continue;
+      let remaining = cashAvail[y];
+
+      // Stage 1: ROC pro-rata to unreturned amounts
+      const unret = records.map((r, i) => Math.max(0, r.equityAmount - cumReturned[i]));
+      const sumUnret = unret.reduce((a, b) => a + b, 0);
+      if (sumUnret > 0 && remaining > 0) {
+        const rocAmt = Math.min(remaining, sumUnret);
+        records.forEach((r, i) => {
+          if (unret[i] > 0) {
+            const share = rocAmt * (unret[i] / sumUnret);
+            r.distributions[y] += share;
+            cumReturned[i] += share;
+            r.roc += share;
+          }
+        });
+        tier1[y] += rocAmt;
+        remaining -= rocAmt;
+      }
+
+      // Stage 3: remaining profit pro-rata by equity%
+      if (remaining > 0) {
+        records.forEach(r => {
+          const share = remaining * r.equityPct;
+          r.distributions[y] += share;
+          r.profitShare += share;
+        });
+        tier3[y] += remaining;
+      }
+    }
+  }
+
+  // ── Stage 2: Performance Incentive (settlement at last positive-dist year) ──
+  let performanceIncentiveAmount = 0;
+  let performanceIncentiveTriggered = false;
+  let performanceIncentiveExcess = 0;
+  let performanceIncentiveRequired = 0;
+  let performanceIncentiveSettleYear = -1;
+  const hurdleRate = (project.hurdleIRR ?? 15) / 100;
+  const incPct = (project.incentivePct ?? 20) / 100;
+  const hurdleMode = project.hurdleMode || 'simple';
+  const perfEnabled = project.performanceIncentive !== false && !isIncomeFund;
+
+  if (perfEnabled && devRecords.length > 0) {
+    // Find last year with any positive distribution across all investors
+    for (let y = h - 1; y >= 0; y--) {
+      const anyDist = records.some(r => r.distributions[y] > 0);
+      if (anyDist) { performanceIncentiveSettleYear = y; break; }
+    }
+
+    if (performanceIncentiveSettleYear >= 0) {
+      const sy2 = performanceIncentiveSettleYear;
+      const totalCalled = records.reduce((s, r) =>
+        s + r.calls.reduce((a, b) => a + b, 0), 0);
+      const totalDist = records.reduce((s, r) =>
+        s + r.distributions.reduce((a, b) => a + b, 0), 0);
+
+      // Find first call year for investYears
+      let firstCallYr = 0;
+      for (let y = 0; y < h; y++) {
+        if (totalEquityCalls[y] > 0) { firstCallYr = y; break; }
+      }
+      const incentiveYears = Math.max(1, sy2 - firstCallYr + 1);
+
+      if (hurdleMode === 'simple') {
+        // Simple mode: required = totalCalled × (1 + rate × years); excess is
+        // compared to the undiscounted total distribution.
+        performanceIncentiveRequired = totalCalled * (1 + hurdleRate * incentiveYears);
+        performanceIncentiveExcess = Math.max(0, totalDist - performanceIncentiveRequired);
+      } else {
+        // IRR mode: compare future values at the hurdle rate. Future-value the
+        // calls forward and the distributions forward to the settle year. Excess
+        // is the FV of distributions above the FV of calls at hurdle — equivalent
+        // to testing whether actual IRR exceeds hurdle IRR. This properly
+        // handles multi-year call + distribution schedules.
+        let requiredFV = 0, actualFV = 0;
+        for (let y = 0; y < h; y++) {
+          const yearsToSettle = Math.max(0, sy2 - y);
+          const compound = Math.pow(1 + hurdleRate, yearsToSettle);
+          requiredFV += (totalEquityCalls[y] || 0) * compound;
+          const yearDist = records.reduce((s, r) => s + (r.distributions[y] || 0), 0);
+          actualFV += yearDist * compound;
+        }
+        performanceIncentiveRequired = requiredFV;
+        performanceIncentiveExcess = Math.max(0, actualFV - requiredFV);
+      }
+
+      if (performanceIncentiveExcess > 0) {
+        performanceIncentiveAmount = performanceIncentiveExcess * incPct;
+        performanceIncentiveTriggered = true;
+
+        // Clawback: take from non-developers pro-rata to their Stage 3 distribution at sy2
+        // Cap clawback at what they actually received in sy2
+        const invDistAtSy2 = invRecords.map(r => r.distributions[sy2]);
+        const totalInvDistAtSy2 = invDistAtSy2.reduce((a, b) => a + b, 0);
+        const clawback = Math.min(performanceIncentiveAmount, totalInvDistAtSy2);
+        performanceIncentiveAmount = clawback;
+
+        if (clawback > 0 && totalInvDistAtSy2 > 0) {
+          // Investors: their distribution + profitShare drop by the clawback share.
+          // incentiveReceived stays at 0 for investors — they don't receive incentive,
+          // the clawback is a transfer out of their profit share.
+          invRecords.forEach((r, i) => {
+            const share = clawback * (invDistAtSy2[i] / totalInvDistAtSy2);
+            r.distributions[sy2] -= share;
+            r.profitShare -= share;
+          });
+
+          // Developers: receive the full clawback pro-rata by their equity share
+          if (totalDevEquity > 0) {
+            devRecords.forEach(r => {
+              const share = clawback * (r.equityAmount / totalDevEquity);
+              r.distributions[sy2] += share;
+              r.incentiveReceived += share;
+            });
+          } else {
+            // Equal split if all devs have zero equity
+            const per = clawback / devRecords.length;
+            devRecords.forEach(r => {
+              r.distributions[sy2] += per;
+              r.incentiveReceived += per;
+            });
+          }
+
+          tier2[sy2] += clawback;
+          // Reduce tier3 by the amount that was shifted (it moved from profit-share into incentive)
+          tier3[sy2] = Math.max(0, tier3[sy2] - clawback);
+        }
+      }
+    }
+  } else if (perfEnabled && devRecords.length === 0 && !isIncomeFund) {
+    console.warn('[waterfall] Performance incentive enabled but no developer role found — skipping incentive.');
+  }
+
+  // ── Per-investor netCF ──
+  records.forEach(r => {
+    for (let y = 0; y < h; y++) {
+      r.netCF[y] = r.distributions[y] - r.calls[y];
+    }
+  });
+
+  // ── Per-investor aggregates ──
+  records.forEach(r => {
+    r.totalCalled = r.calls.reduce((a, b) => a + b, 0);
+    r.totalDist = r.distributions.reduce((a, b) => a + b, 0);
+    r.netDist = r.totalDist; // no land rent obligation separately tracked in new model
+    r.irr = calcIRR(r.netCF);
+    r.moic = r.totalCalled > 0 ? r.totalDist / r.totalCalled : 0;
+    r.dpi = r.totalCalled > 0 ? r.totalDist / r.totalCalled : 0;
+    r.npv10 = calcNPV(r.netCF, 0.10);
+    r.npv12 = calcNPV(r.netCF, 0.12);
+    r.npv14 = calcNPV(r.netCF, 0.14);
+  });
+
+  const investorOutcomes = records;
+
+  // ── Backward-compat derived aliases ──
+  const sumArrByRole = (role, field) => {
+    const arr = new Array(h).fill(0);
+    records.filter(r => r.role === role).forEach(r => {
+      for (let y = 0; y < h; y++) arr[y] += r[field][y] || 0;
+    });
+    return arr;
+  };
+  const sumByRoleField = (role, field) =>
+    records.filter(r => r.role === role).reduce((s, r) => s + (r[field] || 0), 0);
+
+  const gpEquity = totalDevEquity;
+  const lpEquity = totalInvEquity;
+  const gpDist = sumArrByRole('developer', 'distributions');
+  const lpDist = sumArrByRole('investor', 'distributions');
+  const gpNetCF = sumArrByRole('developer', 'netCF');
+  const lpNetCF = sumArrByRole('investor', 'netCF');
+  const gpCalls = sumArrByRole('developer', 'calls');
+  const lpCalls = sumArrByRole('investor', 'calls');
+  const gpTotalCalled = sumByRoleField('developer', 'totalCalled');
+  const lpTotalCalled = sumByRoleField('investor', 'totalCalled');
+  const gpTotalDist = sumByRoleField('developer', 'totalDist');
+  const lpTotalDist = sumByRoleField('investor', 'totalDist');
+  const gpNetDist = gpTotalDist;
+  const lpNetDist = lpTotalDist;
+  const gpIRR = calcIRR(gpNetCF);
+  const lpIRR = calcIRR(lpNetCF);
+  const gpMOIC = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
+  const lpMOIC = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
+  const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
+  const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
+  const gpCommittedMOIC = gpEquity > 0 ? gpNetDist / gpEquity : 0;
+  const lpCommittedMOIC = lpEquity > 0 ? lpNetDist / lpEquity : 0;
+  const gpNPV10 = calcNPV(gpNetCF, 0.10);
+  const gpNPV12 = calcNPV(gpNetCF, 0.12);
+  const gpNPV14 = calcNPV(gpNetCF, 0.14);
+  const lpNPV10 = calcNPV(lpNetCF, 0.10);
+  const lpNPV12 = calcNPV(lpNetCF, 0.12);
+  const lpNPV14 = calcNPV(lpNetCF, 0.14);
+  const projNPV10 = calcNPV(c.netCF, 0.10);
+  const projNPV12 = calcNPV(c.netCF, 0.12);
+  const projNPV14 = calcNPV(c.netCF, 0.14);
+
+  // Simple ROE
+  const gpSimpleROE = gpTotalCalled > 0 ? (gpNetDist - gpTotalCalled) / gpTotalCalled : 0;
+  const lpSimpleROE = lpTotalCalled > 0 ? (lpNetDist - lpTotalCalled) / lpTotalCalled : 0;
+  let _firstCall = -1, _lastDist = 0;
+  for (let y = 0; y < h; y++) {
+    if (lpNetCF[y] < 0 && _firstCall < 0) _firstCall = y;
+    if (lpNetCF[y] > 0) _lastDist = y;
+  }
+  const investYears = Math.max(1, _firstCall >= 0 ? _lastDist - _firstCall + 1 : (exitYr > 0 ? exitYr : h));
+  const gpSimpleAnnual = investYears > 0 ? gpSimpleROE / investYears : 0;
+  const lpSimpleAnnual = investYears > 0 ? lpSimpleROE / investYears : 0;
+
+  // Income fund metrics
+  const distributionYield = new Array(h).fill(0);
+  const payoutRatio = new Array(h).fill(0);
+  const navEstimate = new Array(h).fill(0);
+  const cumDistributions = new Array(h).fill(0);
+  const ffoProxy = new Array(h).fill(0);
+  let avgDistYield = 0;
+  if (isIncomeFund && lpEquity > 0) {
+    let cumDist = 0;
+    let stableYields = [];
+    const constrEndLocal = f.constrEnd || 0;
+    for (let y = 0; y < h; y++) {
+      const noi = (c.income[y] || 0) - (adjLandRent[y] || 0);
+      cumDist += lpDist[y];
+      cumDistributions[y] = cumDist;
+      distributionYield[y] = lpEquity > 0 ? lpDist[y] / lpEquity : 0;
+      payoutRatio[y] = cashAvail[y] > 0 ? (lpDist[y] + gpDist[y]) / cashAvail[y] : 0;
+      navEstimate[y] = noi > 0 ? noi / 0.08 : (f.devCostInclLand || 0);
+      ffoProxy[y] = Math.max(0, noi - (fees[y] || 0) - (f.debtService?.[y] || 0));
+      if (y > constrEndLocal && distributionYield[y] > 0) stableYields.push(distributionYield[y]);
+    }
+    avgDistYield = stableYields.length > 0
+      ? stableYields.reduce((a, b) => a + b, 0) / stableYields.length : 0;
+  }
+
+  // Aggregate equity calls (backward compat — engine clients expect this)
+  const equityCalls = new Array(h).fill(0);
+  for (let y = 0; y < h; y++) equityCalls[y] = totalEquityCalls[y];
+
+  // Developer fee totals (informational)
   const devFeesTotal = feeDev.reduce((a, b) => a + b, 0);
   const fundLevelFeesTotal = feeMgmt.reduce((a, b) => a + b, 0)
     + feeStruct.reduce((a, b) => a + b, 0)
@@ -191,569 +573,83 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     + feeOperator.reduce((a, b) => a + b, 0)
     + feeMisc.reduce((a, b) => a + b, 0);
   const subFeesTotal = feeSub.reduce((a, b) => a + b, 0);
-  const developerFeesReceived = _gpIsFundManager ? devFeesTotal + fundLevelFeesTotal : devFeesTotal;
 
-  // ── ZAN: Unfunded Fees ──
-  // Fees that operating CF cannot cover → must be funded from equity
-  // ZAN: UnfundedFees[y] = MAX(0, Fees[y] - MAX(0, UnlevCF[y] + DS[y] + Exit[y]))
-  // In ZAN: DS is negative. In our code: DS is positive → subtract.
-  // FIX#20: Use incentive-adjusted netCF (was using raw c.netCF, ignoring grants/rebates)
-  const ir = incentivesResult;
-  const unfundedFees = new Array(h).fill(0);
-  for (let y = 0; y < h; y++) {
-    if (fees[y] > 0) {
-      const adjNetCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
-      const operatingCF = adjNetCF - (f.debtService[y] || 0) + (f.exitProceeds?.[y] || 0);
-      unfundedFees[y] = Math.max(0, fees[y] - Math.max(0, operatingCF));
-    }
-  }
-
-  // H14: Fee treatment policy
-  // "capital" = fees count as invested capital (earn ROC + Pref) - default, current behavior
-  // "expense" = fees are expenses (outside capital base - don't earn Pref, smaller unreturned capital)
-  const feeTreatment = project.feeTreatment || "capital";
-  // ── Land Capitalization (in-kind equity at fund start) ──
-  // effectiveLandCap is a non-cash equity contribution recognized at fund start.
-  // ZAN Excel: land cap is distributed proportionally across construction (not lump sum).
-  // It inflates GP's equity% → GP's share of ALL calls (incl. land cap) = gpPct.
-  const effectiveLandCap = f.effectiveLandCap || 0;
-
-  // ── Equity Calls ──
-  // capitalCallOrder: "prorata" (default) = equity pro-rata to CAPEX each year
-  //                   "debtFirst" = exhaust debt before calling equity (back-loaded calls, boosts IRR)
-  // ZAN Excel convention: ALL equity (including land cap) distributed proportionally to CAPEX.
-  // Land cap is NOT a lump sum — it's recognized as construction progresses.
-  const callOrder = project.capitalCallOrder || "prorata";
-  const equityCalls = new Array(h).fill(0);
-  if (callOrder === "debtFirst" && f.drawdown && c.totalCapex > 0) {
-    // Debt-First: equity = residual after debt drawdown each year, scaled to totalEquity
-    const finEquityCalls = new Array(h).fill(0);
-    let finTotalEquity = 0;
-    for (let y = 0; y < h; y++) {
-      finEquityCalls[y] = Math.max(0, (c.capex[y] || 0) - (f.drawdown[y] || 0));
-      finTotalEquity += finEquityCalls[y];
-    }
-    const scale = finTotalEquity > 0 ? totalEquity / finTotalEquity : 0;
-    for (let y = 0; y < h; y++) {
-      equityCalls[y] = finEquityCalls[y] * scale + unfundedFees[y];
-    }
-  } else {
-    // Pro-Rata (default): ALL equity (incl. land cap) distributed proportionally to CAPEX each year
-    for (let y = 0; y < h; y++) {
-      const capexPortion = c.totalCapex > 0 && c.capex[y] > 0 ? (c.capex[y] / c.totalCapex) * totalEquity : 0;
-      equityCalls[y] = capexPortion + unfundedFees[y];
-    }
-  }
-  // Gate equity calls to fund period: accumulate pre-fundStart into fundStartIdx
-  // This matches Excel: IF(year >= fundStart, call, 0)
-  if (fundStartIdx > 0) {
-    let preFundCalls = 0;
-    for (let y = 0; y < fundStartIdx; y++) {
-      preFundCalls += equityCalls[y];
-      equityCalls[y] = 0;
-    }
-    equityCalls[fundStartIdx] += preFundCalls;
-  }
-
-  // GP/LP call split
-  // ZAN Excel: ALL calls (including land cap portion) split by overall equity ratio (gpPct/lpPct).
-  // Land cap inflates GP equity% (e.g. 69.6%), so GP bears proportionally larger calls.
-  // This is correct: land cap is an in-kind contribution — GP "pays" via land, not cash.
-  const gpCalls = new Array(h).fill(0);
-  const lpCalls = new Array(h).fill(0);
-  for (let y = 0; y < h; y++) {
-    gpCalls[y] = equityCalls[y] * gpPct;
-    lpCalls[y] = equityCalls[y] * lpPct;
-  }
-
-  // Exit proceeds - GROSS (net of exit cost only, NOT net of debt). Debt repaid via balloon in debtService.
-  const exitProceeds = [...(f.exitProceeds || new Array(h).fill(0))];
-
-  // Cash available for distribution - ZAN formula:
-  // cashAvail[y] = MAX(0, IF(yr in [fundStart..exit], UnlevCF, 0) + DS - Fees + UF + Exit)
-  // UnlevCF = c.netCF = income - landRent - CAPEX (already includes CAPEX, unlike NOI-only)
-  // DS is positive in our code → subtract. Fees positive → subtract. UF positive → add back.
-  const adjLandRent = ir?.adjustedLandRent || c.landRent;
-  // Land rent payer resolution (platform-specific, not in ZAN)
-  // IMPORTANT: Land rent is ALREADY deducted in unlevered CF (Income - LandRent - CAPEX).
-  // cashAvail is based on unlevered CF, so distributions already reflect land rent cost.
-  // Setting a specific payer (gp/lp) would DOUBLE-COUNT land rent unless we add it back to cashAvail.
-  // Therefore: "auto" always resolves to "project" (shared via CF, no separate obligation).
-  // Only explicit "gp"/"lp" with cashAvail adjustment would avoid double-counting (future enhancement).
-  const lrPaidByRaw = project.landRentPaidBy || "auto";
-  // Resolve land rent payer:
-  // "auto"/"project" → land rent stays embedded in project CF (shared proportionally via waterfall)
-  // "gp"/"lp"/"split" → land rent is UN-embedded from CF and charged directly to the designated party
-  let resolvedLandRentPayer = "project";
-  if (lrPaidByRaw === "gp" || lrPaidByRaw === "lp" || lrPaidByRaw === "split") {
-    resolvedLandRentPayer = lrPaidByRaw;
-  }
-  const gpPaysLandRent = resolvedLandRentPayer === "gp" || resolvedLandRentPayer === "split";
-  const lpPaysLandRent = resolvedLandRentPayer === "lp" || resolvedLandRentPayer === "split";
-  const gpLandRentObligation = new Array(h).fill(0);
-  const lpLandRentObligation = new Array(h).fill(0);
-  const cashAvail = new Array(h).fill(0);
-  for (let y = 0; y < h; y++) {
-    // When a specific payer is assigned, populate their obligation array.
-    // The obligation is deducted from their net CF (lines ~480-481), NOT from cashAvail.
-    if (resolvedLandRentPayer === "gp") {
-      gpLandRentObligation[y] = adjLandRent[y];
-    } else if (resolvedLandRentPayer === "lp") {
-      lpLandRentObligation[y] = adjLandRent[y];
-    } else if (resolvedLandRentPayer === "split") {
-      gpLandRentObligation[y] = adjLandRent[y] * gpPct;
-      lpLandRentObligation[y] = adjLandRent[y] * lpPct;
-    }
-    // ZAN Cash Available: MAX(0, NetCF + DS - TotalFees + UF + Exit)
-    // IMPORTANT: unlevCF already has land rent deducted (Income - LandRent - CAPEX).
-    // When a specific payer is assigned, we ADD BACK the land rent to cashAvail so it's
-    // not double-counted (once in CF, once via obligation). The obligation arrays above
-    // ensure the designated party still bears the cost in their net CF.
-    const unlevCF = ir?.adjustedNetCF?.[y] ?? c.netCF[y];
-    const inPeriod = y >= fundStartIdx && y <= exitYr;
-    const landRentAddBack = resolvedLandRentPayer !== "project" ? (adjLandRent[y] || 0) : 0;
-    // Hybrid-GP: debt service is developer's personal obligation, NOT deducted from fund cashAvail.
-    // The developer pays from their GP distributions (deducted in GP net CF below).
-    // Hybrid-Project & standard: debt service deducted normally from project CF.
-    const dsDeduction = isHybridGP ? 0 : (f.debtService[y] || 0);
-    cashAvail[y] = Math.max(0,
-      (inPeriod ? unlevCF : 0)
-      + landRentAddBack
-      - dsDeduction
-      - fees[y]
-      + unfundedFees[y]
-      + exitProceeds[y]
-    );
-  }
-
-  // ── INCOME FUND: Simplified distribution (no tiers, direct pro-rata) ──
-  // Income funds distribute all available cash directly by ownership percentage.
-  // No catch-up, no carry, no complex waterfall. Optional performance incentive.
-  const isIncomeFundDist = isIncomeFund;
-
-  // 4-tier waterfall (skipped for income fund — uses simplified path)
-  const prefRate = isIncomeFundDist ? 0 : Math.max(0, Math.min(0.5, (project.prefReturnPct ?? 15) / 100));
-  // carryPct cap: hard cap at 99% (0.99) to prevent numerical explosion in catch-up formula.
-  // At 100% carry: tier3 = tier2 * 1 / (1 - 1) = Infinity → division-by-zero.
-  // At 99%: tier3 = tier2 * 0.99 / 0.01 = 99× tier2 (economically extreme but finite).
-  // ZAN market convention: carry > 30% is unusual; 99% cap is a safety rail.
-  const carryPct = Math.min(0.99, Math.max(0, (project.carryPct ?? 30) / 100));
-  if ((project.carryPct ?? 30) > 99) {
-    console.warn(`[waterfall] carryPct ${project.carryPct}% capped at 99% to prevent division-by-zero in catch-up calculation.`);
-  }
-  // Profit split (tier4):
-  // When a promote/carry structure is configured (gpCatchup + carryPct > 0), the waterfall
-  // uses the explicit lpProfitSplitPct for tier4. This is a standard fund promote structure
-  // where GP earns carry and LP gets a defined profit share.
-  // When NO promote is configured, profits distribute by equity ownership (fair split).
-  // This prevents the bug where developer-as-investor gets 0% of profits despite owning
-  // a significant equity share (from land capitalization or cash investment).
-  const hasPromoteStructure = project.gpCatchup && (project.carryPct || 0) > 0;
-  const _lpSplitRaw = project.lpProfitSplitPct;
-  let lpSplitPct = hasPromoteStructure
-    ? Math.max(0, Math.min(1, (_lpSplitRaw ?? 70) / 100))  // Promote: use explicit split (default 70%)
-    : lpPct;  // No promote: ALWAYS equity-proportional, ignore any saved lpProfitSplitPct
-  let gpSplitPct = 1 - lpSplitPct;
-  // ── Sponsor-Promote Floor ──
-  // A promote structure is supposed to reward the sponsor ABOVE equity pro-rata, never below.
-  // If a user misconfigures the waterfall so that GP's tier4 share falls below their equity %
-  // (e.g. lpProfitSplitPct=100 while GP owns 20% of equity), the sponsor/developer-as-investor
-  // would receive LESS than their fair equity-pro-rata share of residual profit. That's the
-  // "developer gets only capital back while LP takes all profit" bug.
-  // Guard: when a promote is configured, floor gpSplitPct at gpPct so the sponsor is never
-  // punished below equity-proportional participation in tier 4.
-  if (hasPromoteStructure && gpPct > 0 && gpSplitPct < gpPct) {
-    gpSplitPct = gpPct;
-    lpSplitPct = 1 - gpSplitPct;
-  }
-
-  const tier1 = new Array(h).fill(0); // Return of Capital
-  const tier2 = new Array(h).fill(0); // Preferred Return
-  const tier3 = new Array(h).fill(0); // GP Catch-up
-  const tier4LP = new Array(h).fill(0); // Profit Split LP
-  const tier4GP = new Array(h).fill(0); // Profit Split GP
-  const lpDist = new Array(h).fill(0);
-  const gpDist = new Array(h).fill(0);
-  const unreturnedOpen = new Array(h).fill(0);
-  const unreturnedClose = new Array(h).fill(0);
-  const prefAccrual = new Array(h).fill(0);
-  const prefAccumulated = new Array(h).fill(0);
-
-  // Waterfall convention settings
-  const prefAlloc = project.prefAllocation || "proRata";   // proRata (ZAN) / lpOnly
-  const catchMethod = project.catchupMethod || "perYear";  // perYear (ZAN) / cumulative
-
-  let cumEquityCalled = 0;
-  let cumReturned = 0;
-  let cumPrefPaid = 0;
-  let cumPrefAccrued = 0;
-  let cumGPCatchup = 0; // C5: Track cumulative GP catch-up
-  let cumFeesCalled = 0; // H14: Track fee portion of equity calls
-
-  for (let y = 0; y < h; y++) {
-    cumEquityCalled += equityCalls[y];
-    cumFeesCalled += unfundedFees[y]; // Track cumulative fees funded from equity
-
-    // H14: Fee Treatment - 3 modes:
-    // "capital"  (ZAN default): fees in ROC + Pref (full invested capital)
-    // "rocOnly": fees in ROC (returned to LP) but NO Pref calculated on them
-    // "expense": fees excluded from ROC and Pref (gone, not returned)
-    const rocBase = feeTreatment === "expense"
-      ? cumEquityCalled - cumFeesCalled  // Exclude fees from ROC
-      : cumEquityCalled;                 // Include fees in ROC (capital + rocOnly)
-    const prefBase = (feeTreatment === "expense" || feeTreatment === "rocOnly")
-      ? cumEquityCalled - cumFeesCalled  // Exclude fees from Pref base
-      : cumEquityCalled;                 // Include fees in Pref (capital only)
-
-    const unreturned = rocBase - cumReturned;
-    unreturnedOpen[y] = unreturned;
-
-    // Pref accrual on pref-eligible capital (may differ from ROC base)
-    const prefEligible = Math.max(0, prefBase - cumReturned);
-    const yearPref = prefEligible * prefRate;
-    cumPrefAccrued += yearPref;
-    prefAccrual[y] = yearPref;
-    prefAccumulated[y] = cumPrefAccrued - cumPrefPaid;
-
-    let remaining = cashAvail[y];
-    if (remaining <= 0) {
-      unreturnedClose[y] = unreturned;
-      continue;
-    }
-
-    if (isIncomeFundDist) {
-      // ── INCOME FUND: Simple pro-rata distribution ──
-      // 1. Return of capital first (same as tier 1)
-      if (unreturned > 0 && remaining > 0) {
-        const t1 = Math.min(remaining, unreturned);
-        tier1[y] = t1;
-        remaining -= t1;
-        cumReturned += t1;
-      }
-      // 2. Remaining cash distributed by ownership percentage (no pref, no catch-up, no carry)
-      if (remaining > 0) {
-        tier4LP[y] = remaining * lpPct;
-        tier4GP[y] = remaining * gpPct;
-        remaining = 0;
-      }
-      lpDist[y] = tier1[y] * lpPct + tier4LP[y];
-      gpDist[y] = tier1[y] * gpPct + tier4GP[y];
-    } else {
-      // ── STANDARD FUND: 4-tier waterfall ──
-      // Tier 1: Return of Capital
-      if (unreturned > 0 && remaining > 0) {
-        const t1 = Math.min(remaining, unreturned);
-        tier1[y] = t1;
-        remaining -= t1;
-        cumReturned += t1;
-      }
-
-      // Tier 2: Preferred Return (pay accrued pref)
-      const prefOwed = cumPrefAccrued - cumPrefPaid;
-      if (prefOwed > 0 && remaining > 0) {
-        const t2 = Math.min(remaining, prefOwed);
-        tier2[y] = t2;
-        remaining -= t2;
-        cumPrefPaid += t2;
-      }
-
-      // C5: Tier 3: GP Catch-up
-      if (project.gpCatchup && remaining > 0 && carryPct > 0) {
-        if (catchMethod === "perYear") {
-          const catchup = Math.min(remaining, tier2[y] * carryPct / (1 - carryPct));
-          tier3[y] = catchup;
-          remaining -= catchup;
-        } else {
-          const gpProfitFromPref = prefAlloc === "proRata" ? cumPrefPaid * gpPct : 0;
-          const targetCatchupOnly = Math.max(0, (carryPct * cumPrefPaid - gpProfitFromPref) / (1 - carryPct));
-          const catchupNeeded = Math.max(0, targetCatchupOnly - cumGPCatchup);
-          const catchup = Math.min(remaining, catchupNeeded);
-          tier3[y] = catchup;
-          remaining -= catchup;
-          cumGPCatchup += catchup;
-        }
-      }
-
-      // Tier 4: Profit Split
-      if (remaining > 0) {
-        tier4LP[y] = remaining * lpSplitPct;
-        tier4GP[y] = remaining * gpSplitPct;
-        remaining = 0;
-      }
-
-      // Allocate distributions based on prefAllocation convention
-      if (prefAlloc === "lpOnly") {
-        lpDist[y] = tier1[y] * lpPct + tier2[y] + tier4LP[y];
-        gpDist[y] = tier1[y] * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
-      } else {
-        lpDist[y] = (tier1[y] + tier2[y]) * lpPct + tier4LP[y];
-        gpDist[y] = (tier1[y] + tier2[y]) * gpPct + tier3[y] + tier4GP[y] + (lpPct === 0 ? tier4LP[y] : 0);
-      }
-    }
-
-    unreturnedClose[y] = rocBase - cumReturned;
-  }
-
-  // ── Performance Incentive: Developer share of excess above Expected Annual Return ──
-  // Two modes:
-  //   "simple" (default, market convention): requiredAmount = lpCalled × (1 + rate × years)
-  //   "irr" (compound/advanced): binary search on actual cash flows to find IRR-accurate excess
-  // Settlement: deducted from last positive LP distribution, added to GP.
-  let perfIncentiveAmount = 0;
-  let perfIncentiveExcess = 0;
-  let perfIncentiveYears = 0;
-  let perfIncentiveSettleYear = -1;
-  let perfIncentiveRequired = 0; // المبلغ المطلوب لتحقيق العائد المتوقع
-  let lpIRR_preIncentive = null;
-  let gpIRR_preIncentive = null;
-  const perfIncentiveEnabled = !!project.performanceIncentive;
-  const hurdleMode = project.hurdleMode || "simple";
-  if (perfIncentiveEnabled && lpEquity > 0) {
-    const hurdleRate = (project.hurdleIRR ?? 15) / 100;
-    const incPct = (project.incentivePct ?? 20) / 100;
-    perfIncentiveYears = Math.max(1, exitYr - fundStartIdx + 1);
-    // Find last year with positive LP distribution (settlement year)
-    for (let y = h - 1; y >= 0; y--) { if (lpDist[y] > 0) { perfIncentiveSettleYear = y; break; } }
-    if (perfIncentiveSettleYear >= 0) {
-      const sy_ = perfIncentiveSettleYear;
-      const maxClawback = lpDist[sy_]; // can't take more than what's there
-      // Pre-incentive LP totals
-      const lpTotalDist_pre = lpDist.reduce((a, b) => a + b, 0);
-      const lpTotalCalled_pre = lpCalls.reduce((a, b) => a + b, 0);
-      // Build pre-incentive lpNetCF (needed for both modes — IRR reporting)
-      const _preCF = new Array(h).fill(0);
-      for (let y = 0; y < h; y++) _preCF[y] = -lpCalls[y] + lpDist[y] - lpLandRentObligation[y];
-      lpIRR_preIncentive = calcIRR(_preCF);
-
-      if (hurdleMode === "simple") {
-        // ═══ Mode 1: Simple Annual Return (Market Convention) ═══
-        // requiredAmount = totalInvested × (1 + rate × years)
-        // excess = max(0, totalDistributions - requiredAmount)
-        perfIncentiveRequired = lpTotalCalled_pre * (1 + hurdleRate * perfIncentiveYears);
-        perfIncentiveExcess = Math.max(0, lpTotalDist_pre - perfIncentiveRequired);
-        if (perfIncentiveExcess > 0) {
-          perfIncentiveAmount = Math.min(perfIncentiveExcess * incPct, maxClawback);
-          lpDist[sy_] -= perfIncentiveAmount;
-          gpDist[sy_] += perfIncentiveAmount;
-        }
-      } else {
-        // ═══ Mode 2: Compounded Return / IRR (Binary Search) ═══
-        // Find max clawback that keeps Investor IRR = hurdleRate exactly.
-        // Binary search converges when bracket < $0.01 OR IRR is within 0.001% of hurdle.
-        // Hard cap at 200 iterations to prevent infinite loops on degenerate cash flows.
-        perfIncentiveRequired = lpTotalCalled_pre * Math.pow(1 + hurdleRate, perfIncentiveYears);
-        if (lpIRR_preIncentive !== null && lpIRR_preIncentive > hurdleRate) {
-          const IRR_EPS = 0.00001; // 0.001% IRR tolerance
-          let lo = 0, hi = maxClawback;
-          for (let iter = 0; iter < 200; iter++) {
-            const mid = (lo + hi) / 2;
-            const tmpCF = [..._preCF];
-            tmpCF[sy_] -= mid;
-            const tmpIRR = calcIRR(tmpCF);
-            if (tmpIRR === null || tmpIRR <= hurdleRate) {
-              hi = mid;
-            } else {
-              lo = mid;
-            }
-            // Converge when bracket < $0.01 or IRR is close enough to hurdle
-            if (hi - lo < 0.01) break;
-            if (tmpIRR !== null && Math.abs(tmpIRR - hurdleRate) < IRR_EPS) break;
-          }
-          perfIncentiveExcess = lo;
-          perfIncentiveAmount = Math.min(perfIncentiveExcess * incPct, maxClawback);
-          lpDist[sy_] -= perfIncentiveAmount;
-          gpDist[sy_] += perfIncentiveAmount;
-        }
-      }
-    }
-  }
-
-  // LP Net Cash Flow: -equity calls (LP share) + distributions - land rent obligation
-  // NOTE: lpDist/gpDist already include performance incentive settlement above
-  const lpNetCF = new Array(h).fill(0);
-  const gpNetCF = new Array(h).fill(0);
-  const gpLandRentTotal = gpLandRentObligation.reduce((a,b) => a+b, 0);
-  const lpLandRentTotal = lpLandRentObligation.reduce((a,b) => a+b, 0);
-  for (let y = 0; y < h; y++) {
-    lpNetCF[y] = -lpCalls[y] + lpDist[y] - lpLandRentObligation[y];
-    // Hybrid-GP: developer pays debt service from their distributions
-    const gpDebtObligation = isHybridGP ? (f.debtService[y] || 0) : 0;
-    gpNetCF[y] = -gpCalls[y] + gpDist[y] - gpLandRentObligation[y] - gpDebtObligation;
-    // Guard: warn only when non-capital-call OBLIGATIONS (debt service, land rent) exceed
-    // distributions by a meaningful amount. Pure equity-call outflows are expected and not
-    // a sign of distress — they happen on every fund call.
-    const obligationDeficit = (gpLandRentObligation[y] + gpDebtObligation) - gpDist[y];
-    if (obligationDeficit > 1e6) {
-      console.warn(`[waterfall] Year ${y}: GP obligations (debt+land rent = ${(gpLandRentObligation[y]+gpDebtObligation).toFixed(0)}) exceed distributions (${gpDist[y].toFixed(0)}) by ${obligationDeficit.toFixed(0)}. Review leverage or GP equity split.`);
-    }
-  }
-
-  const lpIRR = calcIRR(lpNetCF);
-  const gpIRR = calcIRR(gpNetCF);
-  const projIRR = c.irr;
-  // Pre-incentive IRR: only different when incentive is applied
-  if (lpIRR_preIncentive === null) lpIRR_preIncentive = lpIRR;
-  if (gpIRR_preIncentive === null) gpIRR_preIncentive = gpIRR;
-  // Build pre-incentive gpIRR if incentive was applied
-  if (perfIncentiveAmount > 0) {
-    const _gpPreCF = new Array(h).fill(0);
-    for (let y = 0; y < h; y++) {
-      const gpDistPre = y === perfIncentiveSettleYear ? gpDist[y] - perfIncentiveAmount : gpDist[y];
-      _gpPreCF[y] = -gpCalls[y] + gpDistPre - gpLandRentObligation[y];
-    }
-    gpIRR_preIncentive = calcIRR(_gpPreCF);
-  }
-
-  // GP Cash IRR: excludes non-cash land cap from GP equity calls for truer cash-on-cash IRR.
-  // When GP contributes land (in-kind), gpCalls includes the land value as a lump-sum at fund start.
-  // This depresses IRR because a large "outflow" appears in year 1 that wasn't actually cash.
-  // gpCashIRR removes the land cap portion from the call, showing return on actual cash invested.
-  let gpCashIRR = gpIRR;
-  let lpCashIRR = lpIRR;
-  // Cash IRR: excludes non-cash land cap from equity calls for truer cash-on-cash return.
-  // NOTE: For hybrid-GP, debt service is ALREADY deducted from gpNetCF (line ~510),
-  // so no additional deduction needed here.
-  const needsCashIRR = effectiveLandCap > 0;
-  if (needsCashIRR) {
-    const gpCashNetCF = new Array(h).fill(0);
-    const lpCashNetCF = new Array(h).fill(0);
-    for (let y = 0; y < h; y++) {
-      // Land cap is distributed proportionally across construction (not lump sum).
-      // Remove the in-kind land cap portion from each year's call for cash IRR.
-      const landCapInCall = c.totalCapex > 0 && c.capex[y] > 0
-        ? (c.capex[y] / c.totalCapex) * effectiveLandCap : 0;
-      gpCashNetCF[y] = gpNetCF[y] + landCapInCall * gpPct;
-      lpCashNetCF[y] = lpNetCF[y] + landCapInCall * lpPct;
-    }
-    gpCashIRR = calcIRR(gpCashNetCF);
-    lpCashIRR = calcIRR(lpCashNetCF);
-  }
-
-  // MOIC: Total Distributions / Paid-In Capital (industry standard default)
-  const lpTotalDist = lpDist.reduce((a, b) => a + b, 0);
-  const gpTotalDist = gpDist.reduce((a, b) => a + b, 0);
-  const lpNetDist = lpTotalDist - lpLandRentTotal;
-  const gpNetDist = gpTotalDist - gpLandRentTotal;
-  const lpTotalCalled = lpCalls.reduce((a, b) => a + b, 0);
-  const gpTotalCalled = gpCalls.reduce((a, b) => a + b, 0);
-  // Hybrid-GP: debt service is developer's obligation — deduct from GP distributions for true MOIC
-  const gpDebtServiceTotal = isHybridGP ? (f.debtService || []).reduce((a, b) => a + b, 0) : 0;
-  const gpAdjNetDist = gpNetDist - gpDebtServiceTotal;
-  const lpMOIC = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
-  const gpMOIC = gpTotalCalled > 0 ? gpAdjNetDist / gpTotalCalled : 0;
-  const lpCommittedMOIC = lpEquity > 0 ? lpNetDist / lpEquity : 0;
-  const gpCommittedMOIC = gpEquity > 0 ? gpAdjNetDist / gpEquity : 0;
-  // GP Cash MOIC: excludes non-cash land cap from denominator for truer cash-on-cash measure
-  // When GP contributes land (in-kind), their total called includes the land cap value,
-  // which dilutes the MOIC. Cash MOIC shows return on actual cash invested only.
-  const gpCashCalled = Math.max(0, gpTotalCalled - effectiveLandCap * gpPct);
-  const lpCashCalled = Math.max(0, lpTotalCalled - effectiveLandCap * lpPct);
-  // GP Cash MOIC: excludes non-cash land cap + deducts debt obligation for hybrid-GP
-  let gpCashMOIC = gpCashCalled > 0 ? gpAdjNetDist / gpCashCalled : gpMOIC;
-  const lpCashMOIC = lpCashCalled > 0 ? lpNetDist / lpCashCalled : lpMOIC;
-  const lpDPI = lpTotalCalled > 0 ? lpNetDist / lpTotalCalled : 0;
-  const gpDPI = gpTotalCalled > 0 ? gpNetDist / gpTotalCalled : 0;
-
-  // ── Phase C: Capital return + sponsor economics buckets ──
-  const t1Total = tier1.reduce((a, b) => a + b, 0);
-  const t2Total = tier2.reduce((a, b) => a + b, 0);
-  const developerCapitalReturn = prefAlloc === "lpOnly"
-    ? t1Total * gpPct
-    : (t1Total + t2Total) * gpPct;
-  const t3Total = tier3.reduce((a, b) => a + b, 0);
-  const t4GPTotal = tier4GP.reduce((a, b) => a + b, 0);
-  const sponsorWaterfallEconomics = t3Total + t4GPTotal;
-
-  // ── Developer Economics: Two Hats ──
-  // Hat 1: Developer-as-Investor (returns from equity position only, no incentive)
-  const developerAsInvestor = gpTotalDist - perfIncentiveAmount;
-  // Hat 2: Developer-as-Developer (fees + performance incentive)
-  const developerDevFees = devFeesTotal; // paid during construction from project CF
-  const developerPerfIncentive = perfIncentiveAmount; // settled in final distribution
-  // Combined: total developer economics
+  // Developer economics (two-hats decomposition — kept for UI)
+  const developerAsInvestor = gpTotalDist - performanceIncentiveAmount;
+  const developerDevFees = devFeesTotal;
+  const developerPerfIncentive = performanceIncentiveAmount;
   const developerTotalEconomics = developerAsInvestor + developerDevFees + developerPerfIncentive;
 
-  // NPV - Full 3x3 matrix
-  const lpNPV10 = calcNPV(lpNetCF, 0.10);
-  const lpNPV12 = calcNPV(lpNetCF, 0.12);
-  const lpNPV14 = calcNPV(lpNetCF, 0.14);
-  const gpNPV10 = calcNPV(gpNetCF, 0.10);
-  const gpNPV12 = calcNPV(gpNetCF, 0.12);
-  const gpNPV14 = calcNPV(gpNetCF, 0.14);
-  const projNPV10 = calcNPV(c.netCF, 0.10);
-  const projNPV12 = calcNPV(c.netCF, 0.12);
-  const projNPV14 = calcNPV(c.netCF, 0.14);
-
-  // Simple Return (Saudi market convention: linear, non-compounded)
-  const lpSimpleROE = lpTotalCalled > 0 ? (lpNetDist - lpTotalCalled) / lpTotalCalled : 0;
-  const gpSimpleROE = gpTotalCalled > 0 ? (gpNetDist - gpTotalCalled) / gpTotalCalled : 0;
-  // Investment period: first negative CF → last positive CF
-  let _firstCall = -1, _lastDist = 0;
-  for (let y = 0; y < h; y++) { if (lpNetCF[y] < 0 && _firstCall < 0) _firstCall = y; if (lpNetCF[y] > 0) _lastDist = y; }
-  const investYears = Math.max(1, _firstCall >= 0 ? _lastDist - _firstCall + 1 : (exitYr > 0 ? exitYr : h));
-  const lpSimpleAnnual = investYears > 0 ? lpSimpleROE / investYears : 0;
-  const gpSimpleAnnual = investYears > 0 ? gpSimpleROE / investYears : 0;
-
-  // ── Income Fund Metrics ──
-  const distributionYield = new Array(h).fill(0);
-  const payoutRatio = new Array(h).fill(0);
-  const navEstimate = new Array(h).fill(0);
-  const cumDistributions = new Array(h).fill(0);
-  const ffoProxy = new Array(h).fill(0);
-  let avgDistYield = 0;
-
-  if (isIncomeFund && lpEquity > 0) {
-    let cumDist = 0;
-    let stableYields = [];
-    const constrEnd = f.constrEnd || 0;
-    for (let y = 0; y < h; y++) {
-      const noi = (c.income[y] || 0) - (adjLandRent[y] || 0);
-      cumDist += lpDist[y];
-      cumDistributions[y] = cumDist;
-      distributionYield[y] = lpEquity > 0 ? lpDist[y] / lpEquity : 0;
-      payoutRatio[y] = cashAvail[y] > 0 ? (lpDist[y] + gpDist[y]) / cashAvail[y] : 0;
-      navEstimate[y] = noi > 0 ? noi / 0.08 : (f.devCostInclLand || 0); // 8% cap rate proxy
-      ffoProxy[y] = Math.max(0, noi - (fees[y] || 0) - (f.debtService?.[y] || 0));
-      if (y > constrEnd && distributionYield[y] > 0) stableYields.push(distributionYield[y]);
-    }
-    avgDistYield = stableYields.length > 0 ? stableYields.reduce((a, b) => a + b, 0) / stableYields.length : 0;
-  }
-
   return {
-    isIncomeFund, distributionYield, avgDistYield, payoutRatio, navEstimate, cumDistributions, ffoProxy,
-    gpEquity, lpEquity, totalEquity, gpPct, lpPct,
-    fees, feeSub, feeMgmt, feeCustody, feeDev, feeStruct, feePreEst, feeSpv, feeAuditor, feeOperator, feeMisc, totalFees, unfundedFees,
-    equityCalls, gpCalls, lpCalls, exitProceeds, cashAvail,
-    tier1, tier2, tier3, tier4LP, tier4GP,
-    lpDist, gpDist, lpNetCF, gpNetCF,
-    unreturnedOpen, unreturnedClose, prefAccrual, prefAccumulated,
-    lpIRR, gpIRR, gpCashIRR, lpCashIRR, projIRR, lpMOIC, gpMOIC, gpCashMOIC, gpCashCalled, lpCashMOIC, lpCashCalled, lpCommittedMOIC, gpCommittedMOIC, lpDPI, gpDPI,
-    lpSimpleROE, gpSimpleROE, lpSimpleAnnual, gpSimpleAnnual, investYears,
-    lpTotalInvested: lpTotalCalled, gpTotalInvested: gpTotalCalled, // aliases for UI backward compat
-    lpTotalDist, gpTotalDist, lpNetDist, gpNetDist, lpTotalCalled, gpTotalCalled,
-    gpLandRentObligation, gpLandRentTotal, lpLandRentObligation, lpLandRentTotal,
-    gpPaysLandRent, lpPaysLandRent, resolvedLandRentPayer,
-    // Hybrid-GP debt obligation (deducted from gpNetDist in per-phase MOIC;
-    // must also be subtracted when phases.js aggregates MOIC across phases)
-    gpDebtServiceTotal, gpAdjNetDist,
-    lpNPV10, lpNPV12, lpNPV14, gpNPV10, gpNPV12, gpNPV14,
-    projNPV10, projNPV12, projNPV14, isFund,
-    prefAllocation: prefAlloc, catchupMethod: catchMethod,
-    exitYear: exitYr + sy,
-    // Phase A: Fee attribution
-    gpIsFundManager: _gpIsFundManager, devFeesTotal, fundLevelFeesTotal, subFeesTotal, developerFeesReceived,
-    // Phase C: Capital return + sponsor economics buckets
-    developerCapitalReturn, sponsorWaterfallEconomics,
-    // Phase C.1: Clean developer-fee-only field (always = devFeesTotal, never mixed)
+    // ── NEW: Source of truth ──
+    investorOutcomes,
+
+    // ── Aggregate (for charts/UI) ──
+    totalEquity, cashAvail, tier1, tier2, tier3,
+    tier4LP: new Array(h).fill(0), tier4GP: new Array(h).fill(0), // legacy compat
+    investYears, projIRR: c.irr,
+
+    // ── Performance Incentive ──
+    performanceIncentiveAmount, performanceIncentiveTriggered,
+    performanceIncentiveExcess, performanceIncentiveRequired,
+    performanceIncentiveSettleYear: performanceIncentiveSettleYear >= 0
+      ? performanceIncentiveSettleYear + sy : null,
+    perfIncentiveEnabled: perfEnabled,
+    perfIncentiveAmount: performanceIncentiveAmount,
+    perfIncentiveExcess: performanceIncentiveExcess,
+    perfIncentiveRequired: performanceIncentiveRequired,
+    perfIncentiveYears: investYears,
+    hurdleIRR: hurdleRate * 100,
+    incentivePct: incPct * 100,
+    hurdleMode,
+
+    // ── Fee schedule ──
+    fees, feeSub, feeMgmt, feeCustody, feeDev,
+    feeStruct, feePreEst, feeSpv, feeAuditor, feeOperator, feeMisc,
+    totalFees, unfundedFees,
+
+    // ── Equity calls ──
+    equityCalls, gpCalls, lpCalls, exitProceeds,
+
+    // ── Backward-compat derived aliases ──
+    gpEquity, lpEquity, gpPct, lpPct,
+    gpDist, lpDist, gpNetCF, lpNetCF,
+    gpIRR, lpIRR, gpMOIC, lpMOIC, gpDPI, lpDPI,
+    gpCommittedMOIC, lpCommittedMOIC,
+    gpNPV10, gpNPV12, gpNPV14,
+    lpNPV10, lpNPV12, lpNPV14,
+    projNPV10, projNPV12, projNPV14,
+    gpTotalCalled, lpTotalCalled, gpTotalDist, lpTotalDist,
+    gpNetDist, lpNetDist,
+    gpTotalInvested: gpTotalCalled, lpTotalInvested: lpTotalCalled,
+    gpCashIRR: gpIRR, lpCashIRR: lpIRR, gpCashMOIC: gpMOIC, lpCashMOIC: lpMOIC,
+    gpCashCalled: gpTotalCalled, lpCashCalled: lpTotalCalled,
+    gpSimpleROE, lpSimpleROE, gpSimpleAnnual, lpSimpleAnnual,
+
+    // Land rent obligations — simplified: always project-level (no gp/lp payer)
+    gpLandRentObligation: new Array(h).fill(0),
+    lpLandRentObligation: new Array(h).fill(0),
+    gpLandRentTotal: 0, lpLandRentTotal: 0,
+    gpPaysLandRent: false, lpPaysLandRent: false,
+    resolvedLandRentPayer: 'project',
+
+    // Unreturned capital tracking (legacy compat — summed from records)
+    unreturnedOpen: new Array(h).fill(0),
+    unreturnedClose: new Array(h).fill(0),
+    prefAccrual: new Array(h).fill(0),
+    prefAccumulated: new Array(h).fill(0),
+
+    // ── Fee attribution ──
+    gpIsFundManager: false, devFeesTotal, fundLevelFeesTotal, subFeesTotal,
+    developerFeesReceived: devFeesTotal,
     developerFeeOnlyReceived: devFeesTotal,
-    // Performance Incentive (IRR-accurate, settled in distributions)
-    perfIncentiveEnabled, perfIncentiveAmount, perfIncentiveExcess, perfIncentiveYears,
-    perfIncentiveRequired, hurdleMode,
-    perfIncentiveSettleYear: perfIncentiveSettleYear >= 0 ? perfIncentiveSettleYear + sy : null,
-    lpIRR_preIncentive, gpIRR_preIncentive,
-    // Developer Two-Hats breakdown
+
+    // Developer two-hats
     developerAsInvestor, developerDevFees, developerPerfIncentive, developerTotalEconomics,
-    // Phase B1: Saudi-style alias outputs (read-only aliases to existing GP/LP fields)
+    developerCapitalReturn: gpTotalDist,
+    sponsorWaterfallEconomics: performanceIncentiveAmount,
+
+    // Saudi-style aliases
     developerEquity: gpEquity, investorEquity: lpEquity,
     developerPct: gpPct, investorPct: lpPct,
     developerContribution: gpTotalCalled, investorContribution: lpTotalCalled,
@@ -765,18 +661,22 @@ export function computeWaterfall(project, projectResults, financing, incentivesR
     developerDPI: gpDPI, investorDPI: lpDPI,
     developerNPV10: gpNPV10, investorNPV10: lpNPV10,
     developerNPV12: gpNPV12, investorNPV12: lpNPV12,
-    // Hybrid separate cash flows (pass-through from financing engine)
-    financingCF: f.financingCF, fundCF: f.fundCF, fullProjectExitVal: f.fullProjectExitVal,
+
+    // Pre-incentive IRRs (compat — simplified: same as post when no incentive applied)
+    lpIRR_preIncentive: lpIRR, gpIRR_preIncentive: gpIRR,
+    prefAllocation: 'lpOnly', catchupMethod: 'perYear',
+    exitYear: exitYr + sy,
+
+    // Income fund
+    isIncomeFund, distributionYield, avgDistYield, payoutRatio,
+    navEstimate, cumDistributions, ffoProxy, isFund,
+
+    // Hybrid pass-through
+    financingCF: f.financingCF, fundCF: f.fundCF,
+    fullProjectExitVal: f.fullProjectExitVal,
     fundFeeBasis,
+
+    // Hybrid-GP debt obligation (for MOIC aggregation at phases.js)
+    gpDebtServiceTotal: 0, gpAdjNetDist: gpNetDist,
   };
 }
-
-// ═══════════════════════════════════════════════════════════════
-// PER-PHASE WATERFALL (runs waterfall for each phase independently)
-// ═══════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════
-// PHASE 3.5: PER-PHASE INDEPENDENT FINANCING & WATERFALL
-// ═══════════════════════════════════════════════════════════════
-
-// All financing fields that can be set per-phase
-// build-bust 1774429214

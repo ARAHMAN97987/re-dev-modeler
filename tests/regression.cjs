@@ -78,13 +78,14 @@ t("T2", "Levered IRR > 25%", f.leveredIRR > 0.25, `Got: ${(f.leveredIRR*100).toF
 t("T2", "DSCR all > 0 during repayment", f.dscr.filter(d => d !== null && d > 0).length > 0);
 t("T2", "Debt fully repaid", f.debtBalClose[f.repayStart + f.repayYears] === 0 || f.debtBalClose[14] < 1);
 
-// ── T3: Waterfall ──
-t("T3", "Catch-up < Pref (C5 fix)", w.tier3.reduce((s,v)=>s+v,0) < w.tier2.reduce((s,v)=>s+v,0));
+// ── T3: Waterfall (Apr 2026: simplified 3-stage; Catch-up removed) ──
+// OLD: t("T3", "Catch-up < Pref (C5 fix)", ...) — pref tier removed, no catchup
 t("T3", "LP IRR > 20%", w.lpIRR > 0.20, `Got: ${(w.lpIRR*100).toFixed(2)}%`);
 t("T3", "GP IRR > 15%", w.gpIRR > 0.15, `Got: ${(w.gpIRR*100).toFixed(2)}%`);
 t("T3", "LP MOIC > 3x", w.lpMOIC > 3, `Got: ${w.lpMOIC.toFixed(2)}x`);
 t("T3", "DPI exists", w.lpDPI > 0 && w.gpDPI > 0);
-t("T3", "LP+GP dist = total distributable", Math.abs(w.lpTotalDist + w.gpTotalDist - (w.tier1.reduce((s,v)=>s+v,0) + w.tier2.reduce((s,v)=>s+v,0) + w.tier3.reduce((s,v)=>s+v,0) + w.tier4LP.reduce((s,v)=>s+v,0) + w.tier4GP.reduce((s,v)=>s+v,0))) < 1);
+// New: 3-stage sum check (tier1=ROC, tier2=Incentive, tier3=Profit). tier4* removed.
+t("T3", "LP+GP dist = Σ tiers", Math.abs(w.lpTotalDist + w.gpTotalDist - (w.tier1.reduce((s,v)=>s+v,0) + w.tier2.reduce((s,v)=>s+v,0) + w.tier3.reduce((s,v)=>s+v,0))) < 1);
 
 // ── T4: Edge Cases ──
 // C1: Zero inputs
@@ -181,19 +182,11 @@ const totalSources = fLand.drawdown.reduce((s,v)=>s+v,0) + fLand.equityCalls.red
 t("T6", "FIX2: Sources ≈ Uses (no double count)", Math.abs(totalSources - rLand.consolidated.totalCapex) < 10000,
   `Sources: ${Math.round(totalSources)}, Uses: ${Math.round(rLand.consolidated.totalCapex)}`);
 
-// FIX#3 Option B: GP gets pro-rata T2, catch-up adjusted
-t("T6", "FIX3B: T2 pro-rata (GP gets gpPct)", (() => {
-  for (let y = 0; y < JAZAN.horizon; y++) {
-    if (w.tier2[y] > 0) {
-      // LP gets (T1+T2)*lpPct + T4LP, GP gets (T1+T2)*gpPct + T3 + T4GP
-      const expLP = (w.tier1[y]+w.tier2[y]) * w.lpPct + (w.tier4LP[y] || 0);
-      if (Math.abs(w.lpDist[y] - expLP) > 1) return false;
-      const expGP = (w.tier1[y]+w.tier2[y]) * w.gpPct + (w.tier3[y]||0) + (w.tier4GP[y] || 0);
-      if (Math.abs(w.gpDist[y] - expGP) > 1) return false;
-    }
-  }
-  return true;
-})());
+// FIX#3 Option B superseded — 4-tier waterfall replaced with 3-stage
+// investors[] model (Apr 2026). Tier2 now represents Performance Incentive
+// clawback (settlement year only), distributed to developers; not a pro-rata
+// pref allocation. The (T1+T2)*lpPct formula no longer applies.
+t("T6", "FIX3B: obsolete — 4-tier replaced with 3-stage", true);
 
 // FIX#5: Phase land allocation
 const pPurchPhase = {...JAZAN, landType:"purchase", landPurchasePrice:100000000};

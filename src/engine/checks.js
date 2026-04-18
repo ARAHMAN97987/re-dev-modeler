@@ -333,28 +333,21 @@ export function runChecks(project, results, financing, waterfall, incentivesResu
     // may have different LP/GP pcts. The consolidated w.lpPct is a weighted average that
     // doesn't match per-phase tier math — skip distribution formula checks.
     const isMultiPhaseWF = w.mode === 'independent';
-    let lpDOk=true;
+    // NEW (Apr 2026 simplification): waterfall is 3-stage pro-rata by investor
+    // equity%. Per-year check: sum of per-role distributions should equal the
+    // year's cashAvail minus any Stage-1 ROC shortfall. We verify via aliases:
+    // lpDist[y] + gpDist[y] = tier1[y] + tier2[y] + tier3[y] (when cashAvail > 0).
+    let distSumOk = true;
     if (!isMultiPhaseWF) {
-    for(let y=0;y<h;y++){
-      if(w.lpDist[y]>0&&w.lpPct>0){
-        // Option B: T1+T2 both pro-rata
-        const exp=(w.tier1[y]+w.tier2[y])*(w.lpPct||0)+(w.tier4LP[y]||0);
-        if(Math.abs(w.lpDist[y]-exp)>tol){lpDOk=false;break;}
+      for (let y = 0; y < h; y++) {
+        const tierSum = (w.tier1?.[y] || 0) + (w.tier2?.[y] || 0) + (w.tier3?.[y] || 0);
+        const distSum = (w.lpDist?.[y] || 0) + (w.gpDist?.[y] || 0);
+        if (Math.abs(tierSum - distSum) > 1) { distSumOk = false; break; }
       }
     }
-    }
-    add("T3","LP Dist = (T1+T2)*LP% + T4LP", lpDOk, isMultiPhaseWF?"Multi-phase: LP distribution validated per-phase":"LP distribution formula correct");
-    let gpDOk=true;
-    if (!isMultiPhaseWF) {
-    for(let y=0;y<h;y++){
-      if(w.gpDist[y]>0&&w.gpPct>0){
-        // Option B: T1+T2 pro-rata + T3 + T4GP
-        const exp=(w.tier1[y]+w.tier2[y])*(w.gpPct||0)+(w.tier3[y]||0)+(w.tier4GP[y]||0);
-        if(Math.abs(w.gpDist[y]-exp)>tol){gpDOk=false;break;}
-      }
-    }
-    }
-    add("T3","GP Dist = (T1+T2)*GP% + T3 + T4GP", gpDOk, isMultiPhaseWF?"Multi-phase: GP distribution validated per-phase":"GP distribution formula correct");
+    add("T3", "Distributions = Σ tiers (3-stage)", distSumOk,
+      isMultiPhaseWF ? "Multi-phase: validated per-phase"
+                     : "Investor + Developer dist = tier1 + tier2 + tier3");
     if(w.lpTotalInvested>0&&w.lpMOIC){
       const expM=w.lpTotalDist/w.lpTotalInvested;
       add("T3","LP MOIC = Dist/Equity", Math.abs(w.lpMOIC-expM)<0.01, "LP MOIC correct", `${w.lpMOIC.toFixed(2)}x`);

@@ -310,11 +310,15 @@ assert(`GP equity ≈ 75% (actual: ${(gpEquity / totalEquity * 100).toFixed(1)}%
 // 6. LP equity ≈ 25%
 assert(`LP equity ≈ 25% (actual: ${(lpEquity / totalEquity * 100).toFixed(1)}%)`, near(lpEquity / totalEquity, 0.25, 0.02));
 
-// 7. No pref return (Tier 2 = 0)
-assert(`Tier 2 (pref) = 0 (actual: ${fmtM(t2)})`, Math.abs(t2) < 1);
+// 7. Tier 2 semantics changed (Apr 2026): tier2 is now Performance Incentive
+// clawback (not pref return). Zero when incentive not triggered.
+assert(`Tier 2 (incentive settlement) = 0 when no incentive fired (actual: ${fmtM(t2)})`,
+  Math.abs(t2) < 1 || w.performanceIncentiveTriggered);
 
-// 8. No catch-up (Tier 3 = 0)
-assert(`Tier 3 (catch-up) = 0 (actual: ${fmtM(t3)})`, Math.abs(t3) < 1);
+// 8. Tier 3 semantics changed: tier3 is now Remaining Profit pro-rata
+// (not GP catch-up). Non-zero when project has distributable profit above ROC.
+// The old "catch-up = 0" assertion was based on the legacy 4-tier model.
+assert(`Tier 3 (profit pro-rata) is non-negative (actual: ${fmtM(t3)})`, t3 >= 0);
 
 // 9. LP MOIC ≈ 1.5x
 assert(`LP MOIC ≈ 1.5x (actual: ${lpMOIC.toFixed(2)}x)`, near(lpMOIC, 1.5, 0.1));

@@ -17,6 +17,10 @@ export { computeIncentives, applyInterestSubsidy } from './incentives.js';
 export { computeFinancing } from './financing.js';
 export { computeWaterfall } from './waterfall.js';
 export {
+  migrateProjectToInvestors, developerIds, sumByRole,
+  resolveContributionAmount, allocateEquity,
+} from './investors.js';
+export {
   FINANCING_FIELDS,
   getPhaseFinancing, hasPerPhaseFinancing, migrateToPerPhaseFinancing,
   buildPhaseIncentives, buildPhaseVirtualProject, buildPhaseProjectResults,

@@ -32,6 +32,7 @@ function loadESM(filePath) {
 // Level 0: no deps
 eval(loadESM(path.join(engineDir, 'math.js')));
 eval(loadESM(path.join(engineDir, 'hospitality.js')));
+eval(loadESM(path.join(engineDir, 'investors.js')));
 
 // Level 1: depends on math + hospitality
 eval(loadESM(path.join(engineDir, 'cashflow.js')));
@@ -39,10 +40,10 @@ eval(loadESM(path.join(engineDir, 'cashflow.js')));
 // Level 2: depends on math
 eval(loadESM(path.join(engineDir, 'incentives.js')));
 
-// Level 3: depends on math + incentives
+// Level 3: depends on math + incentives + investors
 eval(loadESM(path.join(engineDir, 'financing.js')));
 
-// Level 4: depends on math
+// Level 4: depends on math + investors
 eval(loadESM(path.join(engineDir, 'waterfall.js')));
 
 // Level 5: depends on math + financing + waterfall
@@ -84,6 +85,9 @@ module.exports = {
   calcIRR, calcNPV,
   // engine/hospitality.js
   calcHotelEBITDA, calcMarinaEBITDA,
+  // engine/investors.js
+  migrateProjectToInvestors, developerIds, sumByRole,
+  resolveContributionAmount, allocateEquity,
   // engine/cashflow.js
   getScenarioMults, computeAssetCapex, computeProjectCashFlows,
   // engine/incentives.js

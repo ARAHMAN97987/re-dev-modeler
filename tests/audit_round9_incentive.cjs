@@ -127,20 +127,24 @@ if (r9a?.waterfall) {
 
   assert(w.perfIncentiveEnabled === true, 'performanceIncentive flag = true');
 
-  // Pre-incentive LP dist = post-incentive dist + incentive amount (clawback)
-  const lpDistPre = w.lpTotalDist + w.perfIncentiveAmount;
+  // NEW (simplified 3-stage): hurdle is on TOTAL equity called (all investors),
+  // not just LP-called. Developer is an investor too, so the project must clear
+  // the hurdle on all capital deployed. This is a deliberate design change
+  // documented in .claude/simplification/03_waterfall_design.md.
+  const totalCalled = (w.lpTotalCalled || 0) + (w.gpTotalCalled || 0);
+  const totalDistPre = (w.lpTotalDist || 0) + (w.gpTotalDist || 0);
 
-  // Simple mode: required = lpCalled × (1 + rate × years)
-  const expectedRequired = w.lpTotalCalled * (1 + 0.14 * w.perfIncentiveYears);
+  // Simple mode: required = totalCalled × (1 + rate × years)
+  const expectedRequired = totalCalled * (1 + 0.14 * w.perfIncentiveYears);
   assert(near(w.perfIncentiveRequired, expectedRequired, 0.001),
-    `perfIncentiveRequired = lpCalled × (1 + 14% × ${w.perfIncentiveYears} yrs)`,
+    `perfIncentiveRequired = totalCalled × (1 + 14% × ${w.perfIncentiveYears} yrs)`,
     `expected=${expectedRequired.toFixed(0)}, actual=${w.perfIncentiveRequired?.toFixed(0)}`
   );
 
-  // excess = max(0, lpDist_pre - required)
-  const expectedExcess = Math.max(0, lpDistPre - expectedRequired);
+  // excess = max(0, totalDist - required)
+  const expectedExcess = Math.max(0, totalDistPre - expectedRequired);
   assert(near(w.perfIncentiveExcess, expectedExcess, 0.02),
-    `perfIncentiveExcess = max(0, lpDist_pre − required)`,
+    `perfIncentiveExcess = max(0, totalDist − required)`,
     `expected≈${expectedExcess.toFixed(0)}, actual=${w.perfIncentiveExcess?.toFixed(0)}`
   );
 

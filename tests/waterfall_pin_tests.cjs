@@ -133,16 +133,15 @@ console.log("\n[PT-2] No promote (gpCatchup=false, carryPct=0, profitable) → G
 }
 
 // ──────────────────────────────────────────────────────────────
-// PT-3: prefAlloc conservation (proRata vs lpOnly sum to same total)
+// PT-3: prefAlloc conservation — OBSOLETE (pref tier removed Apr 2026)
 // ──────────────────────────────────────────────────────────────
-console.log("\n[PT-3] prefAlloc proRata vs lpOnly → total (LP+GP) conserved");
+// The 3-stage waterfall has no pref tier and no prefAllocation setting.
+// Both proRata and lpOnly produce identical output, so the "must differ"
+// assertion is no longer meaningful. We still verify conservation (sum
+// invariant) as a sanity check on the simplified model.
+console.log("\n[PT-3] conservation — 3-stage waterfall is symmetric across legacy prefAlloc settings");
 {
   const base = profitable();
-  base.prefReturnPct = 8;
-  base.gpCatchup = true;
-  base.carryPct = 20;
-  base.lpProfitSplitPct = 80;
-
   const p1 = { ...base, prefAllocation: "proRata" };
   const p2 = { ...base, prefAllocation: "lpOnly" };
   const r1 = runFullModel(p1), r2 = runFullModel(p2);
@@ -152,9 +151,9 @@ console.log("\n[PT-3] prefAlloc proRata vs lpOnly → total (LP+GP) conserved");
     const tot2 = w2.lpTotalDist + w2.gpTotalDist;
     assert(near(tot1, tot2, Math.max(1, tot1 * 1e-6)),
       `Total distributions equal: proRata=${tot1.toFixed(0)}, lpOnly=${tot2.toFixed(0)}`);
-    // Allocation should actually differ between the two modes
-    assert(Math.abs(w1.lpTotalDist - w2.lpTotalDist) > 0,
-      `LP allocation DOES differ between modes (proRata=${w1.lpTotalDist.toFixed(0)}, lpOnly=${w2.lpTotalDist.toFixed(0)})`);
+    // Both modes identical now — pin the fact:
+    assert(Math.abs(w1.lpTotalDist - w2.lpTotalDist) < 1,
+      `Legacy prefAllocation no longer affects output (both modes produce identical LP dist)`);
   } else {
     assert(false, "both waterfalls computed");
   }

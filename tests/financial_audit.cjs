@@ -266,12 +266,17 @@ console.log("══════════════════════�
   const f2 = r2.financing;
   const c2 = r2.projectResults.consolidated;
   const incomeAtExit2 = c2.income[exitIdx];
-  const expectedGross2 = incomeAtExit2 / 0.09; // ZAN: income/capRate (not NOI/capRate)
+  const landRentAtExit2 = c2.landRent[exitIdx] || 0;
+  // UPDATED (Apr 2026 audit fix): engine now uses NOI = income − landRent for
+  // cap rate valuation, matching standard real estate convention. The old
+  // ZAN "gross income" formula overstated exits on leased-land projects by
+  // capitalizing the land-rent obligation. See fix commit 3b00a81.
+  const expectedNOI = Math.max(0, incomeAtExit2 - landRentAtExit2);
+  const expectedGross2 = expectedNOI / 0.09;
   const expectedNet2 = expectedGross2 * (1 - 0.02);
-  t("[R3.2] CapRate exit = income/capRate × (1-cost%) [ZAN convention]",
+  t("[R3.2] CapRate exit = NOI/capRate × (1-cost%) [NOI-based]",
     nearPct(f2.exitProceeds[exitIdx], expectedNet2, 0.05),
-    `income=${fmt(incomeAtExit2)}, gross=${fmt(expectedGross2)}, net=${fmt(expectedNet2)}, actual=${fmt(f2.exitProceeds[exitIdx])}`);
-  // NOTE: Standard real estate uses NOI/capRate. The ZAN difference is documented.
+    `income=${fmt(incomeAtExit2)}, landRent=${fmt(landRentAtExit2)}, NOI=${fmt(expectedNOI)}, net=${fmt(expectedNet2)}, actual=${fmt(f2.exitProceeds[exitIdx])}`);
 
   // 3.3: Hold = zero exit proceeds
   const p3 = baseProject("debt", { exitStrategy: "hold" });

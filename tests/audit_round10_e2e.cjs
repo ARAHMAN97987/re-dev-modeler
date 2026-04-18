@@ -298,29 +298,17 @@ assert(near(tier1Total, fin.totalEquity, 0.15),
   `tier1=${fmt(tier1Total)}, totalEquity=${fmt(fin.totalEquity)}`
 );
 
-// Pref accrues correctly: each year pref accrual = unreturnedCapital × 14%
-// Pref base includes unfunded fees (feeTreatment="capital" default), so
-// max annual pref = equityCalls.reduce() × 14% (slightly > fin.totalEquity × 14%)
-const prefAccruals = wf.prefAccrual || [];
-const maxPrefAccrual = Math.max(...prefAccruals);
-const expectedMaxPref = wfEquityCallsTotal * 0.14; // pref base = all equity called incl fees
-assert(maxPrefAccrual > 0, 'Pref accrual > 0 in at least one year');
-assert(near(maxPrefAccrual, expectedMaxPref, 0.05),
-  'Pref accrual ≈ 14% × total equity called (incl fee capital)',
-  `maxAccrual=${fmt(maxPrefAccrual)}, 14%×equityCalls=${fmt(expectedMaxPref)}`
-);
-
-// Profit split: LP gets lpProfitSplitPct% (25%) of tier4
-const tier4LP = wf.tier4LP.reduce((a, b) => a + b, 0);
-const tier4GP = wf.tier4GP.reduce((a, b) => a + b, 0);
-const tier4Total = tier4LP + tier4GP;
-if (tier4Total > 0) {
-  const actualLPSplit = tier4LP / tier4Total;
-  assert(near(actualLPSplit, 0.25, 0.02),
-    'Tier4 profit split: LP gets 25% (lpProfitSplitPct)',
-    `actual LP split=${(actualLPSplit*100).toFixed(1)}%, expected=25%`
-  );
-}
+// NOTE (Apr 2026 simplification): Pref tier and tier4 profit split are both
+// REMOVED in the new 3-stage waterfall. Tests that asserted pref accrual > 0
+// and tier4 split % are obsolete. The new model has only:
+//   Stage 1: ROC (tier1)
+//   Stage 2: Performance incentive (tier2, settlement year only)
+//   Stage 3: Remaining profit pro-rata (tier3)
+//
+// These assertions are intentionally skipped — see
+// .claude/simplification/03_waterfall_design.md for the new math.
+assert(true, 'Pref accrual assertions removed (pref tier no longer exists)');
+assert(true, 'Tier4 LP/GP split assertions removed (profit is pro-rata by equity)');
 
 // Performance incentive
 assert(wf.perfIncentiveEnabled === true, 'Performance incentive enabled');
