@@ -70,6 +70,14 @@ export function collectReportData(project, results, financing, waterfall, incent
       total: (smartAlerts || []).length,
       critical: (smartAlerts || []).filter(a => a.severity === "critical").length,
       warning: (smartAlerts || []).filter(a => a.severity === "warning").length,
+      // `items` is what AdvisoryReport.jsx renders (severity + ar + en + assetName).
+      // `top5` retained as a string array for any legacy/LLM-prompt consumer.
+      items: (smartAlerts || []).filter(a => a.severity === "critical" || a.severity === "warning").slice(0, 5).map(a => ({
+        severity: a.severity,
+        en: a.en,
+        ar: a.ar,
+        assetName: a.assetName,
+      })),
       top5: (smartAlerts || []).filter(a => a.severity === "critical" || a.severity === "warning").slice(0, 5).map(a => a.en),
     },
   };
