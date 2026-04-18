@@ -2718,13 +2718,14 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div className="z-card" style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--text-primary)",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:v==="hybrid"?{debtAllowed:true,govFinancingPct:cfg.govFinancingPct||70,govBeneficiary:cfg.govBeneficiary||"project"}:v==="incomeFund"?{exitStrategy:"hold",maxLtvPct:50,debtAllowed:true}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&v!=="incomeFund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
-            <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
-            <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const extras=v==="incomeFund"?{exitStrategy:"hold",maxLtvPct:50,debtAllowed:true}:v==="debt"?{debtAllowed:true}:{};const graceReset=v!=="fund"&&v!=="incomeFund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
             <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
             <option value="incomeFund">{ar?"صندوق مدر للدخل":"Income Fund"}</option>
-            <option value="hybrid">{ar?"مختلط (صندوق + تمويل)":"Hybrid (Fund + Financing)"}</option>
+            {/* Legacy modes: keep visible only if current project uses them (backward-compat) */}
+            {cfg.finMode === "self" && <option value="self">{ar?"تمويل ذاتي (قديم)":"Self-Funded (legacy)"}</option>}
+            {cfg.finMode === "bank100" && <option value="bank100">{ar?"بنكي 100% (قديم)":"100% Bank Debt (legacy)"}</option>}
+            {cfg.finMode === "hybrid" && <option value="hybrid">{ar?"مختلط (قديم)":"Hybrid (legacy)"}</option>}
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
@@ -2889,6 +2890,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
 
           {/* ── GP Investment Sources ── */}
           {isFundMode && <>
+            {Array.isArray(project.investors) && project.investors.length > 0 && <div style={{gridColumn:"1/-1",marginTop:6,padding:"8px 12px",background:"rgba(46,196,182,0.08)",border:"0.5px solid rgba(46,196,182,0.3)",borderRadius:6,fontSize:11,color:"var(--text-secondary)"}}>
+              {ar?"الحقول أدناه قديمة — استخدم تبويب ":"Fields below are legacy — use the "}<b>{ar?"المستثمرون":"Investors"}</b>{ar?" لإدارة مساهمات المطور والمستثمرين بشكل موحد.":" tab to manage developer and investor contributions uniformly."}
+            </div>}
             <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:11,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"استثمار المطور":"Developer Investment"}</div>
 
             {/* Source 2: Dev Fee as Investment */}
@@ -4454,12 +4458,9 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
     // Step 2: Financing mode
     { title: t?"طريقة التمويل":"Financing Mode", subtitle: t?"كيف سيتم تمويل المشروع؟":"How will the project be funded?", content: (
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <Option icon="💰" label={t?"تمويل ذاتي (رأس مال كامل)":"Self-Funded (100% Equity)"} desc={t?"المطور يموّل كل شي من جيبه":"Developer funds everything"} selected={project.finMode==="self"} onClick={()=>onUpdate({finMode:"self"})} />
-        <Option icon="🏦" label={t?"تمويل بنكي 100% (ملك المطور)":"100% Bank Debt (Developer-Owned)"} desc={t?"البنك يموّل كامل التكلفة، المطور هو المالك":"Bank finances 100%, developer owns"} selected={project.finMode==="bank100"} onClick={()=>onUpdate({finMode:"bank100",debtAllowed:true,maxLtvPct:100})} />
-        <Option icon="🏗" label={t?"دين بنكي + رأس مال المطور":"Bank Debt + Developer Equity"} desc={t?"جزء من البنك وجزء من المطور":"Part bank loan, part developer equity"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
+        <Option icon="🏗" label={t?"دين بنكي + رأس مال":"Debt + Equity"} desc={t?"جزء من البنك وجزء رأس مال (مطور و/أو مستثمرين)":"Part bank loan, part equity (developer and/or investors)"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
         <Option icon="📊" label={t?"صندوق استثماري (مطور/مستثمر)":"Fund Structure (Developer/Investor)"} desc={t?"مطور + مستثمرين مع شلال توزيعات":"Developer + investors with waterfall"} selected={project.finMode==="fund"} onClick={()=>onUpdate({finMode:"fund",debtAllowed:true})} />
         <Option icon="💰" label={t?"صندوق مدر للدخل":"Income Fund"} desc={t?"شراء/تطوير وتشغيل للدخل الدوري":"Buy/develop & hold for periodic income"} selected={project.finMode==="incomeFund"} onClick={()=>onUpdate({finMode:"incomeFund",debtAllowed:true,maxLtvPct:50,exitStrategy:"hold"})} />
-        <Option icon="🔀" label={t?"مختلط (صندوق + تمويل)":"Hybrid (Fund + Financing)"} desc={t?"تمويل مؤسسي (بنك/حكومة) + صندوق استثماري على الباقي":"Institutional financing + fund structure on remainder"} selected={project.finMode==="hybrid"} onClick={()=>onUpdate({finMode:"hybrid",debtAllowed:true,govFinancingPct:70,govBeneficiary:"project"})} />
         <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} /></div>
       </div>
     )},

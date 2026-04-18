@@ -20,8 +20,8 @@ export const defaultProject = () => ({
   activeScenario: "Base Case", customCapexMult: 100, customRentMult: 100, customDelay: 0, customEscAdj: 0,
   phases: [{ name: "Phase 1", startYearOffset: 1, completionYear: new Date().getFullYear() + 3, footprint: 0 }],
   assets: [],
-  // Financing (Phase 2)
-  finMode: "self", // self | debt | fund
+  // Financing (Phase 2) — simplified to 3 modes (legacy self/bank100/hybrid still migrate on load)
+  finMode: "debt", // debt | fund | incomeFund
   vehicleType: "fund", // fund | direct | spv
   gpIsFundManager: false, // ALWAYS false = separate fund manager. Developer ≠ Fund Manager.
   fundName: "",
