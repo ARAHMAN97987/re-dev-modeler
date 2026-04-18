@@ -130,6 +130,12 @@ export function buildPhaseVirtualProject(project, phaseName, phaseResult) {
   delete vProject.gpEquityManual;
   delete vProject.lpEquityManual;
 
+  // Apr 2026 simplification: strip project-level investors[] as well.
+  // Per-phase migration will rebuild investors from this phase's scoped landArea.
+  // (Otherwise each phase would inherit the full-project landCap valuation and
+  // triple-count contributions in a 3-phase model.)
+  delete vProject.investors;
+
   return vProject;
 }
 

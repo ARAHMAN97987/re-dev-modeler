@@ -115,9 +115,21 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   // ── Land Capitalization ──
   // Only for lease/bot — purchase has land in CAPEX already, partner uses landValuation
   const canCapitalize = project.landType === "lease" || project.landType === "bot";
-  const landCapValue = (project.landCapitalize && canCapitalize) ? (project.landArea || 0) * (project.landCapRate || 1000) : 0;
-  // H15: Partner land uses landValuation as equity contribution
-  const partnerLandValue = project.landType === "partner" ? (project.landValuation || 0) : 0;
+  const legacyLandCap = (project.landCapitalize && canCapitalize) ? (project.landArea || 0) * (project.landCapRate || 1000) : 0;
+  const legacyPartnerLand = project.landType === "partner" ? (project.landValuation || 0) : 0;
+  // If investors[] has explicit landCap/landValue contributions, use THOSE as source of truth
+  // (prevents double-counting when user edits InvestorsView with landCapitalize=false,
+  // and prevents divergence between the two definitions).
+  let investorLandCap = 0, investorLandValue = 0;
+  if (Array.isArray(project.investors) && project.investors.length > 0) {
+    project.investors.forEach(inv => {
+      const c = inv.contribution || {};
+      if (c.type === 'landCap') investorLandCap += c.valuation || 0;
+      if (c.type === 'landValue') investorLandValue += c.valuation || 0;
+    });
+  }
+  const landCapValue = investorLandCap > 0 ? investorLandCap : legacyLandCap;
+  const partnerLandValue = investorLandValue > 0 ? investorLandValue : legacyPartnerLand;
   const effectiveLandCap = landCapValue + partnerLandValue;
   const devCostExclLand = ir ? ir.adjustedCapex.reduce((a,b) => a+b, 0) : c.totalCapex;
   const capexGrantTotal = ir?.capexGrantTotal || 0;
@@ -353,6 +365,48 @@ export function computeFinancing(project, projectResults, incentivesResult) {
     // Reconcile - GP + LP must equal totalEquity
     if (totalEquity > 0 && Math.abs((gpEquity + lpEquity) - totalEquity) > 1) {
       lpEquity = Math.max(0, totalEquity - gpEquity);
+    }
+  }
+
+  // ── INVESTORS-DERIVED OVERRIDE (Apr 2026 simplification) ──
+  // When `project.investors[]` carries concrete non-zero contributions (from
+  // InvestorsView edits), those become the source of truth for gpEquity/lpEquity.
+  // Legacy projects with placeholder-only investors (amount=0) keep the
+  // legacy-field-driven split above, preserving backward compat.
+  if (Array.isArray(project.investors) && project.investors.length > 0) {
+    const resolveStatic = (inv) => {
+      const c = inv.contribution || {};
+      if (c.type === 'cash') return c.amount || 0;
+      if (c.type === 'devFee') return devFeeTotal * ((c.investPct ?? 100) / 100);
+      if (c.type === 'landValue') return c.valuation || 0;
+      if (c.type === 'landCap') return c.valuation || 0;
+      if (c.type === 'landPurchase') return c.amount || 0;
+      return 0;
+    };
+    const devStatic = project.investors.filter(i => i.role === 'developer').reduce((s, i) => s + resolveStatic(i), 0);
+    const invStatic = project.investors.filter(i => i.role === 'investor').reduce((s, i) => s + resolveStatic(i), 0);
+    const totalStatic = devStatic + invStatic;
+
+    if (totalStatic > 0) {
+      // Remainder policy: follows the capital-structure convention.
+      //   - fund/incomeFund/hybrid (hasLP=true): residual equity belongs to investors
+      //   - debt/bank100/self (hasLP=false):    residual equity belongs to developer
+      // This matches "developer is sponsor, investors provide capital" — fill-rest
+      // cash placeholders in migration are zero-sum and don't override the rule.
+      const remainder = Math.max(0, totalEquity - totalStatic);
+      const devResidual = hasLP ? 0 : remainder;
+      const invResidual = hasLP ? remainder : 0;
+      let newGp = devStatic + devResidual;
+      let newLp = invStatic + invResidual;
+      // Reconcile with totalEquity (scale down if static contributions exceed totalEquity)
+      const sum = newGp + newLp;
+      if (sum > totalEquity && totalEquity > 0) {
+        const scale = totalEquity / sum;
+        newGp *= scale;
+        newLp *= scale;
+      }
+      gpEquity = newGp;
+      lpEquity = newLp;
     }
   }
 
