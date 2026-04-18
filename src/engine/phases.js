@@ -9,7 +9,7 @@
 import { calcIRR, calcNPV } from './math.js';
 import { computeFinancing } from './financing.js';
 import { computeWaterfall } from './waterfall.js';
-import { migrateProjectToInvestors } from './investors.js';
+import { migrateProjectToInvestors, allocateEquity } from './investors.js';
 
 export const FINANCING_FIELDS = [
   'finMode','vehicleType','debtAllowed','maxLtvPct','financeRate',
@@ -440,6 +440,21 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   }
 
   const consolidatedFinancing = aggregatePhaseFinancings(phaseFinancings, h);
+  // Per-investor equity for UI: per-phase financings strip investors[], so we
+  // synthesize perInvestorEquity from project-level investors[] using the
+  // aggregated totalEquity. This is what InvestorsView reads.
+  if (consolidatedFinancing && Array.isArray(project.investors) && project.investors.length > 0) {
+    try {
+      const devFeeTotal = consolidatedFinancing.devFeeTotal || 0;
+      const hasLP = project.finMode === 'fund' || project.finMode === 'jv'
+        || project.finMode === 'hybrid' || project.finMode === 'incomeFund';
+      consolidatedFinancing.perInvestorEquity = allocateEquity(
+        project.investors,
+        consolidatedFinancing.totalEquity,
+        { devFeeTotal, hasLP }
+      );
+    } catch (e) { console.warn('[phases] perInvestorEquity synthesis failed:', e?.message); }
+  }
   // FIX: Consolidated DSCR must use total NOI / total DS across ALL phases
   // The weighted-average method in aggregatePhaseFinancings misses NOI from phases
   // whose debt is fully repaid (DS=0 → DSCR=null → excluded from weighted avg).
