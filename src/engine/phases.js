@@ -440,9 +440,9 @@ export function computeIndependentPhaseResults(project, projectResults, incentiv
   }
 
   const consolidatedFinancing = aggregatePhaseFinancings(phaseFinancings, h);
-  // Per-investor equity for UI: per-phase financings strip investors[], so we
+  // Per-investor equity: per-phase financings strip investors[], so we
   // synthesize perInvestorEquity from project-level investors[] using the
-  // aggregated totalEquity. This is what InvestorsView reads.
+  // aggregated totalEquity. Used by waterfall + any downstream per-investor display.
   if (consolidatedFinancing && Array.isArray(project.investors) && project.investors.length > 0) {
     try {
       const devFeeTotal = consolidatedFinancing.devFeeTotal || 0;

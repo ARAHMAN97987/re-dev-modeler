@@ -212,7 +212,6 @@ import IncentivesView from './components/views/IncentivesView';
 import ScenariosView from './components/views/ScenariosView';
 import LearningCenterView from './components/views/LearningCenterView';
 import ReportsView from './components/views/ReportsView';
-import InvestorsView from './components/views/InvestorsView.jsx';
 import {
   FINANCING_FIELDS, getPhaseFinancing, hasPerPhaseFinancing, migrateToPerPhaseFinancing,
   buildPhaseIncentives, buildPhaseVirtualProject, buildPhaseProjectResults,
@@ -942,39 +941,6 @@ function WaterfallView({ project, results, financing, waterfall, phaseWaterfalls
             </div>
           )}
         </div>
-
-        {/* ── Per-Investor Breakdown (new investors[] model) ── */}
-        {Array.isArray(w.investorOutcomes) && w.investorOutcomes.length > 1 && (
-          <div style={{background:"#fff",borderRadius:12,border:"1px solid var(--border-default)",padding:"12px 16px"}}>
-            <div style={{fontSize:11,fontWeight:700,color:"var(--text-primary)",marginBottom:8,letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"تفصيل لكل مستثمر":"Per-Investor Breakdown"}</div>
-            <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                <thead>
-                  <tr style={{background:"var(--surface-table-header)",color:"var(--text-secondary)"}}>
-                    <th style={{padding:"6px 8px",textAlign:"start",fontWeight:600}}>{ar?"المستثمر":"Investor"}</th>
-                    <th style={{padding:"6px 8px",textAlign:"start",fontWeight:600}}>{ar?"الدور":"Role"}</th>
-                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>{ar?"المساهمة":"Invested"}</th>
-                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>{ar?"التوزيعات":"Distributions"}</th>
-                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>IRR</th>
-                    <th style={{padding:"6px 8px",textAlign:"end",fontWeight:600}}>MOIC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {w.investorOutcomes.map((o) => (
-                    <tr key={o.id} style={{borderTop:"1px solid var(--border-default)"}}>
-                      <td style={{padding:"6px 8px",color:"var(--text-primary)",fontWeight:600}}>{o.name||o.id}</td>
-                      <td style={{padding:"6px 8px",color:o.role==="developer"?"#3b82f6":"#8b5cf6"}}>{o.role==="developer"?(ar?"مطور":"Developer"):(ar?"مستثمر":"Investor")}</td>
-                      <td style={{padding:"6px 8px",textAlign:"end",color:"var(--text-primary)"}}>{fmt(o.totalCalled||0)}</td>
-                      <td style={{padding:"6px 8px",textAlign:"end",color:"var(--text-primary)"}}>{fmt(o.totalDist||0)}</td>
-                      <td style={{padding:"6px 8px",textAlign:"end",color:getMetricColor("IRR",o.irr)}}>{o.irr!=null?fmtPct(o.irr*100):"—"}</td>
-                      <td style={{padding:"6px 8px",textAlign:"end"}}>{o.moic?o.moic.toFixed(2)+"x":"—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {/* ── Card 2: Developer (Fees + Incentive Only) ── */}
         <div style={{background:kpiOpen.gp?"#fff":"linear-gradient(135deg, #eff6ff, #f0fdf4)",borderRadius:12,border:kpiOpen.gp?"2px solid #3b82f6":"1px solid #bfdbfe",padding:"12px 16px",transition:"all 0.2s"}}>
@@ -2751,14 +2717,13 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
         {/* ── SECTION: FINANCING MODE (always visible, compact) ── */}
         <div className="z-card" style={{padding:"12px 14px",gridColumn:"1/-1",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--text-primary)",whiteSpace:"nowrap"}}>{ar?"آلية التمويل":"Financing Mode"}</span>
-          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const extras=v==="incomeFund"?{exitStrategy:"hold",maxLtvPct:50,debtAllowed:true}:v==="debt"?{debtAllowed:true}:{};const graceReset=v!=="fund"&&v!=="incomeFund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+          <select value={cfg.finMode} onChange={e=>{const v=e.target.value;const wasB100=cfg.finMode==="bank100";const extras=v==="bank100"?{debtAllowed:true,maxLtvPct:100}:v==="hybrid"?{debtAllowed:true,govFinancingPct:cfg.govFinancingPct||70,govBeneficiary:cfg.govBeneficiary||"project"}:v==="incomeFund"?{exitStrategy:"hold",maxLtvPct:50,debtAllowed:true}:{};const bank100Reset=wasB100&&v!=="bank100"?{maxLtvPct:70}:{};const graceReset=v!=="fund"&&v!=="hybrid"&&v!=="incomeFund"&&cfg.graceBasis==="fundStart"?{graceBasis:"cod"}:{};upCfg({finMode:v,...extras,...bank100Reset,...graceReset});}} className="z-input z-select" style={{minWidth:160,maxWidth:240,position:"relative",zIndex:10}}>
+            <option value="self">{ar?"تمويل ذاتي":"Self-Funded"}</option>
+            <option value="bank100">{ar?"بنكي 100%":"100% Bank Debt"}</option>
             <option value="debt">{ar?"دين + ملكية":"Debt + Equity"}</option>
             <option value="fund">{ar?"صندوق (مطور/مستثمر)":"Fund (Developer/Investor)"}</option>
             <option value="incomeFund">{ar?"صندوق مدر للدخل":"Income Fund"}</option>
-            {/* Legacy modes: keep visible only if current project uses them (backward-compat) */}
-            {cfg.finMode === "self" && <option value="self">{ar?"تمويل ذاتي (قديم)":"Self-Funded (legacy)"}</option>}
-            {cfg.finMode === "bank100" && <option value="bank100">{ar?"بنكي 100% (قديم)":"100% Bank Debt (legacy)"}</option>}
-            {cfg.finMode === "hybrid" && <option value="hybrid">{ar?"مختلط (قديم)":"Hybrid (legacy)"}</option>}
+            <option value="hybrid">{ar?"مختلط (صندوق + تمويل)":"Hybrid (Fund + Financing)"}</option>
           </select>
           <HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} />
         </div>
@@ -2902,11 +2867,9 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
           {cfg.landCapitalize&&(project.landType==="lease"||project.landType==="bot")&&<>
             <div style={g2}>
               <FL label={ar?"سعر/م²":"Rate/sqm"} tip="سعر تقييم الأرض للمتر المربع عند رسملتها ضمن حقوق الملكية (Equity). يُفضّل أن يكون التقييم محافظاً\nLand value per sqm for equity capitalization. Should be based on conservative appraisal" hint={`= ${fmt((project.landArea||0)*(cfg.landCapRate||1000))} ${cur} · ${dh("landCapRate")}`}><Inp type="number" value={cfg.landCapRate} onChange={v=>upCfg({landCapRate:v})} /></FL>
-              <div style={{padding:"8px 10px",background:"rgba(46,196,182,0.08)",border:"0.5px solid rgba(46,196,182,0.3)",borderRadius:6,fontSize:11,color:"var(--text-secondary)",lineHeight:1.5}}>
-                💡 {ar?"يحدَّد مستلم حق الانتفاع في تبويب":"Recipient is set in the"} <b>{ar?"المستثمرون":"Investors"}</b> {ar?"(مساهمة من نوع landCap).":"tab (contribution type: landCap)."}
-              </div>
+              <FL label={ar?"رسملة حق الانتفاع لصالح":"Leasehold Cap Credit To"} tip={ar?"من يُحسب له حق الانتفاع كحصة Equity: المطور أو المستثمر أو مقسمة":"Who gets the leasehold capitalization as equity credit: Developer, Investor, or split 50/50"}><Drp lang={lang} value={cfg.landCapTo||"gp"} onChange={v=>upCfg({landCapTo:v})} options={[{value:"gp",en:"Developer (default)",ar:"المطور (تلقائي)"},{value:"lp",en:"Investor",ar:"المستثمر"},{value:"split",en:"Split 50/50",ar:"مقسمة 50/50"}]} /></FL>
             </div>
-            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"تلقائي = صاحب حق الانتفاع من تبويب المستثمرين. المشروع = الكل يتحمل.":"Auto = landCap recipient from Investors tab. Project = all bear cost."}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"}]} /></FL>}
+            {project.landType==="lease"&&<FL label={ar?"من يدفع إيجار الأرض؟":"Who Pays Land Rent?"} tip={ar?"بعد رسملة حق الانتفاع: تلقائي = اللي انحسب له حق الانتفاع يدفع الإيجار. المشروع = الكل يتحمل. أو اختر يدوياً":"After leasehold cap: Auto = whoever got the cap credit pays rent. Project = all bear cost. Or choose manually"}><Drp lang={lang} value={cfg.landRentPaidBy||"auto"} onChange={v=>upCfg({landRentPaidBy:v})} options={[{value:"auto",en:"Auto (cap credit owner)",ar:"تلقائي (صاحب حق الانتفاع)"},{value:"project",en:"Project (all bear cost)",ar:"المشروع (الكل يتحمل)"},{value:"gp",en:"Developer",ar:"المطور"},{value:"lp",en:"Investor",ar:"المستثمر"}]} /></FL>}
           </>}
 
           {/* ── Partner Land (In-Kind Contribution) ── */}
@@ -2923,15 +2886,30 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             </div>
           </>}
 
-          {/* ── Equity composition: delegated to Investors tab (Apr 2026) ── */}
+          {/* ── GP Investment Sources ── */}
           {isFundMode && <>
-            <div style={{gridColumn:"1/-1",marginTop:6,padding:"10px 14px",background:"color-mix(in srgb, var(--sys-blue, #007AFF) 10%, transparent)",border:"0.5px solid color-mix(in srgb, var(--sys-blue, #007AFF) 28%, transparent)",borderRadius:8,fontSize:12,color:"var(--text-primary)",lineHeight:1.6}}>
-              🧩 {ar
-                ? <>تفاصيل <b>مساهمات المطور والمستثمرين</b> (نقدي، أتعاب معاد استثمارها، أرض، حق انتفاع) تُدار من <b>تبويب المستثمرون</b>. هذه الشاشة تحدد حجم الدين فقط — أي مبلغ متبقٍّ يوزَّع على المستثمرين.</>
-                : <>Developer + investor contributions (cash, reinvested dev fee, land, leasehold) are managed in the <b>Investors</b> tab. This screen sets debt terms only — the residual equity is distributed to investors.</>}
-            </div>
+            <div style={{gridColumn:"1/-1",marginTop:4,marginBottom:2,fontSize:11,fontWeight:700,color:"#8b5cf6",letterSpacing:0.3,textTransform:"uppercase"}}>{ar?"استثمار المطور":"Developer Investment"}</div>
 
-            {/* Live Summary (read-only — reads from investors[] via financing engine) */}
+            {/* Source 2: Dev Fee as Investment */}
+            <FL label={ar?"إدخال أتعاب التطوير كاستثمار؟":"Invest Developer Fee as Equity?"} tip={ar?"المطور يعيد أتعاب التطوير للصندوق كاستثمار بدل استلامها نقداً":"Developer reinvests dev fee into fund as equity instead of taking cash"}>
+              <Drp lang={lang} value={cfg.gpInvestDevFee?"Y":"N"} onChange={v=>upCfg({gpInvestDevFee:v==="Y"})} options={["Y","N"]} />
+            </FL>
+            {cfg.gpInvestDevFee && <div style={g2}>
+              <FL label={ar?"نسبة الإدخال %":"Invest %"} hint={`${ar?"أتعاب التطوير":"Developer Fee"} = ${fmtM(f?.gpEquityBreakdown?.devFeeTotal||0)}`} tip={ar?"نسبة أتعاب التطوير المُعاد استثمارها. 100% = كامل الأتعاب":"% of dev fee reinvested. 100% = all fees"}>
+                <Inp type="number" value={cfg.gpDevFeeInvestPct??100} onChange={v=>upCfg({gpDevFeeInvestPct:v})} />
+              </FL>
+              <div style={{display:"flex",alignItems:"center",fontSize:11,color:"#16a34a",fontWeight:600,padding:"8px 0"}}>= {fmt((f?.gpEquityBreakdown?.devFeeTotal||0)*((cfg.gpDevFeeInvestPct??100)/100))} {cur}</div>
+            </div>}
+
+            {/* Source 3: Cash Investment */}
+            <FL label={ar?"استثمار نقدي إضافي؟":"Additional Cash Investment?"} tip={ar?"المطور يضيف مبلغ نقدي من جيبه كاستثمار بالصندوق":"Developer adds cash from own pocket as fund investment"}>
+              <Drp lang={lang} value={cfg.gpCashInvest?"Y":"N"} onChange={v=>upCfg({gpCashInvest:v==="Y"})} options={["Y","N"]} />
+            </FL>
+            {cfg.gpCashInvest && <FL label={ar?"المبلغ":"Amount (SAR)"} tip={ar?"المبلغ النقدي الإضافي":"Cash investment amount"}>
+              <Inp type="number" value={cfg.gpCashInvestAmount} onChange={v=>upCfg({gpCashInvestAmount:v})} />
+            </FL>}
+
+            {/* Live Summary */}
             {f && <div style={{gridColumn:"1/-1",marginTop:4,padding:"8px 12px",background:"var(--surface-table-header)",borderRadius:6,border:"0.5px solid var(--border-default)",fontSize:11}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
                 <span style={{color:"var(--text-secondary)"}}>{isHybridMode?(ar?"إجمالي Equity الصندوق":"Fund Equity"):(ar?"إجمالي Equity":"Total Equity")}</span>
@@ -2968,20 +2946,10 @@ function FinancingView({ project, results, financing, phaseFinancings, waterfall
             </div>}
           </>}
 
-          {/* Non-fund modes: summary only. In debt mode, developer fills all residual equity.
-              Any explicit composition (multiple developers / partners) is handled in Investors tab. */}
-          {!isFundMode && hasEq && f && (
-            <div style={{gridColumn:"1/-1",padding:"8px 12px",background:"var(--surface-table-header)",borderRadius:6,border:"0.5px solid var(--border-default)",fontSize:11}}>
-              <div style={{display:"flex",justifyContent:"space-between"}}>
-                <span style={{color:"var(--text-secondary)"}}>{ar?"إجمالي Equity المطلوبة":"Total Equity Required"}</span>
-                <span style={{fontWeight:700}}>{fmt(f.totalEquity)} {cur}</span>
-              </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-                <span style={{color:"var(--text-secondary)"}}>{ar?"مساهمة المطور":"Developer Equity"}</span>
-                <span style={{fontWeight:600,color:"var(--sys-blue,#007AFF)"}}>{fmt(f.gpEquity)} {cur}</span>
-              </div>
-            </div>
-          )}
+          {/* Non-fund modes: just show GP equity */}
+          {!isFundMode && hasEq && <div style={g2}>
+            <FL label={ar?"مساهمة المطور":"Developer Equity"} hint="0=auto" tip={ar?"مساهمة المطور النقدية. عادة 100% في وضع الدين":"Developer equity contribution. Usually 100% in debt mode"}><Inp type="number" value={cfg.gpEquityManual} onChange={v=>upCfg({gpEquityManual:v})} /></FL>
+          </div>}
         </AB>
         </SecWrap>
 
@@ -3916,27 +3884,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
       p.phases = tmpl.phases.map(ph=>({...ph}));
       p.assets = tmpl.assets.map(a=>({...a, id:crypto.randomUUID(), hotelPL:null, marinaPL:null}));
     }
-    // Seed investors[] + fundManager so UI has a populated model from the first render
-    try {
-      const migrated = migrateProjectToInvestors(p);
-      p.investors = migrated.investors || [];
-    } catch (e) { console.warn('[createProject] investors seed failed:', e?.message); }
-    if (!p.fundManager) {
-      p.fundManager = {
-        name: p.fundName || '',
-        annualFeePct: p.annualMgmtFeePct ?? 1.5,
-        mgmtFeeBase: p.mgmtFeeBase || 'nav',
-        subscriptionFeePct: p.subscriptionFeePct ?? 2,
-        custodyFeeAnnual: p.custodyFeeAnnual ?? 100000,
-        structuringFeePct: p.structuringFeePct ?? 1,
-        structuringFeeCap: p.structuringFeeCap ?? 0,
-        preEstablishmentFee: p.preEstablishmentFee ?? 200000,
-        spvFee: p.spvFee ?? 20000,
-        auditorFeeAnnual: p.auditorFeeAnnual ?? 50000,
-        mgmtFeeCapAnnual: p.mgmtFeeCapAnnual ?? 2000000,
-      };
-    }
-    p._structureVersion = 3;
     await saveProject(p); setProjectIndex(await loadProjectIndex()); setProject({...p, _setupDone: false}); setView("editor"); setActiveTab("dashboard"); pushNavHash("editor", p.id, "dashboard"); window.scrollTo(0,0);
   };
   const openProject = async (id) => { setLoading(true); const meta = projectIndex.find(p => p.id === id); const p = await loadProject(id, meta?._ownerId, meta?._permission); if (p) { setProject(p); setView("editor"); setActiveTab("dashboard"); pushNavHash("editor", p.id, "dashboard"); window.scrollTo(0,0); } setLoading(false); };
@@ -3970,21 +3917,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
 
   const up = useCallback((u) => { if (readOnly) return; // Admin read-only mode — block all edits
     const scrollTop = sidebarRef.current?.scrollTop;
-    setProject(prev => {
-      pushUndo(prev);
-      const patch = typeof u === 'function' ? u(prev) : u;
-      let next = {...prev, ...patch};
-      // Apr 2026 simplification: when finMode changes AND user has not edited
-      // investors[] manually, re-seed investors[] from the new finMode so the
-      // UI model stays consistent with capital-structure mode.
-      if (patch && 'finMode' in patch && patch.finMode !== prev.finMode && !prev._investorsEditedByUser) {
-        try {
-          const reseeded = migrateProjectToInvestors({ ...next, investors: undefined });
-          next.investors = reseeded.investors || [];
-        } catch (e) { console.warn('[finMode change] re-migration failed:', e?.message); }
-      }
-      return next;
-    });
+    setProject(prev => { pushUndo(prev); return {...prev,...(typeof u === 'function' ? u(prev) : u)}; });
     if (scrollTop != null) {
       requestAnimationFrame(() => {
         if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop;
@@ -4330,12 +4263,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
               {key:"assets",label:t.assetProgram,group:"project"},
               {key:"cashflow",label:t.cashFlow,group:"project"},
               {key:"financing",label:lang==="ar"?"الهيكلة المالية":"Financial Structure",group:"finance",hide:fm==="self"},
-              {key:"investors",label:lang==="ar"?"المستثمرون":"Investors",group:"finance",hide:!(
-                fm==="fund" || fm==="incomeFund" || fm==="hybrid" || fm==="jv"
-                || (project.landCapitalize && (project.landType==="lease" || project.landType==="bot"))
-                || project.landType==="partner"
-                || (Array.isArray(project.investors) && project.investors.length > 1)
-              )},
               {key:"incentives",label:lang==="ar"?"الحوافز":"Incentives",group:"finance"},
               {key:"results",label:lang==="ar"?"النتائج":"Results",group:"finance"},
               {key:"scenarios",label:lang==="ar"?"السيناريوهات":"Scenarios",group:"analysis"},
@@ -4441,7 +4368,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
             ["dashboard", <ProjectDash key="dashboard" project={project} results={results} checks={checks} t={t} financing={financing} phaseFinancings={phaseFinancings} lang={lang} incentivesResult={incentivesResult} onGoToAssets={()=>{setActiveTab("assets");addAsset();}} setActiveTab={setActiveTab} />],
             ["assets", <AssetTable key="assets" project={project} upAsset={upAsset} addAsset={addAsset} dupAsset={dupAsset} rmAsset={rmAsset} results={results} t={t} lang={lang} updateProject={up} globalExpand={globalExpand} smartAlerts={smartAlerts.alerts} />],
             ["financing", <FinancingView key="financing" project={project} results={results} financing={financing} phaseFinancings={phaseFinancings} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} incentivesResult={incentivesResult} t={t} up={up} lang={lang} globalExpand={globalExpand} onAddAsset={()=>setActiveTab("assets")} />],
-            ["investors", <InvestorsView key="investors" project={project} updateProject={up} financing={financing} lang={lang} />],
             ["results", <><div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}><SmartReviewerPanel alerts={smartAlerts.alerts} lang={lang} summary={smartAlerts.summary} onAskAI={(alert) => { setPendingChatMsg(lang==='ar' ? `تنبيه المراجع الذكي [${alert.id}]: ${alert.ar}\n${alert.assetName?'الأصل: '+alert.assetName+'\n':''}ايش تقترح أعدل عشان أحل هالمشكلة؟ اعطني رقم محدد ووضح الأثر على IRR/NPV.` : `Smart Reviewer alert [${alert.id}]: ${alert.en}\n${alert.assetName?'Asset: '+alert.assetName+'\n':''}What do you suggest I change to fix this? Give me a specific number and explain the impact on IRR/NPV.`); setAiOpen(true); }} /></div><div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}><button onClick={()=>setShowReport(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 18px",borderRadius:8,border:"1px solid #2EC4B6",background:"linear-gradient(135deg,#f0fdfa,#ecfdf5)",color:"#0d9488",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#ccfbf1"} onMouseLeave={e=>e.currentTarget.style.background="linear-gradient(135deg,#f0fdfa,#ecfdf5)"}><span style={{fontSize:16}}>📄</span>{lang==="ar"?"توليد تقرير استشاري":"Generate Advisory Report"}</button></div><ResultsView key="results" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} t={t} lang={lang} up={up} globalExpand={globalExpand} kpiPhase={kpiPhase} setKpiPhase={setKpiPhase} onAddAsset={()=>setActiveTab("assets")} /></>],
             ["reports", <ReportsView key="reports" project={project} results={results} financing={financing} waterfall={waterfall} phaseWaterfalls={phaseWaterfalls} phaseFinancings={phaseFinancings} incentivesResult={incentivesResult} checks={checks} lang={lang} />],
             ["scenarios", <ScenariosView key="scenarios" project={project} results={results} financing={financing} waterfall={waterfall} lang={lang} up={up} />],
@@ -4525,9 +4451,12 @@ function ProjectSetupWizard({ project, onUpdate, onDone, lang }) {
     // Step 2: Financing mode
     { title: t?"طريقة التمويل":"Financing Mode", subtitle: t?"كيف سيتم تمويل المشروع؟":"How will the project be funded?", content: (
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <Option icon="🏗" label={t?"دين بنكي + رأس مال":"Debt + Equity"} desc={t?"جزء من البنك وجزء رأس مال (مطور و/أو مستثمرين)":"Part bank loan, part equity (developer and/or investors)"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
+        <Option icon="💰" label={t?"تمويل ذاتي (رأس مال كامل)":"Self-Funded (100% Equity)"} desc={t?"المطور يموّل كل شي من جيبه":"Developer funds everything"} selected={project.finMode==="self"} onClick={()=>onUpdate({finMode:"self"})} />
+        <Option icon="🏦" label={t?"تمويل بنكي 100% (ملك المطور)":"100% Bank Debt (Developer-Owned)"} desc={t?"البنك يموّل كامل التكلفة، المطور هو المالك":"Bank finances 100%, developer owns"} selected={project.finMode==="bank100"} onClick={()=>onUpdate({finMode:"bank100",debtAllowed:true,maxLtvPct:100})} />
+        <Option icon="🏗" label={t?"دين بنكي + رأس مال المطور":"Bank Debt + Developer Equity"} desc={t?"جزء من البنك وجزء من المطور":"Part bank loan, part developer equity"} selected={project.finMode==="debt"} onClick={()=>onUpdate({finMode:"debt",debtAllowed:true})} />
         <Option icon="📊" label={t?"صندوق استثماري (مطور/مستثمر)":"Fund Structure (Developer/Investor)"} desc={t?"مطور + مستثمرين مع شلال توزيعات":"Developer + investors with waterfall"} selected={project.finMode==="fund"} onClick={()=>onUpdate({finMode:"fund",debtAllowed:true})} />
         <Option icon="💰" label={t?"صندوق مدر للدخل":"Income Fund"} desc={t?"شراء/تطوير وتشغيل للدخل الدوري":"Buy/develop & hold for periodic income"} selected={project.finMode==="incomeFund"} onClick={()=>onUpdate({finMode:"incomeFund",debtAllowed:true,maxLtvPct:50,exitStrategy:"hold"})} />
+        <Option icon="🔀" label={t?"مختلط (صندوق + تمويل)":"Hybrid (Fund + Financing)"} desc={t?"تمويل مؤسسي (بنك/حكومة) + صندوق استثماري على الباقي":"Institutional financing + fund structure on remainder"} selected={project.finMode==="hybrid"} onClick={()=>onUpdate({finMode:"hybrid",debtAllowed:true,govFinancingPct:70,govBeneficiary:"project"})} />
         <div style={{textAlign:"center",marginTop:4}}><HelpLink contentKey="financingMode" lang={lang} onOpen={setEduModal} /></div>
       </div>
     )},

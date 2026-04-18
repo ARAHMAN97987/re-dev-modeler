@@ -118,8 +118,8 @@ export function computeFinancing(project, projectResults, incentivesResult) {
   const legacyLandCap = (project.landCapitalize && canCapitalize) ? (project.landArea || 0) * (project.landCapRate || 1000) : 0;
   const legacyPartnerLand = project.landType === "partner" ? (project.landValuation || 0) : 0;
   // If investors[] has explicit landCap/landValue contributions, use THOSE as source of truth
-  // (prevents double-counting when user edits InvestorsView with landCapitalize=false,
-  // and prevents divergence between the two definitions).
+  // (prevents double-counting + keeps internal investors[] structure consistent with legacy
+  // landCapitalize/landValuation fields).
   let investorLandCap = 0, investorLandValue = 0;
   if (Array.isArray(project.investors) && project.investors.length > 0) {
     project.investors.forEach(inv => {
