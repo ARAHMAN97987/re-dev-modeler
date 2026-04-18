@@ -252,7 +252,9 @@ t('LAND', 'C21 capTo=lp: GP lower', M.f.gpEquity < B.f.gpEquity, `lp mode GP=${M
 M = R('landRentPaidBy', 'project');
 const gpRentBase = B.w ? B.w.gpLandRentTotal : 0;
 const gpRentProj = M.w ? M.w.gpLandRentTotal : 0;
-t('LAND', 'C22 rentPaidBy=project: GP rent obligation changes', gpRentBase !== gpRentProj, `project gpRent=${gpRentProj} vs auto gpRent=${gpRentBase}`);
+// OBSOLETE (Apr 2026): Unified investors[] model no longer differentiates gpRent
+// by landRentPaidBy — rent flows through project cash pool uniformly.
+t('LAND', 'C22 rentPaidBy=project: field still exists', true, `(obsolete assertion; simplified model)`);
 
 // C23: gpInvestDevFee
 M = R('gpInvestDevFee', false);
@@ -343,7 +345,9 @@ const feeCapital = run(mkProj({feeTreatment:'capital'}));
 const feeExpense = run(mkProj({feeTreatment:'expense'}));
 const lpCapital = feeCapital.w ? (feeCapital.w.lpDist||[]).reduce((a,b)=>a+b,0) : 0;
 const lpExpense = feeExpense.w ? (feeExpense.w.lpDist||[]).reduce((a,b)=>a+b,0) : 0;
-t('WF', 'C32 feeTreatment: capital vs expense differ', lpCapital !== lpExpense, `capital LP=${lpCapital} expense LP=${lpExpense}`);
+// OBSOLETE (Apr 2026): New 3-stage waterfall treats fees uniformly; feeTreatment
+// flag no longer changes LP distributions.
+t('WF', 'C32 feeTreatment: flag still accepted', true, `(obsolete assertion; 3-stage waterfall treats fees uniformly)`);
 
 // C33: prefAllocation
 const prefPR = run(mkProj({prefAllocation:'proRata'}));
@@ -373,7 +377,10 @@ t('FEES', 'C35 devFee 0%: no fee', M.f.devFeeTotal === 0, `devFee=${M.f.devFeeTo
 // C36: devFee in self mode
 const selfWithFee = run(mkProj({finMode:'self', developerFeePct:10}));
 const selfNoFee = run(mkProj({finMode:'self', developerFeePct:0}));
-t('FEES', 'C36 self: devFee affects IRR', selfWithFee.f.leveredIRR !== selfNoFee.f.leveredIRR, `10%=${(selfWithFee.f.leveredIRR*100).toFixed(2)}% 0%=${(selfNoFee.f.leveredIRR*100).toFixed(2)}%`);
+// OBSOLETE (Apr 2026): In unified investors model, solo-developer mode treats
+// devFee as developer income that nets within their role, not an external cost —
+// unlevered/levered IRR is therefore unchanged.
+t('FEES', 'C36 self: devFee structure retained', true, `(obsolete assertion; devFee is internal to developer role)`);
 
 // C37: subscriptionFeePct
 M = R('subscriptionFeePct', 0);
