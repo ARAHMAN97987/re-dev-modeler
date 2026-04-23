@@ -83,6 +83,37 @@ function Tip({ children, label }) {
   );
 }
 
+// Inline collapse for "Advanced" groups inside a Section — rarely-edited fields
+function CollapseBlock({ label, lang, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: "100%",
+          padding: "6px 10px",
+          background: open ? "#eff6ff" : "#f8fafc",
+          border: "1px dashed #cbd5e1",
+          borderRadius: 6,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          cursor: "pointer",
+          fontSize: 11,
+          color: open ? "#1e40af" : "#64748b",
+          fontFamily: "inherit",
+          fontWeight: 600,
+        }}
+      >
+        <span style={{ fontSize: 9, transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>▶</span>
+        {label}
+      </button>
+      {open && <div style={{ marginTop: 8, paddingInlineStart: 4 }}>{children}</div>}
+    </div>
+  );
+}
+
 // Section with collapse/expand
 function Section({ title, titleAr, lang, defaultOpen = true, children, badge }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -811,62 +842,49 @@ export default function AssetDetailPanel({
               tip: ar ? "تكلفة البناء الصلبة لكل متر مربع (قبل غير المباشرة والاحتياطي)" : "Hard construction cost per m² (before soft & contingency)",
               error: (asset.costPerSqm || 0) < 0 ? (ar ? "لا يمكن أن تكون التكلفة سالبة" : "Cost cannot be negative") : null,
             })}
-            <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", margin: "10px 0" }} />
-            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8, color: "#6b7280" }}>
-              {lang === "ar" ? "تفاصيل إضافية (اختيارية)" : "Advanced (optional)"}
-            </div>
-            {field("Basement Cost Multiplier", "مضاعف تكلفة البيسمنت", asset.basementCostMultiplier, (v) => up("basementCostMultiplier", v), {
-              type: "number", suffix: "×",
-              hidden: (asset.basementLevels || 0) === 0,
-              tip: ar ? "مضاعف التكلفة للبيسمنت (عادة 1.4-1.8 بسبب الحفريات والعزل)" : "Cost multiplier for basement (typically 1.4-1.8 due to excavation & waterproofing)",
-            })}
-            {field("Parking Cost / m²", "تكلفة مواقف / م²", asset.parkingCostPerSqm, (v) => up("parkingCostPerSqm", v), {
-              type: "number", suffix: "SAR",
-              hidden: (asset.parkingArea || 0) === 0,
-              tip: ar ? "تكلفة بناء المواقف لكل م² (إذا لم تُحتسب ضمن GFA)" : "Parking construction cost per m² (if not in GFA)",
-            })}
-            {field("Soft Cost % (override)", "تكلفة غير مباشرة % (تجاوز)", asset.softCostPctOverride, (v) => up("softCostPctOverride", v), {
-              type: "number", suffix: "%",
-              tip: ar ? `تجاوز نسبة المشروع (${project?.softCostPct || 0}%). اتركه فارغاً لاستخدام قيمة المشروع` : `Override project value (${project?.softCostPct || 0}%). Leave empty to inherit`,
-            })}
-            {field("Contingency % (override)", "احتياطي % (تجاوز)", asset.contingencyPctOverride, (v) => up("contingencyPctOverride", v), {
-              type: "number", suffix: "%",
-              tip: ar ? `تجاوز نسبة المشروع (${project?.contingencyPct || 0}%)` : `Override project value (${project?.contingencyPct || 0}%)`,
-            })}
 
-            {/* Live CAPEX breakdown */}
+            {/* Compact one-line CAPEX summary (replaces the old dark panel) */}
             {capexBreakdown && (asset.gfa || 0) > 0 && (asset.costPerSqm || 0) > 0 && (
-              <div style={{ marginTop: 12, padding: "12px 14px", background: "#0f172a", color: "#e5e7eb", border: "1px solid #1e293b", borderRadius: 8, fontSize: 11 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8, color: "#2EC4B6", fontSize: 12 }}>
-                  {lang === "ar" ? "📊 تفصيل التكلفة الرأسمالية (حي)" : "📊 Live CAPEX Breakdown"}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 12px", fontFamily: "'SF Mono', Consolas, monospace", fontSize: 10.5 }}>
-                  <span style={{ color: "#94a3b8" }}>{lang === "ar" ? "فوق الأرض" : "Above Ground"}</span>
-                  <span>{fmtM(capexBreakdown.hardCostAbove)}</span>
-                  {capexBreakdown.hardCostBasement > 0 && (<>
-                    <span style={{ color: "#94a3b8" }}>{lang === "ar" ? "بيسمنت (مع علاوة)" : "Basement (+premium)"}</span>
-                    <span>{fmtM(capexBreakdown.hardCostBasement)}</span>
-                  </>)}
-                  {capexBreakdown.parkingCost > 0 && (<>
-                    <span style={{ color: "#94a3b8" }}>{lang === "ar" ? "مواقف" : "Parking"}</span>
-                    <span>{fmtM(capexBreakdown.parkingCost)}</span>
-                  </>)}
-                  <span style={{ borderTop: "1px solid #334155", paddingTop: 4, color: "#e5e7eb", fontWeight: 600 }}>{lang === "ar" ? "تكلفة صلبة" : "Hard Cost"}</span>
-                  <span style={{ borderTop: "1px solid #334155", paddingTop: 4, fontWeight: 600 }}>{fmtM(capexBreakdown.hardCost)}</span>
-                  <span style={{ color: "#94a3b8" }}>{lang === "ar" ? "غير مباشرة" : "Soft Cost"}</span>
-                  <span>{fmtM(capexBreakdown.softCost)}</span>
-                  <span style={{ color: "#94a3b8" }}>{lang === "ar" ? "احتياطي" : "Contingency"}</span>
-                  <span>{fmtM(capexBreakdown.contingency)}</span>
-                  <span style={{ borderTop: "2px solid #2EC4B6", paddingTop: 5, fontWeight: 700, color: "#2EC4B6" }}>{lang === "ar" ? "الإجمالي" : "Total CAPEX"}</span>
-                  <span style={{ borderTop: "2px solid #2EC4B6", paddingTop: 5, fontWeight: 700, color: "#2EC4B6" }}>{fmtM(capexBreakdown.total)}</span>
-                </div>
-                {/* Per-m² implied */}
-                <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px dashed #334155", fontSize: 10, color: "#94a3b8", display: "flex", justifyContent: "space-between" }}>
-                  <span>{ar ? "متوسط / م² GFA:" : "Avg / m² GFA:"}</span>
-                  <span style={{ color: "#e5e7eb" }}>{fmtNum(capexBreakdown.total / (asset.gfa || 1))} SAR</span>
-                </div>
+              <div style={{ marginTop: 10, padding: "8px 12px", background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 6, fontSize: 11, color: "#0369a1", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6, fontVariantNumeric: "tabular-nums" }}>
+                <span style={{ fontWeight: 600 }}>{ar ? "تفصيل سريع:" : "Quick breakdown:"}</span>
+                <span>
+                  {ar ? "صلبة" : "Hard"} <strong>{fmtM(capexBreakdown.hardCost)}</strong>
+                  {" · "}
+                  {ar ? "غير مباشرة+احتياطي" : "Soft+Cont"} <strong>{fmtM(capexBreakdown.softCost + capexBreakdown.contingency)}</strong>
+                  {" · "}
+                  {ar ? "إجمالي" : "Total"} <strong style={{ color: "#0c4a6e" }}>{fmtM(capexBreakdown.total)}</strong>
+                  {" · "}
+                  <span style={{ color: "#64748b" }}>
+                    {ar ? "متوسط/م²" : "avg/m²"} <strong>{fmtNum(capexBreakdown.total / (asset.gfa || 1))}</strong>
+                  </span>
+                </span>
               </div>
             )}
+
+            {/* Advanced (hidden overrides) */}
+            <CollapseBlock
+              label={ar ? "متقدم (تكاليف تفصيلية)" : "Advanced (detailed cost overrides)"}
+              lang={lang}
+            >
+              {field("Basement Cost Multiplier", "مضاعف تكلفة البيسمنت", asset.basementCostMultiplier, (v) => up("basementCostMultiplier", v), {
+                type: "number", suffix: "×",
+                hidden: (asset.basementLevels || 0) === 0,
+                tip: ar ? "مضاعف التكلفة للبيسمنت (عادة 1.4-1.8 بسبب الحفريات والعزل)" : "Cost multiplier for basement (typically 1.4-1.8 due to excavation & waterproofing)",
+              })}
+              {field("Parking Cost / m²", "تكلفة مواقف / م²", asset.parkingCostPerSqm, (v) => up("parkingCostPerSqm", v), {
+                type: "number", suffix: "SAR",
+                hidden: (asset.parkingArea || 0) === 0,
+                tip: ar ? "تكلفة بناء المواقف لكل م² (إذا لم تُحتسب ضمن GFA)" : "Parking construction cost per m² (if not in GFA)",
+              })}
+              {field("Soft Cost % (override)", "تكلفة غير مباشرة % (تجاوز)", asset.softCostPctOverride, (v) => up("softCostPctOverride", v), {
+                type: "number", suffix: "%",
+                tip: ar ? `تجاوز نسبة المشروع (${project?.softCostPct || 0}%). اتركه فارغاً لاستخدام قيمة المشروع` : `Override project value (${project?.softCostPct || 0}%). Leave empty to inherit`,
+              })}
+              {field("Contingency % (override)", "احتياطي % (تجاوز)", asset.contingencyPctOverride, (v) => up("contingencyPctOverride", v), {
+                type: "number", suffix: "%",
+                tip: ar ? `تجاوز نسبة المشروع (${project?.contingencyPct || 0}%)` : `Override project value (${project?.contingencyPct || 0}%)`,
+              })}
+            </CollapseBlock>
           </Section>
         </div>
       </div>
