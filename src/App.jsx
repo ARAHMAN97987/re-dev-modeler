@@ -8,7 +8,7 @@ import { embeddedFontCSS } from "./embeddedFonts";
 import AiAssistant from "./AiAssistant";
 import { IncomeFundResultsView } from "./components/views/ResultsView";
 import Tip from "./components/shared/Tip";
-import { FieldGroup, FL, Inp, Drp } from "./components/shared/FormWidgets";
+import { FL, Inp, Drp } from "./components/shared/FormWidgets";
 import EditableCell from "./components/shared/EditableCell";
 import SidebarInput from "./components/shared/SidebarInput";
 import { EDUCATIONAL_CONTENT } from "./data/educational-content.js";
@@ -2475,7 +2475,7 @@ function BankResultsView({ project, results, financing, phaseFinancings, incenti
   </div>);
 }
 
-// FieldGroup, FL, Inp, Drp — imported from ./components/shared/FormWidgets.jsx
+// FL, Inp, Drp — imported from ./components/shared/FormWidgets.jsx
 
 function FinancingView({ project, results, financing, phaseFinancings, waterfall, phaseWaterfalls, incentivesResult, t, up, lang, globalExpand, onAddAsset }) {
   const isMobile = useIsMobile();
@@ -5225,7 +5225,6 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const isMobile = useIsMobile();
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
-  const [editIdx, setEditIdx] = useState(null);
   const [showLandRentDetail, setShowLandRentDetail] = useState(false);
   const [landEduModal, setLandEduModal] = useState(null);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -5277,7 +5276,8 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const handleTemplateSelect = (defaults) => {
     addAsset(Object.keys(defaults).length > 0 ? defaults : undefined);
     setShowTemplatePicker(false);
-    setTimeout(() => setEditIdx(assets.length), 50);
+    // Auto-open the AssetDetailPanel drawer for the newly-added asset
+    setTimeout(() => setSelectedAssetIndex(assets.length), 50);
   };
 
   // Auto-open detail modal after adding a new asset
@@ -5431,7 +5431,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const phaseFootprints = {};
   phaseNames.forEach(pn => { phaseFootprints[pn] = assets.filter(a => a.phase === pn).reduce((s, a) => s + (a.footprint || 0), 0); });
 
-  // Filtered asset indices (display only - editIdx still references original array)
+  // Filtered asset indices (display only — actions still reference original array)
   const filteredIndices = assets.map((_, i) => i).filter(i => {
     const a = assets[i];
     if (filterPhase !== "all" && a.phase !== filterPhase) return false;
@@ -5750,78 +5750,6 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             </div>
           </div>
         </>)}
-        {editIdx!==null&&editIdx<assets.length&&(()=>{const a=assets[editIdx],i=editIdx,comp=results?.assetSchedules?.[i],isOp=a.revType==="Operating",isSale=a.revType==="Sale",isH=isOp&&a.category==="Hospitality",isM=isOp&&a.category==="Marina";
-        const F2=({label,children,error})=><div style={{marginBottom:8}}><div style={{fontSize:11,color:error?"#ef4444":"#6b7080",marginBottom:3,fontWeight:500}}>{label}</div><div style={error?{borderRadius:6,boxShadow:"0 0 0 1.5px #ef4444"}:undefined}>{children}</div>{error&&<div style={{fontSize:11,color:"#ef4444",marginTop:2}}>{error}</div>}</div>;
-        const g3=isMobile?"1fr 1fr":"1fr 1fr 1fr";
-        const g2=isMobile?"1fr":"1fr 1fr";
-        return <><div onClick={()=>setEditIdx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
-        <div style={{position:"fixed",zIndex:9991,display:"flex",flexDirection:"column",overflow:"hidden",background:"var(--surface-card)",boxShadow:"0 20px 60px rgba(0,0,0,0.15)",...(isMobile?{inset:0,borderRadius:0}:{top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:560,maxWidth:"94vw",maxHeight:"88vh",borderRadius:16,animation:"zanModalIn 0.2s ease-out"})}}>
-          <div style={{padding:"16px 20px",borderBottom:"0.5px solid var(--border-default)",display:"flex",alignItems:"center",gap:10}}>
-            <div style={{flex:1}}><div style={{fontSize:16,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"var(--text-tertiary)"}}>{catL(a.category,ar)} · {a.phase}</div></div>
-            <button onClick={()=>{dupAsset(i);setEditIdx(null);setTimeout(()=>setEditIdx(assets.length),80);}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"6px 12px",fontSize:11}} title={ar?"تكرار":"Duplicate"}>{ar?"📋 تكرار":"📋 Duplicate"}</button>
-            <button onClick={()=>{rmAsset(i);setEditIdx(null);}} style={{...btnS,background:"#fef2f2",color:"#ef4444",padding:"6px 12px",fontSize:11}}>{ar?"حذف":"Delete"}</button>
-            <button onClick={()=>setEditIdx(null)} style={{...btnS,background:"var(--surface-sidebar)",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
-          </div>
-          <div style={{padding:"16px 20px",overflowY:"auto",flex:1}}>
-            {/* ── Group 1: Basic Info ── */}
-            <FieldGroup icon="📝" title={ar?"أساسي":"Basic Info"}>
-            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:10}}>
-              <F2 label={ar?"المرحلة":"Phase"}><EditableCell options={phaseNames} value={a.phase} onChange={v=>upAsset(i,{phase:v})} /></F2>
-              <F2 label={ar?"نوع الأصل":"Asset Type"}>{(()=>{const atGroups={};Object.entries(ASSET_TYPES).forEach(([k,v])=>{const g=v.group;if(!atGroups[g])atGroups[g]=[];atGroups[g].push({value:k,label:ar?v.labelAr:v.label});});const curType=a.assetType||migrateCategory(a.category,a);return <select value={curType} onChange={e=>{const t=e.target.value;upAsset(i,{assetType:t,category:getCategoryFromType(t),isBuilding:ASSET_TYPES[t]?.isBuilding??true});}} style={{width:"100%",padding:"7px 8px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)",color:"var(--text-primary)",fontSize:12}}>{Object.entries(atGroups).map(([g,ts])=><optgroup key={g} label={g}>{ts.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}</optgroup>)}</select>;})()}</F2>
-              <F2 label={ar?"نوع الإيراد":"Rev Type"}><EditableCell options={REV_TYPES} labelMap={ar?REV_AR:null} value={a.revType} onChange={v=>upAsset(i,{revType:v})} /></F2>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-              <F2 label={ar?"الاسم":"Name"}><EditableCell value={a.name} onChange={v=>upAsset(i,{name:v})} placeholder={ar?"اسم الأصل":"Name"} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"الرمز":"Code"}><EditableCell value={a.code} onChange={v=>upAsset(i,{code:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"الأولوية":"Priority"}><select value={a.assetPriority||"standard"} onChange={e=>upAsset(i,{assetPriority:e.target.value})} style={{width:"100%",padding:"7px 8px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)",color:"var(--text-primary)",fontSize:12}}><option value="anchor">{ar?"رئيسي (Anchor)":"Anchor"}</option><option value="quickWin">{ar?"سريع (Quick Win)":"Quick Win"}</option><option value="standard">{ar?"عادي (Standard)":"Standard"}</option><option value="optional">{ar?"اختياري (Optional)":"Optional"}</option></select></F2>
-            </div>
-</FieldGroup>
-            {/* ── Group 2: Areas & Dimensions ── */}
-            <FieldGroup icon="📐" title={ar?"المساحات":"Areas & Dimensions"}>
-            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
-              <F2 label={ar?"مساحة القطعة Plot Area":"Plot Area"} error={a.plotArea<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.plotArea} onChange={v=>upAsset(i,{plotArea:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"المسطح البنائي Footprint":"Footprint"} error={a.footprint<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.footprint} onChange={v=>upAsset(i,{footprint:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"المساحة الطابقية GFA (م²)":"GFA (m²)"} error={a.gfa<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.gfa} onChange={v=>upAsset(i,{gfa:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-            </div>
-</FieldGroup>
-            {/* ── Group 3: Revenue ── */}
-            <FieldGroup icon="💰" title={ar?"الإيرادات":"Revenue"}>
-            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
-              <F2 label={ar?"نسبة الكفاءة Eff %":"Efficiency %"}><EditableCell type="number" value={a.efficiency} onChange={v=>upAsset(i,{efficiency:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"معدل الإيجار Lease Rate /م²":"Lease Rate"}><EditableCell type="number" value={a.leaseRate} onChange={v=>upAsset(i,{leaseRate:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"EBITDA التشغيلية":"Op EBITDA"}><EditableCell type="number" value={a.opEbitda} onChange={v=>upAsset(i,{opEbitda:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              {isSale && <>
-                <F2 label={ar?"سعر البيع/م²":"Sale Price/sqm"}><EditableCell type="number" value={a.salePricePerSqm||0} onChange={v=>upAsset(i,{salePricePerSqm:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-                <F2 label={ar?"سنوات الاستيعاب":"Absorption Yrs"}><EditableCell type="number" value={a.absorptionYears||3} onChange={v=>upAsset(i,{absorptionYears:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-                <F2 label={ar?"ما قبل البيع %":"Pre-Sale %"}><EditableCell type="number" value={a.preSalePct||0} onChange={v=>upAsset(i,{preSalePct:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-                <F2 label={ar?"عمولة البيع %":"Commission %"}><EditableCell type="number" value={a.commissionPct||0} onChange={v=>upAsset(i,{commissionPct:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              </>}
-              <F2 label={ar?"نسبة الزيادة Esc %":"Escalation %"}><EditableCell type="number" value={a.escalation} onChange={v=>upAsset(i,{escalation:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"سنوات النمو Ramp":"Ramp Years"}><EditableCell type="number" value={a.rampUpYears} onChange={v=>upAsset(i,{rampUpYears:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"نسبة الإشغال Occ %":"Occupancy %"} error={a.stabilizedOcc>100?(ar?"الحد الأقصى 100%":"Max 100%"):a.stabilizedOcc<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.stabilizedOcc} onChange={v=>upAsset(i,{stabilizedOcc:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-            </div>
-</FieldGroup>
-            {/* ── Group 4: Construction & Cost ── */}
-            <FieldGroup icon="🏗️" title={ar?"البناء والتكاليف":"Construction & Cost"}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <F2 label={ar?"تكلفة/م² Cost/sqm":"Cost/m²"} error={a.costPerSqm<0?(ar?"لا يمكن أن تكون سالبة":"Cannot be negative"):null}><EditableCell type="number" value={a.costPerSqm} onChange={v=>upAsset(i,{costPerSqm:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-              <F2 label={ar?"مدة البناء (شهر)":"Build duration (months)"} error={a.constrDuration<1?(ar?"يجب شهر واحد على الأقل":"Must be at least 1 month"):a.constrDuration>120?(ar?"الحد الأقصى 120 شهر":"Max 120 months"):null}><EditableCell type="number" value={a.constrDuration} onChange={v=>upAsset(i,{constrDuration:v})} style={{padding:"7px 10px",border:"0.5px solid var(--border-default)",borderRadius:6,background:"var(--surface-hover)"}} /></F2>
-            </div>
-            {(isH||isM)&&<button onClick={()=>setModal({type:isH?"hotel":"marina",idx:i})} style={{...btnPrim,padding:"8px 16px",fontSize:12,marginTop:8}}>{isH?(ar?"⚙ حساب أرباح الفندق":"⚙ Hotel P&L"):(ar?"⚙ حساب أرباح المارينا":"⚙ Marina P&L")}</button>}
-            </FieldGroup>
-            <div style={{background:"var(--surface-table-header)",borderRadius:8,padding:12,display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:8,fontSize:12}}>
-              <div><span style={{color:"var(--text-secondary)"}}>{ar?"التكاليف:":"CAPEX:"}</span> <strong style={{color:"#ef4444"}}>{fmt(comp?.totalCapex||computeAssetCapex(a,project))}</strong></div>
-              <div><span style={{color:"var(--text-secondary)"}}>{ar?"الإيرادات:":"Income:"}</span> <strong style={{color:"#16a34a"}}>{fmt(comp?.totalRevenue||0)}</strong></div>
-              {(()=>{
-                const sc = getAssetScore(a, comp);
-                const vCfg = { strong:{bg:"#dcfce7",color:"#15803d",t:ar?"مجدي":"Viable"}, ok:{bg:"#fef9c3",color:"#854d0e",t:ar?"مقبول":"Marginal"}, weak:{bg:"#fef2f2",color:"#991b1b",t:ar?"ضعيف":"Weak"}, none:{bg:"#f0f1f5",color:"var(--text-tertiary)",t:"—"} }[sc.viable];
-                const wPct = (sc.capexWeight * 100).toFixed(0);
-                const impLabel = sc.impact==="high"?(ar?"أثر كبير":"High impact"):sc.impact==="med"?(ar?"أثر متوسط":"Med impact"):(ar?"أثر محدود":"Low impact");
-                return <div><span style={{fontSize:11,padding:"2px 6px",borderRadius:4,background:vCfg.bg,color:vCfg.color,fontWeight:600}}>{vCfg.t}</span> <span style={{fontSize:11,color:"var(--text-secondary)"}}>{impLabel} ({wPct}%)</span></div>;
-              })()}
-            </div>
-          </div>
-        </div></>;})()}
       {/* ═══ ASSETS TABLE ═══ */}
       <div style={{background:"var(--surface-card)",borderRadius:8,border:"0.5px solid var(--border-default)",overflow:"hidden"}}>
         <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
