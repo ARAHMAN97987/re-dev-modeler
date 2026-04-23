@@ -5260,6 +5260,14 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
       plotArea:4000, footprint:2000, gfa:14000, efficiency:85, leaseRate:800,
       costPerSqm:2800, constrStart:1, constrDuration:30, rampUpYears:2, stabilizedOcc:92, escalation:0.75,
     }},
+    { id:"resi_sale", icon:"🔑", label:_ar?"سكني للبيع":"Residential for Sale", defaults:{
+      name:_ar?"سكني للبيع":"Residential for Sale", category:"Residential", revType:"Sale", code:"RS",
+      plotArea:6000, footprint:2400, gfa:18000, efficiency:85, leaseRate:0,
+      costPerSqm:3000, constrStart:1, constrDuration:24, rampUpYears:0, stabilizedOcc:100, escalation:0,
+      // Saudi residential sale defaults (2026 market, mid-tier): ~6,500 SAR/m² sale,
+      // 3-year absorption, 30% pre-sale, 3% commission. Tune per project.
+      salePricePerSqm:6500, absorptionYears:3, preSalePct:30, commissionPct:3,
+    }},
     { id:"marina", icon:"⚓", label:_ar?"مارينا":"Marina", defaults:{
       name:_ar?"مارينا":"Marina", category:"Marina", revType:"Operating", code:"MAR",
       plotArea:3000, footprint:0, gfa:2400, efficiency:0, leaseRate:0,
