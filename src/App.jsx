@@ -5394,11 +5394,11 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const [showColPicker, setShowColPicker] = useState(false);
   const [cfOpen, setCfOpen] = useState({}); // which asset CFs are expanded
   const [cfAllOpen, setCfAllOpen] = useState(false); // global toggle
-  const [cfDetail, setCfDetail] = useState(false); // show detail rows
+  // cfDetail removed — Net Income + Cumulative rows now always rendered (P9).
   const [cfYrs, setCfYrs] = useState(15);
   const [colWidths, setColWidths] = useState({});
   const resizingRef = useRef(null);
-  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCfAllOpen(expand); setCfDetail(expand); setLandOpen(expand); setShowLandRentDetail(expand); const obj = {}; (project?.assets||[]).forEach((_, i) => { obj[i] = expand; }); setCfOpen(obj); }}, [globalExpand]);
+  useEffect(() => { if (globalExpand > 0) { const expand = globalExpand % 2 === 1; setCfAllOpen(expand); setLandOpen(expand); setShowLandRentDetail(expand); const obj = {}; (project?.assets||[]).forEach((_, i) => { obj[i] = expand; }); setCfOpen(obj); }}, [globalExpand]);
   // Column resize handlers
   const onResizeStart = useCallback((e, colKey, defaultW) => {
     e.preventDefault();
@@ -5866,8 +5866,8 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             {l: ar?"(-) إيجار أرض":"(-) Land Rent", d: lr, c:"#f59e0b", neg:true, show: totalLR > 0},
             {l: ar?"(-) تكاليف تطوير":"(-) CAPEX", d: cap, c:"#ef4444", neg:true, show:true},
             {l: ar?"= صافي التدفق":"= Net CF", d: netCF, c:"#1a1d23", bold:true, show:true},
-            {l: ar?"صافي دخل":"Net Income", d: netInc, c:"#2563eb", show:cfDetail},
-            {l: ar?"تراكمي":"Cumulative", d: cumCF, c:"#8b5cf6", show:cfDetail},
+            {l: ar?"صافي دخل":"Net Income", d: netInc, c:"#2563eb", show:true},
+            {l: ar?"تراكمي":"Cumulative", d: cumCF, c:"#8b5cf6", show:true},
           ];
           return rows.filter(r => r.show).map((r, ri) => {
             // Per-row total: cumulative row already shows running-sum, so total == final value, not sum
@@ -5894,9 +5894,6 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
               <span style={{fontSize:12,fontWeight:700,color:"var(--text-primary)"}}>{ar?"التدفق النقدي للأصول":"Asset Cash Flows"}</span>
               <button onClick={toggleAllCF} style={{fontSize:11,padding:"3px 10px",borderRadius:5,border:"0.5px solid var(--border-default)",background:cfAllOpen?"#eff6ff":"#f8f9fb",color:cfAllOpen?"#2563eb":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
                 {cfAllOpen?(ar?"طي الكل":"Collapse All"):(ar?"توسيع الكل":"Expand All")}
-              </button>
-              <button onClick={()=>setCfDetail(!cfDetail)} style={{fontSize:11,padding:"3px 10px",borderRadius:5,border:"0.5px solid var(--border-default)",background:cfDetail?"#fef9c3":"#f8f9fb",color:cfDetail?"#92400e":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
-                {cfDetail?(ar?"إخفاء التفاصيل":"Hide Details"):(ar?"عرض التفاصيل":"Show Details")}
               </button>
               <div style={{flex:1}}/>
               <select value={cfYrs} onChange={e=>setCfYrs(+e.target.value)} style={{fontSize:11,padding:"2px 6px",borderRadius:4,border:"0.5px solid var(--border-default)",background:"var(--surface-card)",fontFamily:"inherit"}}>
