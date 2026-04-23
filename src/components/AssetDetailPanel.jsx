@@ -721,22 +721,20 @@ export default function AssetDetailPanel({
             </Section>
           )}
 
-          {/* Section 3: Phase & Timeline */}
+          {/* Section 3: Phase & Timeline
+              NOTE: the engine drives asset timing from phase.completionYear
+              (set via the Phases Bar above the table) + asset.constrDuration.
+              The old startYear/openingYear fields here were legacy ghosts —
+              the engine never read them (verified in cashflow.js:128-151).
+              Removed to stop misleading users. */}
           <Section title="Phase & Timeline" titleAr="المرحلة والجدول الزمني" lang={lang} defaultOpen={false}>
             {field("Phase", "المرحلة", asset.phase, (v) => up("phase", v), {
-              options: phasesArr.map(p => ({ value: p.name, label: p.name }))
-            })}
-            {field("Start Year", "سنة البداية", asset.startYear || asset.constrStart, (v) => up("startYear", v), {
-              type: "number",
-              tip: ar ? "السنة النسبية لبدء البناء (0 = سنة بدء المشروع)" : "Relative year to start construction (0 = project start)",
+              options: phasesArr.map(p => ({ value: p.name, label: p.name })),
+              tip: ar ? "المرحلة التي ينتمي لها الأصل. وقت البدء والافتتاح يُشتق من 'شريط المراحل' أعلى الجدول." : "Phase this asset belongs to. Start/opening year is derived from the Phases Bar above the table.",
             })}
             {field("Build Duration (months)", "مدة البناء (شهور)", asset.constrDuration, (v) => up("constrDuration", v), {
               type: "number",
               tip: ar ? "عدد أشهر البناء. يُستخدم لتوزيع التكلفة على السنوات" : "Construction months. Used to distribute cost across years",
-            })}
-            {field("Opening Year", "سنة الافتتاح", asset.openingYear, (v) => up("openingYear", v), {
-              type: "number",
-              tip: ar ? "السنة المطلقة لبدء الإيرادات" : "Absolute year to start generating revenue",
             })}
             {field("Priority", "الأولوية", asset.assetPriority, (v) => up("assetPriority", v), {
               options: [
@@ -744,7 +742,8 @@ export default function AssetDetailPanel({
                 { value: "quickWin", label: "Quick Win (fast ROI)", labelAr: "سريع (عائد سريع)" },
                 { value: "standard", label: "Standard", labelAr: "عادي" },
                 { value: "optional", label: "Optional (phase-out ok)", labelAr: "اختياري (يمكن إلغاؤه)" },
-              ]
+              ],
+              tip: ar ? "شارة عرض فقط — لا تؤثر على الأرقام" : "Display badge only — does not affect numbers",
             })}
           </Section>
 
