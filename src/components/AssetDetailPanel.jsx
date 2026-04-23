@@ -573,11 +573,6 @@ export default function AssetDetailPanel({
             {field("Phase", "المرحلة", asset.phase, (v) => up("phase", v), {
               options: phasesArr.map(p => ({ value: p.name, label: p.name }))
             })}
-            {field("Plot Reference", "مرجع القطعة", asset.plotReference, (v) => up("plotReference", v), {
-              placeholder: ar ? "رقم القطعة في المخطط" : "Plot # in masterplan",
-              tip: ar ? "رقم القطعة في مخطط المشروع الكلي لربط الأصل بموقعه" : "Plot number in the masterplan to link asset to its location",
-            })}
-            {field("Notes", "ملاحظات", asset.notes, (v) => up("notes", v))}
           </Section>
 
           {/* Section 2: Geometry & Areas — Buildings only */}

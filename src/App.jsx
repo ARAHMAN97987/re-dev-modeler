@@ -244,8 +244,6 @@ function migrateAssets(assets) {
     assetType: "",
     assetSubtype: "",
     isBuilding: true,
-    plotReference: "",
-    assetNotes: "",
     floorsAboveGround: 0,
     basementLevels: 0,
     coveragePct: 0,
@@ -3944,7 +3942,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     if (scrollTop != null) requestAnimationFrame(() => { if (sidebarRef.current) sidebarRef.current.scrollTop = scrollTop; });
   }, [pushUndo, readOnly]);
   const addAsset = useCallback((tmplDefaults) => setProject(prev => { pushUndo(prev); const base = {
-    id: crypto.randomUUID(), phase: prev.phases[0]?.name||"Phase 1", category:"Retail", name:"", code:"", notes:"",
+    id: crypto.randomUUID(), phase: prev.phases[0]?.name||"Phase 1", category:"Retail", name:"", code:"",
     plotArea:0, footprint:0, gfa:0, revType:"Lease", efficiency: prev.defaultEfficiency||85,
     leaseRate:0, opEbitda:0, escalation: prev.rentEscalation||0.75, rampUpYears:3, stabilizedOcc:100,
     costPerSqm:0, constrStart:0, constrDuration:12, hotelPL:null, marinaPL:null,
@@ -3952,8 +3950,6 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
     assetType: "retail_lifestyle",
     assetSubtype: "",
     isBuilding: true,
-    plotReference: "",
-    assetNotes: "",
     floorsAboveGround: 0,
     basementLevels: 0,
     coveragePct: 0,
