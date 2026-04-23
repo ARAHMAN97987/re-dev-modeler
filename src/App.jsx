@@ -5561,61 +5561,13 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             </div>
           </div>
 
-          {/* Rent allocation details */}
+          {/* Rent allocation — trigger opens modal (P8) */}
           {results?.landRentMeta?.rentStartYear != null && <div style={{padding:"0 14px 10px"}}>
-            <button onClick={()=>setShowLandRentDetail(!showLandRentDetail)} style={{fontSize:11,color:"#2EC4B6",background:"#f0fdfa",border:"1px solid #ccfbf1",borderRadius:8,padding:"4px 8px",cursor:"pointer",width:"100%",textAlign:"start",fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:8,transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background="#e6fffa"} onMouseLeave={e=>e.currentTarget.style.background="#f0fdfa"}>
-              <span style={{fontSize:11}}>{showLandRentDetail?"▼":"▶"}</span>
-              {ar?"تفاصيل توزيع الإيجار بين المراحل":"Land Rent Allocation Details"}
-              {results.landRentMeta.rentStartYear != null && <span style={{marginInlineStart:"auto",fontSize:11,color:"#059669",fontWeight:500}}>{ar?"يبدأ":"Starts"} {results.landRentMeta.rentStartYear + (results?.startYear||2026)}</span>}
+            <button onClick={()=>setShowLandRentDetail(true)} style={{fontSize:11,color:"#2EC4B6",background:"#f0fdfa",border:"1px solid #ccfbf1",borderRadius:8,padding:"6px 10px",cursor:"pointer",width:"100%",textAlign:"start",fontFamily:"inherit",fontWeight:600,display:"flex",alignItems:"center",gap:8}} onMouseEnter={e=>e.currentTarget.style.background="#e6fffa"} onMouseLeave={e=>e.currentTarget.style.background="#f0fdfa"}>
+              <span>⚙</span>
+              {ar?"توزيع متقدم للإيجار بين المراحل":"Advanced rent allocation"}
+              <span style={{marginInlineStart:"auto",fontSize:11,color:"#059669",fontWeight:500}}>{ar?"يبدأ":"Starts"} {results.landRentMeta.rentStartYear + (results?.startYear||2026)}</span>
             </button>
-            {showLandRentDetail && (() => {
-              const m = results.landRentMeta;
-              const sy = results?.startYear||2026;
-              const phases = m.phaseShares ? Object.entries(m.phaseShares) : [];
-              const isManual = !!project.landRentManualAlloc && Object.keys(project.landRentManualAlloc).length > 0;
-              const manualSum = isManual ? Object.values(project.landRentManualAlloc).reduce((s,v)=>s+(Number(v)||0),0) : 0;
-              return <div style={{background:"#f8fffe",border:"1px solid #d1fae5",borderRadius:8,padding:10,marginTop:4,fontSize:11}}>
-                <div style={{display:"flex",gap:12,marginBottom:6,color:"#374151"}}>
-                  <span>{ar?"بداية العقد:":"Lease starts:"} <strong>{m.leaseStartAbsolute||sy}</strong></span>
-                  <span>{ar?"السماح:":"Grace:"} <strong>{project.landRentGrace||0} {ar?"سنة":"yr"}</strong></span>
-                  <span>{ar?"أول إيجار:":"First rent:"} <strong>{m.rentStartYear + sy}</strong></span>
-                </div>
-                {phases.length > 0 && <>
-                  <div style={{fontWeight:700,marginTop:6,marginBottom:4,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11}}>
-                    <span>{ar?"التوزيع بين المراحل:":"Phase allocation:"}</span>
-                    <button onClick={()=>{
-                      if (isManual) { up({landRentManualAlloc:null}); }
-                      else { const init={}; phases.forEach(([pn,ps])=>{init[pn]=Math.round((ps.share||0)*100);}); up({landRentManualAlloc:init}); }
-                    }} style={{fontSize:11,padding:"3px 10px",borderRadius:6,border:"1px solid "+(isManual?"#f59e0b":"#d1d5db"),background:isManual?"#fffbeb":"#fff",color:isManual?"#b45309":"#6b7080",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
-                      {isManual ? (ar?"⚙ يدوي":"⚙ Manual") : (ar?"تلقائي":"Auto")}
-                    </button>
-                  </div>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                    <thead><tr style={{borderBottom:"2px solid #d1fae5"}}>
-                      <th style={{textAlign:"start",padding:"2px 4px",color:"var(--text-secondary)",fontWeight:600}}>{ar?"المرحلة":"Phase"}</th>
-                      <th style={{textAlign:"right",padding:"2px 4px",color:"var(--text-secondary)",fontWeight:600}}>{ar?"المساحة":"Area"}</th>
-                      <th style={{textAlign:"right",padding:"2px 4px",color:"var(--text-secondary)",fontWeight:600}}>{ar?"الحصة":"Share"}</th>
-                    </tr></thead>
-                    <tbody>
-                      {phases.map(([pn,ps])=><tr key={pn} style={{borderBottom:"1px solid #ecfdf5"}}>
-                        <td style={{padding:"2px 4px",fontWeight:500}}>{pn}</td>
-                        <td style={{padding:"2px 4px",textAlign:"right"}}>{(ps.footprint||0).toLocaleString()}</td>
-                        <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600}}>
-                          {isManual ? <input type="number" value={project.landRentManualAlloc?.[pn]??""} onChange={e=>{const cur={...(project.landRentManualAlloc||{})};cur[pn]=Number(e.target.value)||0;up({landRentManualAlloc:cur});}} style={{width:48,textAlign:"right",padding:"2px 4px",border:"1px solid #d1d5db",borderRadius:4,fontSize:11,fontWeight:600,fontFamily:"inherit"}} /> : <span>{((ps.share)*100).toFixed(0)}%</span>}
-                        </td>
-                      </tr>)}
-                      {isManual && <tr style={{borderTop:"2px solid #d1fae5",fontWeight:700}}>
-                        <td colSpan={2} style={{padding:"2px 4px",textAlign:"right",fontSize:11}}>{ar?"المجموع":"Total"}</td>
-                        <td style={{padding:"2px 4px",textAlign:"right",color:Math.abs(manualSum-100)>0.1?"#ef4444":"#059669"}}>{manualSum}%</td>
-                      </tr>}
-                    </tbody>
-                  </table>
-                  {isManual && Math.abs(manualSum-100)>0.1 && <div style={{marginTop:6,padding:"4px 8px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,fontSize:11,color:"#dc2626",fontWeight:500}}>
-                    ⚠ {ar?"المجموع = "+manualSum+"% (يجب 100%)":"Total = "+manualSum+"% (should be 100%)"}
-                  </div>}
-                </>}
-              </div>;
-            })()}
           </div>}
         </>}
         </>}
@@ -6133,6 +6085,64 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         onSave={(m,ebitda)=>upAsset(modal.idx,{marinaPL:m,opEbitda:ebitda})}
         onClose={()=>setModal(null)} t={t} lang={lang}
       />}
+      {/* Land-Rent Allocation Modal (P8) — moved out of inline expandable */}
+      {showLandRentDetail && results?.landRentMeta?.rentStartYear != null && (() => {
+        const m = results.landRentMeta;
+        const sy = results?.startYear||2026;
+        const phases = m.phaseShares ? Object.entries(m.phaseShares) : [];
+        const isManual = !!project.landRentManualAlloc && Object.keys(project.landRentManualAlloc).length > 0;
+        const manualSum = isManual ? Object.values(project.landRentManualAlloc).reduce((s,v)=>s+(Number(v)||0),0) : 0;
+        return <>
+          <div onClick={()=>setShowLandRentDetail(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9990}} />
+          <div style={{position:"fixed",zIndex:9991,top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:520,maxWidth:"94vw",maxHeight:"88vh",overflowY:"auto",background:"var(--surface-card)",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}}>
+            <div style={{padding:"16px 20px",borderBottom:"1px solid var(--hairline)",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{flex:1,fontSize:15,fontWeight:700,color:"var(--text-primary)"}}>{ar?"توزيع الإيجار بين المراحل":"Land Rent Allocation"}</div>
+              <button onClick={()=>setShowLandRentDetail(false)} style={{...btnS,background:"var(--surface-sidebar)",padding:"6px 10px",fontSize:16,lineHeight:1}}>✕</button>
+            </div>
+            <div style={{padding:"16px 20px"}}>
+              <div style={{display:"flex",gap:12,marginBottom:12,color:"var(--text-secondary)",fontSize:12,flexWrap:"wrap"}}>
+                <span>{ar?"بداية العقد:":"Lease starts:"} <strong style={{color:"var(--text-primary)"}}>{m.leaseStartAbsolute||sy}</strong></span>
+                <span>{ar?"السماح:":"Grace:"} <strong style={{color:"var(--text-primary)"}}>{project.landRentGrace||0} {ar?"سنة":"yr"}</strong></span>
+                <span>{ar?"أول إيجار:":"First rent:"} <strong style={{color:"var(--text-primary)"}}>{m.rentStartYear + sy}</strong></span>
+              </div>
+              {phases.length > 0 && <>
+                <div style={{fontWeight:700,marginTop:6,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:12}}>
+                  <span>{ar?"التوزيع بين المراحل:":"Phase allocation:"}</span>
+                  <button onClick={()=>{
+                    if (isManual) { up({landRentManualAlloc:null}); }
+                    else { const init={}; phases.forEach(([pn,ps])=>{init[pn]=Math.round((ps.share||0)*100);}); up({landRentManualAlloc:init}); }
+                  }} style={{fontSize:11,padding:"4px 12px",borderRadius:6,border:"1px solid "+(isManual?"#f59e0b":"#d1d5db"),background:isManual?"#fffbeb":"var(--surface-card)",color:isManual?"#b45309":"var(--text-secondary)",cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>
+                    {isManual ? (ar?"⚙ يدوي":"⚙ Manual") : (ar?"تلقائي":"Auto")}
+                  </button>
+                </div>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead><tr style={{borderBottom:"2px solid #d1fae5"}}>
+                    <th style={{textAlign:"start",padding:"4px 6px",color:"var(--text-secondary)",fontWeight:600}}>{ar?"المرحلة":"Phase"}</th>
+                    <th style={{textAlign:"right",padding:"4px 6px",color:"var(--text-secondary)",fontWeight:600}}>{ar?"المساحة":"Area"}</th>
+                    <th style={{textAlign:"right",padding:"4px 6px",color:"var(--text-secondary)",fontWeight:600}}>{ar?"الحصة":"Share"}</th>
+                  </tr></thead>
+                  <tbody>
+                    {phases.map(([pn,ps])=><tr key={pn} style={{borderBottom:"1px solid #ecfdf5"}}>
+                      <td style={{padding:"4px 6px",fontWeight:500}}>{pn}</td>
+                      <td style={{padding:"4px 6px",textAlign:"right"}}>{(ps.footprint||0).toLocaleString()}</td>
+                      <td style={{padding:"4px 6px",textAlign:"right",fontWeight:600}}>
+                        {isManual ? <input type="number" value={project.landRentManualAlloc?.[pn]??""} onChange={e=>{const cur={...(project.landRentManualAlloc||{})};cur[pn]=Number(e.target.value)||0;up({landRentManualAlloc:cur});}} style={{width:56,textAlign:"right",padding:"3px 6px",border:"1px solid #d1d5db",borderRadius:4,fontSize:12,fontWeight:600,fontFamily:"inherit"}} /> : <span>{((ps.share)*100).toFixed(0)}%</span>}
+                      </td>
+                    </tr>)}
+                    {isManual && <tr style={{borderTop:"2px solid #d1fae5",fontWeight:700}}>
+                      <td colSpan={2} style={{padding:"4px 6px",textAlign:"right",fontSize:12}}>{ar?"المجموع":"Total"}</td>
+                      <td style={{padding:"4px 6px",textAlign:"right",color:Math.abs(manualSum-100)>0.1?"#ef4444":"#059669"}}>{manualSum}%</td>
+                    </tr>}
+                  </tbody>
+                </table>
+                {isManual && Math.abs(manualSum-100)>0.1 && <div style={{marginTop:10,padding:"6px 10px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,fontSize:12,color:"#dc2626",fontWeight:500}}>
+                  ⚠ {ar?"المجموع = "+manualSum+"% (يجب 100%)":"Total = "+manualSum+"% (should be 100%)"}
+                </div>}
+              </>}
+            </div>
+          </div>
+        </>;
+      })()}
       {selectedAssetIndex !== null && assets[selectedAssetIndex] && (
         <AssetDetailPanel
           asset={assets[selectedAssetIndex]}
