@@ -14,7 +14,7 @@ import SidebarInput from "./components/shared/SidebarInput";
 import { EDUCATIONAL_CONTENT } from "./data/educational-content.js";
 import HelpLink from "./components/shared/HelpLink";
 import EducationalModal from "./components/shared/EducationalModal";
-import { useIsMobile } from "./components/shared/hooks";
+import { useIsMobile, useTheme } from "./components/shared/hooks";
 import StatusBadge from "./components/shared/StatusBadge";
 import FeaturesGrid from "./components/shared/FeaturesGrid";
 import NI from "./components/shared/NI";
@@ -3724,9 +3724,7 @@ function ReDevModelerInner({ user, signOut, onSignIn, publicAcademy, exitAcademy
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lang, setLang] = useState("ar");
   useEffect(() => { document.documentElement.dir = lang === "ar" ? "rtl" : "ltr"; document.documentElement.lang = lang; }, [lang]);
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('haseefTheme') === 'dark' ? 'dark' : 'light'; } catch(_) { return 'light'; } });
-  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); try { localStorage.setItem('haseefTheme', theme); } catch(_) {} }, [theme]);
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  const [theme, toggleTheme] = useTheme();
   useEffect(() => { window.__zanOpenAcademy = () => { setView("academy"); pushNavHash("academy",null,null); window.scrollTo(0,0); }; return () => { delete window.__zanOpenAcademy; }; }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
   // ── Sync URL hash with navigation state ──
@@ -4526,6 +4524,7 @@ function ProjectsDashboard({ index, onCreate, onOpen, onDup, onDel, lang, setLan
   const [showFeatures, setShowFeatures] = useState(false);
   const [search, setSearch] = useState("");
   const isMobile = useIsMobile();
+  const [theme, toggleTheme] = useTheme();
   const ar = lang === "ar";
   const filtered = index.filter(p => !search || (p.name||"").toLowerCase().includes(search.toLowerCase()) || (p.location||"").toLowerCase().includes(search.toLowerCase()));
   const sorted = [...filtered].sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
