@@ -5225,7 +5225,6 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
   const isMobile = useIsMobile();
   const [modal, setModal] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
-  const [viewMode, setViewMode] = useState(() => typeof window !== "undefined" && window.innerWidth < 768 ? "cards" : "table");
   const [editIdx, setEditIdx] = useState(null);
   const [showLandRentDetail, setShowLandRentDetail] = useState(false);
   const [landEduModal, setLandEduModal] = useState(null);
@@ -5683,11 +5682,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         <div style={{fontSize:15,fontWeight:600}}>{t.assetProgram}</div>
         <div style={{fontSize:12,color:"var(--text-secondary)"}}>{isFiltered?`${filteredIndices.length}/${assets.length}`:assets.length} {t.assets}</div>
         <div style={{flex:1}} />
-        <div style={{display:"flex",background:"var(--surface-sidebar)",borderRadius:6,padding:2}}>
-          <button onClick={()=>setViewMode("cards")} style={{...btnS,padding:"5px 10px",fontSize:11,fontWeight:600,background:viewMode==="cards"?"#fff":"transparent",color:viewMode==="cards"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="cards"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>▦ {lang==="ar"?"بطاقات":"Cards"}</button>
-          <button onClick={()=>setViewMode("table")} style={{...btnS,padding:"5px 10px",fontSize:11,fontWeight:600,background:viewMode==="table"?"#fff":"transparent",color:viewMode==="table"?"#1a1d23":"#9ca3af",boxShadow:viewMode==="table"?"0 1px 3px rgba(0,0,0,0.08)":"none",border:"none"}}>☰ {lang==="ar"?"جدول":"Table"}</button>
-        </div>
-        {viewMode==="table" && <div style={{position:"relative"}}>
+        <div style={{position:"relative"}}>
           <button onClick={()=>setShowColPicker(!showColPicker)} style={{...btnS,background:showColPicker?"#e0e7ff":"#f0f1f5",color:"var(--text-secondary)",padding:"5px 10px",fontSize:11,fontWeight:500,border:"0.5px solid var(--border-default)"}} title={ar?"إظهار/إخفاء أعمدة":"Show/Hide Columns"}>⚙ {ar?"أعمدة":"Cols"} ({cols.length - hiddenCols.size}/{cols.length})</button>
           {showColPicker && <div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"var(--surface-card)",border:"0.5px solid var(--border-default)",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,padding:"8px 0",width:180,maxHeight:320,overflowY:"auto"}}>
             {cols.filter(c=>!["#","ops"].includes(c.key)).map(c=>(
@@ -5700,7 +5695,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             <button onClick={()=>setHiddenCols(new Set())} style={{width:"100%",padding:"5px 14px",fontSize:11,color:"#2563eb",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"إظهار الكل":"Show All"}</button>
             <button onClick={()=>setHiddenCols(new Set(["plotArea","footprint","esc","ramp","occ","code","hardCost"]))} style={{width:"100%",padding:"5px 14px",fontSize:11,color:"var(--text-secondary)",background:"none",border:"none",cursor:"pointer",textAlign:"start",fontFamily:"inherit"}}>{ar?"الافتراضي":"Default"}</button>
           </div>}
-        </div>}
+        </div>
         {/* Quick Soft Cost & Contingency inputs */}
         <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",background:"#faf5ff",borderRadius:6,border:"1px solid #e9d5ff"}}>
           <span style={{fontSize:11,color:"#7c3aed",fontWeight:600,whiteSpace:"nowrap"}}>{ar?"غ.مباشرة":"Soft"}</span>
@@ -5737,69 +5732,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           <button onClick={()=>setImportMsg(null)} style={{...btnSm,background:"transparent",color:"inherit",fontSize:14,padding:"0 4px"}}>✕</button>
         </div>
       )}
-      {/* CARD VIEW */}
-      {viewMode === "cards" && (<div>
-        {assets.length===0 ? (<>
-          {/* Asset Prep Guide */}
-          <div style={{display:"flex",alignItems:"flex-start",gap:12,padding:"14px 18px",background:"rgba(46,196,182,0.04)",border:"1px solid rgba(46,196,182,0.15)",borderRadius:12,marginBottom:14}}>
-            <span style={{fontSize:20,flexShrink:0}}>📋</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:12,fontWeight:700,color:"var(--text-primary)",marginBottom:6}}>{lang==="ar"?"ما تحتاجه لإضافة أصل:":"What you need to add an asset:"}</div>
-              <div style={{fontSize:11,color:"var(--text-secondary)",lineHeight:1.8}}>{lang==="ar"?<>
-                • مساحة الأرض ومساحة البناء (م²)<br/>• عدد الأدوار والمساحة الإجمالية GFA<br/>• تكلفة البناء لكل م²<br/>• مدة البناء (بالأشهر)<br/>• الإيجار لكل م² أو ADR للفنادق<br/>• نسبة الإشغال المتوقعة
-              </>:<>
-                • Land area and building footprint (sqm)<br/>• Number of floors and total GFA<br/>• Construction cost per sqm<br/>• Build duration (months)<br/>• Rent per sqm or ADR for hotels<br/>• Expected occupancy rate
-              </>}</div>
-              <div style={{fontSize:11,color:"#2EC4B6",marginTop:6,fontWeight:600}}>{lang==="ar"?"💡 اختر قالب جاهز عند الإضافة وسنعبئ معظم القيم تلقائياً":"💡 Pick a template when adding and most values will be pre-filled"}</div>
-            </div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:48,background:"rgba(46,196,182,0.03)",borderRadius:12,border:"1px dashed rgba(46,196,182,0.2)",textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:12,opacity:0.6}}>🏗</div>
-            <div style={{fontSize:16,fontWeight:700,color:"var(--text-primary)",marginBottom:6}}>{lang==="ar"?"لا توجد أصول بعد":"No Assets Yet"}</div>
-            <div style={{fontSize:12,color:"var(--text-secondary)",marginBottom:20,maxWidth:360,lineHeight:1.6}}>{lang==="ar"?"أضف أصول مشروعك لبدء عرض التدفقات والتحليلات. استخدم الزر أدناه أو استورد من ملف.":"Add your project assets to start seeing cash flows and analytics. Use the button below or import from file."}</div>
-            <button onClick={handleAddAsset} style={{background:"linear-gradient(135deg,#0f766e,#2EC4B6)",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
-              ➕ {lang==="ar"?"أضف أول أصل":"Add First Asset"}
-            </button>
-          </div>
-        </>) : (
-          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill, minmax(280px, 1fr))",gap:isMobile?8:12}}>
-            {filteredIndices.map(i=>{const a=assets[i];const comp=results?.assetSchedules?.[i];const capex=comp?.totalCapex||computeAssetCapex(a,project);const income=comp?.totalRevenue||0;const catC={Hospitality:"#8b5cf6",Retail:"#3b82f6",Office:"#06b6d4",Residential:"#22c55e",Marina:"#0ea5e9",Industrial:"#f59e0b",Cultural:"#ec4899"};const catI={Hospitality:"🏨",Retail:"🛍",Office:"🏢",Residential:"🏠",Marina:"⚓",Industrial:"🏭",Cultural:"🎭","Open Space":"🌳",Utilities:"⚡",Flexible:"🔧"};const cc=catC[a.category]||"#6b7080";
-            return <div key={a.id||i} className="asset-card" onClick={()=>setEditIdx(i)} style={{background:"var(--surface-1)",borderRadius:14,border:"1px solid var(--hairline)",cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",transition:"all 0.18s var(--ease-quart)",animationDelay:i*0.05+"s"}} onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 6px 18px rgba(0,0,0,0.08)";e.currentTarget.style.transform="translateY(-1px)";e.currentTarget.style.borderColor="color-mix(in srgb, var(--sys-blue) 20%, transparent)";}} onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 1px 2px rgba(0,0,0,0.04)";e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.borderColor="var(--hairline)";}}>
-              <div style={{padding:"14px 16px 10px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:18}}>{catI[a.category]||"📦"}</span>
-                <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{a.name||"Asset "+(i+1)}</div><div style={{fontSize:11,color:"var(--text-tertiary)"}}>{a.code?a.code+" · ":""}{a.phase}</div></div>
-                <button
-                  onClick={(e)=>{e.stopPropagation();setSelectedAssetIndex(i);}}
-                  title={ar?"فتح التفاصيل الكاملة":"Open full details"}
-                  style={{
-                    display:"inline-flex",alignItems:"center",gap:5,
-                    background:"color-mix(in srgb, var(--sys-blue) 10%, transparent)",
-                    border:"1px solid color-mix(in srgb, var(--sys-blue) 22%, transparent)",
-                    color:"var(--sys-blue)",
-                    fontSize:12,fontWeight:600,
-                    padding:"5px 10px",lineHeight:1,borderRadius:8,
-                    flexShrink:0,cursor:"pointer",fontFamily:"inherit",
-                    letterSpacing:"-0.01em",
-                    transition:"all 0.15s var(--ease-quart)",
-                  }}
-                  onMouseEnter={e=>{e.currentTarget.style.background="color-mix(in srgb, var(--sys-blue) 15%, transparent)";e.currentTarget.style.borderColor="color-mix(in srgb, var(--sys-blue) 35%, transparent)";}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="color-mix(in srgb, var(--sys-blue) 10%, transparent)";e.currentTarget.style.borderColor="color-mix(in srgb, var(--sys-blue) 22%, transparent)";}}
-                >
-                  {ar?"تفاصيل":"Details"}
-                  <span style={{fontSize:10,opacity:0.75}}>{ar?"‹":"›"}</span>
-                </button>
-                <span style={{fontSize:11,padding:"3px 8px",borderRadius:12,background:cc+"15",color:cc,fontWeight:600}}>{catL(a.category,ar)}</span>
-              </div>
-              <div style={{padding:"10px 16px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:11}}>
-                <div><span style={{color:"var(--text-tertiary)"}}>{ar?"GFA":"GFA"}</span><div style={{fontWeight:600}}>{fmt(a.gfa)} m²</div></div>
-                <div><span style={{color:"var(--text-tertiary)"}}>{a.revType==="Lease"?(ar?"الإيجار":"Rate"):a.revType==="Sale"?(ar?"سعر البيع":"Sale Price"):(ar?"أرباح تشغيلية":"EBITDA")}</span><div style={{fontWeight:600}}>{a.revType==="Lease"?fmt(a.leaseRate)+" /m²":a.revType==="Sale"?fmt(a.salePricePerSqm||0)+" /m²":fmtM(a.opEbitda)}</div></div>
-                <div><span style={{color:"var(--text-tertiary)"}}>{ar?"CAPEX":"CAPEX"}</span><div style={{fontWeight:700,color:"#ef4444"}}>{fmtM(capex)}</div></div>
-                <div><span style={{color:"var(--text-tertiary)"}}>{ar?"الإيرادات":"Revenue"}</span><div style={{fontWeight:700,color:"#16a34a"}}>{fmtM(income)}</div></div>
-              </div>
-            </div>;})}
-          </div>
-        )}
-        {/* ═══ TEMPLATE PICKER MODAL ═══ */}
+      {/* ═══ TEMPLATE PICKER MODAL ═══ */}
         {showTemplatePicker && (<>
           <div onClick={()=>setShowTemplatePicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9990}} />
           <div style={{position:"fixed",zIndex:9991,top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:520,maxWidth:"94vw",background:"var(--surface-card)",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.2)",overflow:"hidden",animation:"zanModalIn 0.2s ease-out"}}>
@@ -5889,9 +5822,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             </div>
           </div>
         </div></>;})()}
-      </div>)}
-      {/* TABLE VIEW */}
-      {viewMode === "table" && (<>
+      {/* ═══ ASSETS TABLE ═══ */}
       <div style={{background:"var(--surface-card)",borderRadius:8,border:"0.5px solid var(--border-default)",overflow:"hidden"}}>
         <div className="table-wrap" style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
           <table style={{...tblStyle,fontSize:11,tableLayout:"fixed"}}>
@@ -5998,7 +5929,6 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
           </table>
         </div>
       </div>
-      </>)}
 
       {/* ═══ ASSET CASH FLOW TABLE ═══ */}
       {results?.assetSchedules?.length > 0 && (() => {
