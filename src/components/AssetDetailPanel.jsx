@@ -707,12 +707,14 @@ export default function AssetDetailPanel({
                   </div>
                 );
               })()}
-              {field("NLA", "صافي المساحة", asset.nla, (v) => up("nla", v), { type: "number", suffix: "m²" })}
-              {field("Parking Area", "مساحة المواقف", asset.parkingArea, (v) => up("parkingArea", v), {
-                type: "number", suffix: "m²",
-                tip: ar ? "إجمالي مساحة مواقف السيارات (سطحية أو منظمة)" : "Total parking area (surface or structured)",
-              })}
-              {field("Open Area", "مساحة مفتوحة", asset.openArea, (v) => up("openArea", v), { type: "number", suffix: "m²" })}
+              <CollapseBlock label={ar ? "متقدم (مساحات إضافية)" : "Advanced (additional areas)"} lang={lang}>
+                {field("NLA", "صافي المساحة", asset.nla, (v) => up("nla", v), { type: "number", suffix: "m²" })}
+                {field("Parking Area", "مساحة المواقف", asset.parkingArea, (v) => up("parkingArea", v), {
+                  type: "number", suffix: "m²",
+                  tip: ar ? "إجمالي مساحة مواقف السيارات (سطحية أو منظمة)" : "Total parking area (surface or structured)",
+                })}
+                {field("Open Area", "مساحة مفتوحة", asset.openArea, (v) => up("openArea", v), { type: "number", suffix: "m²" })}
+              </CollapseBlock>
             </Section>
           )}
 
