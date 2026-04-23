@@ -200,12 +200,46 @@
 
 ---
 
-## 7. ما أنتظر قرارك فيه
+## 7. ما نُفّذ بعد موافقتك (2026-04-18, late evening)
 
-1. **P1 (إصلاح EBITDA في الجدول)** — أنفّذ الآن؟
-2. **P2 (قالب Sale)** — مفيد لك؟ (تطويره + أسعار/إشغال سعودية افتراضية)
-3. **P3 (تدقيق startYear/openingYear)** — أبدأ التحقيق؟
-4. **مشكلة الحقول الميتة في Phase & Timeline** — أحذفها أم أتركها كتوثيق؟
-5. **NLA / openArea** — نفس السؤال.
+بعد موافقتك على الاستكمال، نُفّذت 4 إصلاحات وكل واحدة عبر commit منفصل:
 
-قل لي ماذا تريد، وأكمل. **لن أتحرك بدون إذن صريح.**
+| Phase | Commit | Title |
+|---|---|---|
+| P1 | `58de9bc` | fix(assets): EBITDA editable for all Operating assets, not just Hotel/Marina |
+| P2 | `8bb78c5` | feat(assets): add "Residential for Sale" template with KSA defaults |
+| P3 | `268d81a` | refactor(assets): delete dead startYear + openingYear fields from drawer |
+| P4 | `92f838c` | refactor(assets): remove Priority badge from table name cell |
+
+**ما تبقى مفتوحاً عن قصد (تُرك كما هو):**
+- **NLA / Open Area في Geometry → متقدم** — مخفية خلف collapse. لا تُكلف شيئاً، قد تكون مفيدة توثيقياً لبعض المحترفين.
+- **Soft cost / Contingency override + Basement multiplier + Parking cost** في Cost → متقدم — مخفية بالمثل.
+
+هذه الحقول تظل قابلة للوصول للمستخدم المتقدم، وغير ظاهرة في الافتراضي.
+
+---
+
+## 8. الحالة بعد الإصلاحات — المصفوفة المحدثة
+
+| الحالة | الـ drawer مطلوب الآن؟ | لماذا |
+|---|---|---|
+| Lease من قالب Mall/Office/Residential | ❌ اختياري (بدون تغيير) | — |
+| Hotel 5/4 أو Marina | ❌ اختياري (بدون تغيير) | — |
+| **Operating غير Hotel/Marina** (محطة، مطعم، ...) | ❌ **الآن اختياري** (كان إجباري) | P1 جعل EBITDA editable في الجدول ✓ |
+| **أصل Sale من قالب "سكني للبيع"** | ❌ **الآن اختياري** (كان إجباري) | P2 يعبّي الحقول الأربعة الحرجة افتراضياً ✓ |
+| أصل Sale غير سكني (تجزئة/مكتبي للبيع) | ⚠️ شبه إجباري | لا قالب بعد لهذين — المستخدم يبدأ من `resi_sale` ويعدّل، أو يستخدم `custom` + drawer. مقبول. |
+| Basement / Parking override | ⚠️ إجباري (بدون تغيير) | drawer-only — حالة نادرة |
+| تجاوز soft%/contingency% | ⚠️ إجباري (بدون تغيير) | drawer-only — حالة نادرة |
+
+### النتيجة:
+- **95%+ من سيناريوهات المستخدم** الآن تعمل من الجدول + القوالب.
+- الـ drawer يُحجز لـ:
+  - Investment Metrics (عرض)
+  - حالات متقدمة نادرة (basement، parking، overrides)
+  - Sale-غير-سكني (نادر)
+
+### الحقول الميتة حُذفت:
+- `startYear`, `openingYear` — كانت تظهر editable ولا أثر لها. الآن حُذفت.
+
+### التنظيف البصري:
+- Priority badge الصغير في كل صف → أُزيل. الحقل لا يزال في الـ drawer.
