@@ -1,22 +1,15 @@
 /**
  * FormWidgets — Financing Panel Input Components
- * Extracted from App.jsx during deduplication (2026-03-31)
- * MUST be outside FinancingView to keep focus on inputs
+ * Extracted from App.jsx during deduplication (2026-03-31).
+ * MUST be outside FinancingView to keep focus on inputs.
+ * (FieldGroup removed 2026-04-18 — its only consumer, the inline Edit
+ *  Modal in AssetTable, was deleted in Asset Program Redesign Phase 2.)
  */
 import { useState, useEffect, useRef } from "react";
 import Tip from "./Tip";
 
 const _finInpSt = {padding:"8px 11px",borderRadius:"var(--radius-md)",border:"0.5px solid var(--border-default)",background:"var(--surface-card)",color:"var(--text-primary)",fontSize:12,fontFamily:"inherit",outline:"none",width:"100%",boxSizing:"border-box",transition:"border-color 0.15s, box-shadow 0.15s"};
 const _finSelSt = {..._finInpSt,cursor:"pointer",appearance:"auto"};
-
-export function FieldGroup({icon,title,children,defaultOpen=false,globalExpand}) {
-  const [open,setOpen]=useState(defaultOpen);
-  useEffect(() => { if (globalExpand > 0) setOpen(globalExpand % 2 === 1); }, [globalExpand]);
-  return <div style={{marginBottom:12,border:"0.5px solid var(--border-default)",borderRadius:"var(--radius-lg)",overflow:"hidden"}}>
-    <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"10px 14px",background:open?"var(--surface-card)":"var(--surface-hover)",border:"none",cursor:"pointer",fontSize:11,fontWeight:600,color:"var(--text-primary)"}}><span>{icon}</span><span>{title}</span><span style={{marginInlineStart:"auto",fontSize:9,color:"var(--text-tertiary)"}}>{open?"▲":"▼"}</span></button>
-    {open&&<div style={{padding:"10px 14px",borderTop:"0.5px solid var(--surface-separator)"}}>{children}</div>}
-  </div>;
-}
 
 export function FL({label,children,tip,hint,error}) {
   return (<div style={{marginBottom:10}}>
