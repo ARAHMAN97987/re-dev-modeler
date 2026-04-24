@@ -829,7 +829,11 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
   // ═══════════════════════════════════════════════════════════════
   // Export
   // ═══════════════════════════════════════════════════════════════
-  const safeName = (projectName || "Project").replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, "_");
+  // Collapse any run of non-alphanumeric (incl. leading/trailing spaces) to a single _
+  // then strip leading/trailing underscores so the filename doesn't end with __Assets.
+  const safeName = (projectName || "Project")
+    .replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "Project";
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
