@@ -158,7 +158,7 @@ const n = v => (typeof v === "number" && isFinite(v)) ? v : 0;
 // ═══════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════════════════
-export async function generateAssetsWorkbook(project, results) {
+export async function generateAssetsWorkbook(project, results, smartAlerts = null) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Haseef Financial Modeler";
   wb.created = new Date();
@@ -803,7 +803,11 @@ export async function generateAssetsWorkbook(project, results) {
     titleBar(ws, 1, 1, 5, "Smart Reviewer Alerts", "تنبيهات المراجع الذكي");
     tableHeader(ws, 2, ["#", "Asset\nالأصل", "Severity\nالخطورة", "Rule ID", "Message / الرسالة"]);
 
-    const alerts = results?.smartAlerts?.alerts || [];
+    // smartAlerts is a separate React state — passed in from the caller.
+    // Accept either {alerts:[], summary:{}} or an array shape defensively.
+    const alerts = Array.isArray(smartAlerts?.alerts) ? smartAlerts.alerts
+                 : Array.isArray(smartAlerts) ? smartAlerts
+                 : [];
     if (alerts.length === 0) {
       ws.getCell(3, 2).value = "✓ No active alerts — all asset inputs look reasonable.";
       ws.getCell(3, 2).font = { name: FONT_MAIN, size: 10, color: { argb: C.greenDark }, italic: true };

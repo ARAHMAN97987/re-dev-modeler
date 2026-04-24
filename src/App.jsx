@@ -5668,7 +5668,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         </button>
         <button onClick={async ()=>{
           try {
-            await generateAssetsWorkbook(project, results);
+            await generateAssetsWorkbook(project, results, smartAlerts);
             addToast(ar?"تم تصدير ملف الأصول الكامل":"Full Asset Workbook exported","success");
           } catch (err) {
             console.error("[excelAssetExport]", err);
