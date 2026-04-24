@@ -109,6 +109,7 @@ class AppErrorBoundary extends Component {
 
 // ── CSV helpers — imported from utils/csv.js ──
 import { csvEscape, csvParse, generateTemplate, parseAssetFile, mapRowsToAssets, exportAssetsToExcel, TEMPLATE_COLS } from './utils/csv.js';
+import { generateAssetsWorkbook } from './excelAssetExport.js';
 
 const STORAGE_KEY = "redev:projects-index";
 const PROJECT_PREFIX = "redev:project:";
@@ -5665,8 +5666,19 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
         <button onClick={()=>{generateTemplate();addToast(ar?"تم تحميل القالب":"Template downloaded","success");}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تحميل قالب Excel":"Download Excel Template"}>
           {lang==='ar'?'⬇ تحميل نموذج':'⬇ Template'}
         </button>
-        <button onClick={()=>{exportAssetsToExcel(project, results);addToast(ar?"تم تصدير الأصول":"Assets exported","success");}} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير الأصول إلى Excel":"Export Assets to Excel"}>
-          {lang==='ar'?'⬇ تصدير':'⬇ Export'}
+        <button onClick={async ()=>{
+          try {
+            await generateAssetsWorkbook(project, results);
+            addToast(ar?"تم تصدير ملف الأصول الكامل":"Full Asset Workbook exported","success");
+          } catch (err) {
+            console.error("[excelAssetExport]", err);
+            addToast(ar?`تعذّر التصدير: ${err?.message||err}`:`Export failed: ${err?.message||err}`,"error");
+          }
+        }} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير ملف Excel كامل (12 ورقة: المدخلات + الجداول السنوية + IRR + ملخص المراحل)":"Export full Excel workbook (12 sheets: inputs + yearly schedules + IRR + phase summary)"}>
+          {lang==='ar'?'⬇ Excel':'⬇ Excel'}
+        </button>
+        <button onClick={()=>{exportAssetsToExcel(project, results);addToast(ar?"تم تصدير CSV":"CSV exported","success");}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 12px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تصدير CSV (بيانات فقط، للاستيراد السريع)":"Export CSV (data only, for quick re-import)"}>
+          {lang==='ar'?'⬇ CSV':'⬇ CSV'}
         </button>
         <input type="file" accept=".csv,.tsv" ref={fileRef} onChange={handleUpload} style={{display:"none"}} />
         <button onClick={()=>fileRef.current?.click()} style={{...btnS,background:"#fef3c7",color:"#92400e",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #fde68a"}} title={lang==='ar'?"رفع ملف Excel":"Upload Excel File"}>

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Asset Program — Redesign Mockup</title>
+<style>
+  :root {
+    --surface-1: #ffffff;
+    --surface-2: #f8f9fb;
+    --surface-3: #f0f1f5;
+    --surface-card: #ffffff;
+    --surface-hover: #fafbfc;
+    --surface-table-header: #f8f9fb;
+    --hairline: #e5e7ec;
+    --border-default: #d1d5db;
+    --text-primary: #1a1d23;
+    --text-secondary: #6b7080;
+    --text-tertiary: #9ca3af;
+    --sys-blue: #2563eb;
+    --sys-green: #16a34a;
+    --sys-red: #ef4444;
+    --sys-orange: #f59e0b;
+    --sys-indigo: #4f46e5;
+    --sys-teal: #2EC4B6;
+  }
+  body {
+    margin: 0;
+    font-family: "Tajawal", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    color: var(--text-primary);
+    background: #f3f4f6;
+    padding: 20px;
+  }
+  .label { color: var(--text-secondary); font-size: 11px; }
+  .container { max-width: 1400px; margin: 0 auto; }
+  .section-title {
+    font-size: 12px; font-weight: 700;
+    color: #dc2626; text-transform: uppercase; letter-spacing: 1px;
+    margin: 32px 0 12px; padding: 6px 10px;
+    background: #fef2f2; border-radius: 6px; display: inline-block;
+  }
+  .panel {
+    background: var(--surface-card);
+    border: 0.5px solid var(--border-default);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .collapsible-header {
+    padding: 10px 14px;
+    background: var(--surface-table-header);
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    font-size: 12px; font-weight: 700;
+  }
+  .collapsed-arrow { font-size: 10px; color: var(--text-tertiary); }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+  .badge-green { background: #ecfdf5; color: #059669; }
+  .badge-gray { background: #f3f4f6; color: var(--text-secondary); }
+  .btn {
+    padding: 6px 12px; font-size: 11px; border-radius: 6px;
+    border: 0.5px solid var(--border-default); background: #fff;
+    font-family: inherit; cursor: pointer; color: var(--text-primary);
+  }
+  .btn-primary { background: var(--sys-blue); color: #fff; border-color: var(--sys-blue); }
+  .btn-teal { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+  .btn-blue { background: #eff6ff; color: var(--sys-blue); border-color: #bfdbfe; }
+  .btn-amber { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .btn-green { background: #f0fdf4; color: var(--sys-green); border-color: #bbf7d0; }
+  .toolbar {
+    padding: 12px 14px;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--surface-card);
+  }
+  .toolbar-row-2 {
+    padding: 8px 14px;
+    background: var(--surface-2);
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    font-size: 11px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .pill {
+    padding: 4px 10px; border-radius: 6px;
+    background: var(--surface-3); border: 0.5px solid var(--border-default);
+    font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+  }
+  select, input[type="text"], input[type="number"] {
+    padding: 5px 8px; font-size: 12px;
+    border: 0.5px solid var(--border-default); border-radius: 5px;
+    background: #fff; font-family: inherit; color: var(--text-primary);
+  }
+  table.main-table {
+    width: 100%; border-collapse: collapse;
+    background: #fff;
+    font-size: 11px;
+  }
+  table.main-table th {
+    background: var(--surface-table-header);
+    padding: 8px 6px; text-align: right; font-weight: 700;
+    border-bottom: 1px solid var(--hairline);
+    position: relative;
+  }
+  table.main-table td {
+    padding: 7px 6px; border-bottom: 1px solid #f0f1f5;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .row-even { background: #fafbfc; }
+  .cell-capex { background: #eef2ff; color: #1e40af; font-weight: 700; text-align: left; }
+  .cell-rev { background: #ecfdf5; color: #059669; font-weight: 700; text-align: left; }
+  .cell-score { background: #fefce8; }
+  .details-btn {
+    width: 22px; height: 22px; line-height: 1;
+    border: 1px solid #bfdbfe; color: var(--sys-blue);
+    background: transparent; border-radius: 5px; cursor: pointer;
+    font-weight: 700;
+  }
+  .details-btn:hover { background: #eff6ff; }
+
+  .removed {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    text-decoration: line-through;
+    position: relative;
+  }
+  .removed::after {
+    content: "حُذف";
+    position: absolute; top: -8px; right: 0;
+    background: #991b1b; color: #fff;
+    font-size: 9px; padding: 2px 6px; border-radius: 3px;
+    text-decoration: none;
+  }
+
+  .kept-badge {
+    background: #dcfce7; color: #166534;
+    font-size: 10px; padding: 2px 6px; border-radius: 3px;
+    font-weight: 600;
+  }
+
+  .comparison {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    margin-bottom: 20px;
+  }
+  .comparison-col {
+    background: #fff; padding: 16px; border-radius: 10px;
+    border: 1px solid var(--hairline);
+  }
+  .comparison-col.before {
+    border-left: 4px solid #dc2626;
+  }
+  .comparison-col.after {
+    border-left: 4px solid #16a34a;
+  }
+  .comparison-col h3 {
+    margin: 0 0 12px 0; font-size: 14px;
+  }
+
+  /* ──  Drawer mockup (right side panel) ── */
+  .drawer {
+    background: #f8fafc;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 0;
+    max-width: 520px;
+    overflow: hidden;
+  }
+  .drawer-header {
+    padding: 12px 16px; background: #fff;
+    border-bottom: 1px solid var(--hairline);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .drawer-section {
+    padding: 12px 16px; margin-bottom: 8px;
+    background: #fff; border-radius: 8px;
+    margin: 8px 12px;
+  }
+  .drawer-section-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .drawer-section-title .arrow { color: #9ca3af; font-size: 10px; }
+  .field-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px dashed #e5e7eb;
+    font-size: 12px;
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-row .label { flex: 1; }
+  .field-row .value {
+    width: 120px; padding: 4px 8px;
+    border: 0.5px solid var(--border-default); border-radius: 4px;
+    background: #fff;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .cost-summary-line {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f0f9ff; border: 1px solid #bae6fd;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #0369a1;
+    display: flex; justify-content: space-between; align-items: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .cost-summary-line strong { color: #0c4a6e; }
+
+  .advanced-toggle {
+    margin-top: 10px;
+    font-size: 11px; color: var(--sys-blue); cursor: pointer;
+    padding: 4px 8px; background: #f0f9ff; border-radius: 4px;
+    display: inline-block;
+  }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .kpi-card {
+    background: #fafbfc; border: 1px solid var(--hairline);
+    border-radius: 6px; padding: 8px 10px;
+  }
+  .kpi-card .k-label { font-size: 10px; color: var(--text-secondary); }
+  .kpi-card .k-value { font-size: 14px; font-weight: 700; margin-top: 2px; }
+
+  .note-block {
+    background: #fff7ed; border: 1px solid #fed7aa;
+    border-radius: 8px; padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 12px; color: #9a3412;
+  }
+  .note-block strong { color: #7c2d12; }
+
+  h1 { font-size: 18px; margin-top: 20px; }
+  h2 { font-size: 14px; margin-top: 24px; color: #0f766e; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <h1 style="margin-bottom: 6px;">برنامج الأصول — Mockup التصميم الجديد</h1>
+  <div style="color: var(--text-secondary); margin-bottom: 20px;">
+    قبل/بعد لكل تغيير. <strong>كل ما هو بخلفية حمراء مشطوب = مُزال.</strong> كل ما هو أخضر = يبقى.
+  </div>
+
+  <div class="note-block">
+    <strong>ملاحظة مهمة:</strong> الأرقام في هذا Mockup تمثيلية فقط.
+    التصميم يعكس <em>الهيكل</em> والـ <em>UX</em>، لا البيانات الحقيقية. الـ UI الفعلي سيستخدم design tokens الحالية للمشروع
+    (ألوان light/dark mode، الخطوط، المسافات) فلا تحتاج تتغير.
+  </div>
+
+  <!-- ═══ Part 1: Toolbar ═══ -->
+  <div class="section-title">① الشريط العلوي — Toolbar</div>
+
+  <div class="panel">
+    <div style="padding: 10px 14px; background: #fee2e2; font-size: 11px; color: #991b1b; font-weight: 600;">
+      المشكلة الحالية: ازدحام أزرار، view toggle لا حاجة له، soft/contingency مخلوطة مع أزرار الأصول.
+    </div>
+
+    <!-- New proposed -->
+    <div style="padding: 14px;">
+      <div style="font-size: 12px; font-weight: 700; color: #166534; margin-bottom: 10px;">
+        ✓ التصميم الجديد — صفّان منفصلان
+      </div>
+
+      <div class="toolbar">
+        <div style="font-weight: 700; font-size: 14px;">برنامج الأصول</div>
+        <div class="badge badge-gray">30 أصل</div>
+        <div style="flex: 1"></div>
+        <button class="btn btn-green">⬇ نموذج</button>
+        <button class="btn btn-blue">⬇ تصدير</button>
+        <button class="btn btn-amber">⬆ رفع</button>
+        <button class="btn btn-primary">+ أصل</button>
+
+        <!-- REMOVED: view toggle -->
+        <span class="removed" style="padding: 5px 10px; border-radius: 5px; font-size: 11px;">▦ بطاقات  ☰ جدول</span>
+      </div>
+
+      <div class="toolbar-row-2">
+        <span style="font-weight: 600; color: var(--text-secondary);">فلترة:</span>
+        <select><option>كل المراحل</option></select>
+        <select><option>كل التصنيفات</option></select>
+        <select><option>كل أنواع الإيراد</option></select>
+        <button class="btn" style="padding: 3px 10px; background: #fef2f2; color: var(--sys-red); border: 1px solid #fecaca;">
+          مسح الفلتر
+        </button>
+        <button class="btn" style="font-size: 11px;">⚙ أعمدة (11/22)</button>
+        <div style="flex: 1;"></div>
+        <span class="pill" style="background: #faf5ff; border-color: #e9d5ff; color: #7c3aed;">
+          غ.مباشرة <input type="number" value="10" style="width: 40px; padding: 2px 4px; font-size: 11px;"> %
+        </span>
+        <span class="pill" style="background: #faf5ff; border-color: #e9d5ff; color: #7c3aed;">
+          احتياطي <input type="number" value="5" style="width: 40px; padding: 2px 4px; font-size: 11px;"> %
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Part 2: Land Section ═══ -->
+  <div class="section-title">② قسم الأرض — Land</div>
+
+  <div class="panel">
+    <div class="collapsible-header">
+      <span class="collapsed-arrow">▶</span>
+      <span>🏗 الأرض</span>
+      <span style="flex: 1;"></span>
+      <span class="badge badge-green">إيجار</span>
+      <span class="badge badge-gray">302,473 م²</span>
+    </div>
+    <div style="padding: 14px; background: var(--surface-hover); font-size: 11px; color: var(--text-secondary);">
+      ▸ <strong>تبقى كما هي</strong> بكل الحقول الحالية (نوع الحيازة، المساحة، الإيجار السنوي، مدة العقد، السماح، نسبة الزيادة، بداية العقد، قاعدة البداية).
+      <br>▸ <strong>التغيير الوحيد:</strong> "تفاصيل توزيع الإيجار بين المراحل" تتحوّل من expandable داخل القسم إلى
+      <a href="#" style="color: var(--sys-blue);">⚙ توزيع متقدم للإيجار</a>
+      (modal منفصل، نفس الرياضيات 100%).
+    </div>
+  </div>
+
+  <!-- ═══ Part 3: Phases Bar ═══ -->
+  <div class="section-title">③ شريط المراحل — Phases Bar</div>
+
+  <div class="panel" style="padding: 12px;">
+    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
+      <span style="font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">المراحل</span>
+      <div style="flex: 1;"></div>
+      <button class="btn btn-blue">+ مرحلة</button>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <div class="pill"><strong>ZAN 1</strong> <span class="badge badge-gray">12</span> افتتاح: <input type="number" value="2028" style="width: 48px; text-align: center;"></div>
+      <div class="pill"><strong>ZAN 2</strong> <span class="badge badge-gray">11</span> افتتاح: <input type="number" value="2030" style="width: 48px; text-align: center;"></div>
+      <div class="pill"><strong>ZAN 3</strong> <span class="badge badge-gray">7</span> افتتاح: <input type="number" value="2032" style="width: 48px; text-align: center;"></div>
+    </div>
+    <div style="margin-top: 10px; font-size: 11px; color: #166534;">
+      <span class="kept-badge">يبقى بدون تغيير</span>
+    </div>
+  </div>
+
+  <!-- ═══ Part 4: Main Table ═══ -->
+  <div class="section-title">④ جدول الأصول — Main Table (الوضع الوحيد — لا بطاقات)</div>
+
+  <div class="panel">
+    <table class="main-table">
+      <thead>
+        <tr>
+          <th style="width: 32px;">#</th>
+          <th>المرحلة</th>
+          <th>اسم الأصل</th>
+          <th>النوع</th>
+          <th>GFA</th>
+          <th>نوع الإيراد</th>
+          <th>المعدل</th>
+          <th>الإشغال%</th>
+          <th>تكلفة/م²</th>
+          <th style="background: #eef2ff;">إجمالي CAPEX</th>
+          <th style="background: #ecfdf5;">الإيرادات</th>
+          <th style="background: #fefce8;">الدرجة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>ZAN 1</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-weight: 500;">Hotel</span>
+              <button class="details-btn" title="تفاصيل كاملة">›</button>
+            </div>
+          </td>
+          <td>فندق</td>
+          <td>16,577</td>
+          <td>تشغيلي</td>
+          <td>—</td>
+          <td>65</td>
+          <td>8,000</td>
+          <td class="cell-capex">153.2M</td>
+          <td class="cell-rev">720M</td>
+          <td class="cell-score">
+            <span class="badge" style="background: #fef9c3; color: #854d0e;">مقبول</span>
+          </td>
+          <td style="text-align: left;">
+            <button class="details-btn" style="color: var(--sys-red); border-color: #fca5a5;">✕</button>
+          </td>
+        </tr>
+        <tr class="row-even">
+          <td>2</td>
+          <td>ZAN 1</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-weight: 500;">Sport Complex</span>
+              <button class="details-btn">›</button>
+            </div>
+          </td>
+          <td>تجزئة لايف ستايل</td>
+          <td>6,000</td>
+          <td>إيجار</td>
+          <td>240</td>
+          <td>100</td>
+          <td>277</td>
+          <td class="cell-capex">1.66M</td>
+          <td class="cell-rev">51M</td>
+          <td class="cell-score">
+            <span class="badge" style="background: #dcfce7; color: #15803d;">مجدٍ</span>
+          </td>
+          <td style="text-align: left;"><button class="details-btn" style="color: var(--sys-red); border-color: #fca5a5;">✕</button></td>
+        </tr>
+
+        <!-- Row showing REMOVED columns struck-through -->
+        <tr>
+          <td colspan="13" style="background: #fef2f2; padding: 14px; text-align: center; font-size: 11px; color: #991b1b; font-style: italic;">
+            ⚠️ <strong>الأعمدة المحذوفة من هذا الجدول:</strong>
+            <span class="removed" style="display: inline-block; margin: 0 6px; padding: 2px 8px; border-radius: 4px; font-size: 10px;">التكلفة المباشرة Hard Cost</span>
+            <span class="removed" style="display: inline-block; margin: 0 6px; padding: 2px 8px; border-radius: 4px; font-size: 10px;">غير المباشرة + احتياطي Soft+Cont</span>
+            <br>
+            (المجموع يظهر في "إجمالي CAPEX". التفاصيل تظهر بنقرة ‹ على الأصل)
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="padding: 10px 14px; background: #f0fdf4; font-size: 11px; color: #14532d;">
+      <strong>ماذا تغيّر في الجدول:</strong>
+      <ul style="margin: 4px 0 0 0; padding-right: 20px;">
+        <li>22 عمود (كان 24): حذفنا <code>Hard Cost</code> و <code>Soft+Cont</code> — المجموع كافٍ.</li>
+        <li>إزالة column-resize drag handles (معقّدة الصيانة، تحلّها مختار الأعمدة).</li>
+        <li>النقر على الصف لا يفتح نافذة تعديل (كانت تفتح inline modal منسوخة). فقط نقر ‹ يفتح الـ drawer الكامل.</li>
+        <li>نقر على خلية يعدّلها مباشرة (كما اليوم).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══ Part 5: Drawer (AssetDetailPanel) ═══ -->
+  <div class="section-title">⑤ لوحة تفاصيل الأصل — Drawer (بعد التنظيف)</div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
+    <!-- BEFORE -->
+    <div>
+      <h3 style="font-size: 13px; color: #991b1b; margin: 0 0 8px 0;">🔴 قبل (الحالي)</h3>
+      <div class="drawer" style="max-width: none;">
+        <div class="drawer-header">
+          <div>
+            <div style="font-weight: 700;">Mall</div>
+            <div style="font-size: 10px; color: var(--text-secondary);">تجزئة · ZAN 1</div>
+          </div>
+          <button class="btn">✕</button>
+        </div>
+        <div style="padding: 8px; font-size: 11px;">
+          <div class="drawer-section" style="margin: 6px 0;">📊 مؤشرات الاستثمار <span class="kept-badge">يبقى</span></div>
+          <div class="drawer-section" style="margin: 6px 0;">
+            📝 الأساسيات
+            <div style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;">name · code · phase · <span class="removed" style="padding: 1px 4px; font-size: 9px;">plotReference</span> · <span class="removed" style="padding: 1px 4px; font-size: 9px;">notes</span></div>
+          </div>
+          <div class="drawer-section" style="margin: 6px 0;">
+            📐 الهندسة والمساحات
+            <div style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;">
+              Plot · Footprint · Floors · Basement · GFA · Coverage · FAR · Efficiency · GLA · <span class="removed" style="padding: 1px 4px; font-size: 9px;">NLA</span> · <span class="removed" style="padding: 1px 4px; font-size: 9px;">parkingArea</span> · <span class="removed" style="padding: 1px 4px; font-size: 9px;">openArea</span>
+            </div>
+          </div>
+          <div class="drawer-section" style="margin: 6px 0;">📅 المرحلة والوقت <span class="kept-badge">يبقى</span></div>
+          <div class="drawer-section" style="margin: 6px 0;">💰 إعدادات الإيرادات <span class="kept-badge">يبقى</span></div>
+          <div class="drawer-section" style="margin: 6px 0;">
+            🏗 إعدادات التكلفة
+            <div style="font-size: 10px; color: var(--text-secondary); margin-top: 4px;">
+              Cost/m² · Build (mo)
+            </div>
+            <div style="font-size: 10px; color: #991b1b; margin-top: 4px;">
+              <strong>تفاصيل إضافية (اختيارية):</strong><br>
+              <span class="removed" style="padding: 1px 4px; font-size: 9px;">basementCostMultiplier</span>
+              <span class="removed" style="padding: 1px 4px; font-size: 9px;">parkingCostPerSqm</span>
+              <span class="removed" style="padding: 1px 4px; font-size: 9px;">softCostPctOverride</span>
+              <span class="removed" style="padding: 1px 4px; font-size: 9px;">contingencyPctOverride</span>
+              <br>
+              <span class="removed" style="padding: 1px 4px; font-size: 9px; background: #450a0a !important; color: #fca5a5 !important;">Live CAPEX Breakdown (لوحة سوداء كبيرة 33 سطر)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div>
+      <h3 style="font-size: 13px; color: var(--sys-green); margin: 0 0 8px 0;">✓ بعد (الجديد)</h3>
+      <div class="drawer" style="max-width: none;">
+        <div class="drawer-header">
+          <div>
+            <div style="font-weight: 700;">Mall</div>
+            <div style="font-size: 10px; color: var(--text-secondary);">تجزئة · ZAN 1</div>
+          </div>
+          <button class="btn">✕</button>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-section-title">📊 مؤشرات الاستثمار <span class="arrow">▼</span></div>
+          <div class="kpi-grid">
+            <div class="kpi-card"><div class="k-label">إيراد سنوي مستقر</div><div class="k-value">68M</div></div>
+            <div class="kpi-card"><div class="k-label">قيمة الخروج</div><div class="k-value">800M</div></div>
+            <div class="kpi-card"><div class="k-label">ربح التطوير</div><div class="k-value" style="color: var(--sys-green);">420M</div></div>
+            <div class="kpi-card"><div class="k-label">هامش التطوير</div><div class="k-value" style="color: var(--sys-green);">38%</div></div>
+          </div>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-section-title">📝 الأساسيات <span class="arrow">▼</span></div>
+          <div class="field-row"><span class="label">اسم الأصل</span><input class="value" value="Mall" type="text"></div>
+          <div class="field-row"><span class="label">الرمز</span><input class="value" value="RM1" type="text"></div>
+          <div class="field-row"><span class="label">المرحلة</span><select class="value"><option>ZAN 1</option></select></div>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-section-title">📐 الهندسة والمساحات <span class="arrow">▼</span></div>
+          <div class="field-row"><span class="label">مساحة الأرض</span><input class="value" value="28,000" type="text"></div>
+          <div class="field-row"><span class="label">البصمة (Footprint)</span><input class="value" value="20,000" type="text"></div>
+          <div class="field-row"><span class="label">أدوار فوق الأرض</span><input class="value" value="3" type="text"></div>
+          <div class="field-row"><span class="label">أدوار بيسمنت</span><input class="value" value="2" type="text"></div>
+          <div class="field-row"><span class="label">GFA</span><input class="value" value="40,000" type="text"></div>
+          <div class="field-row" style="background: #f0f9ff; margin: 6px -8px; padding: 8px; border-radius: 6px;">
+            <span class="label" style="color: #0369a1;">مشتقات تلقائية</span>
+            <span style="font-size: 10px; color: #0369a1;">تغطية 71% · FAR 1.4 · Leasable 32,000 m²</span>
+          </div>
+          <div class="field-row"><span class="label">نسبة الكفاءة %</span><input class="value" value="80" type="text"></div>
+          <div class="advanced-toggle">▶ متقدم (NLA، مساحة مواقف، مساحة مفتوحة)</div>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-section-title">📅 المرحلة والوقت <span class="arrow">▶</span></div>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-section-title">💰 إعدادات الإيرادات <span class="arrow">▶</span></div>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-section-title">🏗 إعدادات التكلفة <span class="arrow">▼</span></div>
+          <div class="field-row"><span class="label">تكلفة / م²</span><input class="value" value="3,900" type="text"></div>
+          <div class="field-row"><span class="label">مدة البناء (شهر)</span><input class="value" value="36" type="text"></div>
+          <div class="cost-summary-line">
+            <span>تفصيل سريع:</span>
+            <span>صلبة <strong>156M</strong> · غير مباشرة + احتياطي <strong>23M</strong> · إجمالي <strong>179M</strong></span>
+          </div>
+          <div class="advanced-toggle">▶ متقدم (مضاعف بيسمنت، تكلفة مواقف/م²، تجاوز soft/contingency)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Part 6: Per-asset Cash Flow ═══ -->
+  <div class="section-title">⑥ تدفق نقدي لكل أصل — Per-Asset Cash Flow</div>
+
+  <div class="panel">
+    <div style="padding: 14px; background: var(--surface-hover); font-size: 11px;">
+      <strong>القسم يبقى كما هو</strong> بكامل وظائفه، ما عدا:
+      <ul style="margin: 6px 0 0 0; padding-right: 20px; color: var(--text-secondary);">
+        <li class="kept-badge" style="display: inline-block; padding: 2px 6px;">زر "توسيع الكل" — يبقى</li>
+        <li><span class="removed" style="padding: 2px 6px; font-size: 10px;">زر "عرض التفاصيل / إخفاء التفاصيل"</span> — يُحذف، الصفّان الإضافيان (Net Income + Cumulative) يُعرضان دائماً</li>
+        <li class="kept-badge" style="display: inline-block; padding: 2px 6px;">مختار السنوات (10/15/20/30/50) — يبقى</li>
+        <li class="kept-badge" style="display: inline-block; padding: 2px 6px;">زر "الإعدادات الكاملة ‹" أسفل كل جدول — يبقى (يفتح نفس الـ drawer)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══ Part 7: Summary ═══ -->
+  <div class="section-title">⑦ ملخّص الأثر — Impact Summary</div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+    <div class="kpi-card" style="background: #fee2e2; border-color: #fca5a5;">
+      <div class="k-label" style="color: #991b1b;">أسطر كود محذوفة</div>
+      <div class="k-value" style="color: #991b1b;">~400</div>
+      <div style="font-size: 10px; color: #7c2d12; margin-top: 4px;">
+        من App.jsx (5225-6302) و AssetDetailPanel.jsx
+      </div>
+    </div>
+    <div class="kpi-card" style="background: #fef3c7; border-color: #fde68a;">
+      <div class="k-label" style="color: #92400e;">حقول مخفية (متقدم)</div>
+      <div class="k-value" style="color: #92400e;">7</div>
+      <div style="font-size: 10px; color: #78350f; margin-top: 4px;">
+        NLA، parkingArea، openArea، basementCostMultiplier، parkingCostPerSqm، softCostPctOverride، contingencyPctOverride
+      </div>
+    </div>
+    <div class="kpi-card" style="background: #dcfce7; border-color: #86efac;">
+      <div class="k-label" style="color: #166534;">ميزات تبقى سليمة</div>
+      <div class="k-value" style="color: #166534;">100%</div>
+      <div style="font-size: 10px; color: #14532d; margin-top: 4px;">
+        Engine، IRR، Excel، الفلاتر، Templates، P&L modals، Scoring — كل شيء سليم
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; padding: 20px; background: #0f766e; color: #fff; border-radius: 10px;">
+    <h2 style="color: #fff; margin: 0 0 10px 0;">⚠️ المطلوب منك</h2>
+    <ol style="line-height: 1.8;">
+      <li>راجع القائمة السوداء (الحقول المُزالة/المخفية) في <code>00_plan.md §2b</code> و <code>§4</code> — إن أي واحد منها حيوي لك، قله الآن.</li>
+      <li>هل الترتيب 10 مراحل في <code>§5</code> مقبول؟ أم تفضل ترتيب آخر؟</li>
+      <li>هل تفضل <strong>commit واحد لكل مرحلة</strong> (10 commits) أو دفعات أكبر؟</li>
+      <li>هل هذا الـ Mockup هو الشكل النهائي الذي تريد؟ أم تعديلات بصرية؟</li>
+    </ol>
+    <div style="margin-top: 12px; font-size: 13px; opacity: 0.9;">
+      🛑 لن أبدأ التنفيذ قبل جواب صريح: <strong>"موافق"</strong> أو <strong>"نفّذ"</strong> مع أي تعديلات على الخطة.
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
