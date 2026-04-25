@@ -175,6 +175,61 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
     return pr.landRent.map(v => v * ratio);
   });
 
+  // ── SHARED COST ALLOCATION ──
+  // Heuristic: any asset with totalRevenue == 0 AND totalCapex > 0 is a
+  // "shared" / supporting asset (parking, landscape, infrastructure,
+  // common amenities). Its CAPEX is allocated to revenue-generating
+  // assets weighted by each revenue asset's direct CAPEX share.
+  //
+  // Why CAPEX-weighted: matches "the more you cost, the bigger your
+  // share of common burden" — standard for KSA mixed-use feasibility.
+  // Alternative weights (footprint, GFA, revenue) can be added if needed.
+  const isShared = assets.map((a, i) => {
+    const rev = schedules[i]?.totalRevenue || 0;
+    const cap = schedules[i]?.totalCapex || 0;
+    return rev === 0 && cap > 0;
+  });
+  const sharedIdx = assets.map((_, i) => i).filter(i => isShared[i]);
+  const revenueIdx = assets.map((_, i) => i).filter(i => !isShared[i]);
+
+  // Total shared CAPEX per year (sum across all shared assets' schedules)
+  const sharedCapexPerYear = new Array(horizon).fill(0);
+  sharedIdx.forEach(i => {
+    const sched = schedules[i]?.capexSchedule || [];
+    for (let y = 0; y < horizon; y++) sharedCapexPerYear[y] += sched[y] || 0;
+  });
+
+  // Each revenue asset's direct CAPEX (used for weighting)
+  const revenueDirectCapex = {};
+  let totalRevenueDirectCapex = 0;
+  revenueIdx.forEach(i => {
+    const c = schedules[i]?.totalCapex || 0;
+    revenueDirectCapex[i] = c;
+    totalRevenueDirectCapex += c;
+  });
+
+  // Allocated shared CAPEX per asset, year-by-year
+  const allocatedShared = assets.map((a, i) => {
+    if (isShared[i] || totalRevenueDirectCapex === 0) {
+      return new Array(horizon).fill(0);
+    }
+    const weight = (revenueDirectCapex[i] || 0) / totalRevenueDirectCapex;
+    return sharedCapexPerYear.map(v => v * weight);
+  });
+
+  // Per-asset all-in totals for metrics
+  const assetMetrics = assets.map((a, i) => {
+    const sched = schedules[i] || {};
+    const directCapex = sched.totalCapex || 0;
+    const totalRev = sched.totalRevenue || 0;
+    const allocCapex = allocatedShared[i].reduce((s, v) => s + v, 0);
+    const allInCapex = directCapex + allocCapex;
+    const lr = (assetLandRent[i] || []).reduce((s, v) => s + v, 0);
+    const directNCF = totalRev - lr - directCapex;
+    const allInNCF = totalRev - lr - allInCapex;
+    return { directCapex, allocCapex, allInCapex, totalRev, lr, directNCF, allInNCF };
+  });
+
   // Resolve opening year per asset (matches engine logic in cashflow.js:128-151)
   const openingYears = assets.map(a => {
     const ph = phases.find(p => p.name === (a.phase || phases[0]?.name || "Phase 1"));
@@ -391,7 +446,10 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
 
     titleBar(ws, 1, 1, 6 + horizon, "Pro Forma (formula-driven)", "البرنامج المالي السنوي");
 
-    const noteText = "Revenue, CAPEX, and Net CF cells are formulas referencing the Inputs sheet. Edit a value there and watch this sheet recalc. Land Rent uses engine-allocated values (footprint share). Year 1 = " + startYear + ".";
+    const sharedSummary = sharedIdx.length > 0
+      ? `${sharedIdx.length} shared asset${sharedIdx.length > 1 ? "s" : ""} (${sharedIdx.map(i => assets[i]?.name || "").filter(Boolean).join(", ")}) — their CAPEX is allocated to revenue assets by direct-CAPEX weight.`
+      : "No shared assets detected (no zero-revenue + positive-CAPEX assets).";
+    const noteText = `Revenue, Direct CAPEX, and Net CF cells are formulas referencing the Inputs sheet. Edit a value there and watch this sheet recalc. Land Rent + Allocated Shared Cost are engine values (allocation weighted by direct CAPEX). Year 1 = ${startYear}. ${sharedSummary}`;
     ws.mergeCells(2, 1, 2, 6 + horizon);
     const nc = ws.getCell(2, 1);
     nc.value = noteText;
@@ -402,14 +460,20 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
 
     tableHeader(ws, 3, ["#", "Asset / الأصل", "Item / البند", "Total", "IRR", "Payback (yr)", ...yrs.map(y => startYear + y)]);
 
-    // Per-asset 4-row block
+    // Per-asset 5-row block (Revenue / Land Rent / Direct CAPEX /
+    // Allocated Shared CAPEX / Net CF). Allocated Shared row is zero
+    // for shared assets themselves (they're the source, not the recipient).
     const yearStartCol = 7;
     const yearEndCol = 6 + horizon;
     const yearStartL = colLetter(yearStartCol);
     const yearEndL = colLetter(yearEndCol);
 
     // Track row positions for portfolio totals
-    const ncfRowPerAsset = []; // row index of "Net Cash Flow" line per asset
+    const ncfRowPerAsset = [];
+    const revRowPerAsset = [];
+    const lrRowPerAsset = [];
+    const capRowPerAsset = [];
+    const allocRowPerAsset = [];
 
     let curRow = 4;
     assets.forEach((a, i) => {
@@ -422,6 +486,7 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
 
       // Row 1 — Revenue (formula)
       const revRow = curRow;
+      revRowPerAsset.push(revRow);
       setCell(ws, revRow, 1, i + 1, { color: C.grayText, align: "center", bg: blockBg });
       setCell(ws, revRow, 2, a.name || `Asset ${i+1}`, { bold: true, color: C.dark, align: "left", indent: 1, bg: blockBg });
       setCell(ws, revRow, 3, "Revenue / إيراد", { color: C.greenDark, bold: true, align: "left", indent: 1, bg: blockBg });
@@ -463,6 +528,7 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
 
       // Row 2 — Land Rent (engine value)
       const lrRow = curRow;
+      lrRowPerAsset.push(lrRow);
       const lr = assetLandRent[i] || new Array(horizon).fill(0);
       setCell(ws, lrRow, 1, "", { bg: blockBg });
       setCell(ws, lrRow, 2, "", { bg: blockBg });
@@ -475,11 +541,12 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
       setCell(ws, lrRow, 6, "", { bg: blockBg });
       curRow++;
 
-      // Row 3 — CAPEX (formula)
+      // Row 3 — Direct CAPEX (formula)
       const capRow = curRow;
+      capRowPerAsset.push(capRow);
       setCell(ws, capRow, 1, "", { bg: blockBg });
       setCell(ws, capRow, 2, "", { bg: blockBg });
-      setCell(ws, capRow, 3, "CAPEX / تكاليف", { color: C.red, align: "left", indent: 1, bg: blockBg });
+      setCell(ws, capRow, 3, "Direct CAPEX / تكلفة مباشرة", { color: C.red, align: "left", indent: 1, bg: blockBg });
       yrs.forEach(y => {
         const yearAbs = startYear + y;
         // Construction window: yearAbs is in [openingYr - durYears, openingYr - 1]
@@ -498,7 +565,27 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
       setCell(ws, capRow, 6, "", { bg: blockBg });
       curRow++;
 
-      // Row 4 — Net CF
+      // Row 4 — Allocated Shared CAPEX (engine value, weighted by direct CAPEX share)
+      const allocRow = curRow;
+      allocRowPerAsset.push(allocRow);
+      const allocVals = allocatedShared[i] || new Array(horizon).fill(0);
+      const sharedAllocBg = isShared[i] ? "FFF3F4F6" : "FFFFF7E6"; // grayer for shared (no allocation), amber-tinted for revenue (receives alloc)
+      setCell(ws, allocRow, 1, "", { bg: blockBg });
+      setCell(ws, allocRow, 2, "", { bg: blockBg });
+      const allocLabel = isShared[i]
+        ? "Shared (source) / مكوّن مشترك"
+        : "Allocated Shared / حصة من المشترك";
+      setCell(ws, allocRow, 3, allocLabel, { color: isShared[i] ? C.grayText : "FFA16207", align: "left", indent: 1, bg: blockBg });
+      yrs.forEach(y => {
+        setCell(ws, allocRow, yearStartCol + y, n(allocVals[y]) || "", { fmt: FMT.int, color: isShared[i] ? C.grayText : "FFA16207", bg: blockBg });
+      });
+      const allocTotalCell = allocVals.reduce((s, v) => s + v, 0);
+      setCell(ws, allocRow, 4, allocTotalCell || "", { fmt: FMT.int, bold: true, color: isShared[i] ? C.grayText : "FFA16207", bg: blockBg });
+      setCell(ws, allocRow, 5, "", { bg: blockBg });
+      setCell(ws, allocRow, 6, "", { bg: blockBg });
+      curRow++;
+
+      // Row 5 — Net CF (now includes allocated shared cost)
       const ncfRow = curRow;
       ncfRowPerAsset.push(ncfRow);
       setCell(ws, ncfRow, 1, "", { bg: C.blueBg, border: "totalTop" });
@@ -506,19 +593,20 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
       setCell(ws, ncfRow, 3, "Net Cash Flow / صافي التدفق", { bold: true, color: C.navyText, align: "left", indent: 1, bg: C.blueBg, border: "totalTop" });
       yrs.forEach(y => {
         const col = colLetter(yearStartCol + y);
-        const f = `${col}${revRow}-${col}${lrRow}-${col}${capRow}`;
+        // NCF = Revenue − Land Rent − Direct CAPEX − Allocated Shared
+        const f = `${col}${revRow}-${col}${lrRow}-${col}${capRow}-${col}${allocRow}`;
         setCell(ws, ncfRow, yearStartCol + y, { formula: f }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
       });
       // Total NCF
       setCell(ws, ncfRow, 4, { formula: `SUM(${yearStartL}${ncfRow}:${yearEndL}${ncfRow})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
-      // IRR (formula)
+      // IRR (formula) — uses all-in cash flows
       setCell(ws, ncfRow, 5, { formula: `IFERROR(IRR(${yearStartL}${ncfRow}:${yearEndL}${ncfRow}),"—")` }, { fmt: FMT.pct1, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
-      // Payback (compute static — first year cumulative >= 0)
+      // Payback (compute static using all-in cash flows)
       const rev = schedules[i]?.revenueSchedule || [];
       const cap = schedules[i]?.capexSchedule || [];
       let cum = 0, payback = "—", spent = false;
       for (let y = 0; y < horizon; y++) {
-        const ncf = (rev[y] || 0) - (lr[y] || 0) - (cap[y] || 0);
+        const ncf = (rev[y] || 0) - (lr[y] || 0) - (cap[y] || 0) - (allocVals[y] || 0);
         cum += ncf;
         if (ncf < 0) spent = true;
         if (spent && cum >= 0 && payback === "—") { payback = y + 1; break; }
@@ -531,17 +619,15 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
     });
 
     // ── Portfolio totals ─────────────────────────────────────────
+    // The portfolio Net CF should sum each asset's Net CF row directly
+    // (no need to subtract allocated shared again — allocations cancel out
+    // across the portfolio: shared assets carry the cost on their own rows).
     sectionLabel(ws, curRow++, 1, 6 + horizon, "Portfolio / المحفظة الكلية");
+
     const pfRevRow = curRow;
     const pfLrRow = curRow + 1;
     const pfCapRow = curRow + 2;
     const pfNcfRow = curRow + 3;
-
-    // Sum revenues (every 4th-from-block first row: revenue rows are at ncfRow - 3)
-    const revRows = ncfRowPerAsset.map(r => r - 3);
-    const lrRows = ncfRowPerAsset.map(r => r - 2);
-    const capRows = ncfRowPerAsset.map(r => r - 1);
-    const ncfRows = ncfRowPerAsset;
 
     const buildPortfolioRow = (rowIdx, label, color, sumRows) => {
       setCell(ws, rowIdx, 1, "", { bg: C.blueBg });
@@ -559,21 +645,24 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
       setCell(ws, rowIdx, 6, "", { bg: C.blueBg });
     };
 
-    buildPortfolioRow(pfRevRow, "Revenue / إيراد", C.greenDark, revRows);
-    buildPortfolioRow(pfLrRow, "Land Rent / إيجار أرض", C.red, lrRows);
-    buildPortfolioRow(pfCapRow, "CAPEX / تكاليف", C.red, capRows);
+    buildPortfolioRow(pfRevRow, "Revenue / إيراد", C.greenDark, revRowPerAsset);
+    buildPortfolioRow(pfLrRow, "Land Rent / إيجار أرض", C.red, lrRowPerAsset);
+    // CAPEX portfolio = direct CAPEX rows ONLY (not allocated, since allocated are
+    // re-distributions of the same direct CAPEX from shared assets — adding both
+    // would double-count).
+    buildPortfolioRow(pfCapRow, "CAPEX / تكاليف (direct)", C.red, capRowPerAsset);
 
-    // Net CF: difference of the other portfolio rows (so it stays in sync if you re-edit anywhere)
+    // Portfolio Net CF: sum each asset's Net CF row (which already accounts
+    // for allocations within each asset).
     setCell(ws, pfNcfRow, 1, "", { bg: C.amberBg, border: "totalTop" });
     setCell(ws, pfNcfRow, 2, "Portfolio", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.amberBg, border: "totalTop" });
     setCell(ws, pfNcfRow, 3, "Net Cash Flow / صافي", { bold: true, color: C.navyText, align: "left", indent: 1, bg: C.amberBg, border: "totalTop" });
     yrs.forEach(y => {
       const col = colLetter(yearStartCol + y);
-      const f = `${col}${pfRevRow}-${col}${pfLrRow}-${col}${pfCapRow}`;
-      setCell(ws, pfNcfRow, yearStartCol + y, { formula: f }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
+      const refs = ncfRowPerAsset.map(r => `${col}${r}`).join(",");
+      setCell(ws, pfNcfRow, yearStartCol + y, { formula: `SUM(${refs})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
     });
-    setCell(ws, pfNcfRow, 4, { formula: `D${pfRevRow}-D${pfLrRow}-D${pfCapRow}` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
-    // Portfolio IRR
+    setCell(ws, pfNcfRow, 4, { formula: `SUM(${ncfRowPerAsset.map(r => `D${r}`).join(",")})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
     setCell(ws, pfNcfRow, 5, { formula: `IFERROR(IRR(${yearStartL}${pfNcfRow}:${yearEndL}${pfNcfRow}),"—")` }, { fmt: FMT.pct1, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
     setCell(ws, pfNcfRow, 6, "", { bg: C.amberBg, border: "totalTop" });
   }
@@ -653,7 +742,147 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
   }
 
   // ════════════════════════════════════════════════════════════════════
-  // SHEET 5 — Notes (project metadata + smart alerts)
+  // SHEET 5 — Investment Metrics (per-asset full KPI table)
+  // ════════════════════════════════════════════════════════════════════
+  // Per asset shows DIRECT and ALL-IN versions side-by-side so user can
+  // see how shared-cost allocation changes the picture.
+  //
+  // Cap rates by asset type (Saudi 2026 typical) — same source as the
+  // drawer's KPI logic in AssetDetailPanel.jsx
+  const CAP_RATES = {
+    retail_lifestyle: 8.5, mall: 7.5, office: 8.0,
+    residential_villas: 7.0, residential_multifamily: 7.5, serviced_apartments: 7.0,
+    hotel: 8.5, resort: 9.0, marina: 9.5, yacht_club: 9.0, parking_structure: 9.5,
+  };
+  {
+    const ws = wb.addWorksheet("Metrics", {
+      views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 3 }],
+      properties: { tabColor: { argb: "FF06B6D4" } },
+    });
+    const cols = [
+      { label: "#", w: 4 },
+      { label: "Asset / الأصل", w: 22 },
+      { label: "Phase", w: 9 },
+      { label: "Type", w: 9 },
+      { label: "Shared?\nمشترك", w: 9 },
+      { label: "Direct CAPEX", w: 14 },
+      { label: "Allocated\nShared", w: 13 },
+      { label: "All-in CAPEX", w: 14 },
+      { label: "Annual Rev\nالإيراد السنوي", w: 13 },
+      { label: "Total Rev\nإجمالي الإيراد", w: 14 },
+      { label: "Total NCF\n(all-in)", w: 14 },
+      { label: "YoC %\n(all-in)", w: 9 },
+      { label: "IRR\n(all-in)", w: 9 },
+      { label: "Cap Rate", w: 9 },
+      { label: "Exit Value", w: 14 },
+      { label: "Dev Profit", w: 14 },
+      { label: "Dev Margin", w: 11 },
+      { label: "Rev /m²", w: 9 },
+      { label: "Cost /m²\n(all-in)", w: 11 },
+    ];
+    cols.forEach((c, i) => setCol(ws, i + 1, c.w));
+    titleBar(ws, 1, 1, cols.length, "Investment Metrics (per asset, all-in basis)", "مؤشرات الاستثمار لكل مكوّن");
+    tableHeader(ws, 2, cols.map(c => c.label));
+
+    assets.forEach((a, i) => {
+      const r = 3 + i;
+      const m = assetMetrics[i];
+      const sched = schedules[i] || {};
+      const gfa = n(a.gfa);
+      const eff = n(a.efficiency) / 100;
+      const leasable = gfa * eff;
+      // Annual stabilised revenue (matches AssetDetailPanel logic)
+      let annualRev = 0;
+      if (a.revType === "Lease") annualRev = leasable * n(a.leaseRate) * (n(a.stabilizedOcc != null ? a.stabilizedOcc : 100) / 100);
+      else if (a.revType === "Operating") annualRev = n(a.opEbitda);
+      else if (a.revType === "Sale") annualRev = m.totalRev / Math.max(1, n(a.absorptionYears) || 3);
+      const capRate = CAP_RATES[a.assetType] || 8.5;
+      // Exit value = Sale → totalRev; else = annualRev / capRate
+      const exitValue = a.revType === "Sale" ? m.totalRev : (annualRev > 0 ? annualRev / (capRate / 100) : 0);
+      const devProfit = exitValue - m.allInCapex;
+      const devMargin = m.allInCapex > 0 ? devProfit / m.allInCapex : 0;
+      const yoc = m.allInCapex > 0 ? annualRev / m.allInCapex : 0;
+      const revPerSqm = gfa > 0 ? annualRev / gfa : 0;
+      const costPerSqmAllIn = gfa > 0 ? m.allInCapex / gfa : 0;
+
+      // Compute all-in IRR by walking the year-by-year all-in NCF
+      const rev = sched.revenueSchedule || [];
+      const cap = sched.capexSchedule || [];
+      const lr = assetLandRent[i] || [];
+      const allocCs = allocatedShared[i] || [];
+      const allInNcf = yrs.map(y => n(rev[y]) - n(lr[y]) - n(cap[y]) - n(allocCs[y]));
+      // Quick IRR calc (Newton's method) — bounded for export use
+      const calcIRR = (cf) => {
+        let rate = 0.1;
+        for (let iter = 0; iter < 50; iter++) {
+          let npv = 0, dnpv = 0;
+          cf.forEach((v, y) => {
+            npv += v / Math.pow(1 + rate, y);
+            dnpv += -y * v / Math.pow(1 + rate, y + 1);
+          });
+          if (Math.abs(npv) < 1) return rate;
+          if (Math.abs(dnpv) < 1e-10) break;
+          const next = rate - npv / dnpv;
+          if (!isFinite(next) || next < -0.99) break;
+          rate = next;
+        }
+        return null;
+      };
+      const irrAllIn = calcIRR(allInNcf);
+
+      setCell(ws, r, 1, i + 1, { color: C.grayText, align: "center" });
+      setCell(ws, r, 2, a.name || `Asset ${i+1}`, { bold: true, align: "left", indent: 1, color: C.dark });
+      setCell(ws, r, 3, a.phase || "", { align: "center" });
+      setCell(ws, r, 4, a.revType || "", { align: "center" });
+      setCell(ws, r, 5, isShared[i] ? "✓" : "", { align: "center", bold: isShared[i], color: isShared[i] ? "FFA16207" : C.grayText, bg: isShared[i] ? "FFFEF3C7" : null });
+      setCell(ws, r, 6, m.directCapex, { fmt: FMT.int, color: C.red });
+      setCell(ws, r, 7, m.allocCapex || "", { fmt: FMT.int, color: "FFA16207" });
+      setCell(ws, r, 8, { formula: `F${r}+G${r}` }, { fmt: FMT.int, bold: true, color: C.dark, bg: C.derivedBg });
+      setCell(ws, r, 9, annualRev || "", { fmt: FMT.int, color: C.greenDark });
+      setCell(ws, r, 10, m.totalRev || "", { fmt: FMT.int, color: C.greenDark });
+      setCell(ws, r, 11, m.allInNCF, { fmt: FMT.int, bold: true, color: m.allInNCF >= 0 ? C.greenDark : C.red });
+      setCell(ws, r, 12, yoc || "", { fmt: FMT.pct1 });
+      setCell(ws, r, 13, irrAllIn != null ? irrAllIn : "—", { fmt: irrAllIn != null ? FMT.pct1 : null, bold: true, color: irrAllIn != null && irrAllIn >= 0.12 ? C.greenDark : irrAllIn != null && irrAllIn >= 0.08 ? "FFA16207" : C.red });
+      setCell(ws, r, 14, capRate / 100, { fmt: FMT.pct1, color: C.grayText });
+      setCell(ws, r, 15, exitValue || "", { fmt: FMT.int });
+      setCell(ws, r, 16, devProfit, { fmt: FMT.int, color: devProfit >= 0 ? C.greenDark : C.red });
+      // Dev Margin coloured
+      const dmCell = setCell(ws, r, 17, devMargin || "", { fmt: FMT.pct1, bold: true });
+      const dmCellRef = ws.getCell(r, 17);
+      if (devMargin >= 0.25) dmCellRef.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+      else if (devMargin >= 0.15) dmCellRef.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.amberBg } };
+      else if (m.allInCapex > 0) dmCellRef.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+      setCell(ws, r, 18, revPerSqm || "", { fmt: FMT.int, color: C.grayText });
+      setCell(ws, r, 19, costPerSqmAllIn || "", { fmt: FMT.int, color: C.grayText });
+    });
+
+    // Portfolio total row
+    const totR2 = 3 + assets.length;
+    const firstR2 = 3, lastR2 = 2 + assets.length;
+    setCell(ws, totR2, 1, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 2, "Portfolio / المحفظة", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 3, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 4, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 5, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 6, { formula: `SUM(F${firstR2}:F${lastR2})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    // Allocated total should be 0 at the portfolio level (allocations are zero-sum across all assets)
+    setCell(ws, totR2, 7, { formula: `SUM(G${firstR2}:G${lastR2})` }, { fmt: FMT.int, bold: true, color: C.grayText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 8, { formula: `SUM(H${firstR2}:H${lastR2})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 9, { formula: `SUM(I${firstR2}:I${lastR2})` }, { fmt: FMT.int, bold: true, color: C.greenDark, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 10, { formula: `SUM(J${firstR2}:J${lastR2})` }, { fmt: FMT.int, bold: true, color: C.greenDark, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 11, { formula: `SUM(K${firstR2}:K${lastR2})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 12, { formula: `IFERROR(I${totR2}/H${totR2},0)` }, { fmt: FMT.pct1, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 13, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 14, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 15, { formula: `SUM(O${firstR2}:O${lastR2})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 16, { formula: `O${totR2}-H${totR2}` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 17, { formula: `IFERROR((O${totR2}-H${totR2})/H${totR2},0)` }, { fmt: FMT.pct1, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 18, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR2, 19, "", { bg: C.blueBg, border: "totalTop" });
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 6 — Notes (project metadata + smart alerts)
   // ════════════════════════════════════════════════════════════════════
   {
     const ws = wb.addWorksheet("Notes", {
