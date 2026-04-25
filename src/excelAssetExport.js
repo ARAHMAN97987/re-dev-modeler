@@ -513,10 +513,378 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
       setCell(ws, r, 19, n(a.rampUpYears) || 1, { ...yellowOpts, fmt: FMT.int });
       setCell(ws, r, 20, n(a.escalation)/100, { ...yellowOpts, fmt: FMT.pct1 });
     });
+    // We'll back-patch column J (EBITDA) after Operating P&L is built —
+    // for assets with hotelPL/marinaPL/Operating, J becomes a formula
+    // reference to Operating P&L!C{ebitdaRow}.
+    var inputsWsRef = ws;  // captured for back-patch
   }
 
   // ════════════════════════════════════════════════════════════════════
-  // SHEET 3 — Pro Forma (year-by-year, formula-driven)
+  // SHEET 3 — Operating P&L (full financial model for Operating assets)
+  // ════════════════════════════════════════════════════════════════════
+  // Hotel + Marina + Generic-Operating P&L blocks. Each block has:
+  //   - INPUTS (yellow editable cells)
+  //   - REVENUE lines (formulas referencing inputs)
+  //   - EXPENSE lines (formulas)
+  //   - EBITDA + Margin (final cells; EBITDA gets back-referenced from
+  //     the Inputs!J column so editing P&L details cascades into Pro Forma).
+  //
+  // Mirrors the engine logic in src/engine/hospitality.js exactly.
+  const ebitdaRefByIdx = {};
+  {
+    const ws = wb.addWorksheet("Operating P&L", {
+      views: [{ showGridLines: false, state: "frozen", xSplit: 2, ySplit: 2 }],
+      properties: { tabColor: { argb: "FF8B5CF6" } },
+    });
+    setCol(ws, 1, 4); setCol(ws, 2, 30); setCol(ws, 3, 18); setCol(ws, 4, 32);
+    titleBar(ws, 1, 1, 4, "Operating Assets — Full P&L Model", "النموذج المالي للأصول التشغيلية");
+
+    const intro = "Each Operating asset has its own P&L block: yellow INPUTS feed BLUE formulas down to EBITDA. The EBITDA cell is referenced by Inputs!J → Pro Forma uses that → Metrics + Summary read from there. Edit any input here and watch the entire workbook cascade.";
+    ws.mergeCells(2, 1, 2, 4);
+    const introC = ws.getCell(2, 1);
+    introC.value = intro;
+    introC.font = { name: FONT, size: 9, italic: true, color: { argb: C.grayText } };
+    introC.alignment = { vertical: "middle", horizontal: "left", indent: 1, wrapText: true };
+    introC.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.lightGray } };
+    ws.getRow(2).height = 36;
+
+    const hotelOpIdx   = assets.map((a, i) => ({ a, i })).filter(x => x.a.revType === "Operating" && x.a.hotelPL).map(x => x.i);
+    const marinaOpIdx  = assets.map((a, i) => ({ a, i })).filter(x => x.a.revType === "Operating" && x.a.marinaPL).map(x => x.i);
+    const genericOpIdx = assets.map((a, i) => ({ a, i })).filter(x => x.a.revType === "Operating" && !x.a.hotelPL && !x.a.marinaPL).map(x => x.i);
+
+    let r = 4;
+
+    // Helpers within the sheet
+    const yellowCell = (r, c, val, fmt) => setCell(ws, r, c, val, { fmt, bg: C.inputBg, align: "right" });
+    const blueCell = (r, c, val, fmt, bold = false) => setCell(ws, r, c, val, { fmt, bg: C.derivedBg, color: C.blueDark, bold, align: "right" });
+    const labelCell = (r, c, text, opts = {}) => setCell(ws, r, c, text, { color: opts.color || C.dark, align: "left", indent: 1, ...opts });
+
+    // ── HOTEL blocks ──
+    if (hotelOpIdx.length > 0) {
+      sectionLabel(ws, r++, 1, 4, "🏨 Hotels / فنادق");
+      hotelOpIdx.forEach(idx => {
+        const a = assets[idx];
+        const h = a.hotelPL || {};
+        // Asset name banner
+        ws.mergeCells(r, 1, r, 4);
+        const nameCell = ws.getCell(r, 1);
+        nameCell.value = `${a.name || `Asset ${idx+1}`}  ·  ${a.phase || ""}  ·  Hotel`;
+        nameCell.font = { name: FONT, size: 12, bold: true, color: { argb: C.white } };
+        nameCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        nameCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+        ws.getRow(r).height = 22;
+        r++;
+
+        // INPUTS
+        labelCell(r, 1, "INPUTS / مدخلات", { bold: true, color: C.tealDark, bg: C.greenBg });
+        labelCell(r, 4, "Notes", { color: C.grayText, bg: C.greenBg });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        r++;
+
+        const inputDefs = [
+          ["Keys (rooms)",                "عدد الغرف",          n(h.keys),     FMT.int,  "rooms"],
+          ["ADR (Avg Daily Rate)",        "متوسط سعر الليلة",    n(h.adr),      FMT.int,  `${currency} / night`],
+          ["Stabilized Occupancy",        "إشغال مستقر",         n(h.stabOcc)/100, FMT.pct0, "stabilized"],
+          ["Days / Year",                 "أيام / سنة",          n(h.daysYear) || 365, FMT.int, "365 typical"],
+          ["Rooms — % of Total Revenue",  "نسبة إيراد الغرف",    n(h.roomsPct)/100, FMT.pct0, "drives Total Rev"],
+          ["F&B — % of Total Revenue",    "نسبة المأكولات",      n(h.fbPct)/100, FMT.pct0, ""],
+          ["MICE — % of Total Revenue",   "نسبة المؤتمرات",      n(h.micePct)/100, FMT.pct0, ""],
+          ["Other — % of Total Revenue",  "نسبة الإيرادات الأخرى", n(h.otherPct)/100, FMT.pct0, ""],
+          ["Rooms Expense %",             "نسبة مصاريف الغرف",   n(h.roomExpPct)/100, FMT.pct0, "% of Rooms Rev"],
+          ["F&B Expense %",               "نسبة مصاريف F&B",     n(h.fbExpPct)/100, FMT.pct0, "% of F&B Rev"],
+          ["MICE Expense %",              "نسبة مصاريف MICE",    n(h.miceExpPct)/100, FMT.pct0, "% of MICE Rev"],
+          ["Other Expense %",             "نسبة مصاريف أخرى",    n(h.otherExpPct)/100, FMT.pct0, "% of Other Rev"],
+          ["Undistributed %",             "غير موزّعة",          n(h.undistPct)/100, FMT.pct0, "% of Total Rev"],
+          ["Fixed Charges %",             "تكاليف ثابتة",        n(h.fixedPct)/100, FMT.pct0, "% of Total Rev"],
+        ];
+        const inputRows = {};
+        const KEYS = ["keys", "adr", "occ", "days", "roomsPct", "fbPct", "micePct", "otherPct", "roomExp", "fbExp", "miceExp", "otherExp", "undist", "fixed"];
+        inputDefs.forEach(([labelEn, labelAr, val, fmt, note], j) => {
+          labelCell(r, 1, "", { color: C.grayText });
+          labelCell(r, 2, `${labelEn} / ${labelAr}`, { color: C.grayText });
+          yellowCell(r, 3, val, fmt);
+          labelCell(r, 4, note, { color: C.grayText });
+          inputRows[KEYS[j]] = r;
+          r++;
+        });
+        r++;
+
+        // REVENUE
+        labelCell(r, 1, "REVENUE / إيرادات", { bold: true, color: C.greenDark, bg: C.greenBg });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        r++;
+
+        const rRoomsRev = r;
+        labelCell(r, 2, "Rooms Revenue / إيراد الغرف", { color: C.dark });
+        blueCell(r, 3, { formula: `C${inputRows.keys}*C${inputRows.adr}*C${inputRows.occ}*C${inputRows.days}` }, FMT.int);
+        labelCell(r, 4, "= Keys × ADR × Occ × Days", { color: C.grayText });
+        r++;
+
+        const rTotalRev = r;
+        labelCell(r, 2, "Total Revenue / إجمالي الإيراد", { bold: true, color: C.greenDark });
+        blueCell(r, 3, { formula: `IFERROR(C${rRoomsRev}/C${inputRows.roomsPct},0)` }, FMT.int, true);
+        labelCell(r, 4, "= Rooms Rev ÷ Rooms Mix %", { color: C.grayText });
+        r++;
+
+        const rFbRev = r;
+        labelCell(r, 2, "F&B Revenue / إيراد المأكولات", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rTotalRev}*C${inputRows.fbPct}` }, FMT.int);
+        labelCell(r, 4, "= Total Rev × F&B %", { color: C.grayText });
+        r++;
+
+        const rMiceRev = r;
+        labelCell(r, 2, "MICE Revenue / إيراد المؤتمرات", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rTotalRev}*C${inputRows.micePct}` }, FMT.int);
+        labelCell(r, 4, "= Total Rev × MICE %", { color: C.grayText });
+        r++;
+
+        const rOtherRev = r;
+        labelCell(r, 2, "Other Revenue / إيرادات أخرى", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rTotalRev}*C${inputRows.otherPct}` }, FMT.int);
+        labelCell(r, 4, "= Total Rev × Other %", { color: C.grayText });
+        r++;
+        r++;
+
+        // EXPENSES
+        labelCell(r, 1, "EXPENSES / مصاريف", { bold: true, color: C.red, bg: C.redBg });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+        ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+        ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+        r++;
+
+        const rRoomsExp = r;
+        labelCell(r, 2, "Rooms Expense / مصاريف الغرف", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rRoomsRev}*C${inputRows.roomExp}` }, FMT.int);
+        labelCell(r, 4, "= Rooms Rev × Exp %", { color: C.grayText });
+        r++;
+
+        const rFbExp = r;
+        labelCell(r, 2, "F&B Expense / مصاريف المأكولات", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rFbRev}*C${inputRows.fbExp}` }, FMT.int);
+        labelCell(r, 4, "= F&B Rev × Exp %", { color: C.grayText });
+        r++;
+
+        const rMiceExp = r;
+        labelCell(r, 2, "MICE Expense / مصاريف المؤتمرات", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rMiceRev}*C${inputRows.miceExp}` }, FMT.int);
+        labelCell(r, 4, "= MICE Rev × Exp %", { color: C.grayText });
+        r++;
+
+        const rOtherExp = r;
+        labelCell(r, 2, "Other Expense / مصاريف أخرى", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rOtherRev}*C${inputRows.otherExp}` }, FMT.int);
+        labelCell(r, 4, "= Other Rev × Exp %", { color: C.grayText });
+        r++;
+
+        const rUndist = r;
+        labelCell(r, 2, "Undistributed / غير موزّعة", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rTotalRev}*C${inputRows.undist}` }, FMT.int);
+        labelCell(r, 4, "= Total Rev × Undist %", { color: C.grayText });
+        r++;
+
+        const rFixed = r;
+        labelCell(r, 2, "Fixed Charges / تكاليف ثابتة", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rTotalRev}*C${inputRows.fixed}` }, FMT.int);
+        labelCell(r, 4, "= Total Rev × Fixed %", { color: C.grayText });
+        r++;
+
+        const rTotalOpex = r;
+        labelCell(r, 2, "Total Opex / إجمالي المصاريف", { bold: true, color: C.red });
+        blueCell(r, 3, { formula: `SUM(C${rRoomsExp}:C${rFixed})` }, FMT.int, true);
+        labelCell(r, 4, "= sum of expenses", { color: C.grayText });
+        r++;
+        r++;
+
+        // EBITDA + Margin
+        const rEbitda = r;
+        labelCell(r, 1, "EBITDA", { bold: true, color: C.white, bg: C.tealDark });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        const ebitdaCell = ws.getCell(r, 3);
+        ebitdaCell.value = { formula: `C${rTotalRev}-C${rTotalOpex}` };
+        ebitdaCell.font = { name: FONT, size: 12, bold: true, color: { argb: C.white } };
+        ebitdaCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        ebitdaCell.alignment = { vertical: "middle", horizontal: "right", indent: 1 };
+        ebitdaCell.numFmt = FMT.int;
+        ws.getRow(r).height = 22;
+        r++;
+
+        labelCell(r, 2, "EBITDA Margin / هامش EBITDA", { color: C.tealDark, bold: true });
+        blueCell(r, 3, { formula: `IFERROR(C${rEbitda}/C${rTotalRev},0)` }, FMT.pct1, true);
+        labelCell(r, 4, "= EBITDA ÷ Total Revenue", { color: C.grayText });
+        r += 2;
+
+        // Record EBITDA cell address for Inputs!J back-reference
+        ebitdaRefByIdx[idx] = `'Operating P&L'!C${rEbitda}`;
+      });
+    }
+
+    // ── MARINA blocks ──
+    if (marinaOpIdx.length > 0) {
+      r += 1;
+      sectionLabel(ws, r++, 1, 4, "⚓ Marinas / مارينات");
+      marinaOpIdx.forEach(idx => {
+        const a = assets[idx];
+        const m = a.marinaPL || {};
+        ws.mergeCells(r, 1, r, 4);
+        const nameCell = ws.getCell(r, 1);
+        nameCell.value = `${a.name || `Asset ${idx+1}`}  ·  ${a.phase || ""}  ·  Marina`;
+        nameCell.font = { name: FONT, size: 12, bold: true, color: { argb: C.white } };
+        nameCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        nameCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+        ws.getRow(r).height = 22;
+        r++;
+
+        labelCell(r, 1, "INPUTS / مدخلات", { bold: true, color: C.tealDark, bg: C.greenBg });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        r++;
+
+        const mInputs = [
+          ["Berths",                      "عدد الأرصفة",         n(m.berths),       FMT.int, "berths"],
+          ["Avg Berth Length (m)",        "متوسط طول الرصيف",    n(m.avgLength),    FMT.int, "metres"],
+          ["Unit Price (/m/yr)",          "السعر للمتر",         n(m.unitPrice),    FMT.int, `${currency} / m / yr`],
+          ["Stabilized Occupancy",        "إشغال مستقر",         n(m.stabOcc)/100,  FMT.pct0, ""],
+          ["Fuel — % of Total Revenue",   "نسبة الوقود",         n(m.fuelPct)/100,  FMT.pct0, ""],
+          ["Other — % of Total Revenue",  "نسبة الإيرادات الأخرى", n(m.otherRevPct)/100, FMT.pct0, ""],
+          ["Berthing Opex %",             "مصاريف الرسو",         n(m.berthingOpexPct)/100, FMT.pct0, "% of Berth Rev"],
+          ["Fuel Opex %",                 "مصاريف الوقود",        n(m.fuelOpexPct)/100, FMT.pct0, "% of Fuel Rev"],
+          ["Other Opex %",                "مصاريف أخرى",          n(m.otherOpexPct)/100, FMT.pct0, "% of Other Rev"],
+        ];
+        const mInputRows = {};
+        const M_KEYS = ["berths", "avgLen", "unitPrice", "occ", "fuelPct", "otherRevPct", "berthOpex", "fuelOpex", "otherOpex"];
+        mInputs.forEach(([labelEn, labelAr, val, fmt, note], j) => {
+          labelCell(r, 1, "", {});
+          labelCell(r, 2, `${labelEn} / ${labelAr}`, { color: C.grayText });
+          yellowCell(r, 3, val, fmt);
+          labelCell(r, 4, note, { color: C.grayText });
+          mInputRows[M_KEYS[j]] = r;
+          r++;
+        });
+        r++;
+
+        // Revenue
+        labelCell(r, 1, "REVENUE / إيرادات", { bold: true, color: C.greenDark, bg: C.greenBg });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+        r++;
+
+        const rBerthRev = r;
+        labelCell(r, 2, "Berthing Revenue / إيراد الرسو", { color: C.dark });
+        blueCell(r, 3, { formula: `C${mInputRows.berths}*C${mInputRows.avgLen}*C${mInputRows.unitPrice}*C${mInputRows.occ}` }, FMT.int);
+        labelCell(r, 4, "= Berths × Length × Price × Occ", { color: C.grayText });
+        r++;
+
+        const rMTotalRev = r;
+        labelCell(r, 2, "Total Revenue / إجمالي الإيراد", { bold: true, color: C.greenDark });
+        // Berthing % of total = 100% − fuel% − other% → totalRev = berthRev / (berthing%)
+        blueCell(r, 3, { formula: `IFERROR(C${rBerthRev}/(1-C${mInputRows.fuelPct}-C${mInputRows.otherRevPct}),0)` }, FMT.int, true);
+        labelCell(r, 4, "= Berth Rev ÷ (1 − Fuel% − Other%)", { color: C.grayText });
+        r++;
+
+        const rFuelRev = r;
+        labelCell(r, 2, "Fuel Revenue / إيراد الوقود", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rMTotalRev}*C${mInputRows.fuelPct}` }, FMT.int);
+        labelCell(r, 4, "= Total × Fuel %", { color: C.grayText });
+        r++;
+
+        const rMOtherRev = r;
+        labelCell(r, 2, "Other Revenue / إيرادات أخرى", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rMTotalRev}*C${mInputRows.otherRevPct}` }, FMT.int);
+        labelCell(r, 4, "= Total × Other %", { color: C.grayText });
+        r += 2;
+
+        // Expenses
+        labelCell(r, 1, "EXPENSES / مصاريف", { bold: true, color: C.red, bg: C.redBg });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+        ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+        ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+        r++;
+
+        const rBerthExp = r;
+        labelCell(r, 2, "Berthing Opex", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rBerthRev}*C${mInputRows.berthOpex}` }, FMT.int);
+        r++;
+
+        const rFuelExp = r;
+        labelCell(r, 2, "Fuel Opex", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rFuelRev}*C${mInputRows.fuelOpex}` }, FMT.int);
+        r++;
+
+        const rOtherExp = r;
+        labelCell(r, 2, "Other Opex", { color: C.dark });
+        blueCell(r, 3, { formula: `C${rMOtherRev}*C${mInputRows.otherOpex}` }, FMT.int);
+        r++;
+
+        const rMTotalOpex = r;
+        labelCell(r, 2, "Total Opex / إجمالي المصاريف", { bold: true, color: C.red });
+        blueCell(r, 3, { formula: `SUM(C${rBerthExp}:C${rOtherExp})` }, FMT.int, true);
+        r += 2;
+
+        const rMEbitda = r;
+        labelCell(r, 1, "EBITDA", { bold: true, color: C.white, bg: C.tealDark });
+        ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        ws.getCell(r, 4).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        const eC = ws.getCell(r, 3);
+        eC.value = { formula: `C${rMTotalRev}-C${rMTotalOpex}` };
+        eC.font = { name: FONT, size: 12, bold: true, color: { argb: C.white } };
+        eC.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.tealDark } };
+        eC.alignment = { vertical: "middle", horizontal: "right", indent: 1 };
+        eC.numFmt = FMT.int;
+        ws.getRow(r).height = 22;
+        r++;
+
+        labelCell(r, 2, "EBITDA Margin / هامش EBITDA", { color: C.tealDark, bold: true });
+        blueCell(r, 3, { formula: `IFERROR(C${rMEbitda}/C${rMTotalRev},0)` }, FMT.pct1, true);
+        r += 2;
+
+        ebitdaRefByIdx[idx] = `'Operating P&L'!C${rMEbitda}`;
+      });
+    }
+
+    // ── GENERIC OPERATING blocks (no hotelPL/marinaPL — just plain EBITDA) ──
+    if (genericOpIdx.length > 0) {
+      r += 1;
+      sectionLabel(ws, r++, 1, 4, "Other Operating / تشغيلية أخرى");
+      tableHeader(ws, r++, ["#", "Asset / الأصل", "EBITDA / السنة", "Notes"]);
+      genericOpIdx.forEach((idx, j) => {
+        const a = assets[idx];
+        setCell(ws, r, 1, j + 1, { color: C.grayText, align: "center" });
+        labelCell(r, 2, a.name || `Asset ${idx+1}`, { bold: true });
+        yellowCell(r, 3, n(a.opEbitda), FMT.int);
+        labelCell(r, 4, `${a.phase || ""}  ·  ${a.assetType || a.category || "Operating"}`, { color: C.grayText });
+        ebitdaRefByIdx[idx] = `'Operating P&L'!C${r}`;
+        r++;
+      });
+    }
+
+    if (hotelOpIdx.length === 0 && marinaOpIdx.length === 0 && genericOpIdx.length === 0) {
+      labelCell(r, 2, "✓ No Operating assets in this project — nothing to model here.", { color: C.greenDark });
+    }
+  }
+
+  // Now back-patch Inputs!J (EBITDA column) so it references the
+  // Operating P&L sheet for any asset that has a P&L block. This makes
+  // EBITDA single-source-of-truth: change a number in Operating P&L and
+  // it cascades through Inputs → Pro Forma → Metrics → Summary.
+  Object.entries(ebitdaRefByIdx).forEach(([iStr, ref]) => {
+    const i = parseInt(iStr, 10);
+    const r = INPUTS_FIRST_ROW + i;
+    const cell = inputsWsRef.getCell(r, 10); // J column = 10
+    cell.value = { formula: ref };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.derivedBg } };
+    cell.font = { name: FONT, size: 10, bold: true, color: { argb: C.blueDark } };
+    cell.alignment = { vertical: "middle", horizontal: "right" };
+    cell.numFmt = FMT.int;
+  });
+
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 4 — Pro Forma (year-by-year, formula-driven)
   // ════════════════════════════════════════════════════════════════════
   // Per asset: 4 rows
   //   1. Revenue       = formula
