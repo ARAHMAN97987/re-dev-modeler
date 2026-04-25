@@ -242,14 +242,62 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
   });
 
   // ════════════════════════════════════════════════════════════════════
-  // SHEET 1 — Summary
+  // Pre-compute deterministic row addresses of every other sheet so the
+  // Summary (built FIRST so it's the leftmost tab) can reference them
+  // by formula. Excel resolves cross-sheet references at calc time, so
+  // the target sheets don't have to exist yet.
+  // ════════════════════════════════════════════════════════════════════
+  // Forward-declared layout constants used by Inputs sheet AND by
+  // Summary's cross-sheet formulas. Kept here (above Summary) so the
+  // Summary builder can reference them.
+  const INPUTS_FIRST_ROW = 4; // Inputs header on row 3
+  const COL = { phase:"B", name:"C", revType:"D", gfa:"E", eff:"F", leasable:"G", leaseRate:"H", occ:"I", ebitda:"J", salePrice:"K", preSale:"L", absorption:"M", commission:"N", costPerSqm:"O", totalCapex:"P", buildMo:"Q", openingYr:"R", ramp:"S", esc:"T" };
+
+  const ADDR = {
+    // Inputs sheet — header row 3, asset i at row 4+i
+    inputs: {
+      assetRow: (i) => INPUTS_FIRST_ROW + i, // 4..
+      col: COL,
+    },
+    // Metrics sheet — header row 2, asset i at row 3+i
+    metrics: {
+      assetRow: (i) => 3 + i,
+      totalRow: 3 + assets.length,
+      // Column letters in Metrics sheet (per the order in SHEET 5):
+      // A:#  B:Asset  C:Phase  D:Type  E:Shared?  F:DirectCAPEX  G:Alloc
+      // H:All-in CAPEX  I:Annual Rev  J:Total Rev  K:Total NCF  L:YoC
+      // M:IRR  N:Cap Rate  O:Exit  P:Dev Profit  Q:Dev Margin  R:Rev/m²  S:Cost/m²
+      col: {
+        name: "B", phase: "C", type: "D", shared: "E",
+        directCapex: "F", allocCapex: "G", allInCapex: "H",
+        annualRev: "I", totalRev: "J", totalNCF: "K",
+        yoc: "L", irr: "M", capRate: "N", exit: "O",
+        devProfit: "P", devMargin: "Q", revPerSqm: "R", costPerSqm: "S",
+      },
+    },
+    // Pro Forma sheet — each asset uses 6 rows (5 data + 1 spacer) starting at row 4
+    proForma: {
+      assetRevRow: (i) => 4 + 6 * i,
+      assetLrRow: (i) => 5 + 6 * i,
+      assetCapRow: (i) => 6 + 6 * i,
+      assetAllocRow: (i) => 7 + 6 * i,
+      assetNcfRow: (i) => 8 + 6 * i,
+      pfRevRow: 5 + 6 * assets.length,
+      pfLrRow: 6 + 6 * assets.length,
+      pfCapRow: 7 + 6 * assets.length,
+      pfNcfRow: 8 + 6 * assets.length,
+    },
+  };
+
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 1 — Summary (formula-driven)
   // ════════════════════════════════════════════════════════════════════
   {
     const ws = wb.addWorksheet("Summary", {
       views: [{ showGridLines: false }],
       properties: { tabColor: { argb: C.teal } },
     });
-    setCol(ws, 1, 3); setCol(ws, 2, 32); setCol(ws, 3, 22); setCol(ws, 4, 6); setCol(ws, 5, 32); setCol(ws, 6, 22);
+    setCol(ws, 1, 3); setCol(ws, 2, 26); setCol(ws, 3, 18); setCol(ws, 4, 6); setCol(ws, 5, 26); setCol(ws, 6, 18);
 
     titleBar(ws, 1, 2, 6, `${projectName} — Asset Pro Forma`, "البرنامج الاستثماري للأصول");
 
@@ -262,10 +310,11 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
       ["Horizon / الأفق (سنوات)", horizon],
       ["Phases / عدد المراحل", phases.length],
       ["Assets / عدد الأصول", assets.length],
+      ["Shared assets / مكوّنات مشتركة", sharedIdx.length],
       ["Active Scenario / السيناريو", project?.activeScenario || "Base Case"],
+      ["Land Type / نوع الأرض", project?.landType || ""],
       ["Soft Cost % / غير مباشرة", softPct],
       ["Contingency % / احتياطي", contPct],
-      ["Land Type / نوع الأرض", project?.landType || ""],
       ["Generated / تاريخ الإصدار", new Date().toLocaleDateString()],
     ];
     meta.forEach(([k, v]) => {
@@ -277,60 +326,105 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
       r++;
     });
 
-    // ── Portfolio KPIs (right column) — formula-driven ──────────
+    // ── Portfolio KPIs (right column) — ALL formula-driven ──────
     r = 3;
     sectionLabel(ws, r++, 5, 6, "Portfolio KPIs / مؤشرات المحفظة");
-    // We'll fill these with formulas that reference the Pro Forma sheet.
-    // Pro Forma sheet has the portfolio totals in known cells; defer until
-    // those addresses are known. For now, drop in computed values from
-    // engine to seed; will overwrite after Pro Forma sheet is built.
-    const totalCapex = consolidated?.totalCapex || 0;
-    const totalRev = consolidated?.totalIncome || 0;
-    const totalLandRent = consolidated?.totalLandRent || 0;
-    const irr = consolidated?.irr;
-    const npv10 = consolidated?.npv10;
-    const npv12 = consolidated?.npv12;
 
-    const kpis = [
-      ["Total CAPEX",          totalCapex,    FMT.int],
-      ["Total Revenue (life)", totalRev,      FMT.int],
-      ["Total Land Rent",      totalLandRent, FMT.int],
-      ["Net Cash Flow",        totalRev - totalLandRent - totalCapex, FMT.int],
-      ["Unlevered IRR",        irr,           FMT.pct1],
-      ["NPV @ 10%",            npv10,         FMT.int],
-      ["NPV @ 12%",            npv12,         FMT.int],
-      ["Cash-on-Cost",         totalCapex > 0 ? (totalRev - totalCapex) / totalCapex : 0, FMT.pct1],
+    const M = ADDR.metrics; // shorthand
+    const PF = ADDR.proForma;
+    const mFirstR = M.assetRow(0);
+    const mLastR = M.assetRow(assets.length - 1);
+
+    // All cells reference Metrics or Pro Forma sheets — fully dynamic
+    const pfRevAddr = `'Pro Forma'!D${PF.pfRevRow}`;       // total revenue (column D in Pro Forma is "Total")
+    const pfLrAddr = `'Pro Forma'!D${PF.pfLrRow}`;
+    const pfCapAddr = `'Pro Forma'!D${PF.pfCapRow}`;
+    const pfNcfAddr = `'Pro Forma'!D${PF.pfNcfRow}`;
+    const pfIrrAddr = `'Pro Forma'!E${PF.pfNcfRow}`;       // E column is IRR
+
+    const kpiRows = [
+      ["Total CAPEX (all-in)",   `SUM(Metrics!${M.col.allInCapex}${mFirstR}:${M.col.allInCapex}${mLastR})`, FMT.int],
+      ["Total Revenue (life)",   `SUM(Metrics!${M.col.totalRev}${mFirstR}:${M.col.totalRev}${mLastR})`,    FMT.int],
+      ["Land Rent (total)",      pfLrAddr,                                                                  FMT.int],
+      ["Net Cash Flow",          pfNcfAddr,                                                                 FMT.int],
+      ["Portfolio IRR",          pfIrrAddr,                                                                 FMT.pct1],
+      ["Avg Asset IRR (revenue)", `IFERROR(AVERAGEIF(Metrics!${M.col.shared}${mFirstR}:${M.col.shared}${mLastR},"<>✓",Metrics!${M.col.irr}${mFirstR}:${M.col.irr}${mLastR}),"—")`, FMT.pct1],
+      ["Avg Dev Margin",         `IFERROR(AVERAGEIF(Metrics!${M.col.shared}${mFirstR}:${M.col.shared}${mLastR},"<>✓",Metrics!${M.col.devMargin}${mFirstR}:${M.col.devMargin}${mLastR}),0)`, FMT.pct1],
+      ["Cash-on-Cost",           `IFERROR((SUM(Metrics!${M.col.totalRev}${mFirstR}:${M.col.totalRev}${mLastR})-SUM(Metrics!${M.col.allInCapex}${mFirstR}:${M.col.allInCapex}${mLastR}))/SUM(Metrics!${M.col.allInCapex}${mFirstR}:${M.col.allInCapex}${mLastR}),0)`, FMT.pct1],
     ];
-    kpis.forEach(([k, v, fmt]) => {
-      setCell(ws, r, 5, k, { color: C.grayText, align: "left", indent: 1 });
-      setCell(ws, r, 6, v, { fmt, bold: true, color: C.navyText });
+    kpiRows.forEach(([label, formulaOrVal, fmt]) => {
+      setCell(ws, r, 5, label, { color: C.grayText, align: "left", indent: 1 });
+      setCell(ws, r, 6, { formula: formulaOrVal }, { fmt, bold: true, color: C.navyText });
       r++;
     });
 
-    // ── Phase summary (bottom) ─────────────────────────────────
-    r += 2;
+    // ── Phase summary (formula-driven via SUMIF / COUNTIF on Metrics) ──
+    r = Math.max(r, 15) + 1;
     sectionLabel(ws, r++, 2, 6, "Phases / المراحل");
-    tableHeader(ws, r++, ["#", "Phase", "Opening", "Assets", "CAPEX", "Revenue"]);
+    tableHeader(ws, r++, ["#", "Phase / المرحلة", "Opening / الافتتاح", "Assets", "CAPEX (all-in)", "Revenue"]);
+    const phaseFirstR = r;
     phases.forEach((ph, i) => {
-      const pIdx = assets.map((a, idx) => a.phase === ph.name ? idx : -1).filter(idx => idx >= 0);
-      const pCapex = pIdx.reduce((s, idx) => s + (schedules[idx]?.totalCapex || 0), 0);
-      const pRev   = pIdx.reduce((s, idx) => s + (schedules[idx]?.totalRevenue || 0), 0);
-      setCell(ws, r, 1, "", {});
-      setCell(ws, r, 2, ph.name, { color: C.dark, bold: true, align: "left", indent: 1 });
-      setCell(ws, r, 3, ph.completionYear || "", { fmt: FMT.year });
-      setCell(ws, r, 4, pIdx.length, { fmt: FMT.int });
-      setCell(ws, r, 5, pCapex, { fmt: FMT.int });
-      setCell(ws, r, 6, pRev, { fmt: FMT.int });
+      const phaseRange = `Metrics!${M.col.phase}${mFirstR}:${M.col.phase}${mLastR}`;
+      setCell(ws, r, 1, i + 1, { color: C.grayText, align: "center" });
+      setCell(ws, r, 2, ph.name, { bold: true, color: C.dark, align: "left", indent: 1 });
+      setCell(ws, r, 3, ph.completionYear || "", { fmt: FMT.year, color: C.dark });
+      setCell(ws, r, 4, { formula: `COUNTIF(${phaseRange},"${ph.name}")` }, { fmt: FMT.int });
+      setCell(ws, r, 5, { formula: `SUMIF(${phaseRange},"${ph.name}",Metrics!${M.col.allInCapex}${mFirstR}:${M.col.allInCapex}${mLastR})` }, { fmt: FMT.int, color: C.red });
+      setCell(ws, r, 6, { formula: `SUMIF(${phaseRange},"${ph.name}",Metrics!${M.col.totalRev}${mFirstR}:${M.col.totalRev}${mLastR})` }, { fmt: FMT.int, color: C.greenDark });
       r++;
     });
+    const phaseLastR = r - 1;
     // Phase totals (formula)
-    const phFirstR = r - phases.length;
-    const phLastR = r - 1;
-    setCell(ws, r, 2, "Total", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 1, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 2, "Total / الإجمالي", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.blueBg, border: "totalTop" });
     setCell(ws, r, 3, "", { bg: C.blueBg, border: "totalTop" });
-    setCell(ws, r, 4, { formula: `SUM(D${phFirstR}:D${phLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
-    setCell(ws, r, 5, { formula: `SUM(E${phFirstR}:E${phLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
-    setCell(ws, r, 6, { formula: `SUM(F${phFirstR}:F${phLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 4, { formula: `SUM(D${phaseFirstR}:D${phaseLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 5, { formula: `SUM(E${phaseFirstR}:E${phaseLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 6, { formula: `SUM(F${phaseFirstR}:F${phaseLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    r += 2;
+
+    // ── Per-Asset Quick View (NEW) ─────────────────────────────
+    sectionLabel(ws, r++, 2, 6, "Assets — Quick View / نظرة سريعة لكل أصل");
+    const note2 = "All cells below are formulas referencing Metrics + Inputs sheets — edit any input and watch this table recalc.";
+    ws.mergeCells(r, 2, r, 6);
+    const noteC = ws.getCell(r, 2);
+    noteC.value = note2;
+    noteC.font = { name: FONT, size: 9, italic: true, color: { argb: C.grayText } };
+    noteC.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    ws.getRow(r).height = 16;
+    r++;
+    // Quick view layout: # | Asset | Phase + Opening | Type + Shared | CAPEX (all-in) | Annual Rev | IRR
+    // We have 6 columns (B..G is column 2..7 — wait we only have 6 columns). Let me extend to col 7.
+    setCol(ws, 7, 11);
+    tableHeader(ws, r++, ["#", "Asset / الأصل", "Phase + Opening", "Type", "CAPEX (all-in)", "Annual Rev (stab.)", "IRR (all-in)"]);
+    const qvFirstR = r;
+    assets.forEach((a, i) => {
+      const inR = ADDR.inputs.assetRow(i);
+      const meR = M.assetRow(i);
+      setCell(ws, r, 1, i + 1, { color: C.grayText, align: "center" });
+      // Asset name from Inputs C{inR}
+      setCell(ws, r, 2, { formula: `Inputs!${COL.name}${inR}` }, { bold: true, color: C.dark, align: "left", indent: 1 });
+      // Phase + Opening combined: "ZAN 1 · 2029"
+      setCell(ws, r, 3, { formula: `Inputs!${COL.phase}${inR}&" · "&Inputs!${COL.openingYr}${inR}` }, { color: C.dark, align: "center" });
+      // Type with Shared marker
+      setCell(ws, r, 4, { formula: `Inputs!${COL.revType}${inR}&IF(Metrics!${M.col.shared}${meR}="✓"," (مشترك)","")` }, { color: C.grayText, align: "center" });
+      // All-in CAPEX from Metrics
+      setCell(ws, r, 5, { formula: `Metrics!${M.col.allInCapex}${meR}` }, { fmt: FMT.int, color: C.red });
+      // Annual Rev from Metrics
+      setCell(ws, r, 6, { formula: `Metrics!${M.col.annualRev}${meR}` }, { fmt: FMT.int, color: C.greenDark });
+      // IRR from Metrics
+      setCell(ws, r, 7, { formula: `Metrics!${M.col.irr}${meR}` }, { fmt: FMT.pct1, bold: true });
+      r++;
+    });
+    const qvLastR = r - 1;
+    // Quick view total row (formula)
+    setCell(ws, r, 1, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 2, "Total / الإجمالي", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 3, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 4, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 5, { formula: `SUM(E${qvFirstR}:E${qvLastR})` }, { fmt: FMT.int, bold: true, color: C.red, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 6, { formula: `SUM(F${qvFirstR}:F${qvLastR})` }, { fmt: FMT.int, bold: true, color: C.greenDark, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 7, { formula: pfIrrAddr }, { fmt: FMT.pct1, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
   }
 
   // ════════════════════════════════════════════════════════════════════
@@ -343,11 +437,9 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
   //   N: Comm%  O: Cost/m²  P: Total CAPEX (formula)
   //   Q: Build Mo  R: Opening Year  S: Ramp Yrs  T: Esc%
   //
-  // Range constants used by Pro Forma sheet to reference inputs.
-  const INPUTS_FIRST_ROW = 4; // header on row 3
+  // INPUTS_FIRST_ROW + COL declared earlier in the function (above ADDR)
+  // so Summary's cross-sheet formulas can reference them.
   const INPUTS_LAST_ROW  = INPUTS_FIRST_ROW + assets.length - 1;
-  // Column letters for cross-sheet references:
-  const COL = { phase:"B", name:"C", revType:"D", gfa:"E", eff:"F", leasable:"G", leaseRate:"H", occ:"I", ebitda:"J", salePrice:"K", preSale:"L", absorption:"M", commission:"N", costPerSqm:"O", totalCapex:"P", buildMo:"Q", openingYr:"R", ramp:"S", esc:"T" };
 
   {
     const ws = wb.addWorksheet("Inputs", {
