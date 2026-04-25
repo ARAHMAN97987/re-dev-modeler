@@ -414,8 +414,8 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
     let curRow = 4;
     assets.forEach((a, i) => {
       const inputsRow = INPUTS_FIRST_ROW + i;
-      // Reference to inputs (with sheet prefix)
-      const ref = (col) => `Inputs!${col}${inputsRow}`;
+      // Reference to a named field on the Inputs row (resolves COL key → letter)
+      const ref = (key) => `Inputs!${COL[key]}${inputsRow}`;
       const revType = a.revType || "Lease";
 
       const blockBg = i % 2 === 0 ? null : C.lightGray;
