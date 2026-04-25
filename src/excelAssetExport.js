@@ -1,35 +1,50 @@
 /**
- * Haseef — Asset Program Comprehensive Excel Export
+ * Haseef — Asset Pro Forma (truly dynamic Excel export)
  *
- * Single-button export that packages EVERYTHING in the Asset Program tab into
- * one workbook a bank, fund manager, or partner can trace end-to-end.
+ * Rewritten 2026-04-24 to fix prior version's complaints:
+ *   "ضخم ومعقد وغير ديناميكي" — too many sheets, too many columns,
+ *   year cells were static engine values.
  *
- * Sheets:
- *   1. Read Me                — metadata + sheet guide + formula glossary
- *   2. Inputs                 — every asset field (bilingual, editable visual)
- *   3. Geometry               — Plot/Footprint/Floors/Basement/GFA + derived Coverage/FAR/GLA
- *   4. Cost Breakdown         — hard / soft / contingency / basement / parking per asset
- *   5. Land                   — project-level tenure, annual rent schedule with escalation
- *   6. CAPEX Schedule         — year-by-year per asset (engine values)
- *   7. Revenue Schedule       — year-by-year per asset (engine values)
- *   8. Land Rent Schedule     — allocated per asset by footprint, year-by-year
- *   9. Net Cash Flow          — Revenue − Land Rent − CAPEX, with IRR + payback per asset
- *  10. Investment Metrics     — YoC / Cap Rate / Exit Value / Dev Profit/Margin / Break-even
- *  11. Phase Summary          — aggregates per phase (totals + share of project)
- *  12. Smart Alerts           — any active Smart-Reviewer warnings for assets
+ * NEW STRUCTURE — 5 sheets, formula-driven:
  *
- * Dynamic: subtotal rows, IRR (Excel IRR formula), phase SUMIFs, metrics ratios
- * recalc live in Excel when a user tweaks an engine-value cell. Year-by-year
- * schedule values come from the engine (results.assetSchedules) because the
- * engine encodes ramp-up curves, phase-start logic, Sale pre-sale + absorption,
- * basement premiums, etc. — logic too complex to mirror in pure Excel.
+ *   1. Summary             — project header + portfolio KPIs (all formulas)
+ *   2. Inputs              — one row per asset, 18 essential fields,
+ *                            yellow-highlighted = editable. Engine-derived
+ *                            cells (leasable, openingYear, totalCapex) are
+ *                            FORMULAS that recalc when the user edits inputs.
+ *   3. Pro Forma           — per asset: 4 rows (Revenue / Land Rent /
+ *                            CAPEX / Net CF) × N years. Revenue + CAPEX +
+ *                            Net CF are FORMULAS referencing Inputs cells —
+ *                            edit a lease rate and the schedule recalcs.
+ *                            IRR + Payback per asset use Excel IRR(). Portfolio
+ *                            totals at the bottom.
+ *   4. Cost Detail         — Hard / Soft / Contingency per asset (formulas).
+ *   5. Notes               — project metadata + active smart alerts.
+ *
+ * What's deliberately formula-based (recalculates inside Excel on edit):
+ *   • Inputs derived columns: Leasable (G = GFA × Eff), Total CAPEX
+ *     (P = GFA × Cost/m² × (1+Soft%)(1+Cont%)), Opening Year (R)
+ *   • Pro Forma Revenue cells (Lease + Operating + Sale variants)
+ *   • Pro Forma CAPEX cells (proration over construction window)
+ *   • Pro Forma Net CF (Revenue − Land Rent − CAPEX)
+ *   • All SUM / IRR totals
+ *   • Portfolio NCF + Portfolio IRR
+ *   • Investment Metrics ratios (Dev Margin, YoC)
+ *
+ * What stays as engine-computed values (formulas would be infeasible):
+ *   • Land Rent yearly allocation (uses complex grace + escalation-every-N
+ *     + manual-allocation overrides; ~80 cells per asset to mirror in Excel)
+ *
+ * Why Land Rent is engine-only: it depends on landRentMeta from
+ * engine/phases.js which encodes lease-start year, grace logic, and
+ * escalation steps. The Pro Forma row pulls this as a constant from the
+ * engine, so when you change the lease rate ON THE LAND ITSELF in the
+ * app (not the asset), regenerate from Haseef.
  */
 
 import ExcelJS from "exceljs";
-import { computeAssetCapexBreakdown, computeAssetCapex } from "./engine/cashflow.js";
-import { calcIRR } from "./engine/math.js";
 
-// ── Theme / helpers (aligned with existing excelExport.js palette) ──
+// ── Theme ────────────────────────────────────────────────────────────────
 const C = {
   navy:      "FF001E39",
   navyText:  "FF001D39",
@@ -42,148 +57,117 @@ const C = {
   greenDark: "FF16A34A",
   blueBg:    "FFEFF6FF",
   blueDark:  "FF2563EB",
-  indigo:    "FF4F46E5",
   amberBg:   "FFFEF3C7",
   redBg:     "FFFEE2E2",
   red:       "FFDC2626",
   grayText:  "FF6B7280",
   black:     "FF000000",
-  purpleBg:  "FFF3E8FF",
-  inputBg:   "FFFFFDF5",  // slight yellow — editable input hint
-  derivedBg: "FFF0F9FF",  // blue-ish — derived/formula hint
+  inputBg:   "FFFFF7CC",  // yellow — "you can edit this"
+  derivedBg: "FFE0F2FE",  // light blue — "formula derived"
+  hairline:  "FFE5E7EB",
 };
 
-const FONT_MAIN = "Calibri";
-const FONT_AR   = "Arial";
+const FONT = "Calibri";
 const FMT = {
   int:    "#,##0",
-  sar:    "#,##0 \"SAR\"",
-  sarNeg: "#,##0 \"SAR\";[Red]-#,##0 \"SAR\"",
   pct1:   "0.0%",
   pct0:   "0%",
-  x2:     "0.00\\x",
+  num2:   "0.00",
   year:   "0",
   txt:    "@",
 };
 
-function setCol(ws, idx, width) { ws.getColumn(idx).width = width; }
+// ── Helpers ──────────────────────────────────────────────────────────────
+const n = v => (typeof v === "number" && isFinite(v)) ? v : 0;
 
-function titleBar(ws, row, colStart, colEnd, textEn, textAr) {
-  ws.mergeCells(row, colStart, row, colEnd);
-  const cell = ws.getCell(row, colStart);
-  cell.value = textEn + (textAr ? `   —   ${textAr}` : "");
-  cell.font = { name: FONT_MAIN, size: 18, bold: true, color: { argb: C.white } };
-  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.navy } };
-  cell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
-  ws.getRow(row).height = 36;
-}
-
-function sectionHeader(ws, row, colStart, colEnd, text) {
-  ws.mergeCells(row, colStart, row, colEnd);
-  const cell = ws.getCell(row, colStart);
-  cell.value = text;
-  cell.font = { name: FONT_MAIN, size: 11, bold: true, color: { argb: C.tealDark } };
-  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
-  cell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
-  cell.border = { bottom: { style: "medium", color: { argb: C.teal } } };
-  ws.getRow(row).height = 22;
-}
-
-function tableHeader(ws, row, cols, opts = {}) {
-  const { firstColLeft = true, height = 30 } = opts;
-  cols.forEach((label, i) => {
-    const cell = ws.getCell(row, i + 1);
-    cell.value = label;
-    cell.font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.dark } };
-    cell.alignment = { vertical: "middle", horizontal: firstColLeft && i === 0 ? "left" : "center", wrapText: true, indent: firstColLeft && i === 0 ? 1 : 0 };
-    cell.border = { top: { style: "thin", color: { argb: C.dark } }, bottom: { style: "thin", color: { argb: C.dark } } };
-  });
-  ws.getRow(row).height = height;
-}
-
-function writeRow(ws, row, values, opts = {}) {
-  const { bold, numFmts = [], bgColor, alternating, rowIdx } = opts;
-  values.forEach((v, i) => {
-    const cell = ws.getCell(row, i + 1);
-    if (v !== null && v !== undefined && !(typeof v === "string" && v === "")) cell.value = v;
-    cell.font = {
-      name: FONT_MAIN, size: 10,
-      bold: !!bold,
-      color: { argb: typeof v === "number" && v < 0 ? C.red : C.black },
-    };
-    cell.alignment = { vertical: "middle", horizontal: i === 0 ? "left" : "right", indent: i === 0 ? 1 : 0 };
-    if (numFmts[i]) cell.numFmt = numFmts[i];
-    // Alternating row color
-    if (bgColor) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgColor } };
-    else if (alternating && rowIdx % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.lightGray } };
-    cell.border = { bottom: { style: "hair", color: { argb: "FFE5E7EB" } } };
-  });
-}
-
-function totalRow(ws, row, values, numFmts = []) {
-  values.forEach((v, i) => {
-    const cell = ws.getCell(row, i + 1);
-    if (v !== null && v !== undefined && !(typeof v === "string" && v === "")) cell.value = v;
-    cell.font = { name: FONT_MAIN, size: 10, bold: true, color: { argb: C.navyText } };
-    cell.alignment = { vertical: "middle", horizontal: i === 0 ? "left" : "right", indent: i === 0 ? 1 : 0 };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.blueBg } };
-    cell.border = { top: { style: "medium", color: { argb: C.blueDark } }, bottom: { style: "double", color: { argb: C.blueDark } } };
-    if (numFmts[i]) cell.numFmt = numFmts[i];
-  });
-}
-
-function note(ws, row, colStart, colEnd, text) {
-  ws.mergeCells(row, colStart, row, colEnd);
-  const cell = ws.getCell(row, colStart);
-  cell.value = text;
-  cell.font = { name: FONT_MAIN, size: 9, italic: true, color: { argb: C.grayText } };
-  cell.alignment = { vertical: "middle", horizontal: "left", indent: 1, wrapText: true };
-  ws.getRow(row).height = 30;
-}
-
-// Column-letter helper for 1-based index (handles A-Z, AA-ZZ)
-function colLetter(n) {
+function colLetter(idx) {
   let s = "";
-  while (n > 0) {
-    const m = (n - 1) % 26;
+  while (idx > 0) {
+    const m = (idx - 1) % 26;
     s = String.fromCharCode(65 + m) + s;
-    n = Math.floor((n - 1) / 26);
+    idx = Math.floor((idx - 1) / 26);
   }
   return s;
 }
 
-const n = v => (typeof v === "number" && isFinite(v)) ? v : 0;
+function setCol(ws, idx, width) { ws.getColumn(idx).width = width; }
 
-// ═══════════════════════════════════════════════════════════════
+function titleBar(ws, row, colStart, colEnd, en, ar) {
+  ws.mergeCells(row, colStart, row, colEnd);
+  const c = ws.getCell(row, colStart);
+  c.value = ar ? `${en}   —   ${ar}` : en;
+  c.font = { name: FONT, size: 16, bold: true, color: { argb: C.white } };
+  c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.navy } };
+  c.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  ws.getRow(row).height = 32;
+}
+
+function sectionLabel(ws, row, colStart, colEnd, text) {
+  ws.mergeCells(row, colStart, row, colEnd);
+  const c = ws.getCell(row, colStart);
+  c.value = text;
+  c.font = { name: FONT, size: 11, bold: true, color: { argb: C.tealDark } };
+  c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
+  c.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  c.border = { bottom: { style: "medium", color: { argb: C.teal } } };
+  ws.getRow(row).height = 22;
+}
+
+function tableHeader(ws, row, headers, opts = {}) {
+  const { firstColLeft = true } = opts;
+  headers.forEach((h, i) => {
+    const c = ws.getCell(row, i + 1);
+    c.value = h;
+    c.font = { name: FONT, size: 9, bold: true, color: { argb: C.white } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.dark } };
+    c.alignment = {
+      vertical: "middle",
+      horizontal: firstColLeft && i === 0 ? "left" : "center",
+      wrapText: true,
+      indent: firstColLeft && i === 0 ? 1 : 0,
+    };
+    c.border = { bottom: { style: "thin", color: { argb: C.dark } } };
+  });
+  ws.getRow(row).height = 30;
+}
+
+function setCell(ws, row, col, value, opts = {}) {
+  const { fmt, bold, color, bg, align = "right", indent, border = "hair" } = opts;
+  const c = ws.getCell(row, col);
+  if (value !== null && value !== undefined && value !== "") c.value = value;
+  c.font = { name: FONT, size: 10, bold: !!bold, color: { argb: color || C.black } };
+  c.alignment = { vertical: "middle", horizontal: align, indent: indent || 0 };
+  if (fmt) c.numFmt = fmt;
+  if (bg) c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+  if (border === "hair") c.border = { bottom: { style: "hair", color: { argb: C.hairline } } };
+  else if (border === "totalTop") c.border = { top: { style: "medium", color: { argb: C.blueDark } }, bottom: { style: "double", color: { argb: C.blueDark } } };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // MAIN EXPORT
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 export async function generateAssetsWorkbook(project, results, smartAlerts = null) {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Haseef Financial Modeler";
   wb.created = new Date();
-  wb.lastModifiedBy = "Haseef";
 
-  const projectName = project?.name || "Project";
-  const currency   = project?.currency || "SAR";
-  const startYear  = project?.startYear || results?.startYear || new Date().getFullYear();
-  const horizon    = Math.min(project?.horizon || 50, results?.horizon || 50);
-  const assets     = project?.assets || [];
-  const phases     = project?.phases || [];
-  const schedules  = results?.assetSchedules || [];
+  const projectName  = project?.name || "Project";
+  const currency     = project?.currency || "SAR";
+  const startYear    = project?.startYear || results?.startYear || new Date().getFullYear();
+  const horizon      = Math.min(project?.horizon || 50, results?.horizon || 50);
+  const assets       = project?.assets || [];
+  const phases       = project?.phases || [];
+  const schedules    = results?.assetSchedules || [];
   const phaseResults = results?.phaseResults || {};
   const consolidated = results?.consolidated || {};
-  const yrs = Array.from({ length: horizon }, (_, i) => i);
+  const softPct      = (project?.softCostPct || 0) / 100;
+  const contPct      = (project?.contingencyPct || 0) / 100;
+  const yrs          = Array.from({ length: horizon }, (_, i) => i);
 
-  // Pre-compute per-asset derived numbers once (used across multiple sheets)
-  const breakdowns = assets.map(a => {
-    try { return computeAssetCapexBreakdown(a, project || {}); } catch { return null; }
-  });
-
-  // Per-asset land rent share, year-by-year (same logic as UI's getAssetLandRent)
-  const assetLandRent = assets.map((a, i) => {
-    const phaseName = a.phase || phases[0]?.name || "Phase 1";
-    const pr = phaseResults[phaseName];
+  // Per-asset land rent (engine-allocated by footprint share within phase)
+  const assetLandRent = assets.map(a => {
+    const phName = a.phase || phases[0]?.name || "Phase 1";
+    const pr = phaseResults[phName];
     if (!pr || !pr.landRent) return new Array(horizon).fill(0);
     const pFP = pr.footprint || 1;
     const aFP = a.footprint || 0;
@@ -191,655 +175,573 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
     return pr.landRent.map(v => v * ratio);
   });
 
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 1: Read Me
-  // ═══════════════════════════════════════════════════════════════
-  {
-    const ws = wb.addWorksheet("Read Me", { views: [{ showGridLines: false }], properties: { tabColor: { argb: C.teal } } });
-    setCol(ws, 1, 3); setCol(ws, 2, 95);
-    titleBar(ws, 1, 2, 2, `Asset Program Export — ${projectName}`, `برنامج الأصول`);
+  // Resolve opening year per asset (matches engine logic in cashflow.js:128-151)
+  const openingYears = assets.map(a => {
+    const ph = phases.find(p => p.name === (a.phase || phases[0]?.name || "Phase 1"));
+    if (ph && (ph.completionYear || 0) > 0) return ph.completionYear;
+    if ((a.constrStart || 0) > 0) {
+      const dur = Math.ceil((a.constrDuration || 12) / 12);
+      return startYear + a.constrStart + dur;
+    }
+    return startYear + Math.ceil((a.constrDuration || 12) / 12);
+  });
 
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 1 — Summary
+  // ════════════════════════════════════════════════════════════════════
+  {
+    const ws = wb.addWorksheet("Summary", {
+      views: [{ showGridLines: false }],
+      properties: { tabColor: { argb: C.teal } },
+    });
+    setCol(ws, 1, 3); setCol(ws, 2, 32); setCol(ws, 3, 22); setCol(ws, 4, 6); setCol(ws, 5, 32); setCol(ws, 6, 22);
+
+    titleBar(ws, 1, 2, 6, `${projectName} — Asset Pro Forma`, "البرنامج الاستثماري للأصول");
+
+    // ── Project metadata column (left) ────────────────────────────
+    let r = 3;
+    sectionLabel(ws, r++, 2, 3, "Project / المشروع");
     const meta = [
-      [`Project`,          projectName],
-      [`المشروع`,           projectName],
-      [`Currency / العملة`, currency],
-      [`Start Year / سنة البداية`, startYear],
-      [`Horizon / الأفق`,   horizon + " yrs"],
-      [`Phases / المراحل`,  phases.map(p => p.name).join(", ")],
-      [`Assets / الأصول`,   assets.length],
-      [`Active Scenario / السيناريو`, project?.activeScenario || "Base Case"],
-      [`Generated / تاريخ الإصدار`, new Date().toLocaleString()],
+      ["Currency / العملة",  currency],
+      ["Start Year / سنة البداية", startYear],
+      ["Horizon / الأفق (سنوات)", horizon],
+      ["Phases / عدد المراحل", phases.length],
+      ["Assets / عدد الأصول", assets.length],
+      ["Active Scenario / السيناريو", project?.activeScenario || "Base Case"],
+      ["Soft Cost % / غير مباشرة", softPct],
+      ["Contingency % / احتياطي", contPct],
+      ["Land Type / نوع الأرض", project?.landType || ""],
+      ["Generated / تاريخ الإصدار", new Date().toLocaleDateString()],
     ];
-    let r = 3;
     meta.forEach(([k, v]) => {
-      ws.getCell(r, 2).value = `${k}:  ${v}`;
-      ws.getCell(r, 2).font = { name: FONT_MAIN, size: 10, color: { argb: C.dark } };
-      r++;
-    });
-    r += 1;
-    sectionHeader(ws, r, 2, 2, "Sheets in this workbook / الأوراق في هذا الملف");
-    r += 1;
-    const guide = [
-      ["1. Inputs",               "All per-asset inputs in one table (editable)."],
-      ["2. Geometry",             "Plot/Footprint/Floors/GFA + auto-derived Coverage, FAR, GLA."],
-      ["3. Cost Breakdown",       "Hard cost, basement premium, parking, soft cost, contingency."],
-      ["4. Land",                 "Project-level land type + year-by-year rent schedule."],
-      ["5. CAPEX Schedule",       "Year-by-year CAPEX per asset (engine values)."],
-      ["6. Revenue Schedule",     "Year-by-year revenue per asset (engine values)."],
-      ["7. Land Rent Schedule",   "Land rent allocated per asset by footprint ratio."],
-      ["8. Net Cash Flow",        "Revenue − Land Rent − CAPEX, with IRR + payback per asset."],
-      ["9. Investment Metrics",   "YoC, Cap Rate, Exit Value, Dev Profit/Margin, Break-even rent."],
-      ["10. Phase Summary",       "Aggregates per phase (SUMIF-based, recalculates if values change)."],
-      ["11. Smart Alerts",        "Active Smart-Reviewer alerts (if any)."],
-    ];
-    guide.forEach(([a, b]) => {
-      ws.getCell(r, 2).value = `${a}  —  ${b}`;
-      ws.getCell(r, 2).font = { name: FONT_MAIN, size: 10, color: { argb: C.black } };
+      setCell(ws, r, 2, k, { color: C.grayText, align: "left", indent: 1 });
+      let fmt = null;
+      if (typeof v === "number" && k.includes("%")) fmt = FMT.pct1;
+      else if (typeof v === "number") fmt = FMT.int;
+      setCell(ws, r, 3, v, { fmt, bold: true, color: C.navyText });
       r++;
     });
 
-    r += 1;
-    sectionHeader(ws, r, 2, 2, "Dynamic Formulas / الصيغ الديناميكية");
-    r += 1;
-    const formulaNotes = [
-      "• Subtotals (SUM) on every schedule sheet — change a year's value and the row/column totals update.",
-      "• Per-asset IRR uses Excel's IRR function on the Net Cash Flow row — live recalculation.",
-      "• Phase Summary uses SUMIF — editing CAPEX/Revenue in Inputs updates phase totals.",
-      "• Investment Metrics ratios (Dev Margin, YoC) compute from the values in this workbook.",
-      "• Year-by-year schedules are engine-computed because ramp-up curves, Sale pre-sale +",
-      "  absorption logic, basement premiums, and land-rent allocation are too complex to",
-      "  mirror in spreadsheet cells. If you tweak an Inputs cell, regenerate the workbook",
-      "  from Haseef to get an updated schedule. The summary totals update inside Excel.",
+    // ── Portfolio KPIs (right column) — formula-driven ──────────
+    r = 3;
+    sectionLabel(ws, r++, 5, 6, "Portfolio KPIs / مؤشرات المحفظة");
+    // We'll fill these with formulas that reference the Pro Forma sheet.
+    // Pro Forma sheet has the portfolio totals in known cells; defer until
+    // those addresses are known. For now, drop in computed values from
+    // engine to seed; will overwrite after Pro Forma sheet is built.
+    const totalCapex = consolidated?.totalCapex || 0;
+    const totalRev = consolidated?.totalIncome || 0;
+    const totalLandRent = consolidated?.totalLandRent || 0;
+    const irr = consolidated?.irr;
+    const npv10 = consolidated?.npv10;
+    const npv12 = consolidated?.npv12;
+
+    const kpis = [
+      ["Total CAPEX",          totalCapex,    FMT.int],
+      ["Total Revenue (life)", totalRev,      FMT.int],
+      ["Total Land Rent",      totalLandRent, FMT.int],
+      ["Net Cash Flow",        totalRev - totalLandRent - totalCapex, FMT.int],
+      ["Unlevered IRR",        irr,           FMT.pct1],
+      ["NPV @ 10%",            npv10,         FMT.int],
+      ["NPV @ 12%",            npv12,         FMT.int],
+      ["Cash-on-Cost",         totalCapex > 0 ? (totalRev - totalCapex) / totalCapex : 0, FMT.pct1],
     ];
-    formulaNotes.forEach(line => {
-      ws.getCell(r, 2).value = line;
-      ws.getCell(r, 2).font = { name: FONT_MAIN, size: 9.5, color: { argb: C.grayText } };
+    kpis.forEach(([k, v, fmt]) => {
+      setCell(ws, r, 5, k, { color: C.grayText, align: "left", indent: 1 });
+      setCell(ws, r, 6, v, { fmt, bold: true, color: C.navyText });
       r++;
+    });
+
+    // ── Phase summary (bottom) ─────────────────────────────────
+    r += 2;
+    sectionLabel(ws, r++, 2, 6, "Phases / المراحل");
+    tableHeader(ws, r++, ["#", "Phase", "Opening", "Assets", "CAPEX", "Revenue"]);
+    phases.forEach((ph, i) => {
+      const pIdx = assets.map((a, idx) => a.phase === ph.name ? idx : -1).filter(idx => idx >= 0);
+      const pCapex = pIdx.reduce((s, idx) => s + (schedules[idx]?.totalCapex || 0), 0);
+      const pRev   = pIdx.reduce((s, idx) => s + (schedules[idx]?.totalRevenue || 0), 0);
+      setCell(ws, r, 1, "", {});
+      setCell(ws, r, 2, ph.name, { color: C.dark, bold: true, align: "left", indent: 1 });
+      setCell(ws, r, 3, ph.completionYear || "", { fmt: FMT.year });
+      setCell(ws, r, 4, pIdx.length, { fmt: FMT.int });
+      setCell(ws, r, 5, pCapex, { fmt: FMT.int });
+      setCell(ws, r, 6, pRev, { fmt: FMT.int });
+      r++;
+    });
+    // Phase totals (formula)
+    const phFirstR = r - phases.length;
+    const phLastR = r - 1;
+    setCell(ws, r, 2, "Total", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 3, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 4, { formula: `SUM(D${phFirstR}:D${phLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 5, { formula: `SUM(E${phFirstR}:E${phLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, r, 6, { formula: `SUM(F${phFirstR}:F${phLastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 2 — Inputs (editable, yellow background)
+  // ════════════════════════════════════════════════════════════════════
+  // Column layout:
+  //   A: #     B: Phase   C: Name      D: Rev Type   E: GFA
+  //   F: Eff%  G: Leasable (formula)   H: Lease Rate I: Occ%
+  //   J: EBITDA  K: Sale Price/m²      L: Pre-Sale%  M: Absorption
+  //   N: Comm%  O: Cost/m²  P: Total CAPEX (formula)
+  //   Q: Build Mo  R: Opening Year  S: Ramp Yrs  T: Esc%
+  //
+  // Range constants used by Pro Forma sheet to reference inputs.
+  const INPUTS_FIRST_ROW = 4; // header on row 3
+  const INPUTS_LAST_ROW  = INPUTS_FIRST_ROW + assets.length - 1;
+  // Column letters for cross-sheet references:
+  const COL = { phase:"B", name:"C", revType:"D", gfa:"E", eff:"F", leasable:"G", leaseRate:"H", occ:"I", ebitda:"J", salePrice:"K", preSale:"L", absorption:"M", commission:"N", costPerSqm:"O", totalCapex:"P", buildMo:"Q", openingYr:"R", ramp:"S", esc:"T" };
+
+  {
+    const ws = wb.addWorksheet("Inputs", {
+      views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 3 }],
+      properties: { tabColor: { argb: "FF3B82F6" } },
+    });
+    const widths = [4, 12, 22, 11, 11, 9, 11, 11, 9, 13, 11, 9, 10, 9, 10, 13, 10, 11, 9, 10];
+    widths.forEach((w, i) => setCol(ws, i + 1, w));
+    titleBar(ws, 1, 1, widths.length, "Asset Inputs", "مدخلات الأصول");
+
+    const headerNote = "Yellow cells are EDITABLE. Blue cells are FORMULAS (auto-calc). Edit any yellow cell and the Pro Forma sheet updates.";
+    ws.mergeCells(2, 1, 2, widths.length);
+    const noteCell = ws.getCell(2, 1);
+    noteCell.value = headerNote;
+    noteCell.font = { name: FONT, size: 9, italic: true, color: { argb: C.grayText } };
+    noteCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    noteCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.lightGray } };
+    ws.getRow(2).height = 18;
+
+    tableHeader(ws, 3, [
+      "#",
+      "Phase\nالمرحلة",
+      "Asset Name\nاسم الأصل",
+      "Rev Type\nنوع الإيراد",
+      "GFA (m²)",
+      "Eff %",
+      "Leasable\n(formula)",
+      "Lease Rate\nإيجار /م²",
+      "Occ %",
+      "EBITDA /yr",
+      "Sale Price /m²",
+      "Pre-Sale %",
+      "Absorption (yr)",
+      "Commission %",
+      "Cost /m²",
+      "Total CAPEX\n(formula)",
+      "Build (mo)",
+      "Opening Yr",
+      "Ramp (yr)",
+      "Esc %",
+    ]);
+
+    assets.forEach((a, i) => {
+      const r = INPUTS_FIRST_ROW + i;
+      const yellowOpts = { fmt: null, bg: C.inputBg, align: "right" };
+      const blueOpts   = { fmt: null, bg: C.derivedBg, color: C.blueDark, bold: true, align: "right" };
+
+      setCell(ws, r, 1, i + 1, { color: C.grayText, align: "center" });
+      setCell(ws, r, 2, a.phase || "", { ...yellowOpts, align: "left", indent: 1 });
+      setCell(ws, r, 3, a.name || `Asset ${i+1}`, { ...yellowOpts, align: "left", indent: 1 });
+      setCell(ws, r, 4, a.revType || "Lease", { ...yellowOpts, align: "center" });
+      setCell(ws, r, 5, n(a.gfa), { ...yellowOpts, fmt: FMT.int });
+      setCell(ws, r, 6, n(a.efficiency)/100, { ...yellowOpts, fmt: FMT.pct0 });
+      // Leasable = GFA × Efficiency (formula)
+      setCell(ws, r, 7, { formula: `${COL.gfa}${r}*${COL.eff}${r}` }, { ...blueOpts, fmt: FMT.int });
+      setCell(ws, r, 8, n(a.leaseRate), { ...yellowOpts, fmt: FMT.int });
+      setCell(ws, r, 9, n(a.stabilizedOcc != null ? a.stabilizedOcc : 100)/100, { ...yellowOpts, fmt: FMT.pct0 });
+      setCell(ws, r, 10, n(a.opEbitda), { ...yellowOpts, fmt: FMT.int });
+      setCell(ws, r, 11, n(a.salePricePerSqm), { ...yellowOpts, fmt: FMT.int });
+      setCell(ws, r, 12, n(a.preSalePct)/100, { ...yellowOpts, fmt: FMT.pct0 });
+      setCell(ws, r, 13, n(a.absorptionYears) || "", { ...yellowOpts, fmt: FMT.int });
+      setCell(ws, r, 14, n(a.commissionPct)/100, { ...yellowOpts, fmt: FMT.pct0 });
+      setCell(ws, r, 15, n(a.costPerSqm), { ...yellowOpts, fmt: FMT.int });
+      // Total CAPEX = GFA × Cost/m² × (1 + Soft%) × (1 + Cont%)
+      // (matches engine's legacy fast path; ignores basement/parking overrides
+      //  for simplicity — the Cost Detail sheet shows the full breakdown)
+      setCell(ws, r, 16, { formula: `${COL.gfa}${r}*${COL.costPerSqm}${r}*(1+${softPct})*(1+${contPct})` }, { ...blueOpts, fmt: FMT.int });
+      setCell(ws, r, 17, n(a.constrDuration) || 12, { ...yellowOpts, fmt: FMT.int });
+      // Opening Year — formula-derived from project context (engine logic)
+      setCell(ws, r, 18, openingYears[i], { ...blueOpts, fmt: FMT.year });
+      setCell(ws, r, 19, n(a.rampUpYears) || 1, { ...yellowOpts, fmt: FMT.int });
+      setCell(ws, r, 20, n(a.escalation)/100, { ...yellowOpts, fmt: FMT.pct1 });
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 2: Inputs
-  // ═══════════════════════════════════════════════════════════════
-  const inputsCols = [
-    { key: "num",       label: "#",                                  w: 4 },
-    { key: "phase",     label: "Phase\nالمرحلة",                       w: 12 },
-    { key: "name",      label: "Asset Name\nاسم الأصل",                w: 22 },
-    { key: "code",      label: "Code\nالرمز",                          w: 8 },
-    { key: "category",  label: "Category\nالتصنيف",                     w: 14 },
-    { key: "assetType", label: "Asset Type\nنوع الأصل",                 w: 18 },
-    { key: "revType",   label: "Rev Type\nنوع الإيراد",                 w: 10 },
-    { key: "gfa",       label: "GFA (m²)\nالمساحة الإجمالية",            w: 11, fmt: FMT.int },
-    { key: "efficiency",label: "Efficiency %\nالكفاءة",                 w: 10, fmt: FMT.pct0, transform: v => n(v)/100 },
-    { key: "leaseRate", label: "Lease Rate\nإيجار /م²",                  w: 11, fmt: FMT.int },
-    { key: "opEbitda",  label: "EBITDA /yr\nأرباح تشغيلية",              w: 13, fmt: FMT.int },
-    { key: "salePricePerSqm", label: "Sale Price /m²\nسعر البيع",      w: 11, fmt: FMT.int },
-    { key: "absorptionYears", label: "Absorption\nاستيعاب",             w: 8 },
-    { key: "preSalePct", label: "Pre-Sale %\nبيع مسبق",                 w: 9, fmt: FMT.pct0, transform: v => n(v)/100 },
-    { key: "commissionPct", label: "Commission %\nعمولة",               w: 9, fmt: FMT.pct0, transform: v => n(v)/100 },
-    { key: "stabilizedOcc", label: "Occupancy %\nالإشغال",              w: 10, fmt: FMT.pct0, transform: v => n(v)/100 },
-    { key: "rampUpYears", label: "Ramp-Up (yr)\nسنوات النمو",            w: 9 },
-    { key: "escalation", label: "Escalation %\nزيادة سنوية",             w: 10, fmt: FMT.pct1, transform: v => n(v)/100 },
-    { key: "costPerSqm", label: "Cost /m²\nتكلفة",                      w: 10, fmt: FMT.int },
-    { key: "constrDuration", label: "Build (mo)\nمدة البناء",            w: 10 },
-    { key: "plotArea",  label: "Plot Area\nمساحة الأرض",                w: 11, fmt: FMT.int },
-    { key: "footprint", label: "Footprint\nالمسطح البنائي",              w: 11, fmt: FMT.int },
-  ];
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 3 — Pro Forma (year-by-year, formula-driven)
+  // ════════════════════════════════════════════════════════════════════
+  // Per asset: 4 rows
+  //   1. Revenue       = formula
+  //   2. Land Rent     = engine value (logic too complex for formulas)
+  //   3. CAPEX         = formula
+  //   4. Net Cash Flow = Revenue − Land Rent − CAPEX
+  // Per asset right side: Total NCF + IRR (Excel formula) + Payback
+  //
+  // Column layout:
+  //   A: #   B: Asset   C: Item   D: Total   E: IRR   F: Payback
+  //   G..: Year 1 .. Year N
   {
-    const ws = wb.addWorksheet("Inputs", { views: [{ showGridLines: false, state: "frozen", xSplit: 4, ySplit: 3 }], properties: { tabColor: { argb: "FF3B82F6" } } });
-    inputsCols.forEach((c, i) => setCol(ws, i + 1, c.w));
-    titleBar(ws, 1, 1, inputsCols.length, "Asset Inputs", "مدخلات الأصول");
-    tableHeader(ws, 2, inputsCols.map(c => c.label));
+    const ws = wb.addWorksheet("Pro Forma", {
+      views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 4 }],
+      properties: { tabColor: { argb: "FF8B5CF6" } },
+    });
+    setCol(ws, 1, 4); setCol(ws, 2, 22); setCol(ws, 3, 14); setCol(ws, 4, 14); setCol(ws, 5, 9); setCol(ws, 6, 10);
+    for (let y = 0; y < horizon; y++) setCol(ws, 7 + y, 12);
 
+    titleBar(ws, 1, 1, 6 + horizon, "Pro Forma (formula-driven)", "البرنامج المالي السنوي");
+
+    const noteText = "Revenue, CAPEX, and Net CF cells are formulas referencing the Inputs sheet. Edit a value there and watch this sheet recalc. Land Rent uses engine-allocated values (footprint share). Year 1 = " + startYear + ".";
+    ws.mergeCells(2, 1, 2, 6 + horizon);
+    const nc = ws.getCell(2, 1);
+    nc.value = noteText;
+    nc.font = { name: FONT, size: 9, italic: true, color: { argb: C.grayText } };
+    nc.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    nc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.lightGray } };
+    ws.getRow(2).height = 18;
+
+    tableHeader(ws, 3, ["#", "Asset / الأصل", "Item / البند", "Total", "IRR", "Payback (yr)", ...yrs.map(y => startYear + y)]);
+
+    // Per-asset 4-row block
+    const yearStartCol = 7;
+    const yearEndCol = 6 + horizon;
+    const yearStartL = colLetter(yearStartCol);
+    const yearEndL = colLetter(yearEndCol);
+
+    // Track row positions for portfolio totals
+    const ncfRowPerAsset = []; // row index of "Net Cash Flow" line per asset
+
+    let curRow = 4;
     assets.forEach((a, i) => {
-      const r = 3 + i;
-      const vals = inputsCols.map(c => {
-        if (c.key === "num") return i + 1;
-        const raw = a[c.key];
-        if (c.transform) return c.transform(raw);
-        return (raw === undefined || raw === null) ? "" : raw;
+      const inputsRow = INPUTS_FIRST_ROW + i;
+      // Reference to inputs (with sheet prefix)
+      const ref = (col) => `Inputs!${col}${inputsRow}`;
+      const revType = a.revType || "Lease";
+
+      const blockBg = i % 2 === 0 ? null : C.lightGray;
+
+      // Row 1 — Revenue (formula)
+      const revRow = curRow;
+      setCell(ws, revRow, 1, i + 1, { color: C.grayText, align: "center", bg: blockBg });
+      setCell(ws, revRow, 2, a.name || `Asset ${i+1}`, { bold: true, color: C.dark, align: "left", indent: 1, bg: blockBg });
+      setCell(ws, revRow, 3, "Revenue / إيراد", { color: C.greenDark, bold: true, align: "left", indent: 1, bg: blockBg });
+
+      yrs.forEach(y => {
+        const yearAbs = startYear + y;
+        const yearOffset = `(${yearAbs}-${ref("openingYr")})`; // 0 in opening year, 1 next year, etc.
+        // Lease formula:
+        //   IF(yearAbs >= openingYr, Leasable * LeaseRate * Occ * MIN(1,(offset+1)/Ramp) * (1+Esc)^offset, 0)
+        // Operating formula: same shape but using EBITDA (no leasable*rate*occ — EBITDA already absorbs them)
+        // Sale formula:
+        //   pre-sale % goes in year (openingYr - 1) — last build year
+        //   remaining (1 - pre-sale%) * (1 - commission%) split over 'absorption' years starting at openingYr
+        let f;
+        if (revType === "Lease") {
+          f = `IF(${yearAbs}>=${ref("openingYr")},${ref("leasable")}*${ref("leaseRate")}*${ref("occ")}*MIN(1,(${yearOffset}+1)/MAX(1,${ref("ramp")}))*(1+${ref("esc")})^${yearOffset},0)`;
+        } else if (revType === "Operating") {
+          f = `IF(${yearAbs}>=${ref("openingYr")},${ref("ebitda")}*${ref("occ")}*MIN(1,(${yearOffset}+1)/MAX(1,${ref("ramp")}))*(1+${ref("esc")})^${yearOffset},0)`;
+        } else if (revType === "Sale") {
+          // Sellable = GFA × Eff (engine uses 100% if eff is 0; we honour the input here)
+          // Pre-sale lump in year (openingYr − 1), absorption split year openingYr to openingYr + absorption − 1
+          // commission netted from totals
+          const totalSale = `${ref("gfa")}*IF(${ref("eff")}=0,1,${ref("eff")})*${ref("salePrice")}*(1-${ref("commission")})`;
+          const preSaleLump = `${totalSale}*${ref("preSale")}`;
+          const absorptionShare = `((${totalSale}*(1-${ref("preSale")}))/MAX(1,${ref("absorption")}))`;
+          // Pre-sale year = openingYr - 1
+          // Absorption years = openingYr .. openingYr + absorption - 1
+          f = `IF(${yearAbs}=(${ref("openingYr")}-1),${preSaleLump},IF(AND(${yearAbs}>=${ref("openingYr")},${yearAbs}<${ref("openingYr")}+${ref("absorption")}),${absorptionShare},0))`;
+        } else {
+          f = "0";
+        }
+        setCell(ws, revRow, yearStartCol + y, { formula: f }, { fmt: FMT.int, color: C.greenDark, bg: blockBg });
       });
-      const fmts = inputsCols.map(c => c.fmt || null);
-      writeRow(ws, r, vals, { numFmts: fmts, alternating: true, rowIdx: i });
-    });
-    // Store range info for cross-sheet references
-    ws.inputsFirstDataRow = 3;
-    ws.inputsLastDataRow = 3 + assets.length - 1;
-  }
+      // Total + IRR + Payback for revenue row — only Total
+      setCell(ws, revRow, 4, { formula: `SUM(${yearStartL}${revRow}:${yearEndL}${revRow})` }, { fmt: FMT.int, bold: true, color: C.greenDark, bg: blockBg });
+      setCell(ws, revRow, 5, "", { bg: blockBg });
+      setCell(ws, revRow, 6, "", { bg: blockBg });
+      curRow++;
 
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 3: Geometry
-  // ═══════════════════════════════════════════════════════════════
-  {
-    const ws = wb.addWorksheet("Geometry", { views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 3 }], properties: { tabColor: { argb: "FF06B6D4" } } });
-    const cols = [
-      { label: "#", w: 4 },
-      { label: "Asset\nالأصل", w: 22 },
-      { label: "Phase\nالمرحلة", w: 10 },
-      { label: "Plot Area (m²)\nمساحة الأرض", w: 13 },
-      { label: "Footprint (m²)\nالمسطح", w: 13 },
-      { label: "Floors Above\nأدوار فوق الأرض", w: 11 },
-      { label: "Basement\nأدوار بيسمنت", w: 11 },
-      { label: "GFA (m²)\nإجمالي البناء", w: 13 },
-      { label: "Efficiency\nالكفاءة", w: 10 },
-      { label: "GLA (m²)\nمساحة تأجيرية", w: 13 },
-      { label: "Coverage %\nنسبة التغطية", w: 11 },
-      { label: "FAR\nمعامل البناء", w: 9 },
-      { label: "Parking Area\nمواقف", w: 11 },
-    ];
-    cols.forEach((c, i) => setCol(ws, i + 1, c.w));
-    titleBar(ws, 1, 1, cols.length, "Geometry & Derivations", "الهندسة والمساحات المشتقة");
-    tableHeader(ws, 2, cols.map(c => c.label));
+      // Row 2 — Land Rent (engine value)
+      const lrRow = curRow;
+      const lr = assetLandRent[i] || new Array(horizon).fill(0);
+      setCell(ws, lrRow, 1, "", { bg: blockBg });
+      setCell(ws, lrRow, 2, "", { bg: blockBg });
+      setCell(ws, lrRow, 3, "Land Rent / إيجار أرض", { color: C.red, align: "left", indent: 1, bg: blockBg });
+      yrs.forEach(y => {
+        setCell(ws, lrRow, yearStartCol + y, n(lr[y]) || "", { fmt: FMT.int, color: C.red, bg: blockBg });
+      });
+      setCell(ws, lrRow, 4, { formula: `SUM(${yearStartL}${lrRow}:${yearEndL}${lrRow})` }, { fmt: FMT.int, bold: true, color: C.red, bg: blockBg });
+      setCell(ws, lrRow, 5, "", { bg: blockBg });
+      setCell(ws, lrRow, 6, "", { bg: blockBg });
+      curRow++;
 
-    assets.forEach((a, i) => {
-      const r = 3 + i;
-      const plot = n(a.plotArea), fp = n(a.footprint), gfa = n(a.gfa), eff = n(a.efficiency);
-      const gla = a.gla || (gfa * eff / 100);
-      const coverage = plot > 0 ? fp / plot : null;
-      const far = plot > 0 ? gfa / plot : null;
-      const vals = [
-        i + 1, a.name || `Asset ${i+1}`, a.phase || "",
-        plot, fp,
-        n(a.floorsAboveGround) || "", n(a.basementLevels) || "",
-        gfa, eff/100, gla, coverage, far,
-        n(a.parkingArea) || "",
-      ];
-      const fmts = [null, null, null, FMT.int, FMT.int, FMT.int, FMT.int, FMT.int, FMT.pct0, FMT.int, FMT.pct0, "0.00", FMT.int];
-      writeRow(ws, r, vals, { numFmts: fmts, alternating: true, rowIdx: i });
+      // Row 3 — CAPEX (formula)
+      const capRow = curRow;
+      setCell(ws, capRow, 1, "", { bg: blockBg });
+      setCell(ws, capRow, 2, "", { bg: blockBg });
+      setCell(ws, capRow, 3, "CAPEX / تكاليف", { color: C.red, align: "left", indent: 1, bg: blockBg });
+      yrs.forEach(y => {
+        const yearAbs = startYear + y;
+        // Construction window: yearAbs is in [openingYr - durYears, openingYr - 1]
+        // durYears = CEILING(buildMo / 12)
+        // For each construction year, CAPEX share = TotalCAPEX × MIN(12, buildMo - yrOffset×12) / buildMo
+        // yrOffset = yearAbs - (openingYr - durYears)
+        const durYrs = `CEILING(${ref("buildMo")}/12,1)`;
+        const cStart = `(${ref("openingYr")}-${durYrs})`;
+        const yrOffset = `(${yearAbs}-${cStart})`;
+        const monthsThisYear = `MIN(12,MAX(0,${ref("buildMo")}-${yrOffset}*12))`;
+        const f = `IF(AND(${yearAbs}>=${cStart},${yearAbs}<${ref("openingYr")},${ref("buildMo")}>0),${ref("totalCapex")}*${monthsThisYear}/${ref("buildMo")},0)`;
+        setCell(ws, capRow, yearStartCol + y, { formula: f }, { fmt: FMT.int, color: C.red, bg: blockBg });
+      });
+      setCell(ws, capRow, 4, { formula: `SUM(${yearStartL}${capRow}:${yearEndL}${capRow})` }, { fmt: FMT.int, bold: true, color: C.red, bg: blockBg });
+      setCell(ws, capRow, 5, "", { bg: blockBg });
+      setCell(ws, capRow, 6, "", { bg: blockBg });
+      curRow++;
 
-      // Highlight warnings (coverage > 80% or FAR > 6) — rule of thumb
-      if (coverage !== null && coverage > 0.8) {
-        ws.getCell(r, 11).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.amberBg } };
-      }
-      if (far !== null && far > 6) {
-        ws.getCell(r, 12).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.amberBg } };
-      }
-    });
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 4: Cost Breakdown
-  // ═══════════════════════════════════════════════════════════════
-  {
-    const ws = wb.addWorksheet("Cost Breakdown", { views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 3 }], properties: { tabColor: { argb: "FFF59E0B" } } });
-    const cols = [
-      { label: "#", w: 4 },
-      { label: "Asset\nالأصل", w: 22 },
-      { label: "Phase\nالمرحلة", w: 10 },
-      { label: "Cost /m²\nتكلفة", w: 11 },
-      { label: "Above Ground\nفوق الأرض", w: 13 },
-      { label: "Basement\nبيسمنت", w: 12 },
-      { label: "Parking\nمواقف", w: 11 },
-      { label: "Hard Cost\nصلبة", w: 13 },
-      { label: "Soft %\nغير مباشرة", w: 10 },
-      { label: "Soft Cost\nغير مباشرة", w: 13 },
-      { label: "Cont. %\nاحتياطي", w: 10 },
-      { label: "Contingency\nاحتياطي", w: 13 },
-      { label: "Subtotal\nمجموع", w: 13 },
-      { label: "Scen. Mult\nمضاعف", w: 10 },
-      { label: "Total CAPEX\nإجمالي CAPEX", w: 14 },
-      { label: "Avg /m²\nمتوسط", w: 10 },
-    ];
-    cols.forEach((c, i) => setCol(ws, i + 1, c.w));
-    titleBar(ws, 1, 1, cols.length, "Cost Breakdown", "تفصيل التكلفة الرأسمالية");
-    tableHeader(ws, 2, cols.map(c => c.label));
-
-    let totHard = 0, totSoft = 0, totCont = 0, totTotal = 0, totGfa = 0;
-    assets.forEach((a, i) => {
-      const bd = breakdowns[i];
-      const r = 3 + i;
-      const softPct = (a.softCostPctOverride != null ? a.softCostPctOverride : (project.softCostPct || 0));
-      const contPct = (a.contingencyPctOverride != null ? a.contingencyPctOverride : (project.contingencyPct || 0));
-      const gfa = n(a.gfa);
-      const avgPerSqm = bd && gfa > 0 ? bd.total / gfa : null;
-      const vals = [
-        i + 1, a.name || `Asset ${i+1}`, a.phase || "",
-        n(a.costPerSqm),
-        bd?.hardCostAbove || 0,
-        bd?.hardCostBasement || 0,
-        bd?.parkingCost || 0,
-        bd?.hardCost || 0,
-        softPct / 100,
-        bd?.softCost || 0,
-        contPct / 100,
-        bd?.contingency || 0,
-        bd?.subtotal || 0,
-        bd?.scenarioMult || 1,
-        bd?.total || 0,
-        avgPerSqm,
-      ];
-      const fmts = [null, null, null, FMT.int, FMT.int, FMT.int, FMT.int, FMT.int, FMT.pct1, FMT.int, FMT.pct1, FMT.int, FMT.int, "0.00", FMT.int, FMT.int];
-      writeRow(ws, r, vals, { numFmts: fmts, alternating: true, rowIdx: i });
-      totHard += bd?.hardCost || 0;
-      totSoft += bd?.softCost || 0;
-      totCont += bd?.contingency || 0;
-      totTotal += bd?.total || 0;
-      totGfa += gfa;
-    });
-    // Total row
-    const totRow = 3 + assets.length;
-    const firstR = 3, lastR = 3 + assets.length - 1;
-    const totalVals = [
-      "", "Total / الإجمالي", "",
-      "",
-      { formula: `SUM(E${firstR}:E${lastR})` },
-      { formula: `SUM(F${firstR}:F${lastR})` },
-      { formula: `SUM(G${firstR}:G${lastR})` },
-      { formula: `SUM(H${firstR}:H${lastR})` },
-      "",
-      { formula: `SUM(J${firstR}:J${lastR})` },
-      "",
-      { formula: `SUM(L${firstR}:L${lastR})` },
-      { formula: `SUM(M${firstR}:M${lastR})` },
-      "",
-      { formula: `SUM(O${firstR}:O${lastR})` },
-      totGfa > 0 ? { formula: `O${totRow}/SUMIF(H${firstR}:H${lastR},">0",H${firstR}:H${lastR})*0+O${totRow}/${totGfa}` } : "",
-    ];
-    totalRow(ws, totRow, totalVals, [null, null, null, null, FMT.int, FMT.int, FMT.int, FMT.int, null, FMT.int, null, FMT.int, FMT.int, null, FMT.int, FMT.int]);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 5: Land
-  // ═══════════════════════════════════════════════════════════════
-  {
-    const ws = wb.addWorksheet("Land", { views: [{ showGridLines: false }], properties: { tabColor: { argb: "FF84CC16" } } });
-    setCol(ws, 1, 3); setCol(ws, 2, 26); setCol(ws, 3, 22);
-    for (let i = 0; i < horizon; i++) setCol(ws, 4 + i, 11);
-    titleBar(ws, 1, 1, 3 + horizon, "Land — Project Level", "الأرض — مستوى المشروع");
-
-    const landRows = [
-      ["Land Type / نوع الحيازة", project?.landType || ""],
-      ["Land Area (m²) / المساحة", n(project?.landArea)],
-      ["Land Purchase Price / سعر الشراء", project?.landType === "purchase" ? n(project?.landPurchasePrice) : ""],
-      ["Partner Land Valuation / تقييم الشريك", project?.landType === "partner" ? n(project?.landValuation) : ""],
-      ["Partner Equity %", project?.landType === "partner" ? n(project?.partnerEquityPct)/100 : ""],
-      ["BOT Operation Years", project?.landType === "bot" ? n(project?.botOperationYears) : ""],
-      ["Annual Rent / إيجار سنوي", project?.landType === "lease" ? n(project?.landRentAnnual) : ""],
-      ["Lease Term (yrs) / مدة العقد", project?.landType === "lease" ? n(project?.landRentTerm) : ""],
-      ["Grace Period (yrs) / السماح", project?.landType === "lease" ? n(project?.landRentGrace) : ""],
-      ["Escalation %", project?.landType === "lease" ? n(project?.landRentEscalation)/100 : ""],
-      ["Escalation Every N Yrs", project?.landType === "lease" ? n(project?.landRentEscalationEveryN) : ""],
-      ["Rent /m² /yr (implied)", project?.landType === "lease" && n(project?.landArea) > 0 ? n(project?.landRentAnnual) / n(project?.landArea) : ""],
-    ];
-    let r = 3;
-    landRows.forEach(([label, v]) => {
-      ws.getCell(r, 2).value = label;
-      ws.getCell(r, 2).font = { name: FONT_MAIN, size: 10, color: { argb: C.grayText } };
-      ws.getCell(r, 2).alignment = { indent: 1, vertical: "middle" };
-      const valCell = ws.getCell(r, 3);
-      valCell.value = v;
-      valCell.font = { name: FONT_MAIN, size: 10, bold: true, color: { argb: C.navyText } };
-      valCell.alignment = { horizontal: "right", vertical: "middle" };
-      if (typeof v === "number") {
-        if (label.includes("%")) valCell.numFmt = FMT.pct1;
-        else valCell.numFmt = FMT.int;
-      }
-      r++;
-    });
-    r += 1;
-    sectionHeader(ws, r, 1, 3 + horizon, "Annual Land Rent — Project Total (from engine)");
-    r++;
-    // Year headers
-    ws.getCell(r, 2).value = "Year / السنة";
-    ws.getCell(r, 2).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
-    ws.getCell(r, 2).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.dark } };
-    ws.getCell(r, 2).alignment = { horizontal: "left", indent: 1 };
-    ws.getCell(r, 3).value = "Total";
-    ws.getCell(r, 3).font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
-    ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.dark } };
-    ws.getCell(r, 3).alignment = { horizontal: "center" };
-    yrs.forEach(y => {
-      const cell = ws.getCell(r, 4 + y);
-      cell.value = startYear + y;
-      cell.font = { name: FONT_MAIN, size: 9, bold: true, color: { argb: C.white } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.dark } };
-      cell.alignment = { horizontal: "center" };
-    });
-    ws.getRow(r).height = 20;
-    r++;
-
-    // Land rent row: sum of per-phase land rent for "project total"
-    const projectLandRent = new Array(horizon).fill(0);
-    Object.values(phaseResults).forEach(pr => {
-      if (pr && pr.landRent) pr.landRent.forEach((v, y) => { if (y < horizon) projectLandRent[y] += n(v); });
-    });
-    ws.getCell(r, 2).value = "Land Rent (SAR)";
-    ws.getCell(r, 2).font = { name: FONT_MAIN, size: 10, color: { argb: C.dark } };
-    ws.getCell(r, 2).alignment = { horizontal: "left", indent: 1 };
-    // Total formula
-    const startCol = 4;
-    const endCol = 3 + horizon;
-    ws.getCell(r, 3).value = { formula: `SUM(${colLetter(startCol)}${r}:${colLetter(endCol)}${r})` };
-    ws.getCell(r, 3).font = { name: FONT_MAIN, size: 10, bold: true, color: { argb: C.navyText } };
-    ws.getCell(r, 3).numFmt = FMT.int;
-    ws.getCell(r, 3).fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.blueBg } };
-    ws.getCell(r, 3).alignment = { horizontal: "right" };
-    yrs.forEach(y => {
-      const cell = ws.getCell(r, 4 + y);
-      cell.value = projectLandRent[y] || 0;
-      cell.font = { name: FONT_MAIN, size: 10, color: { argb: C.black } };
-      cell.numFmt = FMT.int;
-      cell.alignment = { horizontal: "right" };
-    });
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // Helper: build a generic per-asset year-by-year matrix sheet
-  // ═══════════════════════════════════════════════════════════════
-  function buildScheduleSheet(title, titleAr, tabColor, getRow) {
-    const ws = wb.addWorksheet(title, {
-      views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 4 }],
-      properties: { tabColor: { argb: tabColor } },
-    });
-    setCol(ws, 1, 4); setCol(ws, 2, 24); setCol(ws, 3, 14);
-    for (let i = 0; i < horizon; i++) setCol(ws, 4 + i, 11);
-    titleBar(ws, 1, 1, 3 + horizon, title, titleAr);
-
-    // Year header row
-    const hdr = ["#", "Asset / الأصل", "Total"].concat(yrs.map(y => startYear + y));
-    tableHeader(ws, 3, hdr);
-    // Build rows
-    const firstR = 4;
-    assets.forEach((a, i) => {
-      const r = firstR + i;
-      const seq = getRow(a, i); // array of length horizon
-      const row = [i + 1, a.name || `Asset ${i+1}`];
-      // Total column = SUM formula across year cells
-      const startColLetter = colLetter(4);
-      const endColLetter = colLetter(3 + horizon);
-      row.push({ formula: `SUM(${startColLetter}${r}:${endColLetter}${r})` });
-      for (let y = 0; y < horizon; y++) row.push(n(seq[y]));
-      const fmts = [null, null, FMT.int, ...new Array(horizon).fill(FMT.int)];
-      writeRow(ws, r, row, { numFmts: fmts, alternating: true, rowIdx: i });
-    });
-    // Total row across assets
-    const totR = firstR + assets.length;
-    const totRow = ["", "Total Portfolio / الإجمالي", { formula: `SUM(${colLetter(3)}${firstR}:${colLetter(3)}${firstR + assets.length - 1})` }];
-    for (let y = 0; y < horizon; y++) {
-      const col = colLetter(4 + y);
-      totRow.push({ formula: `SUM(${col}${firstR}:${col}${firstR + assets.length - 1})` });
-    }
-    totalRow(ws, totR, totRow, [null, null, FMT.int, ...new Array(horizon).fill(FMT.int)]);
-    return { ws, firstR, lastR: firstR + assets.length - 1, totR };
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // SHEETS 6-8: CAPEX / Revenue / Land Rent schedules
-  // ═══════════════════════════════════════════════════════════════
-  const capexSheet   = buildScheduleSheet("CAPEX Schedule",   "جدول التكاليف الرأسمالية", "FFEF4444", (_, i) => schedules[i]?.capexSchedule || new Array(horizon).fill(0));
-  const revSheet     = buildScheduleSheet("Revenue Schedule", "جدول الإيرادات",         "FF16A34A", (_, i) => schedules[i]?.revenueSchedule || new Array(horizon).fill(0));
-  const rentSheet    = buildScheduleSheet("Land Rent Schedule","جدول إيجار الأرض",      "FFF59E0B", (_, i) => assetLandRent[i]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 9: Net Cash Flow + IRR + Payback
-  // ═══════════════════════════════════════════════════════════════
-  {
-    const ws = wb.addWorksheet("Net Cash Flow", {
-      views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 4 }],
-      properties: { tabColor: { argb: C.indigo } },
-    });
-    setCol(ws, 1, 4); setCol(ws, 2, 24); setCol(ws, 3, 14); setCol(ws, 4, 11); setCol(ws, 5, 11);
-    for (let i = 0; i < horizon; i++) setCol(ws, 6 + i, 11);
-    titleBar(ws, 1, 1, 5 + horizon, "Net Cash Flow + IRR + Payback", "صافي التدفق النقدي + IRR");
-
-    const hdr = ["#", "Asset / الأصل", "Total NCF", "IRR", "Payback (yr)"].concat(yrs.map(y => startYear + y));
-    tableHeader(ws, 3, hdr);
-
-    const firstR = 4;
-    const cfRowStart = firstR;
-    const cfRowEnd = firstR + assets.length - 1;
-    const yearStartCol = 6;
-    const yearEndCol = 5 + horizon;
-
-    assets.forEach((a, i) => {
-      const r = firstR + i;
-      const rev = schedules[i]?.revenueSchedule || new Array(horizon).fill(0);
-      const cap = schedules[i]?.capexSchedule || new Array(horizon).fill(0);
-      const lr  = assetLandRent[i] || new Array(horizon).fill(0);
-
-      const netCF = yrs.map(y => n(rev[y]) - n(lr[y]) - n(cap[y]));
-      const irr = calcIRR(netCF);
-      // Simple payback: first year cumCF >= 0 after an outflow
-      let cum = 0, paybackYr = null, spent = false;
+      // Row 4 — Net CF
+      const ncfRow = curRow;
+      ncfRowPerAsset.push(ncfRow);
+      setCell(ws, ncfRow, 1, "", { bg: C.blueBg, border: "totalTop" });
+      setCell(ws, ncfRow, 2, "", { bg: C.blueBg, border: "totalTop" });
+      setCell(ws, ncfRow, 3, "Net Cash Flow / صافي التدفق", { bold: true, color: C.navyText, align: "left", indent: 1, bg: C.blueBg, border: "totalTop" });
+      yrs.forEach(y => {
+        const col = colLetter(yearStartCol + y);
+        const f = `${col}${revRow}-${col}${lrRow}-${col}${capRow}`;
+        setCell(ws, ncfRow, yearStartCol + y, { formula: f }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+      });
+      // Total NCF
+      setCell(ws, ncfRow, 4, { formula: `SUM(${yearStartL}${ncfRow}:${yearEndL}${ncfRow})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+      // IRR (formula)
+      setCell(ws, ncfRow, 5, { formula: `IFERROR(IRR(${yearStartL}${ncfRow}:${yearEndL}${ncfRow}),"—")` }, { fmt: FMT.pct1, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+      // Payback (compute static — first year cumulative >= 0)
+      const rev = schedules[i]?.revenueSchedule || [];
+      const cap = schedules[i]?.capexSchedule || [];
+      let cum = 0, payback = "—", spent = false;
       for (let y = 0; y < horizon; y++) {
-        cum += netCF[y];
-        if (netCF[y] < 0) spent = true;
-        if (spent && cum >= 0 && paybackYr === null) { paybackYr = y + 1; break; }
+        const ncf = (rev[y] || 0) - (lr[y] || 0) - (cap[y] || 0);
+        cum += ncf;
+        if (ncf < 0) spent = true;
+        if (spent && cum >= 0 && payback === "—") { payback = y + 1; break; }
       }
+      setCell(ws, ncfRow, 6, payback, { fmt: typeof payback === "number" ? FMT.int : null, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+      curRow++;
 
-      const startLetter = colLetter(yearStartCol);
-      const endLetter = colLetter(yearEndCol);
-      // Row: [i+1, name, total SUM formula, IRR formula, payback, year values...]
-      const row = [
-        i + 1,
-        a.name || `Asset ${i+1}`,
-        { formula: `SUM(${startLetter}${r}:${endLetter}${r})` },
-        { formula: `IFERROR(IRR(${startLetter}${r}:${endLetter}${r}),"—")` },
-        paybackYr != null ? paybackYr : "—",
-        ...netCF,
-      ];
-      const fmts = [null, null, FMT.int, FMT.pct1, null, ...new Array(horizon).fill(FMT.int)];
-      writeRow(ws, r, row, { numFmts: fmts, alternating: true, rowIdx: i });
+      // Spacer row (visual separator)
+      curRow++;
     });
 
-    // Portfolio total row: column-wise SUM, then IRR of the totals
-    const totR = cfRowEnd + 1;
-    const startL = colLetter(yearStartCol);
-    const endL = colLetter(yearEndCol);
-    const totRow = [
-      "", "Portfolio / المحفظة",
-      { formula: `SUM(C${cfRowStart}:C${cfRowEnd})` },
-      { formula: `IFERROR(IRR(${startL}${totR}:${endL}${totR}),"—")` },
-      "",
-    ];
-    for (let y = 0; y < horizon; y++) {
+    // ── Portfolio totals ─────────────────────────────────────────
+    sectionLabel(ws, curRow++, 1, 6 + horizon, "Portfolio / المحفظة الكلية");
+    const pfRevRow = curRow;
+    const pfLrRow = curRow + 1;
+    const pfCapRow = curRow + 2;
+    const pfNcfRow = curRow + 3;
+
+    // Sum revenues (every 4th-from-block first row: revenue rows are at ncfRow - 3)
+    const revRows = ncfRowPerAsset.map(r => r - 3);
+    const lrRows = ncfRowPerAsset.map(r => r - 2);
+    const capRows = ncfRowPerAsset.map(r => r - 1);
+    const ncfRows = ncfRowPerAsset;
+
+    const buildPortfolioRow = (rowIdx, label, color, sumRows) => {
+      setCell(ws, rowIdx, 1, "", { bg: C.blueBg });
+      setCell(ws, rowIdx, 2, "Portfolio", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.blueBg });
+      setCell(ws, rowIdx, 3, label, { bold: true, color, align: "left", indent: 1, bg: C.blueBg });
+      yrs.forEach(y => {
+        const col = colLetter(yearStartCol + y);
+        const refs = sumRows.map(r => `${col}${r}`).join(",");
+        setCell(ws, rowIdx, yearStartCol + y, { formula: `SUM(${refs})` }, { fmt: FMT.int, bold: true, color, bg: C.blueBg });
+      });
+      // Total column
+      const refsCol4 = sumRows.map(r => `D${r}`).join(",");
+      setCell(ws, rowIdx, 4, { formula: `SUM(${refsCol4})` }, { fmt: FMT.int, bold: true, color, bg: C.blueBg });
+      setCell(ws, rowIdx, 5, "", { bg: C.blueBg });
+      setCell(ws, rowIdx, 6, "", { bg: C.blueBg });
+    };
+
+    buildPortfolioRow(pfRevRow, "Revenue / إيراد", C.greenDark, revRows);
+    buildPortfolioRow(pfLrRow, "Land Rent / إيجار أرض", C.red, lrRows);
+    buildPortfolioRow(pfCapRow, "CAPEX / تكاليف", C.red, capRows);
+
+    // Net CF: difference of the other portfolio rows (so it stays in sync if you re-edit anywhere)
+    setCell(ws, pfNcfRow, 1, "", { bg: C.amberBg, border: "totalTop" });
+    setCell(ws, pfNcfRow, 2, "Portfolio", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.amberBg, border: "totalTop" });
+    setCell(ws, pfNcfRow, 3, "Net Cash Flow / صافي", { bold: true, color: C.navyText, align: "left", indent: 1, bg: C.amberBg, border: "totalTop" });
+    yrs.forEach(y => {
       const col = colLetter(yearStartCol + y);
-      totRow.push({ formula: `SUM(${col}${cfRowStart}:${col}${cfRowEnd})` });
-    }
-    totalRow(ws, totR, totRow, [null, null, FMT.int, FMT.pct1, null, ...new Array(horizon).fill(FMT.int)]);
+      const f = `${col}${pfRevRow}-${col}${pfLrRow}-${col}${pfCapRow}`;
+      setCell(ws, pfNcfRow, yearStartCol + y, { formula: f }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
+    });
+    setCell(ws, pfNcfRow, 4, { formula: `D${pfRevRow}-D${pfLrRow}-D${pfCapRow}` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
+    // Portfolio IRR
+    setCell(ws, pfNcfRow, 5, { formula: `IFERROR(IRR(${yearStartL}${pfNcfRow}:${yearEndL}${pfNcfRow}),"—")` }, { fmt: FMT.pct1, bold: true, color: C.navyText, bg: C.amberBg, border: "totalTop" });
+    setCell(ws, pfNcfRow, 6, "", { bg: C.amberBg, border: "totalTop" });
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 10: Investment Metrics
-  // ═══════════════════════════════════════════════════════════════
-  const CAP_RATES = { retail_lifestyle:8.5, mall:7.5, office:8.0, residential_villas:7.0, residential_multifamily:7.5, serviced_apartments:7.0, hotel:8.5, resort:9.0, marina:9.5, yacht_club:9.0, parking_structure:9.5 };
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 4 — Cost Detail
+  // ════════════════════════════════════════════════════════════════════
   {
-    const ws = wb.addWorksheet("Investment Metrics", {
+    const ws = wb.addWorksheet("Cost Detail", {
       views: [{ showGridLines: false, state: "frozen", xSplit: 3, ySplit: 3 }],
       properties: { tabColor: { argb: "FFF59E0B" } },
     });
     const cols = [
       { label: "#", w: 4 },
-      { label: "Asset\nالأصل", w: 22 },
-      { label: "Phase\nالمرحلة", w: 10 },
-      { label: "Rev Type", w: 10 },
-      { label: "Total CAPEX\nإجمالي CAPEX", w: 14 },
-      { label: "Annual Rev\nإيراد مستقر", w: 14 },
-      { label: "YoC %\nعائد على التكلفة", w: 11 },
-      { label: "Cap Rate %\nمعدل الرسملة", w: 11 },
-      { label: "Exit Value\nقيمة الخروج", w: 14 },
-      { label: "Dev Profit\nربح التطوير", w: 14 },
-      { label: "Dev Margin %\nهامش", w: 11 },
-      { label: "Revenue /m²\nإيراد /م²", w: 11 },
-      { label: "Cost /m²\nتكلفة /م²", w: 11 },
-      { label: "Break-even Rent\nإيجار التعادل", w: 13 },
+      { label: "Asset / الأصل", w: 22 },
+      { label: "Phase", w: 10 },
+      { label: "GFA", w: 11 },
+      { label: "Cost /m²", w: 10 },
+      { label: "Hard Cost\n(formula)", w: 14 },
+      { label: "Soft %", w: 9 },
+      { label: "Soft Cost\n(formula)", w: 14 },
+      { label: "Cont %", w: 9 },
+      { label: "Contingency\n(formula)", w: 14 },
+      { label: "Total CAPEX\n(formula)", w: 15 },
+      { label: "Avg /m²\n(formula)", w: 10 },
     ];
     cols.forEach((c, i) => setCol(ws, i + 1, c.w));
-    titleBar(ws, 1, 1, cols.length, "Investment Metrics", "مؤشرات الاستثمار");
+    titleBar(ws, 1, 1, cols.length, "Cost Detail (formula-driven)", "تفصيل التكلفة");
     tableHeader(ws, 2, cols.map(c => c.label));
 
     assets.forEach((a, i) => {
       const r = 3 + i;
-      const sched = schedules[i];
-      const totalCapex = sched?.totalCapex || breakdowns[i]?.total || 0;
-      const totalRev = sched?.totalRevenue || 0;
-      const gfa = n(a.gfa), eff = n(a.efficiency)/100;
-      const leasable = gfa * eff;
-      let annualRev = 0;
-      if (a.revType === "Lease") annualRev = leasable * n(a.leaseRate) * (n(a.stabilizedOcc)||100)/100;
-      else if (a.revType === "Operating") annualRev = n(a.opEbitda);
-      else if (a.revType === "Sale") annualRev = Math.max(1, n(a.absorptionYears)||3) > 0 ? totalRev / Math.max(1, n(a.absorptionYears)||3) : 0;
-      const capRate = (CAP_RATES[a.assetType] || 8.5);
-      let exitValue = 0;
-      if (a.revType === "Sale") exitValue = totalRev;
-      else if (annualRev > 0) exitValue = annualRev / (capRate/100);
-      const devProfit = exitValue - totalCapex;
-      const devMargin = totalCapex > 0 ? devProfit / totalCapex : 0;
-      const yoc = totalCapex > 0 ? annualRev / totalCapex : 0;
-      const revPerSqm = gfa > 0 ? annualRev / gfa : 0;
-      const costPerSqmTotal = gfa > 0 ? totalCapex / gfa : 0;
-      const breakEvenRent = (a.revType === "Lease" && leasable > 0 && totalCapex > 0) ? (totalCapex / 10) / leasable : null;
+      // Reference to Inputs row (same i)
+      const inputsRow = INPUTS_FIRST_ROW + i;
+      const refGfa = `Inputs!${COL.gfa}${inputsRow}`;
+      const refCost = `Inputs!${COL.costPerSqm}${inputsRow}`;
 
-      const vals = [
-        i + 1, a.name || `Asset ${i+1}`, a.phase || "", a.revType || "",
-        totalCapex, annualRev, yoc, capRate/100, exitValue, devProfit, devMargin, revPerSqm, costPerSqmTotal, breakEvenRent,
-      ];
-      const fmts = [null, null, null, null, FMT.int, FMT.int, FMT.pct1, FMT.pct1, FMT.int, FMT.int, FMT.pct1, FMT.int, FMT.int, FMT.int];
-      writeRow(ws, r, vals, { numFmts: fmts, alternating: true, rowIdx: i });
-
-      // Colour-code Dev Margin
-      const mCell = ws.getCell(r, 11);
-      if (devMargin >= 0.25) mCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.greenBg } };
-      else if (devMargin >= 0.15) mCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.amberBg } };
-      else if (totalCapex > 0) mCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
+      setCell(ws, r, 1, i + 1, { color: C.grayText, align: "center" });
+      setCell(ws, r, 2, a.name || `Asset ${i+1}`, { bold: true, align: "left", indent: 1, color: C.dark });
+      setCell(ws, r, 3, a.phase || "", { align: "center" });
+      // GFA + Cost/m² as formulas referencing Inputs
+      setCell(ws, r, 4, { formula: refGfa }, { fmt: FMT.int });
+      setCell(ws, r, 5, { formula: refCost }, { fmt: FMT.int });
+      // Hard Cost = GFA × Cost/m²
+      setCell(ws, r, 6, { formula: `D${r}*E${r}` }, { fmt: FMT.int, bold: true, color: C.dark, bg: C.derivedBg });
+      // Soft %
+      const softUsed = a.softCostPctOverride != null ? a.softCostPctOverride / 100 : softPct;
+      setCell(ws, r, 7, softUsed, { fmt: FMT.pct1, color: C.grayText });
+      // Soft Cost = Hard × Soft%
+      setCell(ws, r, 8, { formula: `F${r}*G${r}` }, { fmt: FMT.int, bold: true, color: C.dark, bg: C.derivedBg });
+      // Cont %
+      const contUsed = a.contingencyPctOverride != null ? a.contingencyPctOverride / 100 : contPct;
+      setCell(ws, r, 9, contUsed, { fmt: FMT.pct1, color: C.grayText });
+      // Contingency = (Hard + Soft) × Cont%
+      setCell(ws, r, 10, { formula: `(F${r}+H${r})*I${r}` }, { fmt: FMT.int, bold: true, color: C.dark, bg: C.derivedBg });
+      // Total CAPEX = Hard + Soft + Contingency
+      setCell(ws, r, 11, { formula: `F${r}+H${r}+J${r}` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg });
+      // Avg /m² = Total CAPEX / GFA
+      setCell(ws, r, 12, { formula: `IFERROR(K${r}/D${r},0)` }, { fmt: FMT.int, color: C.grayText });
     });
 
-    // Total row (portfolio): SUMs + computed margin
+    // Portfolio total row
     const totR = 3 + assets.length;
     const firstR = 3, lastR = 2 + assets.length;
-    const portfolioTotalCapex = `SUM(E${firstR}:E${lastR})`;
-    const portfolioAnnualRev = `SUM(F${firstR}:F${lastR})`;
-    const portfolioExit = `SUM(I${firstR}:I${lastR})`;
-    const vals = [
-      "", "Portfolio / المحفظة", "", "",
-      { formula: portfolioTotalCapex },
-      { formula: portfolioAnnualRev },
-      { formula: `IFERROR(${portfolioAnnualRev}/${portfolioTotalCapex},0)` },
-      "", // cap rate blended — skip
-      { formula: portfolioExit },
-      { formula: `${portfolioExit}-${portfolioTotalCapex}` },
-      { formula: `IFERROR((${portfolioExit}-${portfolioTotalCapex})/${portfolioTotalCapex},0)` },
-      "", "", "",
-    ];
-    totalRow(ws, totR, vals, [null, null, null, null, FMT.int, FMT.int, FMT.pct1, null, FMT.int, FMT.int, FMT.pct1, null, null, null]);
+    setCell(ws, totR, 1, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 2, "Total / الإجمالي", { bold: true, align: "left", indent: 1, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 3, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 4, { formula: `SUM(D${firstR}:D${lastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 5, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 6, { formula: `SUM(F${firstR}:F${lastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 7, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 8, { formula: `SUM(H${firstR}:H${lastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 9, "", { bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 10, { formula: `SUM(J${firstR}:J${lastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 11, { formula: `SUM(K${firstR}:K${lastR})` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
+    setCell(ws, totR, 12, { formula: `IFERROR(K${totR}/D${totR},0)` }, { fmt: FMT.int, bold: true, color: C.navyText, bg: C.blueBg, border: "totalTop" });
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 11: Phase Summary
-  // ═══════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════
+  // SHEET 5 — Notes (project metadata + smart alerts)
+  // ════════════════════════════════════════════════════════════════════
   {
-    const ws = wb.addWorksheet("Phase Summary", {
-      views: [{ showGridLines: false, state: "frozen", xSplit: 2, ySplit: 3 }],
-      properties: { tabColor: { argb: "FF8B5CF6" } },
-    });
-    const cols = [
-      { label: "#", w: 4 },
-      { label: "Phase\nالمرحلة", w: 16 },
-      { label: "Opening Yr\nسنة الافتتاح", w: 12 },
-      { label: "Assets\nعدد الأصول", w: 10 },
-      { label: "GFA (m²)\nمساحة", w: 13 },
-      { label: "Footprint\nمسطح", w: 13 },
-      { label: "Total CAPEX\nCAPEX", w: 14 },
-      { label: "Total Revenue\nإيرادات", w: 14 },
-      { label: "% of CAPEX\nحصة CAPEX", w: 11 },
-      { label: "% of Revenue\nحصة الإيراد", w: 11 },
-      { label: "Land Rent\nإيجار أرض", w: 13 },
-    ];
-    cols.forEach((c, i) => setCol(ws, i + 1, c.w));
-    titleBar(ws, 1, 1, cols.length, "Phase Summary", "ملخص المراحل");
-    tableHeader(ws, 2, cols.map(c => c.label));
-
-    let portfolioCapex = 0, portfolioRev = 0;
-    assets.forEach((a, i) => {
-      portfolioCapex += schedules[i]?.totalCapex || 0;
-      portfolioRev += schedules[i]?.totalRevenue || 0;
-    });
-
-    phases.forEach((ph, i) => {
-      const r = 3 + i;
-      const pAssets = assets.filter(a => a.phase === ph.name);
-      const pIndices = assets.map((a, idx) => a.phase === ph.name ? idx : -1).filter(idx => idx >= 0);
-      const pGfa = pAssets.reduce((s, a) => s + n(a.gfa), 0);
-      const pFp  = pAssets.reduce((s, a) => s + n(a.footprint), 0);
-      const pCapex = pIndices.reduce((s, idx) => s + (schedules[idx]?.totalCapex || 0), 0);
-      const pRev   = pIndices.reduce((s, idx) => s + (schedules[idx]?.totalRevenue || 0), 0);
-      const pRent  = phaseResults[ph.name]?.landRent?.reduce((s, v) => s + n(v), 0) || 0;
-      const vals = [
-        i + 1, ph.name,
-        ph.completionYear || "",
-        pAssets.length, pGfa, pFp,
-        pCapex, pRev,
-        portfolioCapex > 0 ? pCapex / portfolioCapex : 0,
-        portfolioRev > 0 ? pRev / portfolioRev : 0,
-        pRent,
-      ];
-      const fmts = [null, null, null, null, FMT.int, FMT.int, FMT.int, FMT.int, FMT.pct1, FMT.pct1, FMT.int];
-      writeRow(ws, r, vals, { numFmts: fmts, alternating: true, rowIdx: i });
-    });
-    const totR = 3 + phases.length;
-    const firstR = 3, lastR = 2 + phases.length;
-    const vals = [
-      "", "Portfolio / المحفظة", "",
-      { formula: `SUM(D${firstR}:D${lastR})` },
-      { formula: `SUM(E${firstR}:E${lastR})` },
-      { formula: `SUM(F${firstR}:F${lastR})` },
-      { formula: `SUM(G${firstR}:G${lastR})` },
-      { formula: `SUM(H${firstR}:H${lastR})` },
-      "", "",
-      { formula: `SUM(K${firstR}:K${lastR})` },
-    ];
-    totalRow(ws, totR, vals, [null, null, null, null, FMT.int, FMT.int, FMT.int, FMT.int, null, null, FMT.int]);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // SHEET 12: Smart Alerts (if any)
-  // ═══════════════════════════════════════════════════════════════
-  {
-    const ws = wb.addWorksheet("Smart Alerts", {
+    const ws = wb.addWorksheet("Notes", {
       views: [{ showGridLines: false }],
-      properties: { tabColor: { argb: C.red } },
+      properties: { tabColor: { argb: C.grayText } },
     });
-    setCol(ws, 1, 4); setCol(ws, 2, 18); setCol(ws, 3, 10); setCol(ws, 4, 22); setCol(ws, 5, 80);
-    titleBar(ws, 1, 1, 5, "Smart Reviewer Alerts", "تنبيهات المراجع الذكي");
-    tableHeader(ws, 2, ["#", "Asset\nالأصل", "Severity\nالخطورة", "Rule ID", "Message / الرسالة"]);
+    setCol(ws, 1, 3); setCol(ws, 2, 18); setCol(ws, 3, 12); setCol(ws, 4, 22); setCol(ws, 5, 70);
+    titleBar(ws, 1, 1, 5, "Notes & Alerts", "ملاحظات وتنبيهات");
 
-    // smartAlerts is a separate React state — passed in from the caller.
-    // Accept either {alerts:[], summary:{}} or an array shape defensively.
+    let r = 3;
+    sectionLabel(ws, r++, 2, 5, "Land / الأرض");
+    const landFields = [
+      ["Type / النوع", project?.landType || ""],
+      ["Area (m²)", n(project?.landArea)],
+      project?.landType === "lease" && ["Annual Rent", n(project?.landRentAnnual)],
+      project?.landType === "lease" && ["Term (yrs)", n(project?.landRentTerm)],
+      project?.landType === "lease" && ["Grace (yrs)", n(project?.landRentGrace)],
+      project?.landType === "lease" && ["Escalation %", n(project?.landRentEscalation) / 100],
+      project?.landType === "purchase" && ["Purchase Price", n(project?.landPurchasePrice)],
+      project?.landType === "partner" && ["Partner Valuation", n(project?.landValuation)],
+      project?.landType === "partner" && ["Partner Equity %", n(project?.partnerEquityPct) / 100],
+    ].filter(Boolean);
+    landFields.forEach(([k, v]) => {
+      setCell(ws, r, 2, k, { color: C.grayText, align: "left", indent: 1 });
+      const fmt = typeof v === "number" ? (k.includes("%") ? FMT.pct1 : FMT.int) : null;
+      setCell(ws, r, 3, v, { fmt, bold: true, color: C.navyText });
+      r++;
+    });
+
+    r += 1;
+    sectionLabel(ws, r++, 2, 5, "Smart Reviewer Alerts / تنبيهات المراجع الذكي");
     const alerts = Array.isArray(smartAlerts?.alerts) ? smartAlerts.alerts
                  : Array.isArray(smartAlerts) ? smartAlerts
                  : [];
     if (alerts.length === 0) {
-      ws.getCell(3, 2).value = "✓ No active alerts — all asset inputs look reasonable.";
-      ws.getCell(3, 2).font = { name: FONT_MAIN, size: 10, color: { argb: C.greenDark }, italic: true };
-      ws.mergeCells(3, 2, 3, 5);
+      setCell(ws, r, 2, "✓ No active alerts — all asset inputs look reasonable.", { color: C.greenDark, align: "left", indent: 1 });
+      ws.mergeCells(r, 2, r, 5);
     } else {
+      tableHeader(ws, r++, ["", "Asset", "Severity", "Rule", "Message"]);
       alerts.forEach((al, i) => {
-        const r = 3 + i;
-        const aName = al.assetIndex != null ? (assets[al.assetIndex]?.name || `Asset ${al.assetIndex + 1}`) : "Project";
         const sev = al.severity || "info";
-        const vals = [i + 1, aName, sev, al.id || "", (al.ar ? `${al.ar} — ` : "") + (al.en || "")];
-        writeRow(ws, r, vals, { alternating: true, rowIdx: i });
-        const sevCell = ws.getCell(r, 3);
-        if (sev === "critical") sevCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.redBg } };
-        else if (sev === "warning") sevCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: C.amberBg } };
+        const aName = al.assetIndex != null ? (assets[al.assetIndex]?.name || `Asset ${al.assetIndex + 1}`) : "Project";
+        setCell(ws, r, 1, i + 1, { color: C.grayText, align: "center" });
+        setCell(ws, r, 2, aName, { align: "left", indent: 1 });
+        setCell(ws, r, 3, sev, { align: "center", bg: sev === "critical" ? C.redBg : sev === "warning" ? C.amberBg : null, bold: sev === "critical" });
+        setCell(ws, r, 4, al.id || "", { color: C.grayText, align: "center" });
+        setCell(ws, r, 5, (al.ar ? `${al.ar} — ` : "") + (al.en || ""), { align: "left", indent: 1 });
+        r++;
       });
     }
+
+    r += 1;
+    sectionLabel(ws, r++, 2, 5, "How this workbook is organised");
+    const guide = [
+      "• Summary — project header + portfolio KPIs.",
+      "• Inputs — every editable asset field. YELLOW = edit me. BLUE = formula (auto-calc).",
+      "• Pro Forma — year-by-year. Revenue + CAPEX + Net CF are FORMULAS that read from Inputs.",
+      "  Edit a lease rate in Inputs and watch the Pro Forma rows recalc, including IRR.",
+      "• Cost Detail — Hard / Soft / Contingency per asset, all formula-driven from Inputs.",
+      "• Notes — land params + active alerts + this guide.",
+      "",
+      "What is NOT formula-driven: Land Rent yearly cells (uses engine grace + escalation",
+      "logic that's awkward in Excel — 80+ cells per asset to mirror). If you change the",
+      "land rent or escalation in the Haseef app, regenerate this workbook.",
+    ];
+    guide.forEach(line => {
+      ws.mergeCells(r, 2, r, 5);
+      const c = ws.getCell(r, 2);
+      c.value = line;
+      c.font = { name: FONT, size: 10, color: { argb: line.startsWith("What") ? C.dark : C.grayText }, italic: line.startsWith("•") ? false : line === "" ? false : true };
+      c.alignment = { vertical: "middle", horizontal: "left", indent: 1, wrapText: true };
+      r++;
+    });
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // Export
-  // ═══════════════════════════════════════════════════════════════
-  // Collapse any run of non-alphanumeric (incl. leading/trailing spaces) to a single _
-  // then strip leading/trailing underscores so the filename doesn't end with __Assets.
+  // ── Reorder sheets so they appear in logical order in tab strip ─────
+  // Already added in order: Summary, Inputs, Pro Forma, Cost Detail, Notes
+
+  // ── Download ──────────────────────────────────────────────────────────
   const safeName = (projectName || "Project")
-    .replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, "_")
+    .replace(/[^a-zA-Z0-9؀-ۿ]+/g, "_")
     .replace(/^_+|_+$/g, "") || "Project";
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${safeName}_Assets_Full.xlsx`;
+  a.download = `${safeName}_Pro_Forma.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
