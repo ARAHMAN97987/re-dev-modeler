@@ -5674,7 +5674,7 @@ function AssetTable({ project, upAsset, addAsset, dupAsset, rmAsset, results, t,
             console.error("[excelAssetExport]", err);
             addToast(ar?`تعذّر التصدير: ${err?.message||err}`:`Export failed: ${err?.message||err}`,"error");
           }
-        }} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير Pro Forma ديناميكي (6 أوراق: Summary + Inputs + Pro Forma + Cost Detail + Metrics + Notes؛ عدّل أي خلية في Inputs ويتحدّث IRR والمؤشرات)":"Export dynamic Pro Forma (6 sheets: Summary + Inputs + Pro Forma + Cost Detail + Metrics + Notes; edit any Inputs cell and IRR + KPIs recalc)"}>
+        }} style={{...btnS,background:"#eff6ff",color:"#2563eb",padding:"7px 14px",fontSize:11,fontWeight:500,border:"1px solid #bfdbfe"}} title={lang==='ar'?"تصدير Pro Forma ديناميكي (7 أوراق: Summary + Inputs + Operating P&L + Pro Forma + Cost Detail + Metrics + Notes؛ عدّل P&L الفندق وتتحدّث كل الأوراق)":"Export dynamic Pro Forma (7 sheets: Summary + Inputs + Operating P&L + Pro Forma + Cost Detail + Metrics + Notes; edit any P&L input and the whole workbook recalcs)"}>
           {lang==='ar'?'⬇ Excel':'⬇ Excel'}
         </button>
         <button onClick={()=>{exportAssetsToExcel(project, results);addToast(ar?"تم تصدير CSV":"CSV exported","success");}} style={{...btnS,background:"#f0fdf4",color:"#16a34a",padding:"7px 12px",fontSize:11,fontWeight:500,border:"1px solid #bbf7d0"}} title={lang==='ar'?"تصدير CSV (بيانات فقط، للاستيراد السريع)":"Export CSV (data only, for quick re-import)"}>

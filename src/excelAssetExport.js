@@ -5,21 +5,31 @@
  *   "ضخم ومعقد وغير ديناميكي" — too many sheets, too many columns,
  *   year cells were static engine values.
  *
- * NEW STRUCTURE — 5 sheets, formula-driven:
+ * NEW STRUCTURE — 7 sheets, formula-driven:
  *
  *   1. Summary             — project header + portfolio KPIs (all formulas)
- *   2. Inputs              — one row per asset, 18 essential fields,
+ *   2. Inputs              — one row per asset, 19 essential fields,
  *                            yellow-highlighted = editable. Engine-derived
- *                            cells (leasable, openingYear, totalCapex) are
- *                            FORMULAS that recalc when the user edits inputs.
- *   3. Pro Forma           — per asset: 4 rows (Revenue / Land Rent /
- *                            CAPEX / Net CF) × N years. Revenue + CAPEX +
- *                            Net CF are FORMULAS referencing Inputs cells —
- *                            edit a lease rate and the schedule recalcs.
- *                            IRR + Payback per asset use Excel IRR(). Portfolio
- *                            totals at the bottom.
- *   4. Cost Detail         — Hard / Soft / Contingency per asset (formulas).
- *   5. Notes               — project metadata + active smart alerts.
+ *                            cells (leasable, totalCapex) are FORMULAS that
+ *                            recalc when the user edits inputs. The EBITDA
+ *                            column (J) for Operating assets is back-patched
+ *                            to reference the Operating P&L sheet — single
+ *                            source of truth.
+ *   3. Operating P&L       — full Hotel + Marina + Generic-Operating P&L
+ *                            blocks. Yellow inputs feed BLUE formulas all
+ *                            the way down to EBITDA. Mirrors engine logic
+ *                            in src/engine/hospitality.js cell-for-cell.
+ *   4. Pro Forma           — per asset: 5 rows (Revenue / Land Rent /
+ *                            Direct CAPEX / Allocated Shared / Net CF) × N
+ *                            years. Revenue + CAPEX + Net CF are FORMULAS
+ *                            referencing Inputs cells — edit a lease rate
+ *                            (or any P&L input) and the schedule recalcs.
+ *                            IRR + Payback per asset use Excel IRR().
+ *                            Portfolio totals at the bottom.
+ *   5. Cost Detail         — Hard / Soft / Contingency per asset (formulas).
+ *   6. Metrics             — per-asset KPI table (most cells are static
+ *                            engine values — see audit doc for tradeoffs).
+ *   7. Notes               — project metadata + active smart alerts.
  *
  * What's deliberately formula-based (recalculates inside Excel on edit):
  *   • Inputs derived columns: Leasable (G = GFA × Eff), Total CAPEX
@@ -964,7 +974,10 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
         if (revType === "Lease") {
           f = `IF(${yearAbs}>=${ref("openingYr")},${ref("leasable")}*${ref("leaseRate")}*${ref("occ")}*MIN(1,(${yearOffset}+1)/MAX(1,${ref("ramp")}))*(1+${ref("esc")})^${yearOffset},0)`;
         } else if (revType === "Operating") {
-          f = `IF(${yearAbs}>=${ref("openingYr")},${ref("ebitda")}*${ref("occ")}*MIN(1,(${yearOffset}+1)/MAX(1,${ref("ramp")}))*(1+${ref("esc")})^${yearOffset},0)`;
+          // Engine (cashflow.js:187): revSch[y] = opEbitda * ramp * esc — NO occ multiplier.
+          // EBITDA already absorbs occupancy at the source (Keys × ADR × Occ × Days for hotels;
+          // user-entered for generic). Multiplying by occ here would double-discount it.
+          f = `IF(${yearAbs}>=${ref("openingYr")},${ref("ebitda")}*MIN(1,(${yearOffset}+1)/MAX(1,${ref("ramp")}))*(1+${ref("esc")})^${yearOffset},0)`;
         } else if (revType === "Sale") {
           // Sellable = GFA × Eff (engine uses 100% if eff is 0; we honour the input here)
           // Pre-sale lump in year (openingYr − 1), absorption split year openingYr to openingYr + absorption − 1
@@ -1419,7 +1432,7 @@ export async function generateAssetsWorkbook(project, results, smartAlerts = nul
   }
 
   // ── Reorder sheets so they appear in logical order in tab strip ─────
-  // Already added in order: Summary, Inputs, Pro Forma, Cost Detail, Notes
+  // Already added in order: Summary, Inputs, Operating P&L, Pro Forma, Cost Detail, Metrics, Notes
 
   // ── Download ──────────────────────────────────────────────────────────
   const safeName = (projectName || "Project")
